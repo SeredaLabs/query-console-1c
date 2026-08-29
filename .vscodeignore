@@ -1,5 +1,7 @@
 .vscode/**
 .github/**
+.devcontainer/**
+.claude/**
 src/**
 test/**
 scripts/**
@@ -13,4 +15,5 @@ out/webview/**/*.map
 tsconfig*.json
 vitest.config.ts
 playwright.config.ts
+install.sh
 *.vsix
