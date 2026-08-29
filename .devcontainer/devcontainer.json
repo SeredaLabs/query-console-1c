@@ -1,0 +1,46 @@
+{
+  "name": "1C Query Constructor (Claude bypass)",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "workspaceFolder": "/workspaces/query_console_vscode",
+  "remoteUser": "node",
+
+  // Linux: make host.docker.internal resolve to the host so the 1C MCP servers
+  // (running on the host) are reachable from inside the container.
+  "runArgs": ["--add-host=host.docker.internal:host-gateway"],
+
+  // Bind-mount the host 1C platform install (read-only) so `rac` is available
+  // inside the container for cluster session administration (kill hung sessions
+  // via RAS on host.docker.internal:1545). Mounted at the same path so rac's
+  // rpath to its sibling .so files (core83.so, etc.) resolves.
+  // Bind-mount the whole host 1C platform tree (read-only) at the same path, so it
+  // is version-independent (no specific version in the path → survives platform
+  // updates) and rac's rpath to its sibling .so files resolves. post-create.sh
+  // picks the concrete version: ONEC_PLATFORM_DIR from .env if set there, else the
+  // newest installed version under this dir.
+  "mounts": [
+    "source=/opt/1cv8/x86_64,target=/opt/1cv8/x86_64,type=bind,readonly"
+  ],
+
+  // Runs on the HOST before the container is created: copies the sibling repos
+  // into ./tmp so they travel into the workspace (tmp/ is gitignored).
+  "initializeCommand": "bash .devcontainer/copy-sibling-repos.sh",
+
+  // Runs inside the container after creation: enables Claude "allow all actions".
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  // Forward an API key if one is set on the host (optional; you can also `claude login` inside).
+  "containerEnv": {
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}
