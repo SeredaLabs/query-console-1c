@@ -30,6 +30,7 @@ import { deriveUnionColumns } from '../../core/query/unionModel';
 import type { QueryDocument } from '../../core/query/unionModel';
 import { tryOpenBatch } from '../../core/query/validateBatch';
 import { buildResolverFromTables } from '../../core/metadata/buildModelResolver';
+import type { RefreshState } from '../App';
 
 const BTN: React.CSSProperties = {
   padding: '4px 12px',
@@ -45,7 +46,6 @@ export interface ConstructorViewProps {
   state: QueryState;
   dispatch: React.Dispatch<QueryAction>;
   onExpandRef: (ref: RefId) => void;
-  toolbar?: React.ReactNode;
   onOk: () => void;
   onCancel: () => void;
   okDisabled?: boolean;
@@ -53,10 +53,19 @@ export interface ConstructorViewProps {
   okError?: string | null;
   /** 7.8.8: режим вложенного конструктора (скрыть вкладку «Пакет запросов»). */
   nested?: boolean;
+  /** Блок «Кэш метаданных» на вкладке «Дополнительно» — не показывается во
+   * вложенном конструкторе подзапроса (там нет собственного кэша/файла). */
+  refreshState?: RefreshState;
+  onRefreshCache?: () => void;
+  preserveComments?: boolean;
+  onSetPreserveComments?: (value: boolean) => void;
 }
 
 export function ConstructorView(props: ConstructorViewProps): React.ReactElement {
-  const { state, dispatch, onExpandRef, toolbar, onOk, onCancel, okDisabled, okError, nested } = props;
+  const {
+    state, dispatch, onExpandRef, onOk, onCancel, okDisabled, okError, nested,
+    refreshState, onRefreshCache, preserveComments, onSetPreserveComments,
+  } = props;
   const [activeTab, setActiveTab] = useState('Таблицы и поля');
   const [queryModalText, setQueryModalText] = useState<string | null>(null);
   const [queryModalError, setQueryModalError] = useState<string | null>(null);
@@ -265,7 +274,6 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
         .qc-row:hover { background: var(--vscode-list-hoverBackground, rgba(255,255,255,0.06)); }
       `}</style>
       <TabsBar tabs={finalTabs} active={activeTab} onSelect={setActiveTab} />
-      {toolbar}
       <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflow: 'hidden' }}>
       {activeTab === 'Таблицы и поля' && (
@@ -457,6 +465,10 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           onSetLockEnabled={enabled => dispatch({ type: 'SET_LOCK_ENABLED', enabled })}
           onAddLockTable={fullName => dispatch({ type: 'ADD_LOCK_TABLE', fullName })}
           onRemoveLockTable={fullName => dispatch({ type: 'REMOVE_LOCK_TABLE', fullName })}
+          refreshState={refreshState}
+          onRefreshCache={onRefreshCache}
+          preserveComments={preserveComments}
+          onSetPreserveComments={onSetPreserveComments}
         />
       )}
 

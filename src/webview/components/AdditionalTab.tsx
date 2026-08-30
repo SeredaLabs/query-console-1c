@@ -1,5 +1,6 @@
 import * as React from 'react';
 import type { SelectedTable, Selection, QueryType } from '../../core/query/queryModel';
+import type { RefreshState } from '../App';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -16,6 +17,11 @@ interface Props {
   onSetLockEnabled: (enabled: boolean) => void;
   onAddLockTable: (fullName: string) => void;
   onRemoveLockTable: (fullName: string) => void;
+  /** Блок «Кэш метаданных» — не показывается во вложенном конструкторе подзапроса. */
+  refreshState?: RefreshState;
+  onRefreshCache?: () => void;
+  preserveComments?: boolean;
+  onSetPreserveComments?: (value: boolean) => void;
 }
 
 const FIELDSET: React.CSSProperties = {
@@ -49,6 +55,16 @@ const RADIO_LABEL: React.CSSProperties = {
   alignItems: 'center',
   gap: 6,
   cursor: 'pointer',
+};
+
+const BTN: React.CSSProperties = {
+  padding: '4px 12px',
+  cursor: 'pointer',
+  background: 'var(--vscode-button-background, #0e639c)',
+  color: 'var(--vscode-button-foreground, #fff)',
+  border: 'none',
+  borderRadius: 2,
+  fontSize: 12,
 };
 
 const INPUT: React.CSSProperties = {
@@ -119,7 +135,9 @@ export function AdditionalTab(props: Props): React.ReactElement {
     selectedTables, selection, queryType, tempTableName, lockForUpdate, lockEnabled,
     onSetTop, onSetDistinct, onSetAllowed, onSetQueryType, onSetTempTableName,
     onSetLockEnabled, onAddLockTable, onRemoveLockTable,
+    refreshState, onRefreshCache, preserveComments, onSetPreserveComments,
   } = props;
+  const showCacheBlock = onRefreshCache != null && onSetPreserveComments != null;
 
   const topEnabled = selection.top !== undefined;
   const tempNameEnabled = queryType !== 'select';
@@ -148,6 +166,35 @@ export function AdditionalTab(props: Props): React.ReactElement {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 8, padding: 8, overflow: 'auto' }}>
+      {/* Кэш метаданных — не показывается во вложенном конструкторе подзапроса. */}
+      {showCacheBlock && (
+        <fieldset style={FIELDSET}>
+          <legend style={LEGEND}>Кэш метаданных</legend>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              style={{ ...BTN, opacity: refreshState === 'loading' ? 0.6 : 1 }}
+              onClick={onRefreshCache}
+              disabled={refreshState === 'loading'}
+            >
+              {refreshState === 'loading' ? 'Обновление...' : 'Обновить кэш'}
+            </button>
+            {typeof refreshState === 'object' && refreshState != null && (
+              <span style={{ fontSize: 12, color: refreshState.ok ? 'var(--vscode-terminal-ansiGreen, #4caf50)' : 'var(--vscode-errorForeground, #f44747)' }}>
+                {refreshState.message}
+              </span>
+            )}
+          </div>
+          <label style={CHECK_LABEL}>
+            <input
+              type="checkbox"
+              checked={preserveComments ?? false}
+              onChange={e => onSetPreserveComments?.(e.target.checked)}
+            />
+            Сохранять комментарии
+          </label>
+        </fieldset>
+      )}
+
       {/* Выборка записей */}
       <fieldset style={FIELDSET}>
         <legend style={LEGEND}>Выборка записей</legend>

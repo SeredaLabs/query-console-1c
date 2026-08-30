@@ -18,7 +18,7 @@ const BTN: React.CSSProperties = {
   fontSize: 12,
 };
 
-type RefreshState = 'idle' | 'loading' | { ok: boolean; message: string };
+export type RefreshState = 'idle' | 'loading' | { ok: boolean; message: string };
 
 export function App(): React.ReactElement {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
@@ -93,39 +93,16 @@ export function App(): React.ReactElement {
     return generateBatch(preserveComments ? assembled : stripBatchComments(assembled));
   }, [state, preserveComments]);
 
-  const cacheToolbar = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderBottom: '1px solid var(--vscode-panel-border, #444)' }}>
-      <button
-        style={{ ...BTN, opacity: refreshState === 'loading' ? 0.6 : 1 }}
-        onClick={handleRefreshCache}
-        disabled={refreshState === 'loading'}
-      >
-        {refreshState === 'loading' ? 'Обновление...' : 'Обновить кэш'}
-      </button>
-      {typeof refreshState === 'object' && (
-        <span style={{ fontSize: 12, color: refreshState.ok ? 'var(--vscode-terminal-ansiGreen, #4caf50)' : 'var(--vscode-errorForeground, #f44747)' }}>
-          {refreshState.message}
-        </span>
-      )}
-      {/* 8.1: галочка «Сохранять комментарии» (включена по умолчанию). */}
-      <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', marginLeft: 'auto' }}>
-        <input
-          type="checkbox"
-          checked={preserveComments}
-          onChange={e => setPreserveComments(e.target.checked)}
-        />
-        Сохранять комментарии
-      </label>
-    </div>
-  );
-
   return (
     <>
       <ConstructorView
         state={state}
         dispatch={dispatch}
         onExpandRef={ref => postToHost({ type: 'expandRef', ref })}
-        toolbar={cacheToolbar}
+        refreshState={refreshState}
+        onRefreshCache={handleRefreshCache}
+        preserveComments={preserveComments}
+        onSetPreserveComments={setPreserveComments}
         onOk={() => {
           const v = validateBatchText(batchText, buildResolver());
           if (!v.ok) { setOkError(v.error); return; }
