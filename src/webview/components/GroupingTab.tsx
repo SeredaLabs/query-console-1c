@@ -5,6 +5,7 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { ResizeHandle } from './ResizeHandle';
 import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
+import { useLayoutValue } from '../layoutContext';
 
 const ALL_FUNCS: AggregateFunction[] = ['Сумма', 'Количество', 'КоличествоРазличных', 'Максимум', 'Минимум', 'Среднее'];
 const NON_NUMERIC_FUNCS: AggregateFunction[] = ['КоличествоРазличных', 'Количество', 'Максимум', 'Минимум'];
@@ -75,7 +76,7 @@ export function GroupingTab(props: Props): React.ReactElement {
     onAddGroupSet, onRemoveGroupSet, onAddFieldToSet, onRemoveFieldFromSet,
   } = props;
 
-  const [leftWidth, setLeftWidth] = React.useState(260);
+  const [leftWidth, setLeftWidth] = useLayoutValue('groupingLeftWidth', 260);
 
   // Источник: обычные поля выборки (не выражения, не ТЧ).
   const sourceFields = distinctFieldRefs(selectedFields);

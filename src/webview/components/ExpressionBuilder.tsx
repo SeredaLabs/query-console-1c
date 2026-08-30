@@ -2,7 +2,8 @@ import * as React from 'react';
 import { FUNCTION_CATALOG, type FunctionGroup, type FunctionLeaf } from '../../core/query/functionCatalog';
 import { ResizeHandle } from './ResizeHandle';
 import { Chevron } from './Chevron';
-import { BTN, BTN_SECONDARY } from '../sharedStyles';
+import { BTN, BTN_SECONDARY, SECTION_HEADER, panelBox } from '../sharedStyles';
+import { useLayoutValue } from '../layoutContext';
 
 interface Props {
   title?: string;
@@ -66,8 +67,8 @@ export function ExpressionBuilder({ title = 'Произвольное выраж
   const [text, setText] = React.useState(initialText);
   const taRef = React.useRef<HTMLTextAreaElement>(null);
   // 8.3.7: перетаскиваемые границы — ширина списка «Поле» и высота поля ввода.
-  const [fieldsWidth, setFieldsWidth] = React.useState(280);
-  const [editorHeight, setEditorHeight] = React.useState(140);
+  const [fieldsWidth, setFieldsWidth] = useLayoutValue('exprFieldsWidth', 280);
+  const [editorHeight, setEditorHeight] = useLayoutValue('exprEditorHeight', 140);
 
   function insertAtCursor(snippet: string) {
     const ta = taRef.current;
@@ -91,24 +92,32 @@ export function ExpressionBuilder({ title = 'Произвольное выраж
   return (
     <div style={OVERLAY} onClick={onCancel}>
       <div style={PANEL} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 'bold', fontSize: 13 }}>{title}</div>
-        <div style={{ display: 'flex', flex: 1, gap: 0, minHeight: 0 }}>
-          <div style={{ width: fieldsWidth, flexShrink: 0, overflow: 'auto', border: '1px solid var(--qc-border)' }}>
-            <div style={{ fontSize: 11, padding: '2px 6px', opacity: 0.7 }}>Поле</div>
+        <div style={{ fontWeight: 600, fontSize: 14 }}>{title}</div>
+        <div style={{ display: 'flex', flex: 1, gap: 8, minHeight: 0 }}>
+          <div style={{ ...panelBox, width: fieldsWidth, flexShrink: 0, overflow: 'auto' }}>
+            <div style={{ ...SECTION_HEADER, position: 'sticky', top: 0 }}>Поле</div>
             {availableFields.map(f => (
               <div
                 key={f}
                 draggable
+                className="qc-row"
                 onDragStart={e => { e.dataTransfer.setData('text/plain', f); e.dataTransfer.effectAllowed = 'copy'; }}
                 onDoubleClick={() => insertAtCursor(f)}
-                style={{ padding: '1px 8px', fontSize: 12, cursor: 'default', userSelect: 'none' }}
+                title={f}
+                style={{ padding: '3px 8px', fontSize: 12, cursor: 'grab', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
               >
-                {f}
+                <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f}</span>
               </div>
             ))}
+            {availableFields.length === 0 && (
+              <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
+                Нет доступных полей.
+              </div>
+            )}
           </div>
           <ResizeHandle onResize={d => setFieldsWidth(w => Math.max(120, w + d))} />
-          <div style={{ flex: 1, minWidth: 0, overflow: 'auto', border: '1px solid var(--qc-border)' }}>
+          <div style={{ ...panelBox, flex: 1, minWidth: 0, overflow: 'auto', paddingTop: 4 }}>
             <FunctionTree node={FUNCTION_CATALOG} depth={0} onPick={insertAtCursor} />
           </div>
         </div>
@@ -119,14 +128,18 @@ export function ExpressionBuilder({ title = 'Произвольное выраж
           onChange={e => setText(e.target.value)}
           onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
           onDrop={handleDrop}
+          spellCheck={false}
           style={{
             height: editorHeight,
             fontFamily: 'var(--vscode-editor-font-family, monospace)',
             fontSize: 13,
+            lineHeight: 1.5,
             resize: 'none',
             background: 'var(--vscode-input-background, #3c3c3c)',
             color: 'var(--vscode-input-foreground, #ccc)',
             border: '1px solid var(--vscode-input-border, #555)',
+            borderRadius: 3,
+            padding: 8,
           }}
         />
         <div style={{ display: 'flex', gap: 4, alignSelf: 'flex-end' }}>

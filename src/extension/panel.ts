@@ -9,7 +9,7 @@ import { parseConfiguration } from '../core/metadata/parser/parseConfiguration';
 import { generate } from '../core/query/sdblGenerator';
 import { insertResult } from './insertResult';
 import type { SavedEditorState } from './insertResult';
-import type { HostMsg, WebviewMsg } from '../shared/messages';
+import type { HostMsg, WebviewMsg, Layout } from '../shared/messages';
 import type { MetadataModel } from '../core/metadata/types';
 import type { QueryModel } from '../core/query/queryModel';
 
@@ -132,7 +132,10 @@ export function createPanel(
     if (msg.type === 'ready') {
       // 7.8.2: сразу сообщаем вебвью, ждать ли загрузку модели запроса, чтобы оно
       // показало индикатор загрузки и не мигало пустым конструктором до заполнения.
-      const initMsg: HostMsg = { type: 'init', hasInitialQuery: !!initialQueryText };
+      // 8.3.8: вместе с этим отдаём сохранённые между открытиями ширины/высоты
+      // панелей (queryConsole.layout в globalState — общие для всех окон/воркспейсов).
+      const layout = context.globalState.get<Layout>('queryConsole.layout', {});
+      const initMsg: HostMsg = { type: 'init', hasInitialQuery: !!initialQueryText, layout };
       panel.webview.postMessage(initMsg);
       await metadataReady;
       const reply: HostMsg = { type: 'metadataTree', tables: metadataModel.tables };
@@ -186,6 +189,8 @@ export function createPanel(
         const reply: HostMsg = { type: 'refreshResult', ok: false, message: `Ошибка парсинга: ${e}` };
         panel.webview.postMessage(reply);
       }
+    } else if (msg.type === 'saveLayout') {
+      context.globalState.update('queryConsole.layout', msg.layout);
     }
   });
 

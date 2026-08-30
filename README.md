@@ -23,6 +23,8 @@
 - Ручне редагування тексту запиту з поверненням правок у модель конструктора.
 - Збереження коментарів `//…` у тексті запиту між циклами «відкрити → правити
   → зберегти».
+- Розміри панелей, розтягнутих мишею, запам'ятовуються між відкриттями
+  конструктора.
 
 ### Як користуватись
 
@@ -86,6 +88,8 @@
   конструктора.
 - Сохранение комментариев `//…` в тексте запроса между циклами «открыть →
   править → сохранить».
+- Размеры панелей, растянутых мышью, запоминаются между открытиями
+  конструктора.
 
 ### Как пользоваться
 
@@ -149,6 +153,8 @@ types → joins" tree, lets you assemble a query with the mouse, and generates
 - Opens an existing query's text with syntax and metadata validation.
 - Manual text editing that round-trips back into the constructor's model.
 - Preserves `//…` comments in the query text across edit cycles.
+- Panel sizes you drag with the mouse are remembered across constructor
+  reopenings.
 
 ### Usage
 

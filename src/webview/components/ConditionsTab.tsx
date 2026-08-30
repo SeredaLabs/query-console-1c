@@ -5,6 +5,7 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import { ResizeHandle } from './ResizeHandle';
 import { SECTION_HEADER, REMOVE_BTN, panelBox } from '../sharedStyles';
+import { useLayoutValue } from '../layoutContext';
 
 const OPERATORS: ConditionOperator[] = ['=', '<>', '>', '>=', '<', '<=', 'В', 'МЕЖДУ', 'ПОДОБНО'];
 
@@ -69,7 +70,7 @@ export function ConditionsTab(props: Props): React.ReactElement {
   } = props;
 
   // 8.3.7: перетаскиваемая граница ширины левого списка «Поля».
-  const [leftWidth, setLeftWidth] = React.useState(260);
+  const [leftWidth, setLeftWidth] = useLayoutValue('conditionsLeftWidth', 260);
 
   function dragStart(e: React.DragEvent, tableId: string, path: string) {
     e.dataTransfer.setData('text/plain', JSON.stringify({ tableId, path }));

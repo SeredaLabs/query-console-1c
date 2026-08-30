@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import { TabsBar, TABS } from './TabsBar';
+import { useLayoutValue } from '../layoutContext';
 import { DbTreePanel } from './DbTreePanel';
 import { TablesPanel } from './TablesPanel';
 import { FieldsPanel } from './FieldsPanel';
@@ -73,8 +74,8 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   // иначе режим правки существующей ВТ.
   const [tempTableDialog, setTempTableDialog] = useState<null | { tableId: string | null }>(null);
   // 8.3.7: перетаскиваемые границы трёх панелей вкладки «Таблицы и поля».
-  const [dbPanelWidth, setDbPanelWidth] = useState(300);
-  const [tablesPanelWidth, setTablesPanelWidth] = useState(300);
+  const [dbPanelWidth, setDbPanelWidth] = useLayoutValue('dbPanelWidth', 300);
+  const [tablesPanelWidth, setTablesPanelWidth] = useLayoutValue('tablesPanelWidth', 300);
 
   function handleShowQuery() {
     const text = generateBatch(assembleBatch(state));
