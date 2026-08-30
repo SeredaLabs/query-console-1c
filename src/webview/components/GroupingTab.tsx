@@ -124,8 +124,9 @@ export function GroupingTab(props: Props): React.ReactElement {
               data-field-item
               draggable
               onDragStart={e => dragStart(e, f.tableId, f.path!)}
-              style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start' }}
+              style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start', gap: 4 }}
             >
+              <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
               <span>{labelFor(f.tableId, f.path!)}</span>
             </div>
           ))}
@@ -170,7 +171,10 @@ export function GroupingTab(props: Props): React.ReactElement {
             >
               {grouping.groupFields.map((f: FieldRef) => (
                 <div key={`${f.tableId}:${f.path}`} style={ROW}>
-                  <span>{labelFor(f.tableId, f.path)}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                    {labelFor(f.tableId, f.path)}
+                  </span>
                   <button style={REMOVE_BTN} title="Убрать" onClick={() => onRemoveGroupField(f.tableId, f.path)}>✕</button>
                 </div>
               ))}
@@ -188,12 +192,18 @@ export function GroupingTab(props: Props): React.ReactElement {
                       if (d) onAddFieldToSet(idx, d.tableId, d.path);
                     }}
                   >
-                    <span style={{ fontWeight: 'bold' }}>Группировка {idx + 1}</span>
+                    <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span className="codicon codicon-list-flat" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                      Группировка {idx + 1}
+                    </span>
                     <button style={REMOVE_BTN} title="Удалить группировку" onClick={() => onRemoveGroupSet(idx)}>✕</button>
                   </div>
                   {set.map((f: FieldRef) => (
                     <div key={`${f.tableId}:${f.path}`} style={{ ...ROW, paddingLeft: 24 }}>
-                      <span>{labelFor(f.tableId, f.path)}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                        {labelFor(f.tableId, f.path)}
+                      </span>
                       <button style={REMOVE_BTN} title="Убрать" onClick={() => onRemoveFieldFromSet(idx, f.tableId, f.path)}>✕</button>
                     </div>
                   ))}
@@ -230,7 +240,10 @@ export function GroupingTab(props: Props): React.ReactElement {
               const funcs = allowedFuncs(numeric);
               return (
                 <div key={`${a.tableId}:${a.path}`} style={{ display: 'flex', alignItems: 'center', padding: '2px 6px', gap: 4 }}>
-                  <span style={{ flex: 1 }}>{labelFor(a.tableId, a.path)}</span>
+                  <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                    {labelFor(a.tableId, a.path)}
+                  </span>
                   <select
                     value={a.func}
                     onChange={e => onSetSummableFunc(a.tableId, a.path, e.target.value as AggregateFunction)}

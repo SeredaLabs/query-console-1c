@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { SelectedTable, Selection, QueryType } from '../../core/query/queryModel';
 import type { RefreshState } from '../App';
 import { BTN, FIELDSET, LEGEND, CHECK_LABEL, RADIO_LABEL, INPUT, SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
+import { MetaKindIcon } from './MetaKindIcon';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -167,8 +168,9 @@ export function AdditionalTab(props: Props): React.ReactElement {
                   key={t.id}
                   draggable={lockEnabled}
                   onDragStart={e => dragStart(e, t.fullName)}
-                  style={{ ...ROW, cursor: lockEnabled ? 'grab' : 'default', justifyContent: 'flex-start' }}
+                  style={{ ...ROW, cursor: lockEnabled ? 'grab' : 'default', justifyContent: 'flex-start', gap: 4 }}
                 >
+                  <MetaKindIcon kind={t.fullName.split('.')[0] ?? null} />
                   <span>{objectName(t.fullName)}</span>
                 </div>
               ))}
@@ -194,8 +196,11 @@ export function AdditionalTab(props: Props): React.ReactElement {
             <div style={SECTION_HEADER}>Таблицы для изменения</div>
             <div style={dropZone}>
               {lockForUpdate.map(fullName => (
-                <div key={fullName} style={ROW}>
-                  <span>{objectName(fullName)}</span>
+                <div key={fullName} style={{ ...ROW, gap: 4 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <MetaKindIcon kind={fullName.split('.')[0] ?? null} />
+                    {objectName(fullName)}
+                  </span>
                   <button
                     style={REMOVE_BTN}
                     title="Убрать"

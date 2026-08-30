@@ -71,8 +71,9 @@ export function OrderTab(props: Props): React.ReactElement {
                 data-field-item
                 draggable
                 onDragStart={e => dragStart(e, f.tableId, f.path!)}
-                style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start' }}
+                style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start', gap: 4 }}
               >
+                <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                 <span>{labelFor(f.tableId, f.path!)}</span>
               </div>
             ))}
@@ -103,7 +104,10 @@ export function OrderTab(props: Props): React.ReactElement {
           >
             {order.fields.map((f: OrderField) => (
               <div key={`${f.tableId}:${f.path}`} style={{ display: 'flex', alignItems: 'center', padding: '2px 6px', gap: 4 }}>
-                <span style={{ flex: 1 }}>{labelFor(f.tableId, f.path)}</span>
+                <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                  {labelFor(f.tableId, f.path)}
+                </span>
                 <select
                   value={f.direction}
                   onChange={e => onSetOrderDirection(f.tableId, f.path, e.target.value as SortDirection)}

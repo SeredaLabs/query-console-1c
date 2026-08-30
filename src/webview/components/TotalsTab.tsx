@@ -120,8 +120,9 @@ export function TotalsTab(props: Props): React.ReactElement {
               data-field-item
               draggable
               onDragStart={e => dragStart(e, f.tableId, f.path!)}
-              style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start' }}
+              style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start', gap: 4 }}
             >
+              <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
               <span>{labelFor(f.tableId, f.path!)}</span>
             </div>
           ))}
@@ -157,7 +158,10 @@ export function TotalsTab(props: Props): React.ReactElement {
               const isRef = isRefField(findMetaField(metaTables, selectedTables, g.tableId, g.path));
               return (
                 <div key={`${g.tableId}:${g.path}`} style={{ display: 'flex', alignItems: 'center', padding: '2px 6px', gap: 4 }}>
-                  <span style={{ flex: 1 }}>{labelFor(g.tableId, g.path)}</span>
+                  <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                    {labelFor(g.tableId, g.path)}
+                  </span>
                   {isRef ? (
                     <select
                       value={g.kind}
@@ -210,6 +214,7 @@ export function TotalsTab(props: Props): React.ReactElement {
           >
             {totals.totalFields.map((f: TotalField, idx) => (
               <div key={idx} style={{ display: 'flex', alignItems: 'center', padding: '2px 6px', gap: 4 }}>
+                <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                 <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={totalFieldLabel(f)}>
                   {totalFieldLabel(f)}
                 </span>

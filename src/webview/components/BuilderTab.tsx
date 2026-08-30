@@ -5,6 +5,7 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import { isRefField } from './GroupingTab';
 import { ResizeHandle } from './ResizeHandle';
 import { Chevron } from './Chevron';
+import { MetaKindIcon } from './MetaKindIcon';
 import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
 
 type Section = 'fields' | 'conditions' | 'order' | 'totals';
@@ -204,7 +205,10 @@ export function BuilderTab(props: Props): React.ReactElement {
                   onDragStart={e => dragStart(e, { ref, isRef })}
                   style={{ ...ROW, cursor: 'grab' }}
                 >
-                  <span>{selectFieldLabel(t, f)}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                    {selectFieldLabel(t, f)}
+                  </span>
                   <button style={ADD_BTN} title="Добавить" onClick={() => addSelectField(f)}>&gt;</button>
                 </div>
               );
@@ -231,6 +235,7 @@ export function BuilderTab(props: Props): React.ReactElement {
                     onClick={() => setExpandedTables(s => ({ ...s, [t.id]: !s[t.id] }))}
                   >
                     <Chevron expanded={open} />
+                    <MetaKindIcon kind={meta?.kind ?? null} />
                     <span>{alias}</span>
                   </div>
                   {open && (meta?.fields ?? []).map(mf => {
@@ -243,7 +248,10 @@ export function BuilderTab(props: Props): React.ReactElement {
                         onDragStart={e => dragStart(e, { ref, isRef })}
                         style={{ ...ROW, cursor: 'grab', paddingLeft: 34 }}
                       >
-                        <span>{ref}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                          {ref}
+                        </span>
                         <button style={ADD_BTN} title="Добавить" onClick={() => addAllField(t, mf.name)}>&gt;</button>
                       </div>
                     );
@@ -283,7 +291,10 @@ export function BuilderTab(props: Props): React.ReactElement {
               const isRef = rowIsRef(row.ref);
               return (
                 <div key={`${active}:${idx}:${row.ref}`} style={{ display: 'flex', alignItems: 'center', padding: '2px 6px', gap: 4 }}>
-                  <span style={{ flex: 1 }}>{row.ref}{row.child ? '.*' : ''}</span>
+                  <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                    {row.ref}{row.child ? '.*' : ''}
+                  </span>
                   <span style={{ width: 40, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
                     <input
                       type="checkbox"

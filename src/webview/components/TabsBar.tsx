@@ -17,6 +17,8 @@ export function TabsBar({ tabs, active, onSelect }: Props): React.ReactElement {
         display: 'flex',
         borderBottom: '1px solid var(--qc-border)',
         background: 'var(--vscode-editorGroupHeader-tabsBackground, #252526)',
+        overflowX: 'auto',
+        overflowY: 'hidden',
       }}
     >
       <style>{`
@@ -36,6 +38,8 @@ export function TabsBar({ tabs, active, onSelect }: Props): React.ReactElement {
               cursor: 'pointer',
               fontSize: 13,
               userSelect: 'none',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               transition: 'background-color 0.1s',
               // Каждая вкладка — отдельный «бокс»: правый разделитель + рамка сверху.
               borderRight: '1px solid var(--qc-border)',
