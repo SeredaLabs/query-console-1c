@@ -217,12 +217,12 @@ test.describe('Query Constructor Webview', () => {
 
     await page.locator('button:has-text("Запрос")').click();
 
-    // «Запрос» opens a preview modal — assert the modal is visible with generated SQL
+    // «Запрос» opens an editable preview modal — assert it's visible with generated SQL.
     await expect(page.locator('text=Текст запроса')).toBeVisible();
     // The generated query must contain the SELECT keyword and reference the table/field
-    const previewText = page.locator('pre');
-    await expect(previewText).toContainText('ВЫБРАТЬ');
-    await expect(previewText).toContainText('Валюты');
+    const editor = page.locator('[data-testid="query-text-editor"]');
+    await expect(editor).toHaveValue(/ВЫБРАТЬ/);
+    await expect(editor).toHaveValue(/Валюты/);
   });
 
   test('нижняя панель: ОК постит insertText, Отмена постит cancel', async ({ page }) => {

@@ -28,6 +28,8 @@ import { assembleMembers, assembleBatch, batchMemberName, initialState, reducer,
 import { generateBatch } from '../../core/query/sdblGenerator';
 import { deriveUnionColumns } from '../../core/query/unionModel';
 import type { QueryDocument } from '../../core/query/unionModel';
+import { tryOpenBatch } from '../../core/query/validateBatch';
+import { buildResolverFromTables } from '../../core/metadata/buildModelResolver';
 
 const BTN: React.CSSProperties = {
   padding: '4px 12px',
@@ -57,6 +59,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   const { state, dispatch, onExpandRef, toolbar, onOk, onCancel, okDisabled, okError, nested } = props;
   const [activeTab, setActiveTab] = useState('Таблицы и поля');
   const [queryModalText, setQueryModalText] = useState<string | null>(null);
+  const [queryModalError, setQueryModalError] = useState<string | null>(null);
   const [vtDialogTableId, setVtDialogTableId] = useState<string | null>(null);
   const [exprBuilder, setExprBuilder] = useState<null | {
     fields: string[];
@@ -76,6 +79,21 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   function handleShowQuery() {
     const text = generateBatch(assembleBatch(state));
     setQueryModalText(text || '-- нет полей для генерации запроса');
+    setQueryModalError(null);
+  }
+
+  // Ручная правка текста запроса (кнопка «Применить» в модалке «Текст запроса»):
+  // тот же разбор + семантическая проверка, что при открытии существующего запроса
+  // из .bsl (tryOpenBatch), поэтому правки из свободного текста возвращаются в модель
+  // конструктора, а не остаются «в стороне» от визуальных вкладок.
+  function handleApplyQueryEdit() {
+    if (queryModalText === null) return;
+    const resolver = state.tables.length ? buildResolverFromTables(state.tables) : undefined;
+    const r = tryOpenBatch(queryModalText, resolver, { preserveComments: true });
+    if (!r.ok) { setQueryModalError(r.error); return; }
+    dispatch({ type: 'LOAD_BATCH', doc: r.doc });
+    setQueryModalError(null);
+    setQueryModalText(null);
   }
 
   // qualified=true → 'Alias.Поле' (для произвольного поля в SELECT);
@@ -631,7 +649,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 100,
           }}
-          onClick={() => setQueryModalText(null)}
+          onClick={() => { setQueryModalText(null); setQueryModalError(null); }}
         >
           <div
             style={{
@@ -640,6 +658,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
               borderRadius: 4,
               padding: 16,
               minWidth: 400,
+              width: '70vw',
               maxWidth: '70vw',
               maxHeight: '70vh',
               display: 'flex',
@@ -651,23 +670,54 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 'bold', fontSize: 13 }}>Текст запроса</span>
               <button
-                onClick={() => setQueryModalText(null)}
+                onClick={() => { setQueryModalText(null); setQueryModalError(null); }}
                 style={{ background: 'transparent', border: 'none', color: 'var(--vscode-foreground, #ccc)', cursor: 'pointer', fontSize: 16, padding: '0 4px', lineHeight: 1 }}
               >
                 ✕
               </button>
             </div>
-            <pre style={{
-              margin: 0,
-              fontFamily: 'var(--vscode-editor-font-family, monospace)',
-              fontSize: 13,
-              whiteSpace: 'pre-wrap',
-              overflowY: 'auto',
-              maxHeight: 'calc(70vh - 60px)',
-              color: 'var(--vscode-foreground, #ccc)',
-            }}>
-              {queryModalText}
-            </pre>
+            <textarea
+              data-testid="query-text-editor"
+              value={queryModalText ?? ''}
+              onChange={e => setQueryModalText(e.target.value)}
+              onKeyDown={e => {
+                // Tab вставляет отступ вместо перевода фокуса — иначе редактировать
+                // многострочный запрос с клавиатуры неудобно.
+                if (e.key !== 'Tab') return;
+                e.preventDefault();
+                const ta = e.currentTarget;
+                const { selectionStart, selectionEnd, value } = ta;
+                const next = value.slice(0, selectionStart) + '\t' + value.slice(selectionEnd);
+                setQueryModalText(next);
+                requestAnimationFrame(() => { ta.selectionStart = ta.selectionEnd = selectionStart + 1; });
+              }}
+              spellCheck={false}
+              style={{
+                margin: 0,
+                flex: 1,
+                resize: 'none',
+                fontFamily: 'var(--vscode-editor-font-family, monospace)',
+                fontSize: 13,
+                lineHeight: 1.5,
+                whiteSpace: 'pre',
+                overflow: 'auto',
+                minHeight: 200,
+                maxHeight: 'calc(70vh - 100px)',
+                color: 'var(--vscode-editor-foreground, #ccc)',
+                background: 'var(--vscode-editor-background, #1e1e1e)',
+                border: '1px solid var(--vscode-panel-border, #444)',
+                borderRadius: 2,
+                padding: 8,
+              }}
+            />
+            {queryModalError != null && (
+              <div style={{ color: 'var(--vscode-errorForeground, #f44747)', fontSize: 12, whiteSpace: 'pre-wrap' }}>
+                {queryModalError}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button style={BTN} onClick={handleApplyQueryEdit}>Применить</button>
+            </div>
           </div>
         </div>
       )}
