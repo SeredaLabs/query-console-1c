@@ -2,7 +2,8 @@ import * as React from 'react';
 import type { QueryMeta } from '../state/queryStore';
 import type { UnionColumn } from '../../core/query/unionModel';
 import { ResizeHandle } from './ResizeHandle';
-import { SECTION_HEADER } from '../sharedStyles';
+import { IconButton } from './IconButton';
+import { BTN, SECTION_HEADER, panelBox } from '../sharedStyles';
 
 const ALIAS_RE = /^[A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*$/;
 const ALIAS_ERROR = "Псевдонимы полей должны начинаться с буквы и могут содержать только буквы, цифры, и символ '_'";
@@ -20,20 +21,14 @@ interface Props {
   onMoveColumn: (index: number, dir: 'up' | 'down') => void;
 }
 
-const ICON_BTN: React.CSSProperties = {
-  padding: '1px 6px',
-  cursor: 'pointer',
-  background: 'var(--vscode-button-background, #0e639c)',
-  color: 'var(--vscode-button-foreground, #fff)',
-  border: 'none',
-  borderRadius: 4,
-  fontSize: 12,
-};
-
+// Инпуты этой вкладки живут внутри ячеек таблицы и должны заполнять её
+// целиком (width:100% + border-box) — этим они отличаются от обычного
+// sharedStyles.INPUT (авто-ширина), это оправданный отдельный вариант,
+// а не забытый дубликат.
 const INPUT: React.CSSProperties = {
   background: 'var(--vscode-input-background, #3c3c3c)',
   color: 'var(--vscode-input-foreground, #ccc)',
-  border: '1px solid var(--vscode-input-border, #555)',
+  border: '1px solid var(--qc-border)',
   borderRadius: 2,
   fontSize: 12,
   padding: '1px 4px',
@@ -41,28 +36,14 @@ const INPUT: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
-const TH: React.CSSProperties = {
-  textAlign: 'left',
-  fontSize: 12,
-  fontWeight: 'bold',
-  padding: '3px 6px',
-  background: 'var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)',
-  borderBottom: '1px solid var(--qc-border)',
-  color: 'var(--vscode-descriptionForeground, #aaa)',
-  whiteSpace: 'nowrap',
-};
+// Заголовок колонки таблицы — тот же SECTION_HEADER, что и блочные заголовки
+// панелей, разложенный по <th> (как в BatchTab), а не своя отдельная тема.
+const TH: React.CSSProperties = { ...SECTION_HEADER, textAlign: 'left', whiteSpace: 'nowrap' };
 
 const TD: React.CSSProperties = {
   fontSize: 12,
   padding: '2px 6px',
   borderBottom: '1px solid var(--qc-border)',
-};
-
-const PANEL: React.CSSProperties = {
-  border: '1px solid var(--qc-border)',
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
 };
 
 export function UnionsTab({
@@ -120,18 +101,17 @@ export function UnionsTab({
   return (
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
       {/* Список запросов */}
-      <div style={{ ...PANEL, width: queryListWidth, flexShrink: 0 }}>
+      <div style={{ ...panelBox, width: queryListWidth, flexShrink: 0 }}>
         <div style={SECTION_HEADER}>Список запросов</div>
-        <div style={{ display: 'flex', gap: 4, padding: '4px 6px', borderBottom: '1px solid var(--qc-border)' }}>
-          <button style={ICON_BTN} title="Добавить запрос" onClick={onAddQuery}>+</button>
-          <button
-            style={{ ...ICON_BTN, opacity: queryList.length > 1 ? 1 : 0.5 }}
+        <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
+          <IconButton icon="add" tone="add" title="Добавить запрос" onClick={onAddQuery} />
+          <IconButton
+            icon="close"
+            tone="remove"
             title="Удалить запрос"
             disabled={queryList.length <= 1}
             onClick={() => onRemoveQuery(selectedRow)}
-          >
-            ✕
-          </button>
+          />
         </div>
         <div style={{ overflow: 'auto', flex: 1 }}>
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
@@ -177,25 +157,21 @@ export function UnionsTab({
       <ResizeHandle onResize={d => setQueryListWidth(w => Math.max(160, w + d))} />
 
       {/* Список полей */}
-      <div style={{ ...PANEL, flex: 1, minWidth: 0 }}>
+      <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
         <div style={SECTION_HEADER}>Список полей</div>
-        <div style={{ display: 'flex', gap: 4, padding: '4px 6px', borderBottom: '1px solid var(--qc-border)' }}>
-          <button
-            style={{ ...ICON_BTN, opacity: selectedCol > 0 ? 1 : 0.5 }}
+        <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
+          <IconButton
+            icon="arrow-up"
             title="Переместить вверх"
             disabled={selectedCol <= 0}
             onClick={() => moveColumn('up')}
-          >
-            ↑
-          </button>
-          <button
-            style={{ ...ICON_BTN, opacity: selectedCol < columns.length - 1 ? 1 : 0.5 }}
+          />
+          <IconButton
+            icon="arrow-down"
             title="Переместить вниз"
             disabled={selectedCol >= columns.length - 1}
             onClick={() => moveColumn('down')}
-          >
-            ↓
-          </button>
+          />
         </div>
         <div style={{ overflow: 'auto', flex: 1 }}>
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
@@ -268,7 +244,7 @@ export function UnionsTab({
             onClick={e => e.stopPropagation()}
           >
             <span style={{ fontSize: 13 }}>{aliasError}</span>
-            <button style={{ ...ICON_BTN, alignSelf: 'center', padding: '4px 20px' }} onClick={() => setAliasError(null)}>ОК</button>
+            <button style={{ ...BTN, alignSelf: 'center', padding: '5px 20px' }} onClick={() => setAliasError(null)}>ОК</button>
           </div>
         </div>
       )}

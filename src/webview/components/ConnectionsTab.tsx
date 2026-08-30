@@ -3,7 +3,8 @@ import type { MetaTable, MetaField } from '../../core/metadata/types';
 import type { SelectedTable, Join, JoinCondition, ConditionOperator } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
-import { SECTION_HEADER, REMOVE_BTN, panelBox } from '../sharedStyles';
+import { IconButton } from './IconButton';
+import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox } from '../sharedStyles';
 
 const OPERATORS: ConditionOperator[] = ['=', '<>', '>', '>=', '<', '<=', 'В', 'МЕЖДУ', 'ПОДОБНО'];
 
@@ -40,31 +41,6 @@ function joinConjuncts(j: Join): JoinCondition[] {
     expression: j.expression,
   }];
 }
-
-const ICON_BTN: React.CSSProperties = {
-  padding: '1px 6px',
-  cursor: 'pointer',
-  background: 'var(--vscode-button-background, #0e639c)',
-  color: 'var(--vscode-button-foreground, #fff)',
-  border: 'none',
-  borderRadius: 4,
-  fontSize: 12,
-};
-
-const ROW: React.CSSProperties = {
-  padding: '2px 6px',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 4,
-  userSelect: 'none',
-};
-
-const INPUT: React.CSSProperties = {
-  background: 'var(--vscode-input-background, #3c3c3c)',
-  color: 'var(--vscode-input-foreground, #ccc)',
-  border: '1px solid var(--vscode-input-border, #555)',
-  fontSize: 12,
-};
 
 const dropZone: React.CSSProperties = {
   flex: 1,
@@ -139,10 +115,10 @@ export function ConnectionsTab(props: Props): React.ReactElement {
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
       <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
         {/* Тулбар */}
-        <div style={{ ...SECTION_HEADER, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ flex: 1 }}>Связи</span>
-          <button style={ICON_BTN} title="Добавить связь" onClick={onAddJoin}>+</button>
+        <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
+          <IconButton icon="add" tone="add" title="Добавить связь" onClick={onAddJoin} />
         </div>
+        <div style={SECTION_HEADER}>Связи</div>
         {/* Заголовок столбцов */}
         <div style={{ display: 'flex', ...SECTION_HEADER, padding: 0 }}>
           <div style={{ width: W_NUM, padding: '2px 6px', flexShrink: 0, textAlign: 'right' }}>№</div>
@@ -213,22 +189,19 @@ export function ConnectionsTab(props: Props): React.ReactElement {
                       >
                         {c.expression || 'Произвольное условие…'}
                       </span>
-                      <button
-                        style={ICON_BTN}
+                      <IconButton
+                        icon="ellipsis"
                         title="Открыть конструктор выражения"
                         onClick={() => onOpenExpressionBuilder(i, c.expression ?? '', ci)}
-                      >
-                        …
-                      </button>
+                      />
                     </div>
                   )}
-                  <button
-                    style={ICON_BTN}
+                  <IconButton
+                    icon="add"
+                    tone="add"
                     title="Добавить условие к связи"
                     onClick={() => onAddJoinCondition(i)}
-                  >
-                    +
-                  </button>
+                  />
                   <button
                     style={REMOVE_BTN}
                     title={multi ? 'Удалить условие' : 'Удалить связь'}

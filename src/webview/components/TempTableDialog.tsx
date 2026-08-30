@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { BTN, BTN_SECONDARY } from '../sharedStyles';
+import { IconButton } from './IconButton';
+import { BTN, BTN_SECONDARY, REMOVE_BTN, MODAL_INPUT } from '../sharedStyles';
 
 export interface TempTableField {
   name: string;
@@ -22,13 +23,6 @@ const PANEL: React.CSSProperties = {
   borderRadius: 6, padding: 16, width: 460,
   display: 'flex', flexDirection: 'column', gap: 10,
 };
-const INPUT: React.CSSProperties = {
-  flex: 1, fontSize: 12, padding: '2px 4px',
-  background: 'var(--vscode-input-background, #3c3c3c)',
-  color: 'var(--vscode-input-foreground, #ccc)',
-  border: '1px solid var(--vscode-input-border, #555)',
-};
-
 /** Окно «Временная таблица» (7.8.9): имя ВТ + список полей (без «Типа значения»). */
 export function TempTableDialog({ onOk, onCancel, initial }: Props): React.ReactElement {
   const [name, setName] = React.useState(initial?.name ?? 'ВТ');
@@ -55,11 +49,11 @@ export function TempTableDialog({ onOk, onCancel, initial }: Props): React.React
         <div style={{ fontWeight: 'bold', fontSize: 13 }}>Временная таблица</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <label style={{ width: 90, fontSize: 12 }}>Имя таблицы</label>
-          <input data-testid="tt-name" style={INPUT} value={name} onChange={e => setName(e.target.value)} />
+          <input data-testid="tt-name" style={MODAL_INPUT} value={name} onChange={e => setName(e.target.value)} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 12, fontWeight: 'bold' }}>Поля</span>
-          <button data-testid="tt-add-row" style={{ ...BTN, padding: '2px 8px' }} title="Добавить поле" onClick={addRow}>+</button>
+          <IconButton testId="tt-add-row" icon="add" tone="add" title="Добавить поле" onClick={addRow} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: '40vh', overflowY: 'auto' }}>
           <div style={{ display: 'flex', gap: 8, fontSize: 11, opacity: 0.7 }}>
@@ -70,17 +64,11 @@ export function TempTableDialog({ onOk, onCancel, initial }: Props): React.React
             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input
                 data-testid={`tt-field-name-${i}`}
-                style={INPUT}
+                style={MODAL_INPUT}
                 value={f.name}
                 onChange={e => setField(i, { name: e.target.value })}
               />
-              <button
-                style={{ ...BTN, padding: '0 6px', background: 'var(--vscode-button-secondaryBackground, #3a3d41)' }}
-                title="Убрать поле"
-                onClick={() => removeRow(i)}
-              >
-                ✕
-              </button>
+              <button style={REMOVE_BTN} title="Убрать поле" onClick={() => removeRow(i)}>✕</button>
             </div>
           ))}
         </div>

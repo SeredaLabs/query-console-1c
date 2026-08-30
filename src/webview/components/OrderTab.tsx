@@ -116,7 +116,7 @@ export function OrderTab(props: Props): React.ReactElement {
                     flexShrink: 0,
                     background: 'var(--vscode-input-background, #3c3c3c)',
                     color: 'var(--vscode-input-foreground, #ccc)',
-                    border: '1px solid var(--vscode-input-border, #555)',
+                    border: '1px solid var(--qc-border)',
                     fontSize: 12,
                   }}
                 >

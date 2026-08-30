@@ -3,7 +3,8 @@ import type { VirtualParams } from '../../core/query/queryModel';
 import type { VirtualTableInfo, TableKind } from '../../core/metadata/types';
 import { PERIODICITY_VALUES, FILL_METHOD_VALUES } from '../../core/query/accumVirtualFields';
 import { accountingParamFields, type VtParamKey } from '../../core/query/accountingVirtualParams';
-import { BTN, BTN_SECONDARY } from '../sharedStyles';
+import { IconButton } from './IconButton';
+import { BTN, BTN_SECONDARY, MODAL_INPUT } from '../sharedStyles';
 
 interface Props {
   slice: VirtualTableInfo['slice'];
@@ -25,13 +26,6 @@ const PANEL: React.CSSProperties = {
   borderRadius: 6, padding: 16, minWidth: 460,
   display: 'flex', flexDirection: 'column', gap: 10,
 };
-const INPUT: React.CSSProperties = {
-  flex: 1, fontSize: 12, padding: '2px 4px',
-  background: 'var(--vscode-input-background, #3c3c3c)',
-  color: 'var(--vscode-input-foreground, #ccc)',
-  border: '1px solid var(--vscode-input-border, #555)',
-};
-
 function Row({ label, children }: { label: string; children: React.ReactNode }): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -68,23 +62,23 @@ function AccountingForm({ slice, correspondence, initial, onOpenConditionBuilder
         {fieldsDesc.map(f => (
           <Row key={f.key} label={f.label}>
             {f.control === 'periodicity' ? (
-              <select data-testid={`vt-${f.key}`} style={INPUT} value={values[f.key]} onChange={e => set(f.key, e.target.value)}>
+              <select data-testid={`vt-${f.key}`} style={MODAL_INPUT} value={values[f.key]} onChange={e => set(f.key, e.target.value)}>
                 <option value="">(не выбрано)</option>
                 {PERIODICITY_VALUES.map(v => <option key={v} value={v}>{v}</option>)}
               </select>
             ) : f.control === 'fillMethod' ? (
-              <select data-testid={`vt-${f.key}`} style={INPUT} value={values[f.key]} onChange={e => set(f.key, e.target.value)}>
+              <select data-testid={`vt-${f.key}`} style={MODAL_INPUT} value={values[f.key]} onChange={e => set(f.key, e.target.value)}>
                 <option value="">(не выбрано)</option>
                 {FILL_METHOD_VALUES.map(v => <option key={v} value={v}>{v}</option>)}
               </select>
             ) : f.key === 'condition' ? (
               <>
-                <input data-testid={`vt-${f.key}`} style={INPUT} value={values[f.key]} onChange={e => set(f.key, e.target.value)} />
-                <button style={{ ...BTN, padding: '2px 8px' }} title="Произвольное выражение"
-                  onClick={() => onOpenConditionBuilder(values[f.key], text => set('condition', text))}>…</button>
+                <input data-testid={`vt-${f.key}`} style={MODAL_INPUT} value={values[f.key]} onChange={e => set(f.key, e.target.value)} />
+                <IconButton icon="ellipsis" title="Произвольное выражение"
+                  onClick={() => onOpenConditionBuilder(values[f.key], text => set('condition', text))} />
               </>
             ) : (
-              <input data-testid={`vt-${f.key}`} style={INPUT} value={values[f.key]} onChange={e => set(f.key, e.target.value)} />
+              <input data-testid={`vt-${f.key}`} style={MODAL_INPUT} value={values[f.key]} onChange={e => set(f.key, e.target.value)} />
             )}
           </Row>
         ))}
@@ -134,19 +128,19 @@ function LegacyForm({ slice, initial, onOpenConditionBuilder, onOk, onCancel }: 
         <div style={{ fontWeight: 'bold', fontSize: 13 }}>Параметры виртуальной таблицы</div>
         {!isRange && (
           <Row label="Период">
-            <input data-testid="vt-period" style={INPUT} value={period} onChange={e => setPeriod(e.target.value)} />
+            <input data-testid="vt-period" style={MODAL_INPUT} value={period} onChange={e => setPeriod(e.target.value)} />
           </Row>
         )}
         {isRange && (
           <>
             <Row label="Начало периода">
-              <input data-testid="vt-start" style={INPUT} value={startPeriod} onChange={e => setStartPeriod(e.target.value)} />
+              <input data-testid="vt-start" style={MODAL_INPUT} value={startPeriod} onChange={e => setStartPeriod(e.target.value)} />
             </Row>
             <Row label="Конец периода">
-              <input data-testid="vt-end" style={INPUT} value={endPeriod} onChange={e => setEndPeriod(e.target.value)} />
+              <input data-testid="vt-end" style={MODAL_INPUT} value={endPeriod} onChange={e => setEndPeriod(e.target.value)} />
             </Row>
             <Row label="Периодичность">
-              <select data-testid="vt-periodicity" style={INPUT} value={periodicity} onChange={e => setPeriodicity(e.target.value)}>
+              <select data-testid="vt-periodicity" style={MODAL_INPUT} value={periodicity} onChange={e => setPeriodicity(e.target.value)}>
                 <option value="">(не выбрано)</option>
                 {PERIODICITY_VALUES.map(v => <option key={v} value={v}>{v}</option>)}
               </select>
@@ -155,16 +149,16 @@ function LegacyForm({ slice, initial, onOpenConditionBuilder, onOk, onCancel }: 
         )}
         {isOIO && (
           <Row label="Метод дополнения">
-            <select data-testid="vt-fillmethod" style={INPUT} value={fillMethod} onChange={e => setFillMethod(e.target.value)}>
+            <select data-testid="vt-fillmethod" style={MODAL_INPUT} value={fillMethod} onChange={e => setFillMethod(e.target.value)}>
               <option value="">(не выбрано)</option>
               {FILL_METHOD_VALUES.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
           </Row>
         )}
         <Row label="Условие">
-          <input data-testid="vt-condition" style={INPUT} value={condition} onChange={e => setCondition(e.target.value)} />
-          <button style={{ ...BTN, padding: '2px 8px' }} title="Произвольное выражение"
-            onClick={() => onOpenConditionBuilder(condition, setCondition)}>…</button>
+          <input data-testid="vt-condition" style={MODAL_INPUT} value={condition} onChange={e => setCondition(e.target.value)} />
+          <IconButton icon="ellipsis" title="Произвольное выражение"
+            onClick={() => onOpenConditionBuilder(condition, setCondition)} />
         </Row>
         <div style={{ display: 'flex', gap: 4, alignSelf: 'flex-end', marginTop: 6 }}>
           <button data-testid="vt-ok" style={BTN} onClick={handleOk}>ОК</button>

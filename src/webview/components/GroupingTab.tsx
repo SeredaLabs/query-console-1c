@@ -4,6 +4,7 @@ import type { SelectedTable, SelectedField, Grouping, AggregateFunction, FieldRe
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { ResizeHandle } from './ResizeHandle';
+import { IconButton } from './IconButton';
 import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
 
 const ALL_FUNCS: AggregateFunction[] = ['Сумма', 'Количество', 'КоличествоРазличных', 'Максимум', 'Минимум', 'Среднее'];
@@ -25,16 +26,6 @@ interface Props {
   onAddFieldToSet: (index: number, tableId: string, path: string) => void;
   onRemoveFieldFromSet: (index: number, tableId: string, path: string) => void;
 }
-
-const ICON_BTN: React.CSSProperties = {
-  padding: '1px 6px',
-  cursor: 'pointer',
-  background: 'var(--vscode-button-background, #0e639c)',
-  color: 'var(--vscode-button-foreground, #fff)',
-  border: 'none',
-  borderRadius: 4,
-  fontSize: 12,
-};
 
 /** Найти MetaField исходного поля выборки. */
 export function findMetaField(
@@ -154,7 +145,7 @@ export function GroupingTab(props: Props): React.ReactElement {
               Использовать несколько группировок
             </label>
             {grouping.multiple && (
-              <button style={ICON_BTN} title="Добавить группировку" onClick={onAddGroupSet}>+</button>
+              <IconButton icon="add" tone="add" title="Добавить группировку" onClick={onAddGroupSet} />
             )}
           </div>
           <div style={SECTION_HEADER}>Поле группировки</div>
@@ -252,7 +243,7 @@ export function GroupingTab(props: Props): React.ReactElement {
                       flexShrink: 0,
                       background: 'var(--vscode-input-background, #3c3c3c)',
                       color: 'var(--vscode-input-foreground, #ccc)',
-                      border: '1px solid var(--vscode-input-border, #555)',
+                      border: '1px solid var(--qc-border)',
                       fontSize: 12,
                     }}
                   >

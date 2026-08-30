@@ -6,7 +6,8 @@ import { isRefField } from './GroupingTab';
 import { ResizeHandle } from './ResizeHandle';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
-import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
+import { IconButton } from './IconButton';
+import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox } from '../sharedStyles';
 
 type Section = 'fields' | 'conditions' | 'order' | 'totals';
 
@@ -27,25 +28,6 @@ const SUB_TABS: { key: Section; label: string }[] = [
   { key: 'order', label: 'Порядок' },
   { key: 'totals', label: 'Итоги' },
 ];
-
-const INPUT: React.CSSProperties = {
-  flexShrink: 0,
-  background: 'var(--vscode-input-background, #3c3c3c)',
-  color: 'var(--vscode-input-foreground, #ccc)',
-  border: '1px solid var(--vscode-input-border, #555)',
-  fontSize: 12,
-};
-
-const ADD_BTN: React.CSSProperties = {
-  padding: '0 6px',
-  cursor: 'pointer',
-  background: 'transparent',
-  color: 'var(--vscode-descriptionForeground, #888)',
-  border: 'none',
-  fontSize: 12,
-  lineHeight: 1,
-  flexShrink: 0,
-};
 
 /** Последний сегмент составного пути (Поле.Подполе → Подполе). */
 function lastSegment(path: string): string {
@@ -209,7 +191,7 @@ export function BuilderTab(props: Props): React.ReactElement {
                     <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                     {selectFieldLabel(t, f)}
                   </span>
-                  <button style={ADD_BTN} title="Добавить" onClick={() => addSelectField(f)}>&gt;</button>
+                  <IconButton icon="chevron-right" tone="add" title="Добавить" onClick={() => addSelectField(f)} />
                 </div>
               );
             })}
@@ -252,7 +234,7 @@ export function BuilderTab(props: Props): React.ReactElement {
                           <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                           {ref}
                         </span>
-                        <button style={ADD_BTN} title="Добавить" onClick={() => addAllField(t, mf.name)}>&gt;</button>
+                        <IconButton icon="chevron-right" tone="add" title="Добавить" onClick={() => addAllField(t, mf.name)} />
                       </div>
                     );
                   })}
@@ -309,7 +291,7 @@ export function BuilderTab(props: Props): React.ReactElement {
                     value={row.alias ?? ''}
                     placeholder="Псевдоним"
                     onChange={e => onSetAlias(active, idx, e.target.value)}
-                    style={{ ...INPUT, width: 150 }}
+                    style={{ ...INPUT, width: 150, flexShrink: 0 }}
                   />
                   <button style={REMOVE_BTN} title="Убрать" onClick={() => onRemove(active, idx)}>✕</button>
                 </div>

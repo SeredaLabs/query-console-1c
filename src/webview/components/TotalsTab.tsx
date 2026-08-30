@@ -5,7 +5,7 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { findMetaField, isRefField } from './GroupingTab';
 import { ResizeHandle } from './ResizeHandle';
-import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
+import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox } from '../sharedStyles';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -37,14 +37,6 @@ const TOTAL_FUNC_OPTIONS: { value: AggregateFunction; label: string }[] = [
 const EXTRA_FUNC_LABEL: Partial<Record<AggregateFunction, string>> = {
   'Сумма': 'Сумма',
   'Среднее': 'Среднее',
-};
-
-const INPUT: React.CSSProperties = {
-  flexShrink: 0,
-  background: 'var(--vscode-input-background, #3c3c3c)',
-  color: 'var(--vscode-input-foreground, #ccc)',
-  border: '1px solid var(--vscode-input-border, #555)',
-  fontSize: 12,
 };
 
 const KIND_OPTIONS: { value: TotalKind; label: string }[] = [
@@ -166,7 +158,7 @@ export function TotalsTab(props: Props): React.ReactElement {
                     <select
                       value={g.kind}
                       onChange={e => onSetGroupKind(g.tableId, g.path, e.target.value as TotalKind)}
-                      style={{ ...INPUT, width: 170 }}
+                      style={{ ...INPUT, width: 170, flexShrink: 0 }}
                     >
                       {KIND_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
@@ -178,7 +170,7 @@ export function TotalsTab(props: Props): React.ReactElement {
                     value={g.alias ?? ''}
                     placeholder="Псевдоним"
                     onChange={e => onSetGroupAlias(g.tableId, g.path, e.target.value)}
-                    style={{ ...INPUT, width: 150 }}
+                    style={{ ...INPUT, width: 150, flexShrink: 0 }}
                   />
                   <button style={REMOVE_BTN} title="Убрать" onClick={() => onRemoveGroupField(g.tableId, g.path)}>✕</button>
                 </div>
@@ -222,7 +214,7 @@ export function TotalsTab(props: Props): React.ReactElement {
                   <select
                     value={f.func}
                     onChange={e => onSetTotalFieldFunc(idx, e.target.value as AggregateFunction)}
-                    style={{ ...INPUT, width: 200 }}
+                    style={{ ...INPUT, width: 200, flexShrink: 0 }}
                   >
                     {TOTAL_FUNC_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     {/* Сохраняем нестандартную функцию (Сумма/Среднее) из распарсенного запроса. */}

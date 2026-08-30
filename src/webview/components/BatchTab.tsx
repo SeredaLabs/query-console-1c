@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { SECTION_HEADER } from '../sharedStyles';
+import { IconButton } from './IconButton';
+import { SECTION_HEADER, panelBox } from '../sharedStyles';
 
 interface Props {
   names: string[];
@@ -9,16 +10,6 @@ interface Props {
   onMove: (index: number, dir: 'up' | 'down') => void;
   onSetActive: (index: number) => void;
 }
-
-const ICON_BTN: React.CSSProperties = {
-  padding: '1px 6px',
-  cursor: 'pointer',
-  background: 'var(--vscode-button-background, #0e639c)',
-  color: 'var(--vscode-button-foreground, #fff)',
-  border: 'none',
-  borderRadius: 4,
-  fontSize: 12,
-};
 
 const TH: React.CSSProperties = {
   ...SECTION_HEADER,
@@ -30,14 +21,6 @@ const TD: React.CSSProperties = {
   fontSize: 12,
   padding: '3px 6px',
   borderBottom: '1px solid var(--qc-border)',
-};
-
-const PANEL: React.CSSProperties = {
-  border: '1px solid var(--qc-border)',
-  borderRadius: 6,
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
 };
 
 export function BatchTab({
@@ -59,20 +42,19 @@ export function BatchTab({
 
   return (
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
-      <div style={{ ...PANEL, flex: 1, minWidth: 0 }}>
+      <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
         <div style={SECTION_HEADER}>Запросы пакета</div>
-        <div style={{ display: 'flex', gap: 4, padding: '4px 6px', borderBottom: '1px solid var(--qc-border)' }}>
-          <button style={ICON_BTN} title="Добавить" onClick={onAdd}>⊕ Добавить</button>
-          <button
-            style={{ ...ICON_BTN, opacity: names.length > 1 ? 1 : 0.5 }}
+        <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
+          <IconButton icon="add" tone="add" title="Добавить" onClick={onAdd} />
+          <IconButton
+            icon="close"
+            tone="remove"
             title="Удалить"
             disabled={names.length <= 1}
             onClick={() => onRemove(selectedRow)}
-          >
-            ✕ Удалить
-          </button>
-          <button style={ICON_BTN} title="Переместить вверх" onClick={() => move('up')}>↑</button>
-          <button style={ICON_BTN} title="Переместить вниз" onClick={() => move('down')}>↓</button>
+          />
+          <IconButton icon="arrow-up" title="Переместить вверх" onClick={() => move('up')} />
+          <IconButton icon="arrow-down" title="Переместить вниз" onClick={() => move('down')} />
         </div>
         <div style={{ overflow: 'auto', flex: 1 }}>
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>

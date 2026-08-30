@@ -2,7 +2,8 @@ import * as React from 'react';
 import type { SelectedField, Indexing, FieldRef } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { ResizeHandle } from './ResizeHandle';
-import { SECTION_HEADER, panelBox } from '../sharedStyles';
+import { IconButton } from './IconButton';
+import { SECTION_HEADER, panelBox, ROW } from '../sharedStyles';
 
 interface Props {
   selectedFields: SelectedField[];
@@ -18,36 +19,6 @@ interface Props {
   onClearFields: (index: number) => void;
   onMoveField: (index: number, tableId: string, path: string, dir: 'up' | 'down') => void;
 }
-
-const ROW: React.CSSProperties = {
-  padding: '2px 6px',
-  display: 'flex',
-  alignItems: 'center',
-  userSelect: 'none',
-};
-
-const TOOL_BTN: React.CSSProperties = {
-  padding: '0 6px',
-  cursor: 'pointer',
-  background: 'transparent',
-  color: 'var(--vscode-foreground, #ccc)',
-  border: '1px solid var(--qc-border)',
-  borderRadius: 4,
-  fontSize: 12,
-  lineHeight: '18px',
-  flexShrink: 0,
-};
-
-const ARROW_BTN: React.CSSProperties = {
-  padding: '2px 6px',
-  cursor: 'pointer',
-  background: 'transparent',
-  color: 'var(--vscode-foreground, #ccc)',
-  border: '1px solid var(--qc-border)',
-  borderRadius: 2,
-  fontSize: 13,
-  lineHeight: 1,
-};
 
 const SELECTED_BG = 'var(--vscode-list-activeSelectionBackground, #094771)';
 
@@ -148,11 +119,11 @@ export function IndexTab(props: Props): React.ReactElement {
         {/* Панель 1: Индексы */}
         <div style={{ ...panelBox, width: leftWidth, flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
-            <button style={TOOL_BTN} title="Добавить индекс" onClick={onAddIndex}>⊕</button>
-            <button style={TOOL_BTN} title="Скопировать индекс" disabled={currentIdx < 0} onClick={() => currentIdx >= 0 && onCopyIndex(currentIdx)}>⧉</button>
-            <button style={TOOL_BTN} title="Удалить индекс" disabled={currentIdx < 0} onClick={() => currentIdx >= 0 && onRemoveIndex(currentIdx)}>✕</button>
-            <button style={TOOL_BTN} title="Вверх" disabled={currentIdx <= 0} onClick={() => { if (currentIdx > 0) { onMoveIndex(currentIdx, 'up'); setCurrent(currentIdx - 1); } }}>↑</button>
-            <button style={TOOL_BTN} title="Вниз" disabled={currentIdx < 0 || currentIdx >= indexes.length - 1} onClick={() => { if (currentIdx >= 0 && currentIdx < indexes.length - 1) { onMoveIndex(currentIdx, 'down'); setCurrent(currentIdx + 1); } }}>↓</button>
+            <IconButton icon="add" tone="add" title="Добавить индекс" onClick={onAddIndex} />
+            <IconButton icon="copy" title="Скопировать индекс" disabled={currentIdx < 0} onClick={() => currentIdx >= 0 && onCopyIndex(currentIdx)} />
+            <IconButton icon="close" tone="remove" title="Удалить индекс" disabled={currentIdx < 0} onClick={() => currentIdx >= 0 && onRemoveIndex(currentIdx)} />
+            <IconButton icon="arrow-up" title="Вверх" disabled={currentIdx <= 0} onClick={() => { if (currentIdx > 0) { onMoveIndex(currentIdx, 'up'); setCurrent(currentIdx - 1); } }} />
+            <IconButton icon="arrow-down" title="Вниз" disabled={currentIdx < 0 || currentIdx >= indexes.length - 1} onClick={() => { if (currentIdx >= 0 && currentIdx < indexes.length - 1) { onMoveIndex(currentIdx, 'down'); setCurrent(currentIdx + 1); } }} />
           </div>
           <div style={{ display: 'flex' }}>
             <div style={{ ...SECTION_HEADER, flex: 1 }}>Имя</div>
@@ -177,7 +148,7 @@ export function IndexTab(props: Props): React.ReactElement {
               </div>
             ))}
             {!hasIndexes && (
-              <div style={emptyHint}>Нет индексов. Нажмите «⊕», чтобы добавить.</div>
+              <div style={emptyHint}>Нет индексов. Нажмите «+», чтобы добавить.</div>
             )}
           </div>
         </div>
@@ -214,47 +185,51 @@ export function IndexTab(props: Props): React.ReactElement {
 
         {/* Колонка кнопок переноса */}
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
-          <button
-            style={ARROW_BTN}
+          <IconButton
+            icon="chevron-right"
+            tone="add"
             title="Добавить выбранное поле"
             disabled={!currentIndex || !middle || !availableFields.some(f => f.tableId === middle.tableId && f.path === middle.path)}
             onClick={() => { if (currentIdx >= 0 && middle) onAddField(currentIdx, middle.tableId, middle.path); }}
-          >{'>'}</button>
-          <button
-            style={ARROW_BTN}
+          />
+          <IconButton
+            icon="arrow-right"
+            tone="add"
             title="Добавить все поля"
             disabled={!currentIndex || availableFields.length === 0}
             onClick={() => { if (currentIdx >= 0) onAddAllFields(currentIdx, availableFields); }}
-          >{'>>'}</button>
-          <button
-            style={ARROW_BTN}
+          />
+          <IconButton
+            icon="chevron-left"
+            tone="remove"
             title="Убрать выбранное поле"
             disabled={!currentIndex || rightFieldIdx < 0}
             onClick={() => { if (currentIdx >= 0 && right) onRemoveField(currentIdx, right.tableId, right.path); }}
-          >{'<'}</button>
-          <button
-            style={ARROW_BTN}
+          />
+          <IconButton
+            icon="arrow-left"
+            tone="remove"
             title="Убрать все поля"
             disabled={!currentIndex || currentIndex.fields.length === 0}
             onClick={() => { if (currentIdx >= 0) onClearFields(currentIdx); }}
-          >{'<<'}</button>
+          />
         </div>
 
         {/* Панель 3: Поле (поля индекса) */}
         <div style={{ ...panelBox, flex: 2, minWidth: 0 }}>
           <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
-            <button
-              style={TOOL_BTN}
+            <IconButton
+              icon="arrow-up"
               title="Вверх"
               disabled={!currentIndex || rightFieldIdx <= 0}
               onClick={() => { if (currentIdx >= 0 && right) onMoveField(currentIdx, right.tableId, right.path, 'up'); }}
-            >↑</button>
-            <button
-              style={TOOL_BTN}
+            />
+            <IconButton
+              icon="arrow-down"
               title="Вниз"
               disabled={!currentIndex || rightFieldIdx < 0 || (currentIndex !== null && rightFieldIdx >= currentIndex.fields.length - 1)}
               onClick={() => { if (currentIdx >= 0 && right) onMoveField(currentIdx, right.tableId, right.path, 'down'); }}
-            >↓</button>
+            />
           </div>
           <div style={SECTION_HEADER}>Поле</div>
           <div

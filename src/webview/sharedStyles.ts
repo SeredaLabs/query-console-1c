@@ -60,10 +60,22 @@ export const RADIO_LABEL: React.CSSProperties = {
 export const INPUT: React.CSSProperties = {
   background: 'var(--vscode-input-background, #3c3c3c)',
   color: 'var(--vscode-input-foreground, #ccc)',
-  border: '1px solid var(--vscode-input-border, #555)',
+  // --vscode-input-border напрямую — не берём: некоторые темы (как и с
+  // --vscode-panel-border, см. GLOBAL_FORM_CSS) задают его тем же цветом,
+  // что и фон поля ввода, — рамка исчезает целиком. --qc-border гарантированно
+  // виден в любой теме.
+  border: '1px solid var(--qc-border)',
   borderRadius: 3,
   fontSize: 12,
   padding: '3px 6px',
+};
+
+/** Инпут в модалках-диалогах (ВТ, параметры виртуальной таблицы) — та же тема,
+ * что и INPUT, но заполняет строку «подпись + поле» (flex: 1). */
+export const MODAL_INPUT: React.CSSProperties = {
+  ...INPUT,
+  flex: 1,
+  padding: '2px 4px',
 };
 
 export const SECTION_HEADER: React.CSSProperties = {

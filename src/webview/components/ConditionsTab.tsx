@@ -7,7 +7,8 @@ import type { RefId } from '../../shared/messages';
 import { ResizeHandle } from './ResizeHandle';
 import { MetaKindIcon } from './MetaKindIcon';
 import { FieldTreeRow } from './FieldTreeRow';
-import { SECTION_HEADER, REMOVE_BTN, panelBox } from '../sharedStyles';
+import { IconButton } from './IconButton';
+import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox } from '../sharedStyles';
 
 const OPERATORS: ConditionOperator[] = ['=', '<>', '>', '>=', '<', '<=', 'В', 'МЕЖДУ', 'ПОДОБНО'];
 
@@ -24,31 +25,6 @@ interface Props {
   onSetParam: (index: number, param: string) => void;
   onOpenExpressionBuilder: (index: number, currentText: string) => void;
 }
-
-const ICON_BTN: React.CSSProperties = {
-  padding: '1px 6px',
-  cursor: 'pointer',
-  background: 'var(--vscode-button-background, #0e639c)',
-  color: 'var(--vscode-button-foreground, #fff)',
-  border: 'none',
-  borderRadius: 4,
-  fontSize: 12,
-};
-
-const ROW: React.CSSProperties = {
-  padding: '2px 6px',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-  userSelect: 'none',
-};
-
-const INPUT: React.CSSProperties = {
-  background: 'var(--vscode-input-background, #3c3c3c)',
-  color: 'var(--vscode-input-foreground, #ccc)',
-  border: '1px solid var(--vscode-input-border, #555)',
-  fontSize: 12,
-};
 
 const dropZone: React.CSSProperties = {
   flex: 1,
@@ -124,7 +100,7 @@ export function ConditionsTab(props: Props): React.ReactElement {
             const alias = defaultTableAlias(sel);
             return (
               <div key={sel.id} data-field-source={`conditions-source:${alias}`}>
-                <div style={{ ...ROW, fontWeight: 600, color: 'var(--vscode-descriptionForeground, #aaa)', gap: 4 }}>
+                <div style={{ ...ROW, justifyContent: 'flex-start', fontWeight: 600, color: 'var(--vscode-descriptionForeground, #aaa)', gap: 4 }}>
                   <MetaKindIcon kind={meta.kind} />
                   {alias}
                 </div>
@@ -210,13 +186,11 @@ export function ConditionsTab(props: Props): React.ReactElement {
                   >
                     {customText(c) || 'Произвольное условие…'}
                   </span>
-                  <button
-                    style={ICON_BTN}
+                  <IconButton
+                    icon="ellipsis"
                     title="Открыть конструктор выражения"
                     onClick={() => onOpenExpressionBuilder(i, customText(c))}
-                  >
-                    …
-                  </button>
+                  />
                 </div>
               )}
               <button style={REMOVE_BTN} title="Удалить условие" onClick={() => onRemoveCondition(i)}>✕</button>

@@ -2,14 +2,20 @@ import * as React from 'react';
 
 /** Смысловая роль команды — красим иконку в её «цвет намерения», как git-декорации
  * (добавлено/изменено/удалено), чтобы ряд из нескольких кнопок читался по цвету, а
- * не только по форме глифа. `default` — нейтральная команда (настройки и т.п.). */
-export type IconButtonTone = 'default' | 'add' | 'remove' | 'edit';
+ * не только по форме глифа. `default` — нейтральная команда (настройки и т.п.).
+ * `subquery`/`tempTable` — создание отдельного вида источника (вложенный запрос /
+ * временная таблица), а не «добавить элемент в список» — поэтому не зелёные, а
+ * свои акцентные цвета (те же, что использует VS Code для графиков — тоже
+ * тема-безопасные `--vscode-charts-*`). */
+export type IconButtonTone = 'default' | 'add' | 'remove' | 'edit' | 'subquery' | 'tempTable';
 
 const TONE_COLOR: Record<IconButtonTone, string> = {
   default: 'var(--vscode-icon-foreground, #ccc)',
   add: 'var(--vscode-gitDecoration-addedResourceForeground, #81b88b)',
   remove: 'var(--vscode-gitDecoration-deletedResourceForeground, #c74e39)',
   edit: 'var(--vscode-gitDecoration-modifiedResourceForeground, #73c0d4)',
+  subquery: 'var(--vscode-charts-blue, #3794ff)',
+  tempTable: 'var(--vscode-charts-purple, #b180d7)',
 };
 
 interface Props {

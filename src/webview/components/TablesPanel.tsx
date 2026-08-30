@@ -118,14 +118,14 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
           testId="add-subquery"
           icon="list-tree"
           title="Создать вложенный запрос (ВЗ)"
-          tone="add"
+          tone="subquery"
           onClick={onAddSubquery}
         />
         <IconButton
           testId="add-temp-table"
           icon="table"
           title="Создать описание временной таблицы"
-          tone="add"
+          tone="tempTable"
           onClick={onAddTempTable}
         />
         <IconButton
