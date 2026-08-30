@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { FUNCTION_CATALOG, type FunctionGroup, type FunctionLeaf } from '../../core/query/functionCatalog';
 import { ResizeHandle } from './ResizeHandle';
+import { Chevron } from './Chevron';
 
 interface Props {
   title?: string;
@@ -39,10 +40,12 @@ function FunctionTree({ node, depth, onPick }: { node: FunctionGroup | FunctionL
     return (
       <div
         draggable
+        className="qc-row"
         onDragStart={e => { e.dataTransfer.setData('text/plain', node.template); e.dataTransfer.effectAllowed = 'copy'; }}
         onDoubleClick={() => onPick(node.template)}
-        style={{ paddingLeft: 8 + depth * 14, paddingTop: 1, fontSize: 12, cursor: 'default', userSelect: 'none' }}
+        style={{ paddingLeft: 8 + depth * 14 + 14, paddingTop: 1, fontSize: 12, cursor: 'default', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
       >
+        <span className="codicon codicon-symbol-method" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
         {node.label}
       </div>
     );
@@ -51,9 +54,11 @@ function FunctionTree({ node, depth, onPick }: { node: FunctionGroup | FunctionL
     <div>
       <div
         onClick={() => setOpen(o => !o)}
-        style={{ paddingLeft: 8 + depth * 14, fontSize: 12, cursor: 'default', userSelect: 'none', display: 'flex', gap: 4 }}
+        className="qc-row"
+        style={{ paddingLeft: 8 + depth * 14, fontSize: 12, cursor: 'default', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
       >
-        <span style={{ width: 12 }}>{open ? '▼' : '▶'}</span>
+        <Chevron expanded={open} />
+        <span className={`codicon codicon-folder${open ? '-opened' : ''}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
         <span>{node.label}</span>
       </div>
       {open && node.children.map((c, i) => (

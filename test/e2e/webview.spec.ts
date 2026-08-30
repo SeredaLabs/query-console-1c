@@ -181,9 +181,9 @@ test.describe('Query Constructor Webview', () => {
 
   test('7.8.8: кнопка ВЗ открывает вложенный конструктор', async ({ page }) => {
     await page.goto(BASE);
-    // Кнопка переименована ⊂З → ВЗ.
+    // Кнопка стала иконочной (codicon), текстовая подпись теперь только в title.
     const btn = page.locator('[data-testid="add-subquery"]');
-    await expect(btn).toHaveText('ВЗ');
+    await expect(btn).toHaveAttribute('title', 'Создать вложенный запрос (ВЗ)');
 
     // Клик открывает вложенный рекурсивный конструктор.
     await btn.click();

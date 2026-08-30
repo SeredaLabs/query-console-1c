@@ -1,6 +1,7 @@
 import * as React from 'react';
 import type { MetaTable, MetaField, TableKind } from '../../core/metadata/types';
 import type { RefId } from '../../shared/messages';
+import { Chevron } from './Chevron';
 
 interface Props {
   tables: MetaTable[];
@@ -84,6 +85,7 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
       <div
         data-field-path={fieldPath}
         draggable
+        className="qc-row"
         onDragStart={handleDragStart}
         onClick={() => onFocusField(tableFullName, fieldPath)}
         style={{
@@ -91,7 +93,7 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
           paddingTop: 2,
           paddingBottom: 2,
           cursor: 'default',
-          background: isFocused ? 'var(--vscode-list-activeSelectionBackground, #094771)' : 'transparent',
+          background: isFocused ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined,
           color: isFocused ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit',
           display: 'flex',
           alignItems: 'center',
@@ -99,15 +101,8 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
           userSelect: 'none',
         }}
       >
-        {ref && (
-          <span
-            onClick={handleExpandToggle}
-            style={{ cursor: 'pointer', fontSize: 10, width: 12, flexShrink: 0 }}
-          >
-            {expanded ? '▼' : '▶'}
-          </span>
-        )}
-        {!ref && <span style={{ width: 12, flexShrink: 0 }} />}
+        {ref ? <Chevron expanded={expanded} onClick={handleExpandToggle} /> : <span style={{ width: 14, flexShrink: 0 }} />}
+        <span className={`codicon codicon-${ref ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
         <span>{field.name}</span>
       </div>
       {expanded && refKey && expandedRefs.get(refKey)?.map(subField => (
@@ -161,6 +156,8 @@ function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse,
     <>
       <div
         draggable
+        className="qc-row"
+        title="Табличная часть"
         onDragStart={handleDragStart}
         onClick={() => setExpanded(prev => !prev)}
         style={{
@@ -175,8 +172,8 @@ function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse,
           color: 'var(--vscode-descriptionForeground, #aaa)',
         }}
       >
-        <span style={{ fontSize: 10, width: 12, flexShrink: 0 }}>{expanded ? '▼' : '▶'}</span>
-        <span style={{ fontSize: 10, opacity: 0.7, flexShrink: 0 }}>[ТЧ]</span>
+        <Chevron expanded={expanded} />
+        <span className="codicon codicon-list-flat" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
         <span>{ts.name}</span>
       </div>
       {expanded && ts.fields.map(field => (
@@ -254,10 +251,12 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
         return (
           <div key={kind}>
             <div
+              className="qc-row"
               onClick={() => toggleGroup(kind)}
-              style={{ padding: '3px 8px', fontWeight: 'bold', cursor: 'default', display: 'flex', gap: 4, userSelect: 'none' }}
+              style={{ padding: '3px 8px', fontWeight: 'bold', cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
             >
-              <span>{isExpanded ? '▼' : '▶'}</span>
+              <Chevron expanded={isExpanded} />
+              <span className={`codicon codicon-folder${isExpanded ? '-opened' : ''}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
               <span>{GROUP_LABELS[kind]}</span>
             </div>
             {isExpanded && group.map(table => {
@@ -274,6 +273,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                   <div
                     data-table-fullname={table.fullName}
                     draggable
+                    className="qc-row"
                     onDragStart={handleTableDragStart}
                     onClick={() => { toggleTable(table.fullName); onFocusTable(table.fullName); }}
                     style={{
@@ -281,14 +281,16 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                       paddingTop: 2,
                       paddingBottom: 2,
                       cursor: 'default',
-                      background: isFocused ? 'var(--vscode-list-activeSelectionBackground, #094771)' : 'transparent',
+                      background: isFocused ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined,
                       color: isFocused ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit',
                       display: 'flex',
+                      alignItems: 'center',
                       gap: 4,
                       userSelect: 'none',
                     }}
                   >
-                    <span>{isTableExpanded ? '▼' : '▶'}</span>
+                    <Chevron expanded={isTableExpanded} />
+                    <span className="codicon codicon-table" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                     <span>{table.name}</span>
                   </div>
                   {isTableExpanded && table.fields.map(field => (
@@ -338,10 +340,12 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
           <div>
             <div
               data-testid="temp-tables-group"
+              className="qc-row"
               onClick={() => toggleGroup('ВременнаяТаблица')}
-              style={{ padding: '3px 8px', fontWeight: 'bold', cursor: 'default', display: 'flex', gap: 4, userSelect: 'none' }}
+              style={{ padding: '3px 8px', fontWeight: 'bold', cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
             >
-              <span>{isExpanded ? '▼' : '▶'}</span>
+              <Chevron expanded={isExpanded} />
+              <span className={`codicon codicon-folder${isExpanded ? '-opened' : ''}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
               <span>Временные таблицы</span>
             </div>
             {isExpanded && tempTables.map(table => {
@@ -351,6 +355,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                   <div
                     data-temp-table={table.name}
                     draggable
+                    className="qc-row"
                     onDragStart={e => {
                       e.dataTransfer.setData('text/plain', JSON.stringify({
                         kind: 'temptable',
@@ -360,13 +365,15 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                       e.dataTransfer.effectAllowed = 'copy';
                     }}
                     onClick={() => toggleTable(table.fullName)}
-                    style={{ paddingLeft: 24, paddingTop: 2, paddingBottom: 2, cursor: 'default', display: 'flex', gap: 4, userSelect: 'none' }}
+                    style={{ paddingLeft: 24, paddingTop: 2, paddingBottom: 2, cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
                   >
-                    <span>{isTableExpanded ? '▼' : '▶'}</span>
+                    <Chevron expanded={isTableExpanded} />
+                    <span className="codicon codicon-table" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                     <span>{table.name}</span>
                   </div>
                   {isTableExpanded && table.fields.map(field => (
-                    <div key={field.name} style={{ paddingLeft: 48, paddingTop: 2, paddingBottom: 2, userSelect: 'none' }}>
+                    <div key={field.name} className="qc-row" style={{ paddingLeft: 48, paddingTop: 2, paddingBottom: 2, userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                       {field.name}
                     </div>
                   ))}

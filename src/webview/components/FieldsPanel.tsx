@@ -1,6 +1,8 @@
 import * as React from 'react';
 import type { SelectedTable, SelectedField, SelectedTabSectionField } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
+import { IconButton } from './IconButton';
+import { Chevron } from './Chevron';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -20,16 +22,6 @@ interface Props {
   /** 7.8.6: перетаскивание таблицы в список — добавить все её поля. */
   onDropTable: (tableFullName: string) => void;
 }
-
-const BTN: React.CSSProperties = {
-  padding: '2px 8px',
-  cursor: 'pointer',
-  background: 'var(--vscode-button-background, #0e639c)',
-  color: 'var(--vscode-button-foreground, #fff)',
-  border: 'none',
-  borderRadius: 2,
-  fontSize: 12,
-};
 
 const REMOVE_BTN: React.CSSProperties = {
   padding: '0 4px',
@@ -103,23 +95,19 @@ export function FieldsPanel({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 4, gap: 4 }}>
       <div style={{ fontWeight: 'bold', fontSize: 12, color: 'var(--vscode-descriptionForeground, #aaa)' }}>Поля</div>
-      <div style={{ display: 'flex', gap: 4 }}>
-        <button
-          style={BTN}
+      <div style={{ display: 'flex', gap: 2 }}>
+        <IconButton
+          icon="close"
           title="Убрать поле"
           disabled={focusedSelectedFieldIdx === null}
           onClick={() => focusedSelectedFieldIdx !== null && onRemoveField(focusedSelectedFieldIdx)}
-        >
-          ✕
-        </button>
-        <button
-          style={BTN}
+        />
+        <IconButton
+          icon="add"
           title="Добавить поле (произвольное выражение)"
           disabled={!canAddExpression}
           onClick={onAddExpression}
-        >
-          +
-        </button>
+        />
       </div>
       <div
         onDragOver={handleDragOver}
@@ -148,10 +136,11 @@ export function FieldsPanel({
               onClick={() => onFocusField(i)}
               onDoubleClick={() => onEditField(i)}
               title="Двойной клик — править как произвольное выражение"
+              className="qc-row"
               style={{
                 padding: '2px 6px',
                 cursor: 'default',
-                background: focusedSelectedFieldIdx === i ? 'var(--vscode-list-activeSelectionBackground, #094771)' : 'transparent',
+                background: focusedSelectedFieldIdx === i ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined,
                 color: focusedSelectedFieldIdx === i ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit',
                 userSelect: 'none',
                 display: 'flex',
@@ -161,8 +150,9 @@ export function FieldsPanel({
             >
               <span
                 title={f.expression ?? label}
-                style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}
               >
+                <span className={`codicon codicon-${f.expression ? 'symbol-operator' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                 {label}
               </span>
               <button style={REMOVE_BTN} onClick={e => { e.stopPropagation(); onRemoveField(i); }}>✕</button>
@@ -180,6 +170,7 @@ export function FieldsPanel({
           return (
             <div key={tsKey}>
               <div
+                className="qc-row"
                 style={{
                   padding: '2px 6px',
                   cursor: 'default',
@@ -187,15 +178,10 @@ export function FieldsPanel({
                   display: 'flex',
                   alignItems: 'center',
                   gap: 4,
-                  background: 'transparent',
                 }}
               >
-                <span
-                  onClick={() => toggleTs(tsKey)}
-                  style={{ fontSize: 10, cursor: 'pointer', width: 12, flexShrink: 0 }}
-                >
-                  {isExpanded ? '▼' : '▶'}
-                </span>
+                <Chevron expanded={isExpanded} onClick={() => toggleTs(tsKey)} />
+                <span className="codicon codicon-list-flat" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                 <span style={{ flex: 1 }}>{label}</span>
                 <button
                   style={REMOVE_BTN}
@@ -208,6 +194,7 @@ export function FieldsPanel({
               {isExpanded && ts.fields.map(fieldName => (
                 <div
                   key={fieldName}
+                  className="qc-row"
                   style={{
                     paddingLeft: 24,
                     paddingTop: 1,
@@ -221,7 +208,10 @@ export function FieldsPanel({
                     paddingRight: 6,
                   }}
                 >
-                  <span>{fieldName}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                    {fieldName}
+                  </span>
                   <button
                     style={REMOVE_BTN}
                     onClick={() => onRemoveTabSectionSubField(ts.tableId, ts.tsName, fieldName)}

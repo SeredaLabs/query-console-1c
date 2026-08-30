@@ -242,6 +242,10 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', color: 'var(--vscode-foreground, #ccc)', background: 'var(--vscode-editor-background, #1e1e1e)', fontFamily: 'var(--vscode-font-family, sans-serif)', overflow: 'hidden' }}>
+      <style>{`
+        .qc-row { background: transparent; }
+        .qc-row:hover { background: var(--vscode-list-hoverBackground, rgba(255,255,255,0.06)); }
+      `}</style>
       <TabsBar tabs={finalTabs} active={activeTab} onSelect={setActiveTab} />
       {toolbar}
       <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>

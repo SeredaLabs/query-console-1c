@@ -2,7 +2,7 @@
   "name": "query-console-1c",
   "displayName": "1C: Query Constructor",
   "description": "Visual query constructor for 1C",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "icon": "images/icon.png",
   "license": "MIT",
   "publisher": "SeredaLabs",
@@ -77,7 +77,7 @@
     "harvest": "npm run build:oracle && node out/cli/harvestOracle.js",
     "accept:oracle": "npm run build:oracle && node out/cli/oracleAcceptCli.js",
     "oracle:diff": "esbuild src/cli/oracleDiff.ts --bundle --outfile=out/cli/oracleDiff.js --platform=node --format=cjs && node out/cli/oracleDiff.js",
-    "build:webview": "esbuild src/webview/main.tsx --bundle --outfile=out/webview/main.js --platform=browser --format=iife --loader:.tsx=tsx --loader:.ts=ts",
+    "build:webview": "esbuild src/webview/main.tsx --bundle --outfile=out/webview/main.js --platform=browser --format=iife --loader:.tsx=tsx --loader:.ts=ts && cp node_modules/@vscode/codicons/dist/codicon.css node_modules/@vscode/codicons/dist/codicon.ttf out/webview/",
     "watch:extension": "tsc -p tsconfig.json --watch",
     "watch:webview": "npm run build:webview -- --watch",
     "test:unit": "vitest run",
@@ -108,5 +108,8 @@
     "vitest": "^1.6.0",
     "web-tree-sitter": "^0.22.6",
     "yaml": "^2.4.5"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.46-24"
   }
 }

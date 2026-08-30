@@ -4,6 +4,8 @@
 .claude/**
 src/**
 test/**
+test-results/**
+playwright-report/**
 scripts/**
 tooling/**
 tmp/**

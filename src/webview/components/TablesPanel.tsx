@@ -4,6 +4,8 @@ import type { SelectedTable } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import type { RefId } from '../../shared/messages';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
+import { IconButton } from './IconButton';
+import { Chevron } from './Chevron';
 
 interface Props {
   metaTables: MetaTable[];
@@ -27,16 +29,6 @@ interface Props {
    * выделенного источника (активна только для ВТ/подзапроса). */
   onEditTable: (tableId: string) => void;
 }
-
-const BTN: React.CSSProperties = {
-  padding: '2px 8px',
-  cursor: 'pointer',
-  background: 'var(--vscode-button-background, #0e639c)',
-  color: 'var(--vscode-button-foreground, #fff)',
-  border: 'none',
-  borderRadius: 2,
-  fontSize: 12,
-};
 
 function FieldRow({ tableFullName, field, depth, expandedRefs, onExpandRef }: {
   tableFullName: string;
@@ -62,6 +54,7 @@ function FieldRow({ tableFullName, field, depth, expandedRefs, onExpandRef }: {
     <>
       <div
         draggable
+        className="qc-row"
         onDragStart={e => {
           e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'field', tableFullName, fieldPath: field.name }));
           e.dataTransfer.effectAllowed = 'copy';
@@ -79,13 +72,8 @@ function FieldRow({ tableFullName, field, depth, expandedRefs, onExpandRef }: {
           gap: 4,
         }}
       >
-        {ref ? (
-          <span onClick={handleToggle} style={{ cursor: 'pointer', fontSize: 10, width: 12, flexShrink: 0 }}>
-            {expanded ? '▼' : '▶'}
-          </span>
-        ) : (
-          <span style={{ width: 12, flexShrink: 0 }} />
-        )}
+        {ref ? <Chevron expanded={expanded} onClick={handleToggle} /> : <span style={{ width: 14, flexShrink: 0 }} />}
+        <span className={`codicon codicon-${ref ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
         <span>{field.name}</span>
       </div>
       {expanded && refKey && expandedRefs.get(refKey)?.map(subField => (
@@ -163,48 +151,38 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 4, gap: 4 }}>
       <div style={{ fontWeight: 'bold', fontSize: 12, color: 'var(--vscode-descriptionForeground, #aaa)' }}>Таблицы</div>
-      <div style={{ display: 'flex', gap: 4 }}>
-        <button
-          style={BTN}
+      <div style={{ display: 'flex', gap: 2 }}>
+        <IconButton
+          icon="close"
           title="Убрать таблицу"
           disabled={!focusedSelectedTableId}
           onClick={() => focusedSelectedTableId && onRemoveTable(focusedSelectedTableId)}
-        >
-          ✕
-        </button>
-        <button
-          style={BTN}
+        />
+        <IconButton
+          icon="gear"
           title="Параметры виртуальной таблицы"
           disabled={!focusedIsVirtual}
           onClick={() => focusedSelectedTableId && onOpenVirtualParams(focusedSelectedTableId)}
-        >
-          ⚙
-        </button>
-        <button
-          data-testid="add-subquery"
-          style={BTN}
+        />
+        <IconButton
+          testId="add-subquery"
+          icon="list-tree"
           title="Создать вложенный запрос (ВЗ)"
           onClick={onAddSubquery}
-        >
-          ВЗ
-        </button>
-        <button
-          data-testid="add-temp-table"
-          style={BTN}
+        />
+        <IconButton
+          testId="add-temp-table"
+          icon="table"
           title="Создать описание временной таблицы"
           onClick={onAddTempTable}
-        >
-          ВТ
-        </button>
-        <button
-          data-testid="edit-source"
-          style={BTN}
+        />
+        <IconButton
+          testId="edit-source"
+          icon="edit"
           title="Редактирование"
           disabled={!focusedIsEditable}
           onClick={() => focusedSelectedTableId && onEditTable(focusedSelectedTableId)}
-        >
-          ✎
-        </button>
+        />
       </div>
       <div
         onDragOver={handleDragOver}
@@ -237,10 +215,11 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                 }}
                 onClick={() => { onFocusTable(t.id); toggleExpand(t.id); }}
                 onDoubleClick={() => onActivateTable(t.id)}
+                className="qc-row"
                 style={{
                   padding: '2px 6px',
                   cursor: 'default',
-                  background: isSelected ? 'var(--vscode-list-activeSelectionBackground, #094771)' : 'transparent',
+                  background: isSelected ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined,
                   color: isSelected ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit',
                   userSelect: 'none',
                   display: 'flex',
@@ -248,7 +227,8 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                   gap: 4,
                 }}
               >
-                <span style={{ fontSize: 10 }}>{isExpanded ? '▼' : '▶'}</span>
+                <Chevron expanded={isExpanded} />
+                <span className="codicon codicon-table" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                 <span title={t.fullName}>{defaultTableAlias(t)}</span>
               </div>
               {isExpanded && meta && (
@@ -285,6 +265,8 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                             e.dataTransfer.effectAllowed = 'copy';
                           }}
                           onClick={() => toggleTs(tsKey)}
+                          className="qc-row"
+                          title="Табличная часть"
                           style={{
                             paddingLeft: 24,
                             paddingTop: 1,
@@ -298,8 +280,8 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                             gap: 4,
                           }}
                         >
-                          <span style={{ fontSize: 10, width: 12, flexShrink: 0 }}>{isTsExpanded ? '▼' : '▶'}</span>
-                          <span style={{ fontSize: 10, opacity: 0.7 }}>[ТЧ]</span>
+                          <Chevron expanded={isTsExpanded} />
+                          <span className="codicon codicon-list-flat" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                           <span>{ts.name}</span>
                         </div>
                         {isTsExpanded && ts.fields.map(field => (
@@ -314,6 +296,7 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                               }));
                               e.dataTransfer.effectAllowed = 'copy';
                             }}
+                            className="qc-row"
                             style={{
                               paddingLeft: 48,
                               paddingTop: 1,
@@ -322,8 +305,12 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                               color: 'var(--vscode-descriptionForeground, #aaa)',
                               userSelect: 'none',
                               cursor: 'default',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4,
                             }}
                           >
+                            <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                             {field.name}
                           </div>
                         ))}

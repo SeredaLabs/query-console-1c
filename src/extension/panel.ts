@@ -18,12 +18,13 @@ function nonce(): string {
   return Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
-function getHtml(webview: vscode.Webview, scriptUri: vscode.Uri, n: string): string {
+function getHtml(webview: vscode.Webview, scriptUri: vscode.Uri, codiconCssUri: vscode.Uri, n: string): string {
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${n}'; style-src 'unsafe-inline';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${n}'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource};">
+  <link rel="stylesheet" href="${webview.asWebviewUri(codiconCssUri)}">
   <title>1С: Конструктор запроса</title>
 </head>
 <body style="margin:0;padding:0;height:100vh;">
@@ -119,8 +120,9 @@ export function createPanel(
   );
 
   const scriptUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', 'main.js');
+  const codiconCssUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', 'codicon.css');
   const n = nonce();
-  panel.webview.html = getHtml(panel.webview, scriptUri, n);
+  panel.webview.html = getHtml(panel.webview, scriptUri, codiconCssUri, n);
 
   const outPath = resolveOutPath(context);
   let metadataModel: MetadataModel = { version: 1, tables: [] };
