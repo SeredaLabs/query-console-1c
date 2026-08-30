@@ -3,6 +3,7 @@ import type { SelectedTable, SelectedField, SelectedTabSectionField } from '../.
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { IconButton } from './IconButton';
 import { Chevron } from './Chevron';
+import { MetaKindIcon } from './MetaKindIcon';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -181,7 +182,7 @@ export function FieldsPanel({
                 }}
               >
                 <Chevron expanded={isExpanded} onClick={() => toggleTs(tsKey)} />
-                <span className="codicon codicon-list-flat" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                <MetaKindIcon kind="ТабличнаяЧасть" />
                 <span style={{ flex: 1 }}>{label}</span>
                 <button
                   style={REMOVE_BTN}

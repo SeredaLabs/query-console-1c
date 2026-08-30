@@ -6,6 +6,7 @@ import type { RefId } from '../../shared/messages';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import { IconButton } from './IconButton';
 import { Chevron } from './Chevron';
+import { MetaKindIcon } from './MetaKindIcon';
 
 interface Props {
   metaTables: MetaTable[];
@@ -228,7 +229,7 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                 }}
               >
                 <Chevron expanded={isExpanded} />
-                <span className="codicon codicon-table" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                <MetaKindIcon kind={meta?.kind ?? null} />
                 <span title={t.fullName}>{defaultTableAlias(t)}</span>
               </div>
               {isExpanded && meta && (
@@ -281,7 +282,7 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                           }}
                         >
                           <Chevron expanded={isTsExpanded} />
-                          <span className="codicon codicon-list-flat" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                          <MetaKindIcon kind="ТабличнаяЧасть" />
                           <span>{ts.name}</span>
                         </div>
                         {isTsExpanded && ts.fields.map(field => (

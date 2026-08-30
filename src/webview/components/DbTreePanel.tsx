@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { MetaTable, MetaField, TableKind } from '../../core/metadata/types';
 import type { RefId } from '../../shared/messages';
 import { Chevron } from './Chevron';
+import { MetaKindIcon } from './MetaKindIcon';
 
 interface Props {
   tables: MetaTable[];
@@ -173,7 +174,7 @@ function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse,
         }}
       >
         <Chevron expanded={expanded} />
-        <span className="codicon codicon-list-flat" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+        <MetaKindIcon kind="ТабличнаяЧасть" />
         <span>{ts.name}</span>
       </div>
       {expanded && ts.fields.map(field => (
@@ -256,7 +257,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
               style={{ padding: '3px 8px', fontWeight: 'bold', cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
             >
               <Chevron expanded={isExpanded} />
-              <span className={`codicon codicon-folder${isExpanded ? '-opened' : ''}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+              <MetaKindIcon kind={kind} />
               <span>{GROUP_LABELS[kind]}</span>
             </div>
             {isExpanded && group.map(table => {
@@ -290,7 +291,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                     }}
                   >
                     <Chevron expanded={isTableExpanded} />
-                    <span className="codicon codicon-table" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                    <MetaKindIcon kind={table.kind} />
                     <span>{table.name}</span>
                   </div>
                   {isTableExpanded && table.fields.map(field => (
@@ -368,7 +369,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                     style={{ paddingLeft: 24, paddingTop: 2, paddingBottom: 2, cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
                   >
                     <Chevron expanded={isTableExpanded} />
-                    <span className="codicon codicon-table" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                    <MetaKindIcon kind={table.kind} />
                     <span>{table.name}</span>
                   </div>
                   {isTableExpanded && table.fields.map(field => (
