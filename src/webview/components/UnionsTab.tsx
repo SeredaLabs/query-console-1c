@@ -47,7 +47,7 @@ const TH: React.CSSProperties = {
   fontWeight: 'bold',
   padding: '3px 6px',
   background: 'var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)',
-  borderBottom: '1px solid var(--vscode-panel-border, #444)',
+  borderBottom: '1px solid var(--qc-border)',
   color: 'var(--vscode-descriptionForeground, #aaa)',
   whiteSpace: 'nowrap',
 };
@@ -55,11 +55,11 @@ const TH: React.CSSProperties = {
 const TD: React.CSSProperties = {
   fontSize: 12,
   padding: '2px 6px',
-  borderBottom: '1px solid var(--vscode-panel-border, #333)',
+  borderBottom: '1px solid var(--qc-border)',
 };
 
 const PANEL: React.CSSProperties = {
-  border: '1px solid var(--vscode-panel-border, #444)',
+  border: '1px solid var(--qc-border)',
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
@@ -122,7 +122,7 @@ export function UnionsTab({
       {/* Список запросов */}
       <div style={{ ...PANEL, width: queryListWidth, flexShrink: 0 }}>
         <div style={SECTION_HEADER}>Список запросов</div>
-        <div style={{ display: 'flex', gap: 4, padding: '4px 6px', borderBottom: '1px solid var(--vscode-panel-border, #444)' }}>
+        <div style={{ display: 'flex', gap: 4, padding: '4px 6px', borderBottom: '1px solid var(--qc-border)' }}>
           <button style={ICON_BTN} title="Добавить запрос" onClick={onAddQuery}>+</button>
           <button
             style={{ ...ICON_BTN, opacity: queryList.length > 1 ? 1 : 0.5 }}
@@ -179,7 +179,7 @@ export function UnionsTab({
       {/* Список полей */}
       <div style={{ ...PANEL, flex: 1, minWidth: 0 }}>
         <div style={SECTION_HEADER}>Список полей</div>
-        <div style={{ display: 'flex', gap: 4, padding: '4px 6px', borderBottom: '1px solid var(--vscode-panel-border, #444)' }}>
+        <div style={{ display: 'flex', gap: 4, padding: '4px 6px', borderBottom: '1px solid var(--qc-border)' }}>
           <button
             style={{ ...ICON_BTN, opacity: selectedCol > 0 ? 1 : 0.5 }}
             title="Переместить вверх"
@@ -256,7 +256,7 @@ export function UnionsTab({
           <div
             style={{
               background: 'var(--vscode-editor-background, #1e1e1e)',
-              border: '1px solid var(--vscode-panel-border, #555)',
+              border: '1px solid var(--qc-border)',
               borderRadius: 4,
               padding: 16,
               minWidth: 360,

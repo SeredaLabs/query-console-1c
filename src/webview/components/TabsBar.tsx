@@ -15,7 +15,7 @@ export function TabsBar({ tabs, active, onSelect }: Props): React.ReactElement {
       data-testid="tabsbar"
       style={{
         display: 'flex',
-        borderBottom: '1px solid var(--vscode-panel-border, #444)',
+        borderBottom: '1px solid var(--qc-border)',
         background: 'var(--vscode-editorGroupHeader-tabsBackground, #252526)',
       }}
     >
@@ -38,7 +38,7 @@ export function TabsBar({ tabs, active, onSelect }: Props): React.ReactElement {
               userSelect: 'none',
               transition: 'background-color 0.1s',
               // Каждая вкладка — отдельный «бокс»: правый разделитель + рамка сверху.
-              borderRight: '1px solid var(--vscode-panel-border, #444)',
+              borderRight: '1px solid var(--qc-border)',
               borderTop: isActive
                 ? '3px solid var(--vscode-focusBorder, #007fd4)'
                 : '3px solid transparent',
@@ -53,7 +53,7 @@ export function TabsBar({ tabs, active, onSelect }: Props): React.ReactElement {
               // неактивные сохраняют нижний разделитель.
               borderBottom: isActive
                 ? '1px solid var(--vscode-tab-activeBackground, #1e1e1e)'
-                : '1px solid var(--vscode-panel-border, #444)',
+                : '1px solid var(--qc-border)',
               marginBottom: -1,
             }}
           >

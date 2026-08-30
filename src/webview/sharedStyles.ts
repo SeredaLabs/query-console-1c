@@ -21,7 +21,7 @@ export const BTN_SECONDARY: React.CSSProperties = {
 };
 
 export const FIELDSET: React.CSSProperties = {
-  border: '1px solid var(--vscode-panel-border, #444)',
+  border: '1px solid var(--qc-border)',
   borderRadius: 6,
   padding: '10px 12px',
   margin: 0,
@@ -73,14 +73,14 @@ export const SECTION_HEADER: React.CSSProperties = {
   letterSpacing: 0.3,
   padding: '5px 8px',
   background: 'var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)',
-  borderBottom: '1px solid var(--vscode-panel-border, #444)',
+  borderBottom: '1px solid var(--qc-border)',
   color: 'var(--vscode-descriptionForeground, #aaa)',
 };
 
 export const panelBox: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  border: '1px solid var(--vscode-panel-border, #444)',
+  border: '1px solid var(--qc-border)',
   borderRadius: 6,
   overflow: 'hidden',
   // «Бумага» подпанели — как panelStyle в ConstructorView.
@@ -114,6 +114,19 @@ export const REMOVE_BTN: React.CSSProperties = {
  * вкладках, которые ещё не переведены на константы выше.
  */
 export const GLOBAL_FORM_CSS = `
+  :root {
+    /* Некоторые популярные темы (напр. Material Theme) задают
+       --vscode-panel-border и --vscode-sideBar-background визуально не
+       отличимыми от --vscode-editor-background — тогда границы панелей
+       пропадают целиком. Поэтому граница и фон рамки формы вычисляются
+       из foreground/editor-background самой темы через color-mix(), а не
+       берутся из чужих токенов напрямую — гарантированно видны в любой
+       теме, а не только в тех, что явно развели эти токены.
+       Высококонтрастные темы отдают свой --vscode-contrastBorder первым. */
+    --qc-border: var(--vscode-contrastBorder, color-mix(in srgb, var(--vscode-foreground, #cccccc) 24%, transparent));
+    --qc-frame-bg: color-mix(in srgb, var(--vscode-editor-background, #1e1e1e) 92%, #808080 8%);
+  }
+
   .qc-row { background: transparent; }
   .qc-row:hover { background: var(--vscode-list-hoverBackground, rgba(255,255,255,0.06)); }
 

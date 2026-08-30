@@ -181,7 +181,7 @@ export function TotalsTab(props: Props): React.ReactElement {
               );
             })}
           </div>
-          <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', padding: '4px 6px', borderTop: '1px solid var(--vscode-panel-border, #444)' }}>
+          <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', padding: '4px 6px', borderTop: '1px solid var(--qc-border)' }}>
             <input
               type="checkbox"
               checked={totals.grand}

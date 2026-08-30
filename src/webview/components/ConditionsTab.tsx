@@ -166,7 +166,7 @@ export function ConditionsTab(props: Props): React.ReactElement {
           }}
         >
           {conditions.map((c, i) => (
-            <div key={i} style={{ ...ROW, borderBottom: '1px solid var(--vscode-panel-border, #333)', gap: 4 }}>
+            <div key={i} style={{ ...ROW, borderBottom: '1px solid var(--qc-border)', gap: 4 }}>
               <span style={{ width: 56, flexShrink: 0, textAlign: 'right', paddingRight: 8 }}>{i + 1}</span>
               <input
                 type="checkbox"

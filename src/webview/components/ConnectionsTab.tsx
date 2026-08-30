@@ -163,7 +163,7 @@ export function ConnectionsTab(props: Props): React.ReactElement {
               const leftTableId = c.leftTableId ?? j.leftTableId;
               const rightTableId = c.rightTableId ?? j.rightTableId;
               return (
-                <div key={`${i}.${ci}`} style={{ ...ROW, borderBottom: '1px solid var(--vscode-panel-border, #333)' }}>
+                <div key={`${i}.${ci}`} style={{ ...ROW, borderBottom: '1px solid var(--qc-border)' }}>
                   <span style={{ width: W_NUM, flexShrink: 0, textAlign: 'right', paddingRight: 8 }}>
                     {ci === 0 ? i + 1 : ''}
                   </span>

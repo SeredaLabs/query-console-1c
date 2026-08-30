@@ -29,11 +29,11 @@ const TH: React.CSSProperties = {
 const TD: React.CSSProperties = {
   fontSize: 12,
   padding: '3px 6px',
-  borderBottom: '1px solid var(--vscode-panel-border, #333)',
+  borderBottom: '1px solid var(--qc-border)',
 };
 
 const PANEL: React.CSSProperties = {
-  border: '1px solid var(--vscode-panel-border, #444)',
+  border: '1px solid var(--qc-border)',
   borderRadius: 6,
   display: 'flex',
   flexDirection: 'column',
@@ -61,7 +61,7 @@ export function BatchTab({
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
       <div style={{ ...PANEL, flex: 1, minWidth: 0 }}>
         <div style={SECTION_HEADER}>Запросы пакета</div>
-        <div style={{ display: 'flex', gap: 4, padding: '4px 6px', borderBottom: '1px solid var(--vscode-panel-border, #444)' }}>
+        <div style={{ display: 'flex', gap: 4, padding: '4px 6px', borderBottom: '1px solid var(--qc-border)' }}>
           <button style={ICON_BTN} title="Добавить" onClick={onAdd}>⊕ Добавить</button>
           <button
             style={{ ...ICON_BTN, opacity: names.length > 1 ? 1 : 0.5 }}

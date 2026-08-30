@@ -143,7 +143,7 @@ export function GroupingTab(props: Props): React.ReactElement {
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gap: 4 }}>
         {/* Поле группировки */}
         <div style={{ ...panelBox, flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 6px', borderBottom: '1px solid var(--vscode-panel-border, #444)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 6px', borderBottom: '1px solid var(--qc-border)' }}>
             <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
               <input
                 type="checkbox"
@@ -178,7 +178,7 @@ export function GroupingTab(props: Props): React.ReactElement {
           ) : (
             <div style={dropZone}>
               {grouping.groupSets.map((set, idx) => (
-                <div key={idx} style={{ borderBottom: '1px solid var(--vscode-panel-border, #333)' }}>
+                <div key={idx} style={{ borderBottom: '1px solid var(--qc-border)' }}>
                   <div
                     style={{ ...ROW, background: 'var(--vscode-list-hoverBackground, #2a2d2e)' }}
                     onDragOver={allowDrop}

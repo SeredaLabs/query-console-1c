@@ -23,7 +23,7 @@ const OVERLAY: React.CSSProperties = {
 
 const PANEL: React.CSSProperties = {
   background: 'var(--vscode-editor-background, #1e1e1e)',
-  border: '1px solid var(--vscode-panel-border, #555)',
+  border: '1px solid var(--qc-border)',
   borderRadius: 6, padding: 12, width: '70vw', height: '70vh',
   display: 'flex', flexDirection: 'column', gap: 8,
 };
@@ -93,7 +93,7 @@ export function ExpressionBuilder({ title = 'Произвольное выраж
       <div style={PANEL} onClick={e => e.stopPropagation()}>
         <div style={{ fontWeight: 'bold', fontSize: 13 }}>{title}</div>
         <div style={{ display: 'flex', flex: 1, gap: 0, minHeight: 0 }}>
-          <div style={{ width: fieldsWidth, flexShrink: 0, overflow: 'auto', border: '1px solid var(--vscode-panel-border, #444)' }}>
+          <div style={{ width: fieldsWidth, flexShrink: 0, overflow: 'auto', border: '1px solid var(--qc-border)' }}>
             <div style={{ fontSize: 11, padding: '2px 6px', opacity: 0.7 }}>Поле</div>
             {availableFields.map(f => (
               <div
@@ -108,7 +108,7 @@ export function ExpressionBuilder({ title = 'Произвольное выраж
             ))}
           </div>
           <ResizeHandle onResize={d => setFieldsWidth(w => Math.max(120, w + d))} />
-          <div style={{ flex: 1, minWidth: 0, overflow: 'auto', border: '1px solid var(--vscode-panel-border, #444)' }}>
+          <div style={{ flex: 1, minWidth: 0, overflow: 'auto', border: '1px solid var(--qc-border)' }}>
             <FunctionTree node={FUNCTION_CATALOG} depth={0} onPick={insertAtCursor} />
           </div>
         </div>

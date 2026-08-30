@@ -21,7 +21,7 @@ const OVERLAY: React.CSSProperties = {
 };
 const PANEL: React.CSSProperties = {
   background: 'var(--vscode-editor-background, #1e1e1e)',
-  border: '1px solid var(--vscode-panel-border, #555)',
+  border: '1px solid var(--qc-border)',
   borderRadius: 6, padding: 16, minWidth: 460,
   display: 'flex', flexDirection: 'column', gap: 10,
 };

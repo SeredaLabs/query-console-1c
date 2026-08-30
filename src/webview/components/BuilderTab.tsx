@@ -165,7 +165,7 @@ export function BuilderTab(props: Props): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: 4, gap: 4, overflow: 'hidden' }}>
       {/* Полоса под-вкладок */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--vscode-panel-border, #444)', flexShrink: 0 }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--qc-border)', flexShrink: 0 }}>
         {SUB_TABS.map(st => {
           const isActive = st.key === active;
           return (

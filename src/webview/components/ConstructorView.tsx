@@ -130,13 +130,13 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   const panelStyle: React.CSSProperties = {
     flex: 1,
     minWidth: 0,
-    border: '1px solid var(--vscode-panel-border, #444)',
+    border: '1px solid var(--qc-border)',
     borderRadius: 6,
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    // «Бумага» списка отделяется от фона-рамки формы (sideBar) — как белые
-    // списки на бежевом диалоге в Конфигураторе/EDT, только под тему VS Code.
+    // «Бумага» списка отделяется от --qc-frame-bg корня — как белые списки
+    // на бежевом диалоге в Конфигураторе/EDT, только под тему VS Code.
     background: 'var(--vscode-editor-background, #1e1e1e)',
   };
 
@@ -200,7 +200,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   // пакета > 1 и активна не сама вкладка «Пакет запросов»).
   const showSideTabs = state.batchSaved.length > 1 && activeTab !== 'Пакет запросов';
   const sideTabsStrip = showSideTabs ? (
-    <div data-testid="side-strip" style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', maxHeight: '100%', borderLeft: '1px solid var(--vscode-panel-border, #444)', background: 'var(--vscode-editorGroupHeader-tabsBackground, #252526)' }}>
+    <div data-testid="side-strip" style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', maxHeight: '100%', borderLeft: '1px solid var(--qc-border)', background: 'var(--vscode-editorGroupHeader-tabsBackground, #252526)' }}>
       {state.batchSaved.map((_, i) => {
         const name = batchNames[i];
         const isActive = i === state.activeBatch;
@@ -237,7 +237,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   // SET_ACTIVE_QUERY (как на вкладке «Объединения/Псевдонимы»).
   const showUnionTabs = state.queryList.length > 1 && activeTab !== 'Пакет запросов';
   const unionTabsStrip = showUnionTabs ? (
-    <div data-testid="union-strip" style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', maxHeight: '100%', borderLeft: '1px solid var(--vscode-panel-border, #444)', background: 'var(--vscode-editorGroupHeader-tabsBackground, #252526)' }}>
+    <div data-testid="union-strip" style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', maxHeight: '100%', borderLeft: '1px solid var(--qc-border)', background: 'var(--vscode-editorGroupHeader-tabsBackground, #252526)' }}>
       {state.queryList.map((q, i) => {
         const isActive = i === state.activeQuery;
         return (
@@ -269,7 +269,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   ) : null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', color: 'var(--vscode-foreground, #ccc)', background: 'var(--vscode-sideBar-background, var(--vscode-editor-background, #1e1e1e))', fontFamily: 'var(--vscode-font-family, sans-serif)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', color: 'var(--vscode-foreground, #ccc)', background: 'var(--qc-frame-bg, var(--vscode-editor-background, #1e1e1e))', fontFamily: 'var(--vscode-font-family, sans-serif)', overflow: 'hidden' }}>
       <style>{GLOBAL_FORM_CSS}</style>
       <TabsBar tabs={finalTabs} active={activeTab} onSelect={setActiveTab} />
       <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -566,7 +566,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
       </div>
 
       {/* Bottom bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderTop: '1px solid var(--vscode-panel-border, #444)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderTop: '1px solid var(--qc-border)' }}>
         <button style={BTN_SECONDARY} onClick={handleShowQuery}>Запрос</button>
         {okError != null && (
           <span data-testid="ok-error" style={{ color: 'var(--vscode-errorForeground, #f44747)', fontSize: 12 }}>
@@ -664,7 +664,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           <div
             style={{
               background: 'var(--vscode-editor-background, #1e1e1e)',
-              border: '1px solid var(--vscode-panel-border, #555)',
+              border: '1px solid var(--qc-border)',
               borderRadius: 4,
               padding: 16,
               minWidth: 400,
@@ -715,7 +715,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
                 maxHeight: 'calc(70vh - 100px)',
                 color: 'var(--vscode-editor-foreground, #ccc)',
                 background: 'var(--vscode-editor-background, #1e1e1e)',
-                border: '1px solid var(--vscode-panel-border, #444)',
+                border: '1px solid var(--qc-border)',
                 borderRadius: 2,
                 padding: 8,
               }}
@@ -796,7 +796,7 @@ function NestedConstructorModal({ metadataTables, expandedRefs, onExpandRef, ini
       <div style={{
         width: '92vw', height: '92vh',
         background: 'var(--vscode-editor-background, #1e1e1e)',
-        border: '1px solid var(--vscode-panel-border, #555)',
+        border: '1px solid var(--qc-border)',
         borderRadius: 4,
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',

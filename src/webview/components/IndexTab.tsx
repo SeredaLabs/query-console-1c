@@ -31,7 +31,7 @@ const TOOL_BTN: React.CSSProperties = {
   cursor: 'pointer',
   background: 'transparent',
   color: 'var(--vscode-foreground, #ccc)',
-  border: '1px solid var(--vscode-panel-border, #555)',
+  border: '1px solid var(--qc-border)',
   borderRadius: 4,
   fontSize: 12,
   lineHeight: '18px',
@@ -43,7 +43,7 @@ const ARROW_BTN: React.CSSProperties = {
   cursor: 'pointer',
   background: 'transparent',
   color: 'var(--vscode-foreground, #ccc)',
-  border: '1px solid var(--vscode-panel-border, #555)',
+  border: '1px solid var(--qc-border)',
   borderRadius: 2,
   fontSize: 13,
   lineHeight: 1,
@@ -147,7 +147,7 @@ export function IndexTab(props: Props): React.ReactElement {
       <div style={{ display: 'flex', flex: 1, gap: 4, overflow: 'hidden' }}>
         {/* Панель 1: Индексы */}
         <div style={{ ...panelBox, width: leftWidth, flexShrink: 0 }}>
-          <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--vscode-panel-border, #444)' }}>
+          <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
             <button style={TOOL_BTN} title="Добавить индекс" onClick={onAddIndex}>⊕</button>
             <button style={TOOL_BTN} title="Скопировать индекс" disabled={currentIdx < 0} onClick={() => currentIdx >= 0 && onCopyIndex(currentIdx)}>⧉</button>
             <button style={TOOL_BTN} title="Удалить индекс" disabled={currentIdx < 0} onClick={() => currentIdx >= 0 && onRemoveIndex(currentIdx)}>✕</button>
@@ -242,7 +242,7 @@ export function IndexTab(props: Props): React.ReactElement {
 
         {/* Панель 3: Поле (поля индекса) */}
         <div style={{ ...panelBox, flex: 2, minWidth: 0 }}>
-          <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--vscode-panel-border, #444)' }}>
+          <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
             <button
               style={TOOL_BTN}
               title="Вверх"
