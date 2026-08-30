@@ -198,17 +198,7 @@ export function createPanel(
   if (cfg.get<boolean>('openInNewWindow') !== false) {
     Promise.resolve(
       vscode.commands.executeCommand('workbench.action.moveEditorToNewWindow')
-    ).then(
-      () => {
-        // Новое окно только что создано и точно не в Zen Mode, поэтому
-        // toggle здесь безопасен — не может случайно выключить чужой Zen Mode
-        // пользователя в другом (основном) окне.
-        if (cfg.get<boolean>('compactWindow') !== false) {
-          vscode.commands.executeCommand('workbench.action.toggleZenMode').then(undefined, () => { /* недоступно — молча пропускаем */ });
-        }
-      },
-      () => { /* команда недоступна — остаёмся во вкладке */ }
-    );
+    ).then(undefined, () => { /* команда недоступна — остаёмся во вкладке */ });
   }
 
   return panel;

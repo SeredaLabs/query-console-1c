@@ -2,7 +2,7 @@
   "name": "query-console-1c",
   "displayName": "1C: Query Constructor",
   "description": "Visual query constructor for 1C",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "icon": "images/icon.png",
   "license": "MIT",
   "publisher": "SeredaLabs",
@@ -58,11 +58,6 @@
           "type": "boolean",
           "default": true,
           "description": "Открывать «Конструктор запроса» в отдельном окне (а не во вкладке-панели основного окна VS Code). Требует VS Code 1.85+."
-        },
-        "queryConsole.compactWindow": {
-          "type": "boolean",
-          "default": true,
-          "description": "В отдельном окне конструктора (см. queryConsole.openInNewWindow) сразу скрывать боковую панель, статус-бар и вкладки (Zen Mode) — окно ведёт себя как отдельный диалог, а не как обычное окно VS Code. Не действует, если конструктор открыт во вкладке основного окна."
         }
       }
     }

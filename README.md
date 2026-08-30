@@ -59,7 +59,6 @@
 | `queryConsole.metadataPath` | Шлях до каталогу вивантаження `cf` (пусто → автовизначення) |
 | `queryConsole.parserOutputPath` | Каталог результату парсингу (за замовчуванням `tmp/parser_data`) |
 | `queryConsole.openInNewWindow` | Відкривати конструктор в окремому вікні VS Code |
-| `queryConsole.compactWindow` | В окремому вікні одразу ховати бічну панель/статус-бар/вкладки (Zen Mode) |
 
 ### Розробка
 
@@ -126,7 +125,6 @@
 | `queryConsole.metadataPath` | Путь к каталогу выгрузки `cf` (пусто → автоопределение) |
 | `queryConsole.parserOutputPath` | Каталог результата парсинга (по умолчанию `tmp/parser_data`) |
 | `queryConsole.openInNewWindow` | Открывать конструктор в отдельном окне VS Code |
-| `queryConsole.compactWindow` | В отдельном окне сразу скрывать боковую панель/статус-бар/вкладки (Zen Mode) |
 
 ### Разработка
 
@@ -189,7 +187,6 @@ export.
 | `queryConsole.metadataPath` | Path to the `cf` export directory (empty → auto-detect) |
 | `queryConsole.parserOutputPath` | Directory for parser output (default `tmp/parser_data`) |
 | `queryConsole.openInNewWindow` | Open the constructor in a separate VS Code window |
-| `queryConsole.compactWindow` | In that separate window, immediately hide the sidebar/status bar/tabs (Zen Mode) |
 
 ### Development
 
