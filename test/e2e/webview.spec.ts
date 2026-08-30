@@ -221,8 +221,8 @@ test.describe('Query Constructor Webview', () => {
     await expect(page.locator('text=Текст запроса')).toBeVisible();
     // The generated query must contain the SELECT keyword and reference the table/field
     const editor = page.locator('[data-testid="query-text-editor"]');
-    await expect(editor).toHaveValue(/ВЫБРАТЬ/);
-    await expect(editor).toHaveValue(/Валюты/);
+    await expect(editor).toContainText(/ВЫБРАТЬ/);
+    await expect(editor).toContainText(/Валюты/);
   });
 
   test('нижняя панель: ОК постит insertText, Отмена постит cancel', async ({ page }) => {
@@ -249,7 +249,7 @@ test.describe('Query Constructor Webview', () => {
     // как тело выражения ломает разбор: «ВЫБРАТЬ ИЗ КАК Поле1 ИЗ ...»).
     await page.locator('button[title="Добавить поле (произвольное выражение)"]').click();
     await expect(page.locator('text=Произвольное выражение')).toBeVisible();
-    await page.locator('textarea').fill('ИЗ');
+    await page.locator('[data-testid="expr-editor"] .cm-content').fill('ИЗ');
     await page.locator('[data-testid="expr-ok"]').click();
     await expect(page.locator('[data-field-idx="0"]')).toBeVisible();
 
@@ -305,7 +305,7 @@ test.describe('Query Constructor Webview', () => {
     // «+» доступна, как только есть хотя бы одна таблица (фокус не обязателен).
     await page.locator('button[title="Добавить поле (произвольное выражение)"]').click();
     await expect(page.locator('text=Произвольное выражение')).toBeVisible();
-    await page.locator('textarea').fill('1 + 1');
+    await page.locator('[data-testid="expr-editor"] .cm-content').fill('1 + 1');
     await page.locator('[data-testid="expr-ok"]').click();
     // Новое поле-выражение появилось в списке «Поля».
     await expect(page.locator('[data-field-idx="0"]')).toBeVisible();
@@ -322,8 +322,8 @@ test.describe('Query Constructor Webview', () => {
     await page.locator('[data-field-idx="0"]').dblclick();
     await expect(page.locator('text=Произвольное выражение')).toBeVisible();
     // Текст предзаполнен квалифицированным путём редактируемого поля.
-    await expect(page.locator('textarea')).toHaveValue('Валюты.Код');
-    await page.locator('textarea').fill('ВЫРАЗИТЬ(Валюты.Код КАК Строка(10))');
+    await expect(page.locator('[data-testid="expr-editor"] .cm-content')).toContainText('Валюты.Код');
+    await page.locator('[data-testid="expr-editor"] .cm-content').fill('ВЫРАЗИТЬ(Валюты.Код КАК Строка(10))');
     await page.locator('[data-testid="expr-ok"]').click();
     // Поле обновлено на месте (не появилось второе поле).
     await expect(page.locator('[data-field-idx="0"]')).toContainText('ВЫРАЗИТЬ(Валюты.Код КАК Строка(10))');

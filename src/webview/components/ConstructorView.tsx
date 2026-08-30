@@ -18,7 +18,8 @@ import { VirtualTableParamsDialog } from './VirtualTableParamsDialog';
 import { ExpressionBuilder } from './ExpressionBuilder';
 import { TempTableDialog } from './TempTableDialog';
 import { ResizeHandle } from './ResizeHandle';
-import { HighlightedTextarea } from './HighlightedTextarea';
+import { CodeEditor } from './CodeEditor';
+import { IconButton } from './IconButton';
 import type { VirtualParams } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import type { MetaField, MetaTable } from '../../core/metadata/types';
@@ -682,28 +683,16 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 'bold', fontSize: 13 }}>Текст запроса</span>
-              <button
+              <IconButton
+                icon="close"
+                title="Закрыть"
                 onClick={() => { setQueryModalText(null); setQueryModalError(null); }}
-                style={{ background: 'transparent', border: 'none', color: 'var(--vscode-foreground, #ccc)', cursor: 'pointer', fontSize: 16, padding: '0 4px', lineHeight: 1 }}
-              >
-                ✕
-              </button>
+              />
             </div>
-            <HighlightedTextarea
+            <CodeEditor
               testId="query-text-editor"
               value={queryModalText ?? ''}
-              onChange={e => setQueryModalText(e.target.value)}
-              onKeyDown={e => {
-                // Tab вставляет отступ вместо перевода фокуса — иначе редактировать
-                // многострочный запрос с клавиатуры неудобно.
-                if (e.key !== 'Tab') return;
-                e.preventDefault();
-                const ta = e.currentTarget;
-                const { selectionStart, selectionEnd, value } = ta;
-                const next = value.slice(0, selectionStart) + '\t' + value.slice(selectionEnd);
-                setQueryModalText(next);
-                requestAnimationFrame(() => { ta.selectionStart = ta.selectionEnd = selectionStart + 1; });
-              }}
+              onChange={setQueryModalText}
               spellCheck={false}
               wrapperStyle={{
                 flex: 1,

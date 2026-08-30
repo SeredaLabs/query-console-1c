@@ -2,7 +2,7 @@ import * as React from 'react';
 import { FUNCTION_CATALOG, type FunctionGroup, type FunctionLeaf } from '../../core/query/functionCatalog';
 import { ResizeHandle } from './ResizeHandle';
 import { Chevron } from './Chevron';
-import { HighlightedTextarea } from './HighlightedTextarea';
+import { CodeEditor, type CodeEditorHandle } from './CodeEditor';
 import { BTN, BTN_SECONDARY } from '../sharedStyles';
 
 interface Props {
@@ -65,22 +65,15 @@ function FunctionTree({ node, depth, onPick }: { node: FunctionGroup | FunctionL
 
 export function ExpressionBuilder({ title = 'Произвольное выражение', availableFields, initialText = '', onOk, onCancel }: Props): React.ReactElement {
   const [text, setText] = React.useState(initialText);
-  const taRef = React.useRef<HTMLTextAreaElement>(null);
+  const editorRef = React.useRef<CodeEditorHandle>(null);
   // 8.3.7: перетаскиваемые границы — ширина списка «Поле» и высота поля ввода.
   const [fieldsWidth, setFieldsWidth] = React.useState(280);
   const [editorHeight, setEditorHeight] = React.useState(140);
 
   function insertAtCursor(snippet: string) {
-    const ta = taRef.current;
-    if (!ta) { setText(prev => prev + snippet); return; }
-    const start = ta.selectionStart ?? text.length;
-    const end = ta.selectionEnd ?? text.length;
-    setText(prev => prev.slice(0, start) + snippet + prev.slice(end));
-    requestAnimationFrame(() => {
-      ta.focus();
-      const pos = start + snippet.length;
-      ta.setSelectionRange(pos, pos);
-    });
+    const editor = editorRef.current;
+    if (!editor) { setText(prev => prev + snippet); return; }
+    editor.insertAtCursor(snippet);
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -114,16 +107,17 @@ export function ExpressionBuilder({ title = 'Произвольное выраж
           </div>
         </div>
         <ResizeHandle axis="y" onResize={d => setEditorHeight(h => Math.max(60, h - d))} />
-        <HighlightedTextarea
-          textareaRef={taRef}
+        <CodeEditor
+          ref={editorRef}
+          testId="expr-editor"
           value={text}
-          onChange={e => setText(e.target.value)}
+          onChange={setText}
           onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
           onDrop={handleDrop}
           wrapperStyle={{
             height: editorHeight,
             background: 'var(--vscode-input-background, #3c3c3c)',
-            border: '1px solid var(--vscode-input-border, #555)',
+            border: '1px solid var(--qc-border)',
           }}
           textStyle={{
             fontFamily: 'var(--vscode-editor-font-family, monospace)',
