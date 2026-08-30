@@ -3,7 +3,7 @@ import type { SelectedTable, SelectedField, Order, OrderField, SortDirection } f
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { ResizeHandle } from './ResizeHandle';
-import { SECTION_HEADER, REMOVE_BTN, ROW } from '../sharedStyles';
+import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -56,13 +56,6 @@ export function OrderTab(props: Props): React.ReactElement {
     overflowY: 'auto',
     fontSize: 13,
     minHeight: 40,
-  };
-
-  const panelBox: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    border: '1px solid var(--vscode-panel-border, #444)',
-    overflow: 'hidden',
   };
 
   return (

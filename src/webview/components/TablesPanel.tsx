@@ -7,6 +7,7 @@ import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import { IconButton } from './IconButton';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
+import { SECTION_HEADER } from '../sharedStyles';
 
 interface Props {
   metaTables: MetaTable[];
@@ -150,8 +151,9 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
   const focusedIsEditable = !!focusedTable && (!!focusedTable.subquery || !!focusedTable.tempTable);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 4, gap: 4 }}>
-      <div style={{ fontWeight: 'bold', fontSize: 12, color: 'var(--vscode-descriptionForeground, #aaa)' }}>Таблицы</div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={SECTION_HEADER}>Таблицы</div>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 4, gap: 4 }}>
       <div style={{ display: 'flex', gap: 2 }}>
         <IconButton
           icon="close"
@@ -323,6 +325,7 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import type { SelectedTable, Selection, QueryType } from '../../core/query/queryModel';
 import type { RefreshState } from '../App';
-import { BTN, FIELDSET, LEGEND, CHECK_LABEL, RADIO_LABEL, INPUT, SECTION_HEADER, REMOVE_BTN, ROW } from '../sharedStyles';
+import { BTN, FIELDSET, LEGEND, CHECK_LABEL, RADIO_LABEL, INPUT, SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -24,15 +24,6 @@ interface Props {
   preserveComments?: boolean;
   onSetPreserveComments?: (value: boolean) => void;
 }
-
-const panelBox: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  border: '1px solid var(--vscode-panel-border, #444)',
-  overflow: 'hidden',
-  flex: 1,
-  minWidth: 0,
-};
 
 const dropZone: React.CSSProperties = {
   flex: 1,

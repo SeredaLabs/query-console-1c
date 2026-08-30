@@ -3,7 +3,7 @@ import type { MetaTable, MetaField } from '../../core/metadata/types';
 import type { SelectedTable, Join, JoinCondition, ConditionOperator } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
-import { SECTION_HEADER, REMOVE_BTN } from '../sharedStyles';
+import { SECTION_HEADER, REMOVE_BTN, panelBox } from '../sharedStyles';
 
 const OPERATORS: ConditionOperator[] = ['=', '<>', '>', '>=', '<', '<=', 'В', 'МЕЖДУ', 'ПОДОБНО'];
 
@@ -64,14 +64,6 @@ const INPUT: React.CSSProperties = {
   color: 'var(--vscode-input-foreground, #ccc)',
   border: '1px solid var(--vscode-input-border, #555)',
   fontSize: 12,
-};
-
-const panelBox: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  border: '1px solid var(--vscode-panel-border, #444)',
-  borderRadius: 6,
-  overflow: 'hidden',
 };
 
 const dropZone: React.CSSProperties = {
@@ -147,8 +139,8 @@ export function ConnectionsTab(props: Props): React.ReactElement {
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
       <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
         {/* Тулбар */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderBottom: '1px solid var(--vscode-panel-border, #444)' }}>
-          <span style={{ fontSize: 12, fontWeight: 'bold', color: 'var(--vscode-descriptionForeground, #aaa)', flex: 1 }}>Связи</span>
+        <div style={{ ...SECTION_HEADER, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ flex: 1 }}>Связи</span>
           <button style={ICON_BTN} title="Добавить связь" onClick={onAddJoin}>+</button>
         </div>
         {/* Заголовок столбцов */}

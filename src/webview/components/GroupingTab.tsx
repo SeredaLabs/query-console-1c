@@ -4,7 +4,7 @@ import type { SelectedTable, SelectedField, Grouping, AggregateFunction, FieldRe
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { ResizeHandle } from './ResizeHandle';
-import { SECTION_HEADER, REMOVE_BTN, ROW } from '../sharedStyles';
+import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
 
 const ALL_FUNCS: AggregateFunction[] = ['Сумма', 'Количество', 'КоличествоРазличных', 'Максимум', 'Минимум', 'Среднее'];
 const NON_NUMERIC_FUNCS: AggregateFunction[] = ['КоличествоРазличных', 'Количество', 'Максимум', 'Минимум'];
@@ -110,13 +110,6 @@ export function GroupingTab(props: Props): React.ReactElement {
     overflowY: 'auto',
     fontSize: 13,
     minHeight: 40,
-  };
-
-  const panelBox: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    border: '1px solid var(--vscode-panel-border, #444)',
-    overflow: 'hidden',
   };
 
   return (

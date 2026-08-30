@@ -131,9 +131,13 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
     flex: 1,
     minWidth: 0,
     border: '1px solid var(--vscode-panel-border, #444)',
+    borderRadius: 6,
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
+    // «Бумага» списка отделяется от фона-рамки формы (sideBar) — как белые
+    // списки на бежевом диалоге в Конфигураторе/EDT, только под тему VS Code.
+    background: 'var(--vscode-editor-background, #1e1e1e)',
   };
 
   // Участники объединения и производные колонки — общий источник для генерации
@@ -203,16 +207,19 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
         return (
           <div
             key={i}
+            className="qc-side-tab"
             onClick={() => dispatch({ type: 'SET_ACTIVE_BATCH', index: i })}
             title={name}
             style={{
               writingMode: 'vertical-rl',
               flexShrink: 0,
-              padding: '12px 6px',
+              padding: '14px 7px',
               cursor: 'pointer',
+              letterSpacing: 0.3,
               borderLeft: isActive ? '2px solid var(--vscode-focusBorder, #007fd4)' : '2px solid transparent',
-              color: isActive ? 'var(--vscode-tab-activeForeground, #fff)' : 'var(--vscode-tab-inactiveForeground, #999)',
-              background: isActive ? 'var(--vscode-tab-activeBackground, #1e1e1e)' : 'transparent',
+              color: isActive ? 'var(--vscode-tab-activeForeground, #fff)' : 'var(--vscode-descriptionForeground, #aaa)',
+              background: isActive ? 'var(--vscode-tab-activeBackground, #1e1e1e)' : undefined,
+              fontWeight: isActive ? 600 : 400,
               fontSize: 13,
               userSelect: 'none',
             }}
@@ -237,16 +244,19 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           <div
             key={i}
             data-union-query={q.name}
+            className="qc-side-tab"
             onClick={() => dispatch({ type: 'SET_ACTIVE_QUERY', index: i })}
             title={q.name}
             style={{
               writingMode: 'vertical-rl',
               flexShrink: 0,
-              padding: '12px 6px',
+              padding: '14px 7px',
               cursor: 'pointer',
+              letterSpacing: 0.3,
               borderLeft: isActive ? '2px solid var(--vscode-focusBorder, #007fd4)' : '2px solid transparent',
-              color: isActive ? 'var(--vscode-tab-activeForeground, #fff)' : 'var(--vscode-tab-inactiveForeground, #999)',
-              background: isActive ? 'var(--vscode-tab-activeBackground, #1e1e1e)' : 'transparent',
+              color: isActive ? 'var(--vscode-tab-activeForeground, #fff)' : 'var(--vscode-descriptionForeground, #aaa)',
+              background: isActive ? 'var(--vscode-tab-activeBackground, #1e1e1e)' : undefined,
+              fontWeight: isActive ? 600 : 400,
               fontSize: 13,
               userSelect: 'none',
             }}
@@ -259,7 +269,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   ) : null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', color: 'var(--vscode-foreground, #ccc)', background: 'var(--vscode-editor-background, #1e1e1e)', fontFamily: 'var(--vscode-font-family, sans-serif)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', color: 'var(--vscode-foreground, #ccc)', background: 'var(--vscode-sideBar-background, var(--vscode-editor-background, #1e1e1e))', fontFamily: 'var(--vscode-font-family, sans-serif)', overflow: 'hidden' }}>
       <style>{GLOBAL_FORM_CSS}</style>
       <TabsBar tabs={finalTabs} active={activeTab} onSelect={setActiveTab} />
       <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>

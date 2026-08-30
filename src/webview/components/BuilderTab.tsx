@@ -4,7 +4,8 @@ import type { SelectedTable, SelectedField, ReportBuilder, BuilderField } from '
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { isRefField } from './GroupingTab';
 import { ResizeHandle } from './ResizeHandle';
-import { SECTION_HEADER, REMOVE_BTN, ROW } from '../sharedStyles';
+import { Chevron } from './Chevron';
+import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
 
 type Section = 'fields' | 'conditions' | 'order' | 'totals';
 
@@ -161,13 +162,6 @@ export function BuilderTab(props: Props): React.ReactElement {
     minHeight: 40,
   };
 
-  const panelBox: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    border: '1px solid var(--vscode-panel-border, #444)',
-    overflow: 'hidden',
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: 4, gap: 4, overflow: 'hidden' }}>
       {/* Полоса под-вкладок */}
@@ -218,10 +212,12 @@ export function BuilderTab(props: Props): React.ReactElement {
 
             {/* Группа 2: Все поля */}
             <div
-              style={{ ...ROW, cursor: 'pointer', fontWeight: 'bold' }}
+              className="qc-row"
+              style={{ ...ROW, cursor: 'pointer', fontWeight: 600, gap: 4, justifyContent: 'flex-start' }}
               onClick={() => setExpandAll(v => !v)}
             >
-              <span>{expandAll ? '▾' : '▸'} Все поля</span>
+              <Chevron expanded={expandAll} />
+              <span>Все поля</span>
             </div>
             {expandAll && selectedTables.map(t => {
               const meta = metaForTable(t);
@@ -230,10 +226,12 @@ export function BuilderTab(props: Props): React.ReactElement {
               return (
                 <div key={`all:${t.id}`}>
                   <div
-                    style={{ ...ROW, cursor: 'pointer', paddingLeft: 18 }}
+                    className="qc-row"
+                    style={{ ...ROW, cursor: 'pointer', paddingLeft: 18, gap: 4, justifyContent: 'flex-start' }}
                     onClick={() => setExpandedTables(s => ({ ...s, [t.id]: !s[t.id] }))}
                   >
-                    <span>{open ? '▾' : '▸'} {alias}</span>
+                    <Chevron expanded={open} />
+                    <span>{alias}</span>
                   </div>
                   {open && (meta?.fields ?? []).map(mf => {
                     const ref = `${alias}.${mf.name}`;

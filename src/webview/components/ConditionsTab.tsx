@@ -4,7 +4,7 @@ import type { SelectedTable, Condition, ConditionOperator } from '../../core/que
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import { ResizeHandle } from './ResizeHandle';
-import { SECTION_HEADER, REMOVE_BTN } from '../sharedStyles';
+import { SECTION_HEADER, REMOVE_BTN, panelBox } from '../sharedStyles';
 
 const OPERATORS: ConditionOperator[] = ['=', '<>', '>', '>=', '<', '<=', 'В', 'МЕЖДУ', 'ПОДОБНО'];
 
@@ -43,14 +43,6 @@ const INPUT: React.CSSProperties = {
   color: 'var(--vscode-input-foreground, #ccc)',
   border: '1px solid var(--vscode-input-border, #555)',
   fontSize: 12,
-};
-
-const panelBox: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  border: '1px solid var(--vscode-panel-border, #444)',
-  borderRadius: 6,
-  overflow: 'hidden',
 };
 
 const dropZone: React.CSSProperties = {
@@ -127,7 +119,7 @@ export function ConditionsTab(props: Props): React.ReactElement {
             const alias = defaultTableAlias(sel);
             return (
               <div key={sel.id} data-field-source={`conditions-source:${alias}`}>
-                <div style={{ ...ROW, fontWeight: 'bold', color: 'var(--vscode-descriptionForeground, #aaa)' }}>
+                <div style={{ ...ROW, fontWeight: 600, color: 'var(--vscode-descriptionForeground, #aaa)' }}>
                   {alias}
                 </div>
                 {tableFields(meta, sel).map((f: MetaField) => (
@@ -157,9 +149,7 @@ export function ConditionsTab(props: Props): React.ReactElement {
       {/* Правая колонка: Условия */}
       <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
         {/* Тулбар */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderBottom: '1px solid var(--vscode-panel-border, #444)' }}>
-          <span style={{ fontSize: 12, fontWeight: 'bold', color: 'var(--vscode-descriptionForeground, #aaa)' }}>Условия</span>
-        </div>
+        <div style={SECTION_HEADER}>Условия</div>
         {/* Заголовок столбцов */}
         <div style={{ display: 'flex', ...SECTION_HEADER, padding: 0 }}>
           <div style={{ width: 56, padding: '2px 6px', flexShrink: 0 }}>Номер</div>

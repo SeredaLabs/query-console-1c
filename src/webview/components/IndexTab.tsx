@@ -2,7 +2,7 @@ import * as React from 'react';
 import type { SelectedField, Indexing, FieldRef } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { ResizeHandle } from './ResizeHandle';
-import { SECTION_HEADER } from '../sharedStyles';
+import { SECTION_HEADER, panelBox } from '../sharedStyles';
 
 interface Props {
   selectedFields: SelectedField[];
@@ -119,13 +119,6 @@ export function IndexTab(props: Props): React.ReactElement {
     overflowY: 'auto',
     fontSize: 13,
     minHeight: 40,
-  };
-
-  const panelBox: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    border: '1px solid var(--vscode-panel-border, #444)',
-    overflow: 'hidden',
   };
 
   const emptyHint: React.CSSProperties = {

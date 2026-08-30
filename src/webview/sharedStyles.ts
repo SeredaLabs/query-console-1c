@@ -28,7 +28,8 @@ export const FIELDSET: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 6,
-  background: 'var(--vscode-sideBar-background, rgba(255,255,255,0.02))',
+  // «Бумага» карточки-секции на фоне рамки формы (см. ConstructorView root).
+  background: 'var(--vscode-editor-background, #1e1e1e)',
 };
 
 export const LEGEND: React.CSSProperties = {
@@ -74,6 +75,16 @@ export const SECTION_HEADER: React.CSSProperties = {
   background: 'var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)',
   borderBottom: '1px solid var(--vscode-panel-border, #444)',
   color: 'var(--vscode-descriptionForeground, #aaa)',
+};
+
+export const panelBox: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  border: '1px solid var(--vscode-panel-border, #444)',
+  borderRadius: 6,
+  overflow: 'hidden',
+  // «Бумага» подпанели — как panelStyle в ConstructorView.
+  background: 'var(--vscode-editor-background, #1e1e1e)',
 };
 
 export const ROW: React.CSSProperties = {

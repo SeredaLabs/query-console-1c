@@ -3,6 +3,7 @@ import type { MetaTable, MetaField, TableKind } from '../../core/metadata/types'
 import type { RefId } from '../../shared/messages';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
+import { SECTION_HEADER } from '../sharedStyles';
 
 interface Props {
   tables: MetaTable[];
@@ -245,7 +246,9 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
   const topLevelTables = tables.filter(t => GROUP_KINDS.includes(t.kind as typeof GROUP_KINDS[number]));
 
   return (
-    <div style={{ overflowY: 'auto', height: '100%', fontSize: 13 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={SECTION_HEADER}>База данных</div>
+      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, fontSize: 13 }}>
       {GROUP_KINDS.map(kind => {
         const group = topLevelTables.filter(t => t.kind === kind);
         const isExpanded = expandedGroups.has(kind);
@@ -254,7 +257,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
             <div
               className="qc-row"
               onClick={() => toggleGroup(kind)}
-              style={{ padding: '3px 8px', fontWeight: 'bold', cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
+              style={{ padding: '3px 8px', fontWeight: 600, cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
             >
               <Chevron expanded={isExpanded} />
               <MetaKindIcon kind={kind} />
@@ -343,7 +346,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
               data-testid="temp-tables-group"
               className="qc-row"
               onClick={() => toggleGroup('ВременнаяТаблица')}
-              style={{ padding: '3px 8px', fontWeight: 'bold', cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
+              style={{ padding: '3px 8px', fontWeight: 600, cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
             >
               <Chevron expanded={isExpanded} />
               <span className={`codicon codicon-folder${isExpanded ? '-opened' : ''}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
@@ -384,6 +387,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
           </div>
         );
       })()}
+      </div>
     </div>
   );
 }
