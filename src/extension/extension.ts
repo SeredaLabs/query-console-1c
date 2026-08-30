@@ -16,7 +16,6 @@ function resolveCfPathWithLogging(): string {
   outputChannel.appendLine(`[1C Query] setting exists on disk: ${setting ? fs.existsSync(setting) : 'n/a'}`);
   const cfPath = resolveCfPath();
   outputChannel.appendLine(`[1C Query] resolved cfPath: "${cfPath}"`);
-  outputChannel.show(true);
   return cfPath;
 }
 
