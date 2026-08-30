@@ -31,16 +31,7 @@ import type { QueryDocument } from '../../core/query/unionModel';
 import { tryOpenBatch } from '../../core/query/validateBatch';
 import { buildResolverFromTables } from '../../core/metadata/buildModelResolver';
 import type { RefreshState } from '../App';
-
-const BTN: React.CSSProperties = {
-  padding: '4px 12px',
-  cursor: 'pointer',
-  background: 'var(--vscode-button-background, #0e639c)',
-  color: 'var(--vscode-button-foreground, #fff)',
-  border: 'none',
-  borderRadius: 2,
-  fontSize: 12,
-};
+import { BTN, BTN_SECONDARY, GLOBAL_FORM_CSS } from '../sharedStyles';
 
 export interface ConstructorViewProps {
   state: QueryState;
@@ -269,10 +260,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', color: 'var(--vscode-foreground, #ccc)', background: 'var(--vscode-editor-background, #1e1e1e)', fontFamily: 'var(--vscode-font-family, sans-serif)', overflow: 'hidden' }}>
-      <style>{`
-        .qc-row { background: transparent; }
-        .qc-row:hover { background: var(--vscode-list-hoverBackground, rgba(255,255,255,0.06)); }
-      `}</style>
+      <style>{GLOBAL_FORM_CSS}</style>
       <TabsBar tabs={finalTabs} active={activeTab} onSelect={setActiveTab} />
       <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflow: 'hidden' }}>
@@ -569,7 +557,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
       {/* Bottom bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderTop: '1px solid var(--vscode-panel-border, #444)' }}>
-        <button style={BTN} onClick={handleShowQuery}>Запрос</button>
+        <button style={BTN_SECONDARY} onClick={handleShowQuery}>Запрос</button>
         {okError != null && (
           <span data-testid="ok-error" style={{ color: 'var(--vscode-errorForeground, #f44747)', fontSize: 12 }}>
             {okError}
@@ -577,7 +565,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
         )}
         <div style={{ flex: 1 }} />
         <button style={{ ...BTN, opacity: okDisabled ? 0.5 : 1 }} disabled={okDisabled} onClick={onOk}>ОК</button>
-        <button style={BTN} onClick={onCancel}>Отмена</button>
+        <button style={BTN_SECONDARY} onClick={onCancel}>Отмена</button>
       </div>
 
       {/* Virtual table params modal */}

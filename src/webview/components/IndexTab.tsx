@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { SelectedField, Indexing, FieldRef } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { ResizeHandle } from './ResizeHandle';
+import { SECTION_HEADER } from '../sharedStyles';
 
 interface Props {
   selectedFields: SelectedField[];
@@ -18,15 +19,6 @@ interface Props {
   onMoveField: (index: number, tableId: string, path: string, dir: 'up' | 'down') => void;
 }
 
-const SECTION_HEADER: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 'bold',
-  padding: '2px 6px',
-  background: 'var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)',
-  borderBottom: '1px solid var(--vscode-panel-border, #444)',
-  color: 'var(--vscode-descriptionForeground, #aaa)',
-};
-
 const ROW: React.CSSProperties = {
   padding: '2px 6px',
   display: 'flex',
@@ -40,7 +32,7 @@ const TOOL_BTN: React.CSSProperties = {
   background: 'transparent',
   color: 'var(--vscode-foreground, #ccc)',
   border: '1px solid var(--vscode-panel-border, #555)',
-  borderRadius: 2,
+  borderRadius: 4,
   fontSize: 12,
   lineHeight: '18px',
   flexShrink: 0,

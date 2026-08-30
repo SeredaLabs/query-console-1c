@@ -19,27 +19,32 @@ export function TabsBar({ tabs, active, onSelect }: Props): React.ReactElement {
         background: 'var(--vscode-editorGroupHeader-tabsBackground, #252526)',
       }}
     >
+      <style>{`
+        .qc-tab { background: var(--vscode-tab-inactiveBackground, #2d2d2d); }
+        .qc-tab:hover { background: var(--vscode-tab-hoverBackground, rgba(255,255,255,0.06)); }
+      `}</style>
       {tabs.map(tab => {
         const isActive = tab === active;
         return (
           <div
             key={tab}
             data-tab={tab}
+            className={`qc-tab${isActive ? ' qc-tab--active' : ''}`}
             onClick={() => onSelect(tab)}
             style={{
               padding: '6px 16px',
               cursor: 'pointer',
               fontSize: 13,
               userSelect: 'none',
+              transition: 'background-color 0.1s',
               // Каждая вкладка — отдельный «бокс»: правый разделитель + рамка сверху.
               borderRight: '1px solid var(--vscode-panel-border, #444)',
               borderTop: isActive
                 ? '3px solid var(--vscode-focusBorder, #007fd4)'
                 : '3px solid transparent',
-              // Активная вкладка — приподнятый, подсвеченный фон; неактивные — утопленные/темнее.
-              background: isActive
-                ? 'var(--vscode-tab-activeBackground, #1e1e1e)'
-                : 'var(--vscode-tab-inactiveBackground, #2d2d2d)',
+              // Активная вкладка — приподнятый, подсвеченный фон; неактивные — утопленные/темнее
+              // (фон неактивной задаёт CSS-класс выше, чтобы hover мог его перебить).
+              background: isActive ? 'var(--vscode-tab-activeBackground, #1e1e1e)' : undefined,
               color: isActive
                 ? 'var(--vscode-tab-activeForeground, #fff)'
                 : 'var(--vscode-tab-inactiveForeground, #999)',

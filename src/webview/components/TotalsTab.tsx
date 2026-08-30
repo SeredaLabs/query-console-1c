@@ -5,6 +5,7 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { findMetaField, isRefField } from './GroupingTab';
 import { ResizeHandle } from './ResizeHandle';
+import { SECTION_HEADER, REMOVE_BTN, ROW } from '../sharedStyles';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -36,34 +37,6 @@ const TOTAL_FUNC_OPTIONS: { value: AggregateFunction; label: string }[] = [
 const EXTRA_FUNC_LABEL: Partial<Record<AggregateFunction, string>> = {
   'Сумма': 'Сумма',
   'Среднее': 'Среднее',
-};
-
-const SECTION_HEADER: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 'bold',
-  padding: '2px 6px',
-  background: 'var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)',
-  borderBottom: '1px solid var(--vscode-panel-border, #444)',
-  color: 'var(--vscode-descriptionForeground, #aaa)',
-};
-
-const REMOVE_BTN: React.CSSProperties = {
-  padding: '0 4px',
-  cursor: 'pointer',
-  background: 'transparent',
-  color: 'var(--vscode-descriptionForeground, #888)',
-  border: 'none',
-  fontSize: 10,
-  lineHeight: 1,
-  flexShrink: 0,
-};
-
-const ROW: React.CSSProperties = {
-  padding: '2px 6px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  userSelect: 'none',
 };
 
 const INPUT: React.CSSProperties = {

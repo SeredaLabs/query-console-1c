@@ -2,6 +2,7 @@ import * as React from 'react';
 import { FUNCTION_CATALOG, type FunctionGroup, type FunctionLeaf } from '../../core/query/functionCatalog';
 import { ResizeHandle } from './ResizeHandle';
 import { Chevron } from './Chevron';
+import { BTN, BTN_SECONDARY } from '../sharedStyles';
 
 interface Props {
   title?: string;
@@ -23,15 +24,8 @@ const OVERLAY: React.CSSProperties = {
 const PANEL: React.CSSProperties = {
   background: 'var(--vscode-editor-background, #1e1e1e)',
   border: '1px solid var(--vscode-panel-border, #555)',
-  borderRadius: 4, padding: 12, width: '70vw', height: '70vh',
+  borderRadius: 6, padding: 12, width: '70vw', height: '70vh',
   display: 'flex', flexDirection: 'column', gap: 8,
-};
-
-const BTN: React.CSSProperties = {
-  padding: '4px 12px', cursor: 'pointer',
-  background: 'var(--vscode-button-background, #0e639c)',
-  color: 'var(--vscode-button-foreground, #fff)',
-  border: 'none', borderRadius: 2, fontSize: 12,
 };
 
 function FunctionTree({ node, depth, onPick }: { node: FunctionGroup | FunctionLeaf; depth: number; onPick: (template: string) => void }): React.ReactElement {
@@ -137,7 +131,7 @@ export function ExpressionBuilder({ title = 'Произвольное выраж
         />
         <div style={{ display: 'flex', gap: 4, alignSelf: 'flex-end' }}>
           <button data-testid="expr-ok" style={BTN} onClick={() => onOk(text)}>ОК</button>
-          <button data-testid="expr-cancel" style={{ ...BTN, background: 'var(--vscode-button-secondaryBackground, #3a3d41)' }} onClick={onCancel}>Отмена</button>
+          <button data-testid="expr-cancel" style={BTN_SECONDARY} onClick={onCancel}>Отмена</button>
         </div>
       </div>
     </div>

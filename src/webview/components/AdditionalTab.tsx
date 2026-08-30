@@ -1,6 +1,7 @@
 import * as React from 'react';
 import type { SelectedTable, Selection, QueryType } from '../../core/query/queryModel';
 import type { RefreshState } from '../App';
+import { BTN, FIELDSET, LEGEND, CHECK_LABEL, RADIO_LABEL, INPUT, SECTION_HEADER, REMOVE_BTN, ROW } from '../sharedStyles';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -23,85 +24,6 @@ interface Props {
   preserveComments?: boolean;
   onSetPreserveComments?: (value: boolean) => void;
 }
-
-const FIELDSET: React.CSSProperties = {
-  border: '1px solid var(--vscode-panel-border, #444)',
-  borderRadius: 3,
-  padding: '8px 10px',
-  margin: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
-};
-
-const LEGEND: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 'bold',
-  color: 'var(--vscode-descriptionForeground, #aaa)',
-  padding: '0 4px',
-};
-
-const CHECK_LABEL: React.CSSProperties = {
-  fontSize: 13,
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-  cursor: 'pointer',
-};
-
-const RADIO_LABEL: React.CSSProperties = {
-  fontSize: 13,
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-  cursor: 'pointer',
-};
-
-const BTN: React.CSSProperties = {
-  padding: '4px 12px',
-  cursor: 'pointer',
-  background: 'var(--vscode-button-background, #0e639c)',
-  color: 'var(--vscode-button-foreground, #fff)',
-  border: 'none',
-  borderRadius: 2,
-  fontSize: 12,
-};
-
-const INPUT: React.CSSProperties = {
-  background: 'var(--vscode-input-background, #3c3c3c)',
-  color: 'var(--vscode-input-foreground, #ccc)',
-  border: '1px solid var(--vscode-input-border, #555)',
-  fontSize: 12,
-  padding: '2px 4px',
-};
-
-const SECTION_HEADER: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 'bold',
-  padding: '2px 6px',
-  background: 'var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)',
-  borderBottom: '1px solid var(--vscode-panel-border, #444)',
-  color: 'var(--vscode-descriptionForeground, #aaa)',
-};
-
-const REMOVE_BTN: React.CSSProperties = {
-  padding: '0 4px',
-  cursor: 'pointer',
-  background: 'transparent',
-  color: 'var(--vscode-descriptionForeground, #888)',
-  border: 'none',
-  fontSize: 10,
-  lineHeight: 1,
-  flexShrink: 0,
-};
-
-const ROW: React.CSSProperties = {
-  padding: '2px 6px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  userSelect: 'none',
-};
 
 const panelBox: React.CSSProperties = {
   display: 'flex',

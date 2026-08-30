@@ -3,6 +3,7 @@ import type { MetaTable, MetaField } from '../../core/metadata/types';
 import type { SelectedTable, Join, JoinCondition, ConditionOperator } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
+import { SECTION_HEADER, REMOVE_BTN } from '../sharedStyles';
 
 const OPERATORS: ConditionOperator[] = ['=', '<>', '>', '>=', '<', '<=', 'В', 'МЕЖДУ', 'ПОДОБНО'];
 
@@ -40,33 +41,13 @@ function joinConjuncts(j: Join): JoinCondition[] {
   }];
 }
 
-const SECTION_HEADER: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 'bold',
-  padding: '2px 6px',
-  background: 'var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)',
-  borderBottom: '1px solid var(--vscode-panel-border, #444)',
-  color: 'var(--vscode-descriptionForeground, #aaa)',
-};
-
-const REMOVE_BTN: React.CSSProperties = {
-  padding: '0 4px',
-  cursor: 'pointer',
-  background: 'transparent',
-  color: 'var(--vscode-descriptionForeground, #888)',
-  border: 'none',
-  fontSize: 10,
-  lineHeight: 1,
-  flexShrink: 0,
-};
-
 const ICON_BTN: React.CSSProperties = {
   padding: '1px 6px',
   cursor: 'pointer',
   background: 'var(--vscode-button-background, #0e639c)',
   color: 'var(--vscode-button-foreground, #fff)',
   border: 'none',
-  borderRadius: 2,
+  borderRadius: 4,
   fontSize: 12,
 };
 
@@ -89,6 +70,7 @@ const panelBox: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   border: '1px solid var(--vscode-panel-border, #444)',
+  borderRadius: 6,
   overflow: 'hidden',
 };
 

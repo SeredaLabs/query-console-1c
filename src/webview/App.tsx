@@ -7,16 +7,7 @@ import { generateBatch } from '../core/query/sdblGenerator';
 import { tryOpenBatch, validateBatchText } from '../core/query/validateBatch';
 import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
 import type { MetaTable } from '../core/metadata/types';
-
-const BTN: React.CSSProperties = {
-  padding: '4px 12px',
-  cursor: 'pointer',
-  background: 'var(--vscode-button-background, #0e639c)',
-  color: 'var(--vscode-button-foreground, #fff)',
-  border: 'none',
-  borderRadius: 2,
-  fontSize: 12,
-};
+import { BTN } from './sharedStyles';
 
 export type RefreshState = 'idle' | 'loading' | { ok: boolean; message: string };
 

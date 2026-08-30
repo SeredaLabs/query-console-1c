@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { SECTION_HEADER } from '../sharedStyles';
 
 interface Props {
   names: string[];
@@ -9,44 +10,31 @@ interface Props {
   onSetActive: (index: number) => void;
 }
 
-const SECTION_HEADER: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 'bold',
-  padding: '2px 6px',
-  background: 'var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)',
-  borderBottom: '1px solid var(--vscode-panel-border, #444)',
-  color: 'var(--vscode-descriptionForeground, #aaa)',
-};
-
 const ICON_BTN: React.CSSProperties = {
   padding: '1px 6px',
   cursor: 'pointer',
   background: 'var(--vscode-button-background, #0e639c)',
   color: 'var(--vscode-button-foreground, #fff)',
   border: 'none',
-  borderRadius: 2,
+  borderRadius: 4,
   fontSize: 12,
 };
 
 const TH: React.CSSProperties = {
+  ...SECTION_HEADER,
   textAlign: 'left',
-  fontSize: 12,
-  fontWeight: 'bold',
-  padding: '3px 6px',
-  background: 'var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)',
-  borderBottom: '1px solid var(--vscode-panel-border, #444)',
-  color: 'var(--vscode-descriptionForeground, #aaa)',
   whiteSpace: 'nowrap',
 };
 
 const TD: React.CSSProperties = {
   fontSize: 12,
-  padding: '2px 6px',
+  padding: '3px 6px',
   borderBottom: '1px solid var(--vscode-panel-border, #333)',
 };
 
 const PANEL: React.CSSProperties = {
   border: '1px solid var(--vscode-panel-border, #444)',
+  borderRadius: 6,
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',

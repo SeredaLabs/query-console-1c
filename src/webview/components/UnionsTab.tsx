@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { QueryMeta } from '../state/queryStore';
 import type { UnionColumn } from '../../core/query/unionModel';
 import { ResizeHandle } from './ResizeHandle';
+import { SECTION_HEADER } from '../sharedStyles';
 
 const ALIAS_RE = /^[A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*$/;
 const ALIAS_ERROR = "Псевдонимы полей должны начинаться с буквы и могут содержать только буквы, цифры, и символ '_'";
@@ -19,22 +20,13 @@ interface Props {
   onMoveColumn: (index: number, dir: 'up' | 'down') => void;
 }
 
-const SECTION_HEADER: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 'bold',
-  padding: '2px 6px',
-  background: 'var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)',
-  borderBottom: '1px solid var(--vscode-panel-border, #444)',
-  color: 'var(--vscode-descriptionForeground, #aaa)',
-};
-
 const ICON_BTN: React.CSSProperties = {
   padding: '1px 6px',
   cursor: 'pointer',
   background: 'var(--vscode-button-background, #0e639c)',
   color: 'var(--vscode-button-foreground, #fff)',
   border: 'none',
-  borderRadius: 2,
+  borderRadius: 4,
   fontSize: 12,
 };
 

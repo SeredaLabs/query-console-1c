@@ -3,6 +3,7 @@ import type { VirtualParams } from '../../core/query/queryModel';
 import type { VirtualTableInfo, TableKind } from '../../core/metadata/types';
 import { PERIODICITY_VALUES, FILL_METHOD_VALUES } from '../../core/query/accumVirtualFields';
 import { accountingParamFields, type VtParamKey } from '../../core/query/accountingVirtualParams';
+import { BTN, BTN_SECONDARY } from '../sharedStyles';
 
 interface Props {
   slice: VirtualTableInfo['slice'];
@@ -21,14 +22,8 @@ const OVERLAY: React.CSSProperties = {
 const PANEL: React.CSSProperties = {
   background: 'var(--vscode-editor-background, #1e1e1e)',
   border: '1px solid var(--vscode-panel-border, #555)',
-  borderRadius: 4, padding: 16, minWidth: 460,
+  borderRadius: 6, padding: 16, minWidth: 460,
   display: 'flex', flexDirection: 'column', gap: 10,
-};
-const BTN: React.CSSProperties = {
-  padding: '4px 12px', cursor: 'pointer',
-  background: 'var(--vscode-button-background, #0e639c)',
-  color: 'var(--vscode-button-foreground, #fff)',
-  border: 'none', borderRadius: 2, fontSize: 12,
 };
 const INPUT: React.CSSProperties = {
   flex: 1, fontSize: 12, padding: '2px 4px',
@@ -95,7 +90,7 @@ function AccountingForm({ slice, correspondence, initial, onOpenConditionBuilder
         ))}
         <div style={{ display: 'flex', gap: 4, alignSelf: 'flex-end', marginTop: 6 }}>
           <button data-testid="vt-ok" style={BTN} onClick={handleOk}>ОК</button>
-          <button data-testid="vt-cancel" style={{ ...BTN, background: 'var(--vscode-button-secondaryBackground, #3a3d41)' }} onClick={onCancel}>Отмена</button>
+          <button data-testid="vt-cancel" style={BTN_SECONDARY} onClick={onCancel}>Отмена</button>
         </div>
       </div>
     </div>
@@ -173,7 +168,7 @@ function LegacyForm({ slice, initial, onOpenConditionBuilder, onOk, onCancel }: 
         </Row>
         <div style={{ display: 'flex', gap: 4, alignSelf: 'flex-end', marginTop: 6 }}>
           <button data-testid="vt-ok" style={BTN} onClick={handleOk}>ОК</button>
-          <button data-testid="vt-cancel" style={{ ...BTN, background: 'var(--vscode-button-secondaryBackground, #3a3d41)' }} onClick={onCancel}>Отмена</button>
+          <button data-testid="vt-cancel" style={BTN_SECONDARY} onClick={onCancel}>Отмена</button>
         </div>
       </div>
     </div>

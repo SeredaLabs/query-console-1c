@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { BTN, BTN_SECONDARY } from '../sharedStyles';
 
 export interface TempTableField {
   name: string;
@@ -18,14 +19,8 @@ const OVERLAY: React.CSSProperties = {
 const PANEL: React.CSSProperties = {
   background: 'var(--vscode-editor-background, #1e1e1e)',
   border: '1px solid var(--vscode-panel-border, #555)',
-  borderRadius: 4, padding: 16, width: 460,
+  borderRadius: 6, padding: 16, width: 460,
   display: 'flex', flexDirection: 'column', gap: 10,
-};
-const BTN: React.CSSProperties = {
-  padding: '4px 12px', cursor: 'pointer',
-  background: 'var(--vscode-button-background, #0e639c)',
-  color: 'var(--vscode-button-foreground, #fff)',
-  border: 'none', borderRadius: 2, fontSize: 12,
 };
 const INPUT: React.CSSProperties = {
   flex: 1, fontSize: 12, padding: '2px 4px',
@@ -100,7 +95,7 @@ export function TempTableDialog({ onOk, onCancel, initial }: Props): React.React
           </button>
           <button
             data-testid="tt-cancel"
-            style={{ ...BTN, background: 'var(--vscode-button-secondaryBackground, #3a3d41)' }}
+            style={BTN_SECONDARY}
             onClick={onCancel}
           >
             Отмена
