@@ -166,35 +166,6 @@ export function AdditionalTab(props: Props): React.ReactElement {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 8, padding: 8, overflow: 'auto' }}>
-      {/* Кэш метаданных — не показывается во вложенном конструкторе подзапроса. */}
-      {showCacheBlock && (
-        <fieldset style={FIELDSET}>
-          <legend style={LEGEND}>Кэш метаданных</legend>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button
-              style={{ ...BTN, opacity: refreshState === 'loading' ? 0.6 : 1 }}
-              onClick={onRefreshCache}
-              disabled={refreshState === 'loading'}
-            >
-              {refreshState === 'loading' ? 'Обновление...' : 'Обновить кэш'}
-            </button>
-            {typeof refreshState === 'object' && refreshState != null && (
-              <span style={{ fontSize: 12, color: refreshState.ok ? 'var(--vscode-terminal-ansiGreen, #4caf50)' : 'var(--vscode-errorForeground, #f44747)' }}>
-                {refreshState.message}
-              </span>
-            )}
-          </div>
-          <label style={CHECK_LABEL}>
-            <input
-              type="checkbox"
-              checked={preserveComments ?? false}
-              onChange={e => onSetPreserveComments?.(e.target.checked)}
-            />
-            Сохранять комментарии
-          </label>
-        </fieldset>
-      )}
-
       {/* Выборка записей */}
       <fieldset style={FIELDSET}>
         <legend style={LEGEND}>Выборка записей</legend>
@@ -330,6 +301,35 @@ export function AdditionalTab(props: Props): React.ReactElement {
           </div>
         </div>
       </fieldset>
+
+      {/* Кэш метаданных — не показывается во вложенном конструкторе подзапроса. */}
+      {showCacheBlock && (
+        <fieldset style={FIELDSET}>
+          <legend style={LEGEND}>Кэш метаданных</legend>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              style={{ ...BTN, opacity: refreshState === 'loading' ? 0.6 : 1 }}
+              onClick={onRefreshCache}
+              disabled={refreshState === 'loading'}
+            >
+              {refreshState === 'loading' ? 'Обновление...' : 'Обновить кэш'}
+            </button>
+            {typeof refreshState === 'object' && refreshState != null && (
+              <span style={{ fontSize: 12, color: refreshState.ok ? 'var(--vscode-terminal-ansiGreen, #4caf50)' : 'var(--vscode-errorForeground, #f44747)' }}>
+                {refreshState.message}
+              </span>
+            )}
+          </div>
+          <label style={CHECK_LABEL}>
+            <input
+              type="checkbox"
+              checked={preserveComments ?? false}
+              onChange={e => onSetPreserveComments?.(e.target.checked)}
+            />
+            Сохранять комментарии
+          </label>
+        </fieldset>
+      )}
     </div>
   );
 }
