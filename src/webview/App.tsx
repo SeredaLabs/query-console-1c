@@ -7,31 +7,13 @@ import { generateBatch } from '../core/query/sdblGenerator';
 import { tryOpenBatch, validateBatchText } from '../core/query/validateBatch';
 import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
 import type { MetaTable } from '../core/metadata/types';
-import type { Layout } from '../shared/messages';
 import { BTN } from './sharedStyles';
-import { LayoutProvider } from './layoutContext';
 
 export type RefreshState = 'idle' | 'loading' | { ok: boolean; message: string };
 
 export function App(): React.ReactElement {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const [refreshState, setRefreshState] = useState<RefreshState>('idle');
-  // 8.3.8: ширины/высоты панелей-разделителей, сохранённые между открытиями
-  // конструктора (см. layoutContext.tsx). Отправка на хост — с debounce, чтобы
-  // непрерывное перетаскивание ResizeHandle не заваливало хост сообщениями.
-  const [layout, setLayout] = useState<Layout>({});
-  const saveLayoutTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const setLayoutValue = React.useCallback((key: string, value: number) => {
-    setLayout(prev => {
-      if (prev[key] === value) return prev;
-      const next = { ...prev, [key]: value };
-      if (saveLayoutTimerRef.current) clearTimeout(saveLayoutTimerRef.current);
-      saveLayoutTimerRef.current = setTimeout(() => {
-        postToHost({ type: 'saveLayout', layout: next });
-      }, 400);
-      return next;
-    });
-  }, []);
   // 8.1: «Сохранять комментарии» — включено по умолчанию. Управляет и сбором
   // комментариев при открытии, и их печатью в итоговом тексте при сохранении.
   const [preserveComments, setPreserveComments] = useState(true);
@@ -54,7 +36,6 @@ export function App(): React.ReactElement {
     const unsub = onHostMessage(msg => {
       if (msg.type === 'init') {
         expectModelRef.current = msg.hasInitialQuery;
-        setLayout(msg.layout ?? {});
       } else if (msg.type === 'metadataTree') {
         metaTablesRef.current = msg.tables;
         dispatch({ type: 'SET_METADATA', tables: msg.tables });
@@ -103,10 +84,8 @@ export function App(): React.ReactElement {
     return generateBatch(preserveComments ? assembled : stripBatchComments(assembled));
   }, [state, preserveComments]);
 
-  const layoutCtxValue = useMemo(() => ({ layout, setLayoutValue }), [layout, setLayoutValue]);
-
   return (
-    <LayoutProvider value={layoutCtxValue}>
+    <>
       <ConstructorView
         state={state}
         dispatch={dispatch}
@@ -162,6 +141,6 @@ export function App(): React.ReactElement {
           Загрузка конструктора…
         </div>
       )}
-    </LayoutProvider>
+    </>
   );
 }

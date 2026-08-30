@@ -3,12 +3,8 @@ import type { QueryModel } from '../core/query/queryModel';
 
 export type RefId = { kind: TableKind; name: string };
 
-/** Ширины/высоты панелей-разделителей (ResizeHandle), по произвольному ключу
- * компонента — сохраняются между открытиями конструктора (см. saveLayout). */
-export type Layout = Record<string, number>;
-
 export type HostMsg =
-  | { type: 'init'; hasInitialQuery: boolean; layout: Layout }
+  | { type: 'init'; hasInitialQuery: boolean }
   | { type: 'metadataTree'; tables: MetaTable[] }
   | { type: 'refFields'; ref: RefId; fields: MetaField[] }
   | { type: 'generatedText'; text: string }
@@ -21,5 +17,4 @@ export type WebviewMsg =
   | { type: 'generate'; model: QueryModel }
   | { type: 'insertText'; text: string }
   | { type: 'cancel' }
-  | { type: 'refreshCache' }
-  | { type: 'saveLayout'; layout: Layout };
+  | { type: 'refreshCache' };

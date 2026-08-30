@@ -3,7 +3,6 @@ import type { QueryMeta } from '../state/queryStore';
 import type { UnionColumn } from '../../core/query/unionModel';
 import { ResizeHandle } from './ResizeHandle';
 import { SECTION_HEADER } from '../sharedStyles';
-import { useLayoutValue } from '../layoutContext';
 
 const ALIAS_RE = /^[A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*$/;
 const ALIAS_ERROR = "Псевдонимы полей должны начинаться с буквы и могут содержать только буквы, цифры, и символ '_'";
@@ -76,7 +75,7 @@ export function UnionsTab({
   // 8.3.1: выбранная колонка (поле) в «Списке полей» — для кнопок Вверх/Вниз.
   const [selectedCol, setSelectedCol] = React.useState(0);
   // 8.3.7: перетаскиваемая граница ширины «Списка запросов».
-  const [queryListWidth, setQueryListWidth] = useLayoutValue('unionsQueryListWidth', 280);
+  const [queryListWidth, setQueryListWidth] = React.useState(280);
   // Локальные значения полей ввода псевдонимов (по индексу колонки), чтобы при
   // невалидном вводе откатить отображаемый текст к исходному псевдониму.
   const [aliasDrafts, setAliasDrafts] = React.useState<Record<number, string>>({});

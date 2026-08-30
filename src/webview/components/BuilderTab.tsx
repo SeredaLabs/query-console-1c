@@ -7,7 +7,6 @@ import { ResizeHandle } from './ResizeHandle';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
 import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
-import { useLayoutValue } from '../layoutContext';
 
 type Section = 'fields' | 'conditions' | 'order' | 'totals';
 
@@ -70,7 +69,7 @@ export function BuilderTab(props: Props): React.ReactElement {
   const [expandAll, setExpandAll] = React.useState(false);
   const [expandedTables, setExpandedTables] = React.useState<Record<string, boolean>>({});
   // 8.3.7: перетаскиваемая граница ширины левого списка «Поля».
-  const [leftWidth, setLeftWidth] = useLayoutValue('builderLeftWidth', 260);
+  const [leftWidth, setLeftWidth] = React.useState(260);
 
   const rows = builder[active];
 

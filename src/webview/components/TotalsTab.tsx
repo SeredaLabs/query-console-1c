@@ -6,7 +6,6 @@ import { distinctFieldRefs } from '../fieldSource';
 import { findMetaField, isRefField } from './GroupingTab';
 import { ResizeHandle } from './ResizeHandle';
 import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
-import { useLayoutValue } from '../layoutContext';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -64,7 +63,7 @@ export function TotalsTab(props: Props): React.ReactElement {
   // Источник: обычные поля выборки (не выражения, не ТЧ).
   const sourceFields = distinctFieldRefs(selectedFields);
   // 8.3.7: перетаскиваемая граница ширины левого списка «Поля».
-  const [leftWidth, setLeftWidth] = useLayoutValue('totalsLeftWidth', 260);
+  const [leftWidth, setLeftWidth] = React.useState(260);
 
   function labelFor(tableId: string, path: string): string {
     const table = selectedTables.find(t => t.id === tableId);
