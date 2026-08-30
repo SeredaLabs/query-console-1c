@@ -2,6 +2,7 @@ import * as React from 'react';
 import { FUNCTION_CATALOG, type FunctionGroup, type FunctionLeaf } from '../../core/query/functionCatalog';
 import { ResizeHandle } from './ResizeHandle';
 import { Chevron } from './Chevron';
+import { HighlightedTextarea } from './HighlightedTextarea';
 import { BTN, BTN_SECONDARY } from '../sharedStyles';
 
 interface Props {
@@ -113,20 +114,22 @@ export function ExpressionBuilder({ title = 'Произвольное выраж
           </div>
         </div>
         <ResizeHandle axis="y" onResize={d => setEditorHeight(h => Math.max(60, h - d))} />
-        <textarea
-          ref={taRef}
+        <HighlightedTextarea
+          textareaRef={taRef}
           value={text}
           onChange={e => setText(e.target.value)}
           onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
           onDrop={handleDrop}
-          style={{
+          wrapperStyle={{
             height: editorHeight,
+            background: 'var(--vscode-input-background, #3c3c3c)',
+            border: '1px solid var(--vscode-input-border, #555)',
+          }}
+          textStyle={{
             fontFamily: 'var(--vscode-editor-font-family, monospace)',
             fontSize: 13,
-            resize: 'none',
-            background: 'var(--vscode-input-background, #3c3c3c)',
+            whiteSpace: 'pre-wrap',
             color: 'var(--vscode-input-foreground, #ccc)',
-            border: '1px solid var(--vscode-input-border, #555)',
           }}
         />
         <div style={{ display: 'flex', gap: 4, alignSelf: 'flex-end' }}>

@@ -18,6 +18,7 @@ import { VirtualTableParamsDialog } from './VirtualTableParamsDialog';
 import { ExpressionBuilder } from './ExpressionBuilder';
 import { TempTableDialog } from './TempTableDialog';
 import { ResizeHandle } from './ResizeHandle';
+import { HighlightedTextarea } from './HighlightedTextarea';
 import type { VirtualParams } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import type { MetaField, MetaTable } from '../../core/metadata/types';
@@ -688,8 +689,8 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
                 ✕
               </button>
             </div>
-            <textarea
-              data-testid="query-text-editor"
+            <HighlightedTextarea
+              testId="query-text-editor"
               value={queryModalText ?? ''}
               onChange={e => setQueryModalText(e.target.value)}
               onKeyDown={e => {
@@ -704,21 +705,20 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
                 requestAnimationFrame(() => { ta.selectionStart = ta.selectionEnd = selectionStart + 1; });
               }}
               spellCheck={false}
-              style={{
-                margin: 0,
+              wrapperStyle={{
                 flex: 1,
-                resize: 'none',
+                minHeight: 200,
+                maxHeight: 'calc(70vh - 100px)',
+                background: 'var(--vscode-editor-background, #1e1e1e)',
+                border: '1px solid var(--qc-border)',
+                borderRadius: 2,
+              }}
+              textStyle={{
                 fontFamily: 'var(--vscode-editor-font-family, monospace)',
                 fontSize: 13,
                 lineHeight: 1.5,
                 whiteSpace: 'pre',
-                overflow: 'auto',
-                minHeight: 200,
-                maxHeight: 'calc(70vh - 100px)',
                 color: 'var(--vscode-editor-foreground, #ccc)',
-                background: 'var(--vscode-editor-background, #1e1e1e)',
-                border: '1px solid var(--qc-border)',
-                borderRadius: 2,
                 padding: 8,
               }}
             />
