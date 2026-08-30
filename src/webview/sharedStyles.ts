@@ -99,7 +99,9 @@ export const REMOVE_BTN: React.CSSProperties = {
   padding: '0 4px',
   cursor: 'pointer',
   background: 'transparent',
-  color: 'var(--vscode-descriptionForeground, #888)',
+  // Тот же «цвет намерения», что у IconButton tone="remove" — единая семантика
+  // удаления (как git-декорация удалённого файла) по всему конструктору.
+  color: 'var(--vscode-gitDecoration-deletedResourceForeground, #c74e39)',
   border: 'none',
   borderRadius: 3,
   fontSize: 10,

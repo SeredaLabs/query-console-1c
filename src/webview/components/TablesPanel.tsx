@@ -104,6 +104,7 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
         <IconButton
           icon="close"
           title="Убрать таблицу"
+          tone="remove"
           disabled={!focusedSelectedTableId}
           onClick={() => focusedSelectedTableId && onRemoveTable(focusedSelectedTableId)}
         />
@@ -117,18 +118,21 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
           testId="add-subquery"
           icon="list-tree"
           title="Создать вложенный запрос (ВЗ)"
+          tone="add"
           onClick={onAddSubquery}
         />
         <IconButton
           testId="add-temp-table"
           icon="table"
           title="Создать описание временной таблицы"
+          tone="add"
           onClick={onAddTempTable}
         />
         <IconButton
           testId="edit-source"
           icon="edit"
           title="Редактирование"
+          tone="edit"
           disabled={!focusedIsEditable}
           onClick={() => focusedSelectedTableId && onEditTable(focusedSelectedTableId)}
         />

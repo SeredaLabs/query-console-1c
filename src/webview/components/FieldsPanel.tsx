@@ -4,7 +4,7 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import { IconButton } from './IconButton';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
-import { SECTION_HEADER } from '../sharedStyles';
+import { SECTION_HEADER, REMOVE_BTN } from '../sharedStyles';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -24,17 +24,6 @@ interface Props {
   /** 7.8.6: перетаскивание таблицы в список — добавить все её поля. */
   onDropTable: (tableFullName: string) => void;
 }
-
-const REMOVE_BTN: React.CSSProperties = {
-  padding: '0 4px',
-  cursor: 'pointer',
-  background: 'transparent',
-  color: 'var(--vscode-descriptionForeground, #888)',
-  border: 'none',
-  fontSize: 10,
-  lineHeight: 1,
-  flexShrink: 0,
-};
 
 export function FieldsPanel({
   selectedTables, selectedFields, tabSectionFields, focusedSelectedFieldIdx,
@@ -102,12 +91,14 @@ export function FieldsPanel({
         <IconButton
           icon="close"
           title="Убрать поле"
+          tone="remove"
           disabled={focusedSelectedFieldIdx === null}
           onClick={() => focusedSelectedFieldIdx !== null && onRemoveField(focusedSelectedFieldIdx)}
         />
         <IconButton
           icon="add"
           title="Добавить поле (произвольное выражение)"
+          tone="add"
           disabled={!canAddExpression}
           onClick={onAddExpression}
         />
