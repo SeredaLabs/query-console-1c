@@ -7,6 +7,7 @@ import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import { IconButton } from './IconButton';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
+import { FieldTreeRow } from './FieldTreeRow';
 import { SECTION_HEADER } from '../sharedStyles';
 
 interface Props {
@@ -32,64 +33,9 @@ interface Props {
   onEditTable: (tableId: string) => void;
 }
 
-function FieldRow({ tableFullName, field, depth, expandedRefs, onExpandRef }: {
-  tableFullName: string;
-  field: MetaField;
-  depth: number;
-  expandedRefs: Map<string, MetaField[]>;
-  onExpandRef: (ref: RefId) => void;
-}): React.ReactElement {
-  const [localExpanded, setLocalExpanded] = React.useState(false);
-  const ref = field.types.find(t => t.ref)?.ref ?? null;
-  const refKey = ref ? `${ref.kind}.${ref.name}` : null;
-  const fetched = refKey ? expandedRefs.has(refKey) : false;
-  const expanded = localExpanded && fetched && refKey ? true : false;
-
-  function handleToggle(e: React.MouseEvent) {
-    e.stopPropagation();
-    if (!ref || !refKey) return;
-    if (!fetched) onExpandRef(ref);
-    setLocalExpanded(prev => !prev);
-  }
-
-  return (
-    <>
-      <div
-        draggable
-        className="qc-row"
-        onDragStart={e => {
-          e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'field', tableFullName, fieldPath: field.name }));
-          e.dataTransfer.effectAllowed = 'copy';
-        }}
-        style={{
-          paddingLeft: 8 + depth * 16,
-          paddingTop: 1,
-          paddingBottom: 1,
-          fontSize: 12,
-          color: 'var(--vscode-descriptionForeground, #aaa)',
-          userSelect: 'none',
-          cursor: 'default',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-        }}
-      >
-        {ref ? <Chevron expanded={expanded} onClick={handleToggle} /> : <span style={{ width: 14, flexShrink: 0 }} />}
-        <span className={`codicon codicon-${ref ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
-        <span>{field.name}</span>
-      </div>
-      {expanded && refKey && expandedRefs.get(refKey)?.map(subField => (
-        <FieldRow
-          key={`${field.name}.${subField.name}`}
-          tableFullName={tableFullName}
-          field={{ ...subField, name: `${field.name}.${subField.name}` }}
-          depth={depth + 1}
-          expandedRefs={expandedRefs}
-          onExpandRef={onExpandRef}
-        />
-      ))}
-    </>
-  );
+function dragStartField(tableFullName: string, e: React.DragEvent, fieldPath: string) {
+  e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'field', tableFullName, fieldPath }));
+  e.dataTransfer.effectAllowed = 'copy';
 }
 
 export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId, expandedRefs, onAddTable, onRemoveTable, onFocusTable, onExpandRef, onOpenVirtualParams, onAddSubquery, onAddTempTable, onAddTempTableSource, onActivateTable, onEditTable }: Props): React.ReactElement {
@@ -241,13 +187,13 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                       ? [...accumPeriodFields(t.virtual?.periodicity), ...meta.fields]
                       : meta.fields
                   ).map(field => (
-                    <FieldRow
+                    <FieldTreeRow
                       key={field.name}
-                      tableFullName={t.fullName}
                       field={field}
                       depth={1}
                       expandedRefs={expandedRefs}
                       onExpandRef={onExpandRef}
+                      onDragStart={(e, path) => dragStartField(t.fullName, e, path)}
                     />
                   ))}
                   {meta.tabularSections?.map(ts => {

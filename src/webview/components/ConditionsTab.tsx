@@ -3,7 +3,10 @@ import type { MetaTable, MetaField } from '../../core/metadata/types';
 import type { SelectedTable, Condition, ConditionOperator } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
+import type { RefId } from '../../shared/messages';
 import { ResizeHandle } from './ResizeHandle';
+import { MetaKindIcon } from './MetaKindIcon';
+import { FieldTreeRow } from './FieldTreeRow';
 import { SECTION_HEADER, REMOVE_BTN, panelBox } from '../sharedStyles';
 
 const OPERATORS: ConditionOperator[] = ['=', '<>', '>', '>=', '<', '<=', 'В', 'МЕЖДУ', 'ПОДОБНО'];
@@ -12,6 +15,8 @@ interface Props {
   selectedTables: SelectedTable[];
   metaTables: MetaTable[];
   conditions: Condition[];
+  expandedRefs: Map<string, MetaField[]>;
+  onExpandRef: (ref: RefId) => void;
   onAddCondition: (tableId: string, path: string) => void;
   onRemoveCondition: (index: number) => void;
   onSetCustom: (index: number, custom: boolean) => void;
@@ -63,7 +68,7 @@ function tableFields(meta: MetaTable, sel: SelectedTable): MetaField[] {
 
 export function ConditionsTab(props: Props): React.ReactElement {
   const {
-    selectedTables, metaTables, conditions,
+    selectedTables, metaTables, conditions, expandedRefs, onExpandRef,
     onAddCondition, onRemoveCondition, onSetCustom, onSetOperator, onSetParam,
     onOpenExpressionBuilder,
   } = props;
@@ -119,19 +124,19 @@ export function ConditionsTab(props: Props): React.ReactElement {
             const alias = defaultTableAlias(sel);
             return (
               <div key={sel.id} data-field-source={`conditions-source:${alias}`}>
-                <div style={{ ...ROW, fontWeight: 600, color: 'var(--vscode-descriptionForeground, #aaa)' }}>
+                <div style={{ ...ROW, fontWeight: 600, color: 'var(--vscode-descriptionForeground, #aaa)', gap: 4 }}>
+                  <MetaKindIcon kind={meta.kind} />
                   {alias}
                 </div>
                 {tableFields(meta, sel).map((f: MetaField) => (
-                  <div
+                  <FieldTreeRow
                     key={`${sel.id}:${f.name}`}
-                    data-field-item
-                    draggable
-                    onDragStart={e => dragStart(e, sel.id, f.name)}
-                    style={{ ...ROW, paddingLeft: 18, cursor: 'grab' }}
-                  >
-                    <span>{f.name}</span>
-                  </div>
+                    field={f}
+                    depth={1}
+                    expandedRefs={expandedRefs}
+                    onExpandRef={onExpandRef}
+                    onDragStart={(e, path) => dragStart(e, sel.id, path)}
+                  />
                 ))}
               </div>
             );

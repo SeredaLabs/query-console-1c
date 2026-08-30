@@ -429,6 +429,8 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           selectedTables={state.selectedTables}
           metaTables={state.tables}
           conditions={state.conditions}
+          expandedRefs={state.expandedRefs}
+          onExpandRef={onExpandRef}
           onAddCondition={(tableId, path) => dispatch({ type: 'ADD_CONDITION', tableId, path })}
           onRemoveCondition={index => dispatch({ type: 'REMOVE_CONDITION', index })}
           onSetCustom={(index, custom) => dispatch({ type: 'SET_CONDITION_CUSTOM', index, custom })}
