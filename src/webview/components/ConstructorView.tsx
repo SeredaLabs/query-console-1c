@@ -698,7 +698,11 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
                 flex: 1,
                 minHeight: 200,
                 maxHeight: 'calc(70vh - 100px)',
-                background: 'var(--vscode-editor-background, #1e1e1e)',
+                // Отличается от фона самой модалки (--vscode-editor-background) —
+                // иначе поле текста запроса визуально сливается с рамкой вокруг
+                // него в один плоский цвет. --qc-frame-bg (тот же приём, что и для
+                // фона всей формы) даёт гарантированно другой тон в любой теме.
+                background: 'var(--qc-frame-bg, var(--vscode-editor-background, #1e1e1e))',
                 border: '1px solid var(--qc-border)',
                 borderRadius: 2,
               }}
