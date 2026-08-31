@@ -12,10 +12,4 @@ export default defineConfig({
       reporter: ['text'],
     },
   },
-  resolve: {
-    alias: {
-      '@shared': '/workspaces/query_console_vscode/src/shared',
-      '@core': '/workspaces/query_console_vscode/src/core',
-    },
-  },
 });

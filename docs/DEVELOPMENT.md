@@ -118,7 +118,7 @@ Release с файлом `query-console-1c-<тег>.vsix` в Assets. Локаль
 ### Установка VSIX
 
 Скачайте `query-console-1c-<тег>.vsix` со страницы
-[Releases](https://github.com/AlekseyUAM/query_console_vscode/releases) и установите
+[Releases](https://github.com/SeredaLabs/query-console-1c/releases) и установите
 одним из способов.
 
 Через UI VS Code: панель **Extensions** (`Ctrl+Shift+X`) → меню «**...**» →
@@ -135,7 +135,7 @@ code --install-extension query-console-1c-<тег>.vsix --force
 
 ```bash
 curl -L -o qc.vsix \
-  https://github.com/AlekseyUAM/query_console_vscode/releases/latest/download/query-console-1c-<тег>.vsix
+  https://github.com/SeredaLabs/query-console-1c/releases/latest/download/query-console-1c-<тег>.vsix
 code --install-extension qc.vsix
 ```
 
