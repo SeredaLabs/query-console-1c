@@ -3,6 +3,7 @@ import type { MetaTable, MetaField, TableKind } from '../../core/metadata/types'
 import type { RefId } from '../../shared/messages';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
+import { IconButton } from './IconButton';
 import { SECTION_HEADER } from '../sharedStyles';
 
 interface Props {
@@ -47,43 +48,156 @@ const GROUP_LABELS: Record<string, string> = {
   'Перечисление': 'Перечисления',
 };
 
+const ACTIVE_MATCH_BG = 'var(--vscode-editor-findMatchBackground, rgba(234,92,0,0.5))';
+
 function norm(s: string): string {
   return s.toLowerCase();
 }
 
-function fieldMatches(field: MetaField, q: string): boolean {
-  return norm(field.name).includes(q);
+/** Разбивает строку поиска на отдельные ключевые слова («расчет эффектив» → ['расчет','эффектив']) —
+ * каждое слово должно найтись где-то в таблице (в её названии или названиях полей), но не обязательно
+ * рядом друг с другом и не обязательно в одном и том же слове/поле. */
+function tokenize(query: string): string[] {
+  return query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+}
+
+function textMatchesToken(text: string, token: string): boolean {
+  return norm(text).includes(token);
+}
+
+function textMatchesAllTokens(text: string, tokens: string[]): boolean {
+  const t = norm(text);
+  return tokens.every(tok => t.includes(tok));
 }
 
 /** ВНИМАНИЕ: ищет только среди уже загруженных полей (собственные поля таблицы
  * и её табличных частей) — вложенные поля справочных полей подгружаются лениво
- * по клику (onExpandRef), поэтому в поиск не попадают. */
-function tsMatchesQuery(ts: MetaTable, q: string): boolean {
-  return norm(ts.name).includes(q) || ts.fields.some(f => fieldMatches(f, q));
+ * по клику (onExpandRef), поэтому в поиск не попадают.
+ *
+ * Кэшируется по ссылке на таблицу — на реальных конфигурациях (сотни таблиц,
+ * тысячи полей) пересборка этой строки на каждое нажатие клавиши заметно
+ * тормозила ввод; объект метаданных таблицы не меняется, пока не перезагрузят
+ * метаданные целиком, поэтому WeakMap безопасен. */
+const tableCorpusCache = new WeakMap<MetaTable, string>();
+function tableCorpus(table: MetaTable): string {
+  const cached = tableCorpusCache.get(table);
+  if (cached !== undefined) return cached;
+  const parts = [table.name, ...table.fields.map(f => f.name)];
+  for (const ts of table.tabularSections ?? []) {
+    parts.push(ts.name, ...ts.fields.map(f => f.name));
+  }
+  const corpus = norm(parts.join(' '));
+  tableCorpusCache.set(table, corpus);
+  return corpus;
 }
 
-function tableMatchesQuery(table: MetaTable, q: string): boolean {
-  return norm(table.name).includes(q)
-    || table.fields.some(f => fieldMatches(f, q))
-    || (table.tabularSections ?? []).some(ts => tsMatchesQuery(ts, q));
+function tableMatchesQuery(table: MetaTable, tokens: string[]): boolean {
+  const corpus = tableCorpus(table);
+  return tokens.every(tok => corpus.includes(tok));
 }
 
-function highlightText(text: string, q: string): React.ReactNode {
-  if (!q) return text;
-  const idx = norm(text).indexOf(q);
-  if (idx === -1) return text;
-  return (
-    <>
-      {text.slice(0, idx)}
-      <mark style={{ background: 'var(--vscode-editor-findMatchHighlightBackground, rgba(234,92,0,0.33))', color: 'inherit', borderRadius: 2 }}>
-        {text.slice(idx, idx + q.length)}
+function highlightText(text: string, tokens: string[]): React.ReactNode {
+  if (tokens.length === 0) return text;
+  const lower = text.toLowerCase();
+  const ranges: Array<[number, number]> = [];
+  for (const tok of tokens) {
+    let from = 0;
+    while (true) {
+      const idx = lower.indexOf(tok, from);
+      if (idx === -1) break;
+      ranges.push([idx, idx + tok.length]);
+      from = idx + tok.length;
+    }
+  }
+  if (ranges.length === 0) return text;
+  ranges.sort((a, b) => a[0] - b[0]);
+  const merged: Array<[number, number]> = [];
+  for (const r of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);
+    else merged.push(r);
+  }
+  const parts: React.ReactNode[] = [];
+  let pos = 0;
+  merged.forEach(([start, end], i) => {
+    if (start > pos) parts.push(text.slice(pos, start));
+    parts.push(
+      <mark key={i} style={{ background: 'var(--vscode-editor-findMatchHighlightBackground, rgba(234,92,0,0.33))', color: 'inherit', borderRadius: 2 }}>
+        {text.slice(start, end)}
       </mark>
-      {text.slice(idx + q.length)}
-    </>
-  );
+    );
+    pos = end;
+  });
+  if (pos < text.length) parts.push(text.slice(pos));
+  return <>{parts}</>;
 }
 
-function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRefs, onToggleCollapse, focusedTableFullName, focusedFieldPath, onFocusField, onExpandRef, onAddField, depth, query }: {
+/** Одно уже отфильтрованное (при активном поиске) поле, готовое к отрисовке. */
+interface RenderField {
+  field: MetaField;
+  key: string;
+}
+interface RenderTs {
+  ts: MetaTable;
+  key: string;
+  fields: RenderField[];
+}
+interface RenderTable {
+  table: MetaTable;
+  key: string;
+  fields: RenderField[];
+  tabularSections: RenderTs[];
+}
+interface RenderGroup {
+  kind: TableKind;
+  tables: RenderTable[];
+}
+
+/**
+ * Единая модель фильтрации дерева под поиск — считается один раз за рендер и
+ * используется и для отрисовки, и для сбора списка результатов (навигация
+ * вперёд/назад), чтобы обе части не могли разойтись между собой.
+ */
+function buildRenderModel(topLevelTables: MetaTable[], tokens: string[], isSearching: boolean): RenderGroup[] {
+  return GROUP_KINDS.map(kind => {
+    const groupAll = topLevelTables.filter(t => t.kind === kind);
+    const groupTables = isSearching ? groupAll.filter(t => tableMatchesQuery(t, tokens)) : groupAll;
+    const tables: RenderTable[] = groupTables.map(table => {
+      const nameMatches = isSearching && textMatchesAllTokens(table.name, tokens);
+      const fields: RenderField[] = (isSearching
+        ? table.fields.filter(f => nameMatches || tokens.some(tok => textMatchesToken(f.name, tok)))
+        : table.fields
+      ).map(field => ({ field, key: `${table.fullName}#${field.name}` }));
+      const tabularSections: RenderTs[] = (table.tabularSections ?? [])
+        .filter(ts => !isSearching || nameMatches || textMatchesAllTokens(ts.name, tokens) || ts.fields.some(f => tokens.some(tok => textMatchesToken(f.name, tok))))
+        .map(ts => {
+          const tsNameMatches = isSearching && textMatchesAllTokens(ts.name, tokens);
+          const showAll = nameMatches || tsNameMatches;
+          const tsFields: RenderField[] = (isSearching
+            ? ts.fields.filter(f => showAll || tokens.some(tok => textMatchesToken(f.name, tok)))
+            : ts.fields
+          ).map(field => ({ field, key: `${ts.fullName}#${field.name}` }));
+          return { ts, key: ts.fullName, fields: tsFields };
+        });
+      return { table, key: table.fullName, fields, tabularSections };
+    });
+    return { kind, tables };
+  });
+}
+
+/** Плоский упорядоченный список ключей результатов (в том же порядке, в каком они отрисованы) —
+ * по нему работают кнопки «следующий/предыдущий результат» и счётчик. Гранулярность — таблица/
+ * документ целиком (а не каждое совпавшее поле внутри неё по отдельности): если хоть что-то в
+ * таблице совпало (имя или любое из её полей), в списке результатов она одна. */
+function collectMatchKeys(groups: RenderGroup[]): string[] {
+  const keys: string[] = [];
+  for (const g of groups) {
+    for (const t of g.tables) keys.push(t.key);
+  }
+  return keys;
+}
+
+function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRefs, onToggleCollapse, focusedTableFullName, focusedFieldPath, onFocusField, onExpandRef, onAddField, depth, tokens }: {
   tableFullName: string;
   fieldPath: string;
   field: MetaField;
@@ -96,7 +210,7 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
   onExpandRef: (ref: RefId) => void;
   onAddField: (tableFullName: string, fieldPath: string) => void;
   depth: number;
-  query: string;
+  tokens: string[];
 }): React.ReactElement {
   const ref = field.types.find(t => t.ref)?.ref ?? null;
   const refKey = ref ? `${ref.kind}.${ref.name}` : null;
@@ -142,7 +256,7 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
       >
         {ref ? <Chevron expanded={expanded} onClick={handleExpandToggle} /> : <span style={{ width: 14, flexShrink: 0 }} />}
         <span className={`codicon codicon-${ref ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
-        <span>{highlightText(field.name, query)}</span>
+        <span>{highlightText(field.name, tokens)}</span>
       </div>
       {expanded && refKey && expandedRefs.get(refKey)?.map(subField => (
         <FieldNode
@@ -159,15 +273,16 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
           onExpandRef={onExpandRef}
           onAddField={onAddField}
           depth={depth + 1}
-          query={query}
+          tokens={tokens}
         />
       ))}
     </>
   );
 }
 
-function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse, focusedTableFullName, focusedFieldPath, onFocusField, onExpandRef, onAddField, depth, query, parentMatched }: {
+function TabularSectionNode({ ts, fields, expandedRefs, collapsedRefs, onToggleCollapse, focusedTableFullName, focusedFieldPath, onFocusField, onExpandRef, onAddField, depth, tokens, expanded, onToggle }: {
   ts: MetaTable;
+  fields: RenderField[];
   expandedRefs: Map<string, MetaField[]>;
   collapsedRefs: Set<string>;
   onToggleCollapse: (key: string) => void;
@@ -177,16 +292,10 @@ function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse,
   onExpandRef: (ref: RefId) => void;
   onAddField: (tableFullName: string, fieldPath: string) => void;
   depth: number;
-  query: string;
-  parentMatched: boolean;
+  tokens: string[];
+  expanded: boolean;
+  onToggle: () => void;
 }): React.ReactElement {
-  const [manualExpanded, setManualExpanded] = React.useState(false);
-  const isSearching = query.length > 0;
-  const expanded = isSearching || manualExpanded;
-  const tsNameMatches = isSearching && norm(ts.name).includes(query);
-  const showAllFields = parentMatched || tsNameMatches;
-  const fieldsToRender = isSearching ? ts.fields.filter(f => showAllFields || fieldMatches(f, query)) : ts.fields;
-
   function handleDragStart(e: React.DragEvent) {
     const parentFullName = ts.fullName.split('.').slice(0, 2).join('.');
     e.dataTransfer.setData('text/plain', JSON.stringify({
@@ -206,7 +315,7 @@ function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse,
         className="qc-row"
         title="Табличная часть"
         onDragStart={handleDragStart}
-        onClick={() => setManualExpanded(prev => !prev)}
+        onClick={onToggle}
         style={{
           paddingLeft: 8 + depth * 16,
           paddingTop: 2,
@@ -221,14 +330,14 @@ function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse,
       >
         <Chevron expanded={expanded} />
         <MetaKindIcon kind="ТабличнаяЧасть" />
-        <span>{highlightText(ts.name, query)}</span>
+        <span>{highlightText(ts.name, tokens)}</span>
       </div>
-      {expanded && fieldsToRender.map(field => (
+      {expanded && fields.map(rf => (
         <FieldNode
-          key={`${ts.fullName}:${field.name}`}
+          key={`${ts.fullName}:${rf.field.name}`}
           tableFullName={ts.fullName}
-          fieldPath={field.name}
-          field={field}
+          fieldPath={rf.field.name}
+          field={rf.field}
           expandedRefs={expandedRefs}
           collapsedRefs={collapsedRefs}
           onToggleCollapse={onToggleCollapse}
@@ -238,7 +347,7 @@ function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse,
           onExpandRef={onExpandRef}
           onAddField={onAddField}
           depth={depth + 1}
-          query={query}
+          tokens={tokens}
         />
       ))}
     </>
@@ -248,11 +357,23 @@ function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse,
 export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focusedFieldPath, onFocusTable, onFocusField, onExpandRef, onAddTable, onAddField, tempTables = [] }: Props): React.ReactElement {
   const [expandedGroups, setExpandedGroups] = React.useState<Set<TableKind>>(new Set());
   const [expandedTables, setExpandedTables] = React.useState<Set<string>>(new Set());
+  const [expandedTsSections, setExpandedTsSections] = React.useState<Set<string>>(new Set());
   const [collapsedRefs, setCollapsedRefs] = React.useState<Set<string>>(new Set());
   const [query, setQuery] = React.useState('');
+  const [debouncedQuery, setDebouncedQuery] = React.useState('');
+  const [activeMatchIdx, setActiveMatchIdx] = React.useState(0);
+  const treeRef = React.useRef<HTMLDivElement>(null);
 
-  const normalizedQuery = query.trim().toLowerCase();
-  const isSearching = normalizedQuery.length > 0;
+  // Поле ввода реагирует мгновенно, а фильтрация дерева — с небольшой задержкой:
+  // на реальных конфигурациях (сотни таблиц) пересчёт на каждое нажатие клавиши
+  // ощутимо тормозил набор текста.
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 150);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const tokens = React.useMemo(() => tokenize(debouncedQuery), [debouncedQuery]);
+  const isSearching = tokens.length > 0;
 
   function toggleGroup(kind: TableKind) {
     setExpandedGroups(prev => {
@@ -266,6 +387,14 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
     setExpandedTables(prev => {
       const next = new Set(prev);
       next.has(fullName) ? next.delete(fullName) : next.add(fullName);
+      return next;
+    });
+  }
+
+  function toggleTsSection(key: string) {
+    setExpandedTsSections(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
   }
@@ -292,29 +421,103 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
     });
   }, [expandedRefs]);
 
+  React.useEffect(() => {
+    setActiveMatchIdx(0);
+  }, [debouncedQuery]);
+
   // Only top-level object kinds are shown as groups
-  const topLevelTables = tables.filter(t => GROUP_KINDS.includes(t.kind as typeof GROUP_KINDS[number]));
+  const topLevelTables = React.useMemo(
+    () => tables.filter(t => GROUP_KINDS.includes(t.kind as typeof GROUP_KINDS[number])),
+    [tables]
+  );
+  const renderModel = React.useMemo(
+    () => buildRenderModel(topLevelTables, tokens, isSearching),
+    [topLevelTables, tokens, isSearching]
+  );
+  const matchKeys = React.useMemo(() => collectMatchKeys(renderModel), [renderModel]);
+  const totalMatches = matchKeys.length;
+
+  // Совпадения при поиске раскрываются автоматически, но только один раз — в момент,
+  // когда объект впервые становится совпадением. Дальше пользователь может свободно
+  // свернуть/развернуть его вручную (в т.ч. пока поиск ещё активен), и это уже не
+  // перебивается на каждое следующее нажатие клавиши.
+  const prevMatchedGroupsRef = React.useRef<Set<TableKind>>(new Set());
+  const prevMatchedTablesRef = React.useRef<Set<string>>(new Set());
+  const prevMatchedTsRef = React.useRef<Set<string>>(new Set());
+  React.useEffect(() => {
+    if (!isSearching) {
+      prevMatchedGroupsRef.current = new Set();
+      prevMatchedTablesRef.current = new Set();
+      prevMatchedTsRef.current = new Set();
+      return;
+    }
+    const curGroups = new Set<TableKind>();
+    const curTables = new Set<string>();
+    const curTs = new Set<string>();
+    const newGroups: TableKind[] = [];
+    const newTables: string[] = [];
+    const newTs: string[] = [];
+    for (const g of renderModel) {
+      if (g.tables.length === 0) continue;
+      curGroups.add(g.kind);
+      if (!prevMatchedGroupsRef.current.has(g.kind)) newGroups.push(g.kind);
+      for (const t of g.tables) {
+        curTables.add(t.key);
+        if (!prevMatchedTablesRef.current.has(t.key)) newTables.push(t.key);
+        for (const ts of t.tabularSections) {
+          curTs.add(ts.key);
+          if (!prevMatchedTsRef.current.has(ts.key)) newTs.push(ts.key);
+        }
+      }
+    }
+    if (newGroups.length > 0) setExpandedGroups(prev => new Set([...prev, ...newGroups]));
+    if (newTables.length > 0) setExpandedTables(prev => new Set([...prev, ...newTables]));
+    if (newTs.length > 0) setExpandedTsSections(prev => new Set([...prev, ...newTs]));
+    prevMatchedGroupsRef.current = curGroups;
+    prevMatchedTablesRef.current = curTables;
+    prevMatchedTsRef.current = curTs;
+  }, [renderModel, isSearching]);
+  const clampedActiveIdx = totalMatches > 0 ? Math.min(activeMatchIdx, totalMatches - 1) : 0;
+  const activeMatchKey = totalMatches > 0 ? matchKeys[clampedActiveIdx] : null;
+
+  React.useEffect(() => {
+    if (!activeMatchKey || !treeRef.current) return;
+    const el = treeRef.current.querySelector(`[data-search-key="${CSS.escape(activeMatchKey)}"]`);
+    el?.scrollIntoView({ block: 'nearest' });
+  }, [activeMatchKey]);
+
+  function goToMatch(delta: number) {
+    if (totalMatches === 0) return;
+    setActiveMatchIdx(i => (i + delta + totalMatches) % totalMatches);
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={SECTION_HEADER}>База данных</div>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 4, gap: 4 }}>
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 6,
-          margin: '4px 6px',
-          padding: '3px 6px',
+          gap: 2,
+          height: 24,
+          boxSizing: 'border-box',
+          padding: '0 6px',
           background: 'var(--vscode-input-background, #3c3c3c)',
           border: '1px solid var(--qc-border)',
           borderRadius: 3,
         }}
       >
-        <span className="codicon codicon-search" style={{ fontSize: 13, opacity: 0.6, flexShrink: 0 }} />
+        <span className="codicon codicon-search" style={{ fontSize: 13, opacity: 0.6, flexShrink: 0, marginRight: 4 }} />
         <input
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            goToMatch(e.shiftKey ? -1 : 1);
+          }}
           placeholder="Поиск таблицы или поля..."
           style={{
             flex: 1,
@@ -326,63 +529,56 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
             fontSize: 12,
           }}
         />
-        {query && (
-          <span
-            className="codicon codicon-close"
-            onClick={() => setQuery('')}
-            title="Очистить"
-            style={{ fontSize: 12, opacity: 0.6, cursor: 'pointer', flexShrink: 0 }}
-          />
+        {isSearching && (
+          <span style={{ fontSize: 11, color: 'var(--vscode-descriptionForeground, #888)', flexShrink: 0, whiteSpace: 'nowrap', padding: '0 2px' }}>
+            {totalMatches > 0 ? `${clampedActiveIdx + 1} из ${totalMatches}` : 'нет результатов'}
+          </span>
         )}
+        <IconButton icon="chevron-up" title="Предыдущий результат" disabled={totalMatches === 0} onClick={() => goToMatch(-1)} />
+        <IconButton icon="chevron-down" title="Следующий результат" disabled={totalMatches === 0} onClick={() => goToMatch(1)} />
+        {query && <IconButton icon="close" title="Очистить" onClick={() => setQuery('')} />}
       </div>
-      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, fontSize: 13 }}>
-      {GROUP_KINDS.map(kind => {
-        const groupAll = topLevelTables.filter(t => t.kind === kind);
-        const group = isSearching ? groupAll.filter(t => tableMatchesQuery(t, normalizedQuery)) : groupAll;
-        if (isSearching && group.length === 0) return null;
-        const isExpanded = isSearching ? true : expandedGroups.has(kind);
+      <div ref={treeRef} style={{ overflowY: 'auto', flex: 1, minHeight: 0, fontSize: 13 }}>
+      {renderModel.map(group => {
+        if (isSearching && group.tables.length === 0) return null;
+        const isExpanded = expandedGroups.has(group.kind);
         return (
-          <div key={kind}>
+          <div key={group.kind}>
             <div
               className="qc-row"
-              onClick={() => toggleGroup(kind)}
+              onClick={() => toggleGroup(group.kind)}
               style={{ padding: '3px 8px', fontWeight: 600, cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
             >
               <Chevron expanded={isExpanded} />
-              <MetaKindIcon kind={kind} />
-              <span>{GROUP_LABELS[kind]}</span>
+              <MetaKindIcon kind={group.kind} />
+              <span>{GROUP_LABELS[group.kind]}</span>
             </div>
-            {isExpanded && group.map(table => {
-              const isTableExpanded = isSearching ? true : expandedTables.has(table.fullName);
-              const isFocused = focusedTableFullName === table.fullName && !focusedFieldPath;
-              const tableNameMatches = isSearching && norm(table.name).includes(normalizedQuery);
-              const fieldsToRender = isSearching
-                ? table.fields.filter(f => tableNameMatches || fieldMatches(f, normalizedQuery))
-                : table.fields;
-              const tsToRender = isSearching
-                ? (table.tabularSections ?? []).filter(ts => tableNameMatches || tsMatchesQuery(ts, normalizedQuery))
-                : (table.tabularSections ?? []);
+            {isExpanded && group.tables.map(rt => {
+              const isTableExpanded = expandedTables.has(rt.table.fullName);
+              const isFocused = focusedTableFullName === rt.table.fullName && !focusedFieldPath;
+              const isTableActiveMatch = rt.key === activeMatchKey;
 
               function handleTableDragStart(e: React.DragEvent) {
-                e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'table', tableFullName: table.fullName }));
+                e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'table', tableFullName: rt.table.fullName }));
                 e.dataTransfer.effectAllowed = 'copy';
               }
 
               return (
-                <div key={table.fullName}>
+                <div key={rt.table.fullName}>
                   <div
-                    data-table-fullname={table.fullName}
+                    data-table-fullname={rt.table.fullName}
+                    data-search-key={rt.key}
                     draggable
                     className="qc-row"
                     onDragStart={handleTableDragStart}
-                    onClick={() => { toggleTable(table.fullName); onFocusTable(table.fullName); }}
+                    onClick={() => { toggleTable(rt.table.fullName); onFocusTable(rt.table.fullName); }}
                     style={{
                       paddingLeft: 24,
                       paddingTop: 2,
                       paddingBottom: 2,
                       cursor: 'default',
-                      background: isFocused ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined,
-                      color: isFocused ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit',
+                      background: isTableActiveMatch ? ACTIVE_MATCH_BG : (isFocused ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined),
+                      color: isTableActiveMatch ? 'inherit' : (isFocused ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit'),
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
@@ -390,15 +586,15 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                     }}
                   >
                     <Chevron expanded={isTableExpanded} />
-                    <MetaKindIcon kind={table.kind} />
-                    <span>{highlightText(table.name, normalizedQuery)}</span>
+                    <MetaKindIcon kind={rt.table.kind} />
+                    <span>{highlightText(rt.table.name, tokens)}</span>
                   </div>
-                  {isTableExpanded && fieldsToRender.map(field => (
+                  {isTableExpanded && rt.fields.map(rf => (
                     <FieldNode
-                      key={`${table.fullName}:${field.name}`}
-                      tableFullName={table.fullName}
-                      fieldPath={field.name}
-                      field={field}
+                      key={`${rt.table.fullName}:${rf.field.name}`}
+                      tableFullName={rt.table.fullName}
+                      fieldPath={rf.field.name}
+                      field={rf.field}
                       expandedRefs={expandedRefs}
                       collapsedRefs={collapsedRefs}
                       onToggleCollapse={toggleCollapsedRef}
@@ -408,13 +604,14 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                       onExpandRef={onExpandRef}
                       onAddField={onAddField}
                       depth={2}
-                      query={normalizedQuery}
+                      tokens={tokens}
                     />
                   ))}
-                  {isTableExpanded && tsToRender.map(ts => (
+                  {isTableExpanded && rt.tabularSections.map(rts => (
                     <TabularSectionNode
-                      key={ts.fullName}
-                      ts={ts}
+                      key={rts.ts.fullName}
+                      ts={rts.ts}
+                      fields={rts.fields}
                       expandedRefs={expandedRefs}
                       collapsedRefs={collapsedRefs}
                       onToggleCollapse={toggleCollapsedRef}
@@ -424,8 +621,9 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                       onExpandRef={onExpandRef}
                       onAddField={onAddField}
                       depth={2}
-                      query={normalizedQuery}
-                      parentMatched={tableNameMatches}
+                      tokens={tokens}
+                      expanded={expandedTsSections.has(rts.key)}
+                      onToggle={() => toggleTsSection(rts.key)}
                     />
                   ))}
                 </div>
@@ -434,6 +632,10 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
           </div>
         );
       })}
+
+      {isSearching && totalMatches === 0 && (
+        <div style={{ padding: '12px 8px', color: 'var(--vscode-descriptionForeground, #888)' }}>Совпадений не найдено</div>
+      )}
 
       {/* 7.8.17: группа «Временные таблицы» — ВТ, созданные в предыдущих запросах пакета.
           Перетаскивание строки добавляет источник-ВТ (`врем КАК врем`) через ADD_TEMP_TABLE.
@@ -486,6 +688,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
           </div>
         );
       })()}
+      </div>
       </div>
     </div>
   );
