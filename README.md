@@ -18,6 +18,10 @@
 - Парсинг метаданих конфігурації в кеш (без Конфігуратора/EDT).
 - Візуальна побудова запиту — таблиці, поля, умови, групування, з'єднання,
   об'єднання, тимчасові таблиці, пакет запитів.
+- Пошук по дереву метаданих за кількома ключовими словами одразу, з
+  підсвіткою збігів і навігацією між результатами (стрілочки/`Enter`).
+- Підсвітка синтаксису SDBL (ключові слова, функції, рядки, дати, параметри)
+  у тексті запиту й виразів.
 - Відкриття вже збереженого тексту запиту з перевіркою синтаксису й наявності
   таблиць у метаданих.
 - Ручне редагування тексту запиту з поверненням правок у модель конструктора.
@@ -80,6 +84,10 @@
 - Парсинг метаданных конфигурации в кэш (без Конфигуратора/EDT).
 - Визуальное построение запроса — таблицы, поля, условия, группировка,
   соединения, объединения, временные таблицы, пакет запросов.
+- Поиск по дереву метаданных сразу по нескольким ключевым словам, с
+  подсветкой совпадений и навигацией между результатами (стрелочки/`Enter`).
+- Подсветка синтаксиса SDBL (ключевые слова, функции, строки, даты,
+  параметры) в тексте запроса и выражений.
 - Открытие уже сохранённого текста запроса с проверкой синтаксиса и наличия
   таблиц в метаданных.
 - Ручное редактирование текста запроса с возвратом правок в модель
@@ -146,6 +154,10 @@ types → joins" tree, lets you assemble a query with the mouse, and generates
 - Parses configuration metadata into a cache (no Configurator/EDT needed).
 - Visual query building — tables, fields, conditions, grouping, joins,
   unions, temp tables, query batches.
+- Multi-keyword search across the metadata tree, with match highlighting and
+  next/previous navigation (arrows/`Enter`).
+- SDBL syntax highlighting (keywords, functions, strings, dates, parameters)
+  in the query and expression text.
 - Opens an existing query's text with syntax and metadata validation.
 - Manual text editing that round-trips back into the constructor's model.
 - Preserves `//…` comments in the query text across edit cycles.
