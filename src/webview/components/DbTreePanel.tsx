@@ -47,7 +47,43 @@ const GROUP_LABELS: Record<string, string> = {
   'Перечисление': 'Перечисления',
 };
 
-function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRefs, onToggleCollapse, focusedTableFullName, focusedFieldPath, onFocusField, onExpandRef, onAddField, depth }: {
+function norm(s: string): string {
+  return s.toLowerCase();
+}
+
+function fieldMatches(field: MetaField, q: string): boolean {
+  return norm(field.name).includes(q);
+}
+
+/** ВНИМАНИЕ: ищет только среди уже загруженных полей (собственные поля таблицы
+ * и её табличных частей) — вложенные поля справочных полей подгружаются лениво
+ * по клику (onExpandRef), поэтому в поиск не попадают. */
+function tsMatchesQuery(ts: MetaTable, q: string): boolean {
+  return norm(ts.name).includes(q) || ts.fields.some(f => fieldMatches(f, q));
+}
+
+function tableMatchesQuery(table: MetaTable, q: string): boolean {
+  return norm(table.name).includes(q)
+    || table.fields.some(f => fieldMatches(f, q))
+    || (table.tabularSections ?? []).some(ts => tsMatchesQuery(ts, q));
+}
+
+function highlightText(text: string, q: string): React.ReactNode {
+  if (!q) return text;
+  const idx = norm(text).indexOf(q);
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark style={{ background: 'var(--vscode-editor-findMatchHighlightBackground, rgba(234,92,0,0.33))', color: 'inherit', borderRadius: 2 }}>
+        {text.slice(idx, idx + q.length)}
+      </mark>
+      {text.slice(idx + q.length)}
+    </>
+  );
+}
+
+function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRefs, onToggleCollapse, focusedTableFullName, focusedFieldPath, onFocusField, onExpandRef, onAddField, depth, query }: {
   tableFullName: string;
   fieldPath: string;
   field: MetaField;
@@ -60,6 +96,7 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
   onExpandRef: (ref: RefId) => void;
   onAddField: (tableFullName: string, fieldPath: string) => void;
   depth: number;
+  query: string;
 }): React.ReactElement {
   const ref = field.types.find(t => t.ref)?.ref ?? null;
   const refKey = ref ? `${ref.kind}.${ref.name}` : null;
@@ -105,7 +142,7 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
       >
         {ref ? <Chevron expanded={expanded} onClick={handleExpandToggle} /> : <span style={{ width: 14, flexShrink: 0 }} />}
         <span className={`codicon codicon-${ref ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
-        <span>{field.name}</span>
+        <span>{highlightText(field.name, query)}</span>
       </div>
       {expanded && refKey && expandedRefs.get(refKey)?.map(subField => (
         <FieldNode
@@ -122,13 +159,14 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
           onExpandRef={onExpandRef}
           onAddField={onAddField}
           depth={depth + 1}
+          query={query}
         />
       ))}
     </>
   );
 }
 
-function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse, focusedTableFullName, focusedFieldPath, onFocusField, onExpandRef, onAddField, depth }: {
+function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse, focusedTableFullName, focusedFieldPath, onFocusField, onExpandRef, onAddField, depth, query, parentMatched }: {
   ts: MetaTable;
   expandedRefs: Map<string, MetaField[]>;
   collapsedRefs: Set<string>;
@@ -139,8 +177,15 @@ function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse,
   onExpandRef: (ref: RefId) => void;
   onAddField: (tableFullName: string, fieldPath: string) => void;
   depth: number;
+  query: string;
+  parentMatched: boolean;
 }): React.ReactElement {
-  const [expanded, setExpanded] = React.useState(false);
+  const [manualExpanded, setManualExpanded] = React.useState(false);
+  const isSearching = query.length > 0;
+  const expanded = isSearching || manualExpanded;
+  const tsNameMatches = isSearching && norm(ts.name).includes(query);
+  const showAllFields = parentMatched || tsNameMatches;
+  const fieldsToRender = isSearching ? ts.fields.filter(f => showAllFields || fieldMatches(f, query)) : ts.fields;
 
   function handleDragStart(e: React.DragEvent) {
     const parentFullName = ts.fullName.split('.').slice(0, 2).join('.');
@@ -161,7 +206,7 @@ function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse,
         className="qc-row"
         title="Табличная часть"
         onDragStart={handleDragStart}
-        onClick={() => setExpanded(prev => !prev)}
+        onClick={() => setManualExpanded(prev => !prev)}
         style={{
           paddingLeft: 8 + depth * 16,
           paddingTop: 2,
@@ -176,9 +221,9 @@ function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse,
       >
         <Chevron expanded={expanded} />
         <MetaKindIcon kind="ТабличнаяЧасть" />
-        <span>{ts.name}</span>
+        <span>{highlightText(ts.name, query)}</span>
       </div>
-      {expanded && ts.fields.map(field => (
+      {expanded && fieldsToRender.map(field => (
         <FieldNode
           key={`${ts.fullName}:${field.name}`}
           tableFullName={ts.fullName}
@@ -193,6 +238,7 @@ function TabularSectionNode({ ts, expandedRefs, collapsedRefs, onToggleCollapse,
           onExpandRef={onExpandRef}
           onAddField={onAddField}
           depth={depth + 1}
+          query={query}
         />
       ))}
     </>
@@ -203,6 +249,10 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
   const [expandedGroups, setExpandedGroups] = React.useState<Set<TableKind>>(new Set());
   const [expandedTables, setExpandedTables] = React.useState<Set<string>>(new Set());
   const [collapsedRefs, setCollapsedRefs] = React.useState<Set<string>>(new Set());
+  const [query, setQuery] = React.useState('');
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const isSearching = normalizedQuery.length > 0;
 
   function toggleGroup(kind: TableKind) {
     setExpandedGroups(prev => {
@@ -248,10 +298,49 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={SECTION_HEADER}>База данных</div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          margin: '4px 6px',
+          padding: '3px 6px',
+          background: 'var(--vscode-input-background, #3c3c3c)',
+          border: '1px solid var(--qc-border)',
+          borderRadius: 3,
+        }}
+      >
+        <span className="codicon codicon-search" style={{ fontSize: 13, opacity: 0.6, flexShrink: 0 }} />
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Поиск таблицы или поля..."
+          style={{
+            flex: 1,
+            minWidth: 0,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: 'var(--vscode-input-foreground, #ccc)',
+            fontSize: 12,
+          }}
+        />
+        {query && (
+          <span
+            className="codicon codicon-close"
+            onClick={() => setQuery('')}
+            title="Очистить"
+            style={{ fontSize: 12, opacity: 0.6, cursor: 'pointer', flexShrink: 0 }}
+          />
+        )}
+      </div>
       <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, fontSize: 13 }}>
       {GROUP_KINDS.map(kind => {
-        const group = topLevelTables.filter(t => t.kind === kind);
-        const isExpanded = expandedGroups.has(kind);
+        const groupAll = topLevelTables.filter(t => t.kind === kind);
+        const group = isSearching ? groupAll.filter(t => tableMatchesQuery(t, normalizedQuery)) : groupAll;
+        if (isSearching && group.length === 0) return null;
+        const isExpanded = isSearching ? true : expandedGroups.has(kind);
         return (
           <div key={kind}>
             <div
@@ -264,8 +353,15 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
               <span>{GROUP_LABELS[kind]}</span>
             </div>
             {isExpanded && group.map(table => {
-              const isTableExpanded = expandedTables.has(table.fullName);
+              const isTableExpanded = isSearching ? true : expandedTables.has(table.fullName);
               const isFocused = focusedTableFullName === table.fullName && !focusedFieldPath;
+              const tableNameMatches = isSearching && norm(table.name).includes(normalizedQuery);
+              const fieldsToRender = isSearching
+                ? table.fields.filter(f => tableNameMatches || fieldMatches(f, normalizedQuery))
+                : table.fields;
+              const tsToRender = isSearching
+                ? (table.tabularSections ?? []).filter(ts => tableNameMatches || tsMatchesQuery(ts, normalizedQuery))
+                : (table.tabularSections ?? []);
 
               function handleTableDragStart(e: React.DragEvent) {
                 e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'table', tableFullName: table.fullName }));
@@ -295,9 +391,9 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                   >
                     <Chevron expanded={isTableExpanded} />
                     <MetaKindIcon kind={table.kind} />
-                    <span>{table.name}</span>
+                    <span>{highlightText(table.name, normalizedQuery)}</span>
                   </div>
-                  {isTableExpanded && table.fields.map(field => (
+                  {isTableExpanded && fieldsToRender.map(field => (
                     <FieldNode
                       key={`${table.fullName}:${field.name}`}
                       tableFullName={table.fullName}
@@ -312,9 +408,10 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                       onExpandRef={onExpandRef}
                       onAddField={onAddField}
                       depth={2}
+                      query={normalizedQuery}
                     />
                   ))}
-                  {isTableExpanded && table.tabularSections?.map(ts => (
+                  {isTableExpanded && tsToRender.map(ts => (
                     <TabularSectionNode
                       key={ts.fullName}
                       ts={ts}
@@ -327,6 +424,8 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                       onExpandRef={onExpandRef}
                       onAddField={onAddField}
                       depth={2}
+                      query={normalizedQuery}
+                      parentMatched={tableNameMatches}
                     />
                   ))}
                 </div>
@@ -337,7 +436,8 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
       })}
 
       {/* 7.8.17: группа «Временные таблицы» — ВТ, созданные в предыдущих запросах пакета.
-          Перетаскивание строки добавляет источник-ВТ (`врем КАК врем`) через ADD_TEMP_TABLE. */}
+          Перетаскивание строки добавляет источник-ВТ (`врем КАК врем`) через ADD_TEMP_TABLE.
+          Поиск на эту группу не распространяется — список ВТ пакета всегда короткий. */}
       {tempTables.length > 0 && (() => {
         const isExpanded = expandedGroups.has('ВременнаяТаблица');
         return (
@@ -359,7 +459,6 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                   <div
                     data-temp-table={table.name}
                     draggable
-                    className="qc-row"
                     onDragStart={e => {
                       e.dataTransfer.setData('text/plain', JSON.stringify({
                         kind: 'temptable',
