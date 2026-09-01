@@ -2,7 +2,7 @@
 
 [🇺🇦 Українська](#українська) · [🇷🇺 Русский](#русский) · [🇬🇧 English](#english)
 
-![1C: Query Constructor](images/constructor.png)
+![1C: Query Constructor](assets/images/constructor.png)
 
 ---
 

@@ -11,7 +11,7 @@ const FIXTURES = path.join(__dirname, '..', 'fixtures');
 const SDBL_WASM = path.join(FIXTURES, 'tree-sitter-sdbl.wasm');
 
 /**
- * Грамматика SDBL вендорится отдельно (scripts/build-wasm.sh) и не коммитится.
+ * Грамматика SDBL вендорится отдельно (tooling/scripts/build-wasm.sh) и не коммитится.
  * В окружениях без неё валидацию пропускаем, чтобы тесты текста запроса не
  * падали из-за отсутствия артефакта сборки.
  */

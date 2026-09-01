@@ -79,17 +79,17 @@ parseConfiguration.ts  оркестратор: обход cf/, диспетч п
 
 ## Сборка и запуск
 
-Быстрый старт — скрипт [`install.sh`](../install.sh) (проверка Node, системные пакеты
+Быстрый старт — команда `npm run setup` (скрипт [`tooling/setup/install.sh`](../tooling/setup/install.sh), проверка Node, системные пакеты
 для node-gyp, `npm install` и сборка одной командой):
 
 ```bash
-./install.sh           # окружение + npm install + build
-./install.sh --e2e     # + браузеры Playwright для e2e-тестов
-./install.sh --docker  # + Docker Engine и devcontainers CLI (для DevContainer)
-./install.sh --help     # все опции (--wasm, --no-system)
+npm run setup --              # окружение + npm install + build
+npm run setup -- --e2e        # + браузеры Playwright для e2e-тестов
+npm run setup -- --docker     # + Docker Engine и devcontainers CLI (для DevContainer)
+npm run setup -- --help       # все опции (--wasm, --no-system)
 ```
 
-Для разработки в контейнере (`.devcontainer/`) нужен Docker на хосте: `./install.sh
+Для разработки в контейнере (`.devcontainer/`) нужен Docker на хосте: `npm run setup --
 --docker` ставит Docker Engine (buildx/compose), добавляет пользователя в группу
 `docker` и `@devcontainers/cli`. Дальше — «Dev Containers: Reopen in Container» в VS
 Code или `devcontainer up --workspace-folder .` из терминала.

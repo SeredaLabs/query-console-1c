@@ -6,7 +6,6 @@ src/**
 test/**
 test-results/**
 playwright-report/**
-scripts/**
 tooling/**
 tmp/**
 docs/**
@@ -17,5 +16,4 @@ out/webview/**/*.map
 tsconfig*.json
 vitest.config.ts
 playwright.config.ts
-install.sh
 *.vsix

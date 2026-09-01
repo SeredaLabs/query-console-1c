@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install.sh — подготовка окружения для сборки и тестов 1C: Query Constructor.
+# tooling/setup/install.sh — подготовка окружения для сборки и тестов 1C: Query Constructor.
 #
 # Что делает (по шагам):
 #   1. Проверяет Node.js (>= 20; рекомендуется 22) и npm.
@@ -14,15 +14,15 @@
 #               хост-окружение для разработки в контейнере (DevContainer).
 #
 # Использование:
-#   ./install.sh              # системные пакеты (если apt) + npm install + build
-#   ./install.sh --e2e        # то же + браузеры Playwright
-#   ./install.sh --wasm       # то же + пересборка SDBL-грамматики в .wasm
-#   ./install.sh --docker     # то же + Docker Engine и devcontainers CLI (DevContainer)
-#   ./install.sh --no-system  # пропустить установку системных пакетов
-#   ./install.sh --e2e --wasm
+#   npm run setup --              # системные пакеты (если apt) + npm install + build
+#   npm run setup -- --e2e        # то же + браузеры Playwright
+#   npm run setup -- --wasm       # то же + пересборка SDBL-грамматики в .wasm
+#   npm run setup -- --docker     # то же + Docker Engine и devcontainers CLI (DevContainer)
+#   npm run setup -- --no-system  # пропустить установку системных пакетов
+#   npm run setup -- --e2e --wasm
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 WITH_E2E=0
@@ -108,8 +108,8 @@ fi
 # --- 6. Пересборка SDBL-грамматики в WASM (опционально) ---------------------
 if [ "$WITH_WASM" -eq 1 ]; then
   if [ -d "tmp/tree-sitter-bsl" ]; then
-    log "Пересборка tree-sitter-sdbl.wasm (scripts/build-wasm.sh) ..."
-    bash scripts/build-wasm.sh
+    log "Пересборка tree-sitter-sdbl.wasm (tooling/scripts/build-wasm.sh) ..."
+    bash tooling/scripts/build-wasm.sh
   else
     echo "[install] ПРОПУСК --wasm: нет tmp/tree-sitter-bsl." >&2
     echo "          Скопируйте sibling-репо (см. .devcontainer/copy-sibling-repos.sh) и нужен emscripten." >&2

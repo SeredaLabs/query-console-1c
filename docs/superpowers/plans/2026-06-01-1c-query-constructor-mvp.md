@@ -19,7 +19,7 @@ tsconfig.webview.json               webview (React/JSX) TS config
 vitest.config.ts                    unit test config
 playwright.config.ts                E2E test config
 .vscodeignore
-scripts/build-wasm.sh               build + vendor tree-sitter-sdbl.wasm
+tooling/scripts/build-wasm.sh       build + vendor tree-sitter-sdbl.wasm
 
 src/
   shared/messages.ts                host↔webview message contract + RefId
@@ -53,7 +53,7 @@ test/
     cf/
       Catalogs/Тест.xml             minimal catalog fixture (2 attributes)
       Documents/ТестДок.xml         minimal document fixture (1 attribute)
-    tree-sitter-sdbl.wasm           vendored (built by scripts/build-wasm.sh)
+    tree-sitter-sdbl.wasm           vendored (built by tooling/scripts/build-wasm.sh)
     tree-sitter.wasm                vendored from web-tree-sitter
   helpers/
     assertValidSdbl.ts              oracle: parse SDBL text, assert no errors
@@ -341,11 +341,11 @@ git commit -m "feat: shared types — MetadataModel, QueryModel, host↔webview 
 ## Task 3: WASM Build Script + Oracle Helper
 
 **Files:**
-- Create: `scripts/build-wasm.sh`
+- Create: `tooling/scripts/build-wasm.sh`
 - Create: `test/helpers/assertValidSdbl.ts`
 - Create: `test/fixtures/` (wasm files go here after running script)
 
-- [ ] **Step 1: Write `scripts/build-wasm.sh`**
+- [ ] **Step 1: Write `tooling/scripts/build-wasm.sh`**
 
 ```bash
 #!/usr/bin/env bash
@@ -381,8 +381,8 @@ echo "Done. Vendored to $FIXTURES/"
 - [ ] **Step 2: Make script executable and run it**
 
 ```bash
-chmod +x scripts/build-wasm.sh
-bash scripts/build-wasm.sh
+chmod +x tooling/scripts/build-wasm.sh
+bash tooling/scripts/build-wasm.sh
 ```
 
 Expected output:
@@ -434,7 +434,7 @@ export async function assertValidSdbl(text: string): Promise<void> {
 - [ ] **Step 4: Commit (include the vendored WASM)**
 
 ```bash
-git add scripts/build-wasm.sh test/fixtures/ test/helpers/assertValidSdbl.ts
+git add tooling/scripts/build-wasm.sh test/fixtures/ test/helpers/assertValidSdbl.ts
 git commit -m "feat: vendor tree-sitter-sdbl.wasm + assertValidSdbl oracle helper"
 ```
 
@@ -640,7 +640,7 @@ Run: `npm run test:unit -- --reporter=verbose 2>&1`
 
 Expected: `9 tests passed` (the oracle test runs last and loads WASM once).
 
-If the oracle test fails with a WASM error, verify `test/fixtures/tree-sitter-sdbl.wasm` exists and re-run `bash scripts/build-wasm.sh`.
+If the oracle test fails with a WASM error, verify `test/fixtures/tree-sitter-sdbl.wasm` exists and re-run `bash tooling/scripts/build-wasm.sh`.
 
 - [ ] **Step 7: Commit**
 

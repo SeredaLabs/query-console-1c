@@ -3,7 +3,7 @@
   "displayName": "1C: Query Constructor",
   "description": "Visual query constructor for 1C",
   "version": "0.1.20",
-  "icon": "images/icon.png",
+  "icon": "assets/images/icon.png",
   "license": "MIT",
   "publisher": "SeredaLabs",
   "author": {
@@ -64,6 +64,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
+    "setup": "bash tooling/setup/install.sh",
     "package": "vsce package --out query-console-1c.vsix",
     "build": "npm run build:extension && npm run build:webview",
     "build:extension": "esbuild src/extension/extension.ts --bundle --outfile=out/extension/extension.js --platform=node --format=cjs --external:vscode --sourcemap",
