@@ -39,7 +39,10 @@ query-console-1c/
 │   ├── webview/              # СЛОЙ UI (React + TypeScript)
 │   │   ├── App.tsx, main.tsx, bridge.ts
 │   │   ├── components/        #   DbTreePanel / TablesPanel / FieldsPanel / TabsBar
-│   │   └── state/queryStore.ts
+│   │   └── state/
+│   │       ├── queryStore.ts    # reducer і сумісний фасад стану
+│   │       └── queryStore/
+│   │           └── snapshots.ts # snapshot/restore і складання запитів
 │   ├── shared/
 │   │   └── messages.ts       # контракт сообщений host ↔ webview
 │   ├── cli/

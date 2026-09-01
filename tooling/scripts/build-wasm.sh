@@ -4,7 +4,7 @@
 # Run once (or when grammar changes). Requires: tree-sitter CLI, emscripten.
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BSL_REPO="$REPO_ROOT/tmp/tree-sitter-bsl"
 FIXTURES="$REPO_ROOT/test/fixtures"
 
