@@ -78,6 +78,9 @@
     "accept:oracle": "npm run build:oracle && node out/cli/oracleAcceptCli.js",
     "oracle:diff": "esbuild src/cli/oracleDiff.ts --bundle --outfile=out/cli/oracleDiff.js --platform=node --format=cjs && node out/cli/oracleDiff.js",
     "build:webview": "esbuild src/webview/main.tsx --bundle --outfile=out/webview/main.js --platform=browser --format=iife --loader:.tsx=tsx --loader:.ts=ts && cp node_modules/@vscode/codicons/dist/codicon.css node_modules/@vscode/codicons/dist/codicon.ttf out/webview/",
+    "typecheck:extension": "tsc -p tsconfig.json --noEmit",
+    "typecheck:webview": "tsc -p tsconfig.webview.json --noEmit",
+    "typecheck": "npm run typecheck:extension && npm run typecheck:webview",
     "watch:extension": "tsc -p tsconfig.json --watch",
     "watch:webview": "npm run build:webview -- --watch",
     "test:unit": "vitest run",
@@ -88,7 +91,7 @@
     "real:inventory": "esbuild tooling/real-constructor/inventory.ts --bundle --outfile=out/real-constructor/inventory.js --platform=node --format=cjs --packages=external && node out/real-constructor/inventory.js",
     "our:inventory": "npm run build:webview && esbuild tooling/our-constructor/inventory.ts --bundle --outfile=out/our-constructor/inventory.js --platform=node --format=cjs --packages=external && node out/our-constructor/inventory.js",
     "corpus:verify": "npm run build:webview && esbuild tooling/corpus-verify/verify.ts --bundle --outfile=out/corpus-verify/verify.js --platform=node --format=cjs --packages=external && node out/corpus-verify/verify.js",
-    "test": "npm run test:unit",
+    "test": "npm run typecheck && npm run test:unit",
     "dev": "npm run build && code --extensionDevelopmentPath=."
   },
   "devDependencies": {

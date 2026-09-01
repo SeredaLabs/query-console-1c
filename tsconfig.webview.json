@@ -6,7 +6,7 @@
     "lib": ["ES2020", "DOM"],
     "jsx": "react",
     "outDir": "out/webview",
-    "rootDir": "src/webview",
+    "rootDir": "src",
     "noEmit": true
   },
   "include": ["src/webview/**/*", "src/shared/**/*", "src/core/metadata/types.ts", "src/core/query/queryModel.ts"],

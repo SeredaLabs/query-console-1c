@@ -139,10 +139,7 @@ describe('extractQueriesFromXml', () => {
 
 describe('extractQueriesFromXml — реальный макет', () => {
   it('round-trip на Reports/Задачи Template.xml: сущности декодированы', () => {
-    const file = path.resolve(
-      __dirname,
-      '../../src/cf/Reports/Задачи/Templates/ОсновнаяСхемаКомпоновкиДанных/Ext/Template.xml',
-    );
+    const file = path.resolve(__dirname, '../fixtures/extractQueries/template-sample.xml');
     const xml = fs.readFileSync(file, 'utf8');
     const res = extractQueriesFromXml(xml);
     expect(res.length).toBeGreaterThanOrEqual(1);

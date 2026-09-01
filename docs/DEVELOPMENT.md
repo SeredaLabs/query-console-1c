@@ -19,7 +19,7 @@
 ## Структура каталогов
 
 ```
-query_console_vscode/
+query-console-1c/
 ├── src/
 │   ├── extension/            # СЛОЙ VS Code (тонкий, зависит от vscode)
 │   │   ├── extension.ts      #   activate(): регистрация команд
@@ -43,8 +43,10 @@ query_console_vscode/
 │   ├── shared/
 │   │   └── messages.ts       # контракт сообщений host ↔ webview
 │   ├── cli/
-│   │   └── parseMetadata.ts  # CLI-вход парсера метаданных
+│   │   ├── parseMetadata.ts  # CLI-вход парсера метаданных
+│   │   └── *.ts              #   инструменты corpus/oracle-тестирования
 │   └── cf/                   # пример выгрузки конфигурации 1С (в .gitignore)
+├── tooling/                  # инструменты corpus/oracle-тестирования и сверки UI; не входят в VSIX
 ├── docs/
 │   ├── ROADMAP.md            # общий план проекта (фазы и статусы)
 │   └── superpowers/
@@ -115,6 +117,10 @@ Workflow ([`.github/workflows/release.yml`](../.github/workflows/release.yml)) �
 Release с файлом `query-console-1c-<тег>.vsix` в Assets. Локально собрать пакет можно
 командой `npm run package`.
 
+Тот же workflow запускает job `verify` (`typecheck`, сборка, unit- и e2e-тесты) на
+каждый pull request и push в `main`; упаковка и публикация релиза выполняются только
+для тега `v*`.
+
 ### Установка VSIX
 
 Скачайте `query-console-1c-<тег>.vsix` со страницы
@@ -171,6 +177,8 @@ cf/
 Разработка ведётся по **TDD**.
 
 ```bash
+npm run typecheck      # tsc для extension/core/cli и отдельно для webview
+npm test               # typecheck + test:unit; основной локальный gate
 npm run test:unit      # юнит-тесты ядра (Vitest): cfParser, sdblGenerator, typeParser, cache
 npm run test:e2e       # Playwright e2e для webview
 ```
@@ -195,3 +203,8 @@ npm run test:e2e       # Playwright e2e для webview
 - [`docs/ROADMAP.md`](ROADMAP.md) — общий план проекта, фазы и статусы.
 - [`docs/superpowers/specs/`](superpowers/specs/) — дизайн-документы (спеки) по итерациям.
 - [`docs/superpowers/plans/`](superpowers/plans/) — планы реализации.
+
+Спецификации и планы в `superpowers/`, а также `docs/PHASE_*.md` — точечные записи
+соответствующих прошлых итераций; они могут описывать уже изменившиеся предположения
+(например, `src/cf` как обязательный вход). Текущую работу сверяйте по коду, тестам и
+этой документации.

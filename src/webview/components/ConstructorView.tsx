@@ -762,10 +762,10 @@ function NestedConstructorModal({ metadataTables, expandedRefs, onExpandRef, ini
   useEffect(() => {
     for (const [key, fields] of expandedRefs) {
       if (!nestedState.expandedRefs.has(key)) {
-        const dot = key.indexOf('.');
-        const kind = key.slice(0, dot);
-        const name = key.slice(dot + 1);
-        nestedDispatch({ type: 'SET_REF_FIELDS', ref: { kind, name }, fields });
+        const table = metadataTables.find(candidate => `${candidate.kind}.${candidate.name}` === key);
+        if (table) {
+          nestedDispatch({ type: 'SET_REF_FIELDS', ref: { kind: table.kind, name: table.name }, fields });
+        }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
