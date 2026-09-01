@@ -1,15 +1,20 @@
 import type { MetaTable } from '../../../core/metadata/types';
-import type { Grouping, Indexing, Order, QueryModel, QueryType, SelectedField, Totals } from '../../../core/query/queryModel';
+import type { Grouping, Indexing, Order, QueryModel, QueryType, ReportBuilder, SelectedField, Totals } from '../../../core/query/queryModel';
 import { fieldAlias, type QueryDocument, type UnionMember } from '../../../core/query/unionModel';
 import type { BatchDocument } from '../../../core/query/batchModel';
 import type { BatchSnapshot, QueryState, SavedQuery } from '../queryStore';
 
 /** Пустой построитель отчёта: все секции без строк. */
-export function emptyBuilder() {
+export function emptyBuilder(): ReportBuilder {
   return { fields: [], conditions: [], order: [], totals: [] };
 }
 
-/** Предзаполнение окна «Временная таблица» для существующего источника-ВТ. */
+/**
+ * Предзаполнение окна «Временная таблица» для существующего источника-ВТ (двойной
+ * клик). Имя — РЕАЛЬНОЕ имя ВТ (`sel.fullName`, напр. `#ВТ`/`&ВТ`), а НЕ
+ * `defaultTableAlias`: иначе двойной клик по `#ВТ КАК ВТ` потеряет ведущий `#`.
+ * Поля — из синтетической метатаблицы источника.
+ */
 export function tempTableDialogInitial(state: QueryState, editId: string): { name: string; fields: { name: string }[] } | undefined {
   const sel = state.selectedTables.find(t => t.id === editId);
   if (!sel) return undefined;
@@ -29,7 +34,10 @@ export function snapshotActive(state: QueryState): SavedQuery {
   };
 }
 
-/** Восстановить плоские поля из снимка или пустых значений по умолчанию. */
+/**
+ * Восстановить плоские поля из снимка (или пустые значения по умолчанию при null).
+ * Транзитные поля фокуса всегда сбрасываются.
+ */
 export function restoreSaved(_state: QueryState, saved: SavedQuery | null): Partial<QueryState> {
   const base = saved ?? {
     selectedTables: [], selectedFields: [], tabSectionFields: [],
@@ -49,6 +57,7 @@ export function restoreSaved(_state: QueryState, saved: SavedQuery | null): Part
   };
 }
 
+/** Собрать QueryModel из снимка (или из плоских полей активного запроса). */
 export function buildModelFromFlat(flat: SavedQuery): QueryModel {
   return {
     tables: flat.selectedTables, fields: flat.selectedFields, tabSectionFields: flat.tabSectionFields,
@@ -58,6 +67,10 @@ export function buildModelFromFlat(flat: SavedQuery): QueryModel {
   };
 }
 
+/**
+ * Обратное преобразование `buildModelFromFlat`: модель → плоский SavedQuery.
+ * Поля-опционалы заполняются теми же пустыми значениями, что и в `restoreSaved`.
+ */
 export function modelToFlat(model: QueryModel): SavedQuery {
   return {
     selectedTables: model.tables, selectedFields: model.fields, tabSectionFields: model.tabSectionFields ?? [],
@@ -69,10 +82,12 @@ export function modelToFlat(model: QueryModel): SavedQuery {
   };
 }
 
+/** Снимок документа объединения из распарсенного QueryDocument. */
 export function docToSnapshot(doc: QueryDocument): BatchSnapshot {
   return { queryList: doc.members.map(m => ({ name: m.name, distinct: m.distinct })), activeQuery: 0, savedQueries: doc.members.map(m => modelToFlat(m.model)) };
 }
 
+/** Собрать участников объединения из active working set и сохранённых снимков. */
 export function assembleMembers(state: QueryState): UnionMember[] {
   return state.queryList.map((meta, i) => {
     const saved = i === state.activeQuery ? snapshotActive(state) : state.savedQueries[i];
@@ -81,11 +96,13 @@ export function assembleMembers(state: QueryState): UnionMember[] {
   });
 }
 
+/** Собрать текущий документ объединения в снимок пакета. */
 export function snapshotActiveBatch(state: QueryState): BatchSnapshot {
   const savedQueries = state.queryList.map((_, i) => i === state.activeQuery ? snapshotActive(state) : (state.savedQueries[i] ?? snapshotActive(state)));
   return { queryList: state.queryList, activeQuery: state.activeQuery, savedQueries };
 }
 
+/** Восстановить документ объединения из снимка пакета или пустого состояния. */
 export function restoreBatch(state: QueryState, snap: BatchSnapshot | null): Partial<QueryState> {
   if (snap === null) return { queryList: [{ name: 'Запрос 1', distinct: false }], activeQuery: 0, savedQueries: [null], ...restoreSaved(state, null) };
   const savedQueries: (SavedQuery | null)[] = snap.savedQueries.slice();
@@ -93,6 +110,7 @@ export function restoreBatch(state: QueryState, snap: BatchSnapshot | null): Par
   return { queryList: snap.queryList, activeQuery: snap.activeQuery, savedQueries, ...restoreSaved(state, snap.savedQueries[snap.activeQuery]) };
 }
 
+/** Производное имя запроса пакета по первому участнику объединения его документа. */
 export function batchMemberName(state: QueryState, i: number): string {
   const first = i === state.activeBatch
     ? (state.activeQuery === 0 ? snapshotActive(state) : state.savedQueries[0]!)
@@ -103,6 +121,10 @@ export function batchMemberName(state: QueryState, i: number): string {
   return `Запрос пакета ${i + 1}`;
 }
 
+/**
+ * Доступные временные таблицы для активного запроса пакета: только созданные
+ * `ПОМЕСТИТЬ`/`ДОБАВИТЬ` в предыдущих запросах. ВТ не доступна своему создателю.
+ */
 export function availableTempTables(state: QueryState): MetaTable[] {
   const out: MetaTable[] = [];
   const seenNames = new Set<string>();
@@ -130,6 +152,7 @@ export function availableTempTables(state: QueryState): MetaTable[] {
   return out;
 }
 
+/** Собрать пакет: активный документ из live-состояния, остальные из снимков. */
 export function assembleBatch(state: QueryState): BatchDocument {
   return {
     members: state.batchSaved.map((snap, i) => {
@@ -153,7 +176,7 @@ export function stripBatchComments(batch: BatchDocument): BatchDocument {
   };
 }
 
-function stripFieldComments(fields: SelectedField[]): SelectedField[] {
+export function stripFieldComments(fields: SelectedField[]): SelectedField[] {
   return fields.map(f => {
     if (f.commentLeading === undefined && f.commentTrailing === undefined) return f;
     const { commentLeading, commentTrailing, ...rest } = f;

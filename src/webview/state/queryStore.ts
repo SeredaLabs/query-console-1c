@@ -19,6 +19,7 @@ import {
   snapshotActive,
   snapshotActiveBatch,
   stripBatchComments,
+  stripFieldComments,
   tempTableDialogInitial,
 } from './queryStore/snapshots';
 
@@ -423,14 +424,6 @@ function synthesizeSubqueryTables(doc: BatchDocument, taken: Set<string>): MetaT
 function totalOperandAlias(state: QueryState, tableId: string, path: string): string {
   const col = state.selectedFields.find(f => !f.expression && f.tableId === tableId && f.path === path);
   return col?.alias ?? (path.split('.').pop() ?? path);
-}
-
-function stripFieldComments(fields: SelectedField[]): SelectedField[] {
-  return fields.map(f => {
-    if (f.commentLeading === undefined && f.commentTrailing === undefined) return f;
-    const { commentLeading, commentTrailing, ...rest } = f;
-    return rest;
-  });
 }
 
 /**
