@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view';
-import { defaultKeymap, historyKeymap, history, indentWithTab, undo as cmUndo, redo as cmRedo } from '@codemirror/commands';
+import { defaultKeymap, historyKeymap, history, indentWithTab, undo as cmUndo, redo as cmRedo, isolateHistory } from '@codemirror/commands';
 import { bracketMatching, foldGutter, codeFolding, foldKeymap } from '@codemirror/language';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { search, searchKeymap, openSearchPanel } from '@codemirror/search';
@@ -239,15 +239,23 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wrapLines, richFeatures]);
 
-  // Синхронизация извне (например, сброс текста при повторном открытии диалога) —
-  // свои же изменения (через onChange выше) сюда не возвращаются, так как
-  // `value` в родителе уже совпадёт с состоянием CodeMirror к этому моменту.
+  // Синхронизация извне (сброс текста при повторном открытии диалога, кнопка
+  // «Форматировать» — стадия 5 плана) — свои же изменения (через onChange выше) сюда
+  // не возвращаются, так как `value` в родителе уже совпадёт с состоянием CodeMirror
+  // к этому моменту. `isolateHistory: 'full'` — программная замена ВСЕГДА своя
+  // undo-группа, а не сливается с только что напечатанным пользователем текстом
+  // (CodeMirror группирует соседние транзакции по умолчанию, если они произошли
+  // достаточно быстро одна за другой — без этой аннотации Ctrl/Cmd+Z после «Форматировать»,
+  // выполненного сразу вслед за правкой, мог бы откатить ОБЕ правки одним шагом).
   React.useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
     const current = view.state.doc.toString();
     if (current !== value) {
-      view.dispatch({ changes: { from: 0, to: current.length, insert: value } });
+      view.dispatch({
+        changes: { from: 0, to: current.length, insert: value },
+        annotations: isolateHistory.of('full'),
+      });
     }
   }, [value]);
 

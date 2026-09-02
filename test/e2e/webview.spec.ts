@@ -323,6 +323,35 @@ test.describe('Query Constructor Webview', () => {
     await expect(editor).toBeFocused();
   });
 
+  // Стадия 5 плана «Текст запроса v2»: «Форматировать» переносит секции на отдельные
+  // строки, и один Ctrl/Cmd+Z полностью откатывает результат (design-док, раздел 5).
+  test('Текст запроса v2: «Форматировать» переносит секции, Ctrl/Cmd+Z откатывает одним шагом', async ({ page }) => {
+    await page.goto(BASE);
+    await page.evaluate(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
+      }));
+    });
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+    await page.locator('button:has-text("Запрос")').click();
+
+    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+    const oneLiner = 'ВЫБРАТЬ Валюты.Код КАК Код ИЗ Справочник.Валюты КАК Валюты ГДЕ Валюты.Код = &Код';
+    await editor.fill(oneLiner);
+    await expect(editor).toHaveText(oneLiner);
+
+    await page.locator('button[title="Форматировать"]').click();
+    await expect(editor).toContainText('ВЫБРАТЬ');
+    const formattedText = await editor.textContent();
+    expect(formattedText).not.toBe(oneLiner);
+
+    await editor.click();
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z');
+    await expect(editor).toHaveText(oneLiner);
+  });
+
   test('нижняя панель: ОК постит insertText, Отмена постит cancel', async ({ page }) => {
     await page.goto(BASE);
     await expect(page.locator('button:has-text("Запрос")')).toBeVisible();

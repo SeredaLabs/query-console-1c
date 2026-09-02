@@ -3,6 +3,7 @@ import { CodeEditor, type CodeEditorHandle } from './CodeEditor';
 import { IconButton } from './IconButton';
 import { BTN, BTN_SECONDARY } from '../sharedStyles';
 import { analyze, type QueryAnalysisResult, type QueryDiagnostic } from '../../core/query/queryAnalysisService';
+import { formatQueryText } from '../../core/query/queryTextFormatter';
 import type { MetadataResolver } from '../../core/query/metadataResolver';
 import type { Diagnostic } from '@codemirror/lint';
 
@@ -174,7 +175,10 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
             ↷
           </button>
           <span style={SEPARATOR} />
-          <button disabled style={TOOLBAR_BTN_DISABLED} title="Форматировать — появится на следующей стадии">Форматировать</button>
+          {/* onChange идёт тем же путём, что и обычная правка текста, и триггерит
+              value-sync эффект CodeEditor (единая транзакция CodeMirror) — поэтому
+              один Ctrl/Cmd+Z полностью откатывает форматирование (design-док, раздел 5). */}
+          <button style={{ ...TOOLBAR_BTN, cursor: 'pointer' }} title="Форматировать" onClick={() => onChange(formatQueryText(text))}>Форматировать</button>
           <button style={{ ...TOOLBAR_BTN, cursor: 'pointer' }} title="Проверить сейчас" onClick={runCheckNow}>✓ Проверить</button>
           <button disabled style={TOOLBAR_BTN_DISABLED} title="Параметры — появятся на следующей стадии">Параметры</button>
           <button
