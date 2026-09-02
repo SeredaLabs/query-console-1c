@@ -26,6 +26,9 @@ export function App(): React.ReactElement {
   // запрос НЕ открывается пустым конструктором, а показывает ошибку с номером строки.
   const [loadError, setLoadError] = useState<string | null>(null);
   const expectModelRef = React.useRef(false);
+  // Стадия 1 плана «Текст запроса v2» — прокидывается хостом из настройки
+  // `queryConsole.queryTextEditorV2` (по умолчанию выключено).
+  const [queryTextEditorV2, setQueryTextEditorV2] = useState(false);
   // 8.4: таблицы метаданных для локальной семантической проверки открытия/ОК.
   // Резолвер строится из них только при непустом списке (иначе — fail-open: undefined).
   const metaTablesRef = React.useRef<MetaTable[]>([]);
@@ -36,6 +39,7 @@ export function App(): React.ReactElement {
     const unsub = onHostMessage(msg => {
       if (msg.type === 'init') {
         expectModelRef.current = msg.hasInitialQuery;
+        setQueryTextEditorV2(msg.queryTextEditorV2);
       } else if (msg.type === 'metadataTree') {
         metaTablesRef.current = msg.tables;
         dispatch({ type: 'SET_METADATA', tables: msg.tables });
@@ -89,6 +93,7 @@ export function App(): React.ReactElement {
       <ConstructorView
         state={state}
         dispatch={dispatch}
+        queryTextEditorV2={queryTextEditorV2}
         onExpandRef={ref => postToHost({ type: 'expandRef', ref })}
         refreshState={refreshState}
         onRefreshCache={handleRefreshCache}

@@ -4,7 +4,7 @@ import type { QueryModel } from '../core/query/queryModel';
 export type RefId = { kind: TableKind; name: string };
 
 export type HostMsg =
-  | { type: 'init'; hasInitialQuery: boolean }
+  | { type: 'init'; hasInitialQuery: boolean; queryTextEditorV2: boolean }
   | { type: 'metadataTree'; tables: MetaTable[] }
   | { type: 'refFields'; ref: RefId; fields: MetaField[] }
   | { type: 'generatedText'; text: string }

@@ -132,7 +132,8 @@ export function createPanel(
     if (msg.type === 'ready') {
       // 7.8.2: сразу сообщаем вебвью, ждать ли загрузку модели запроса, чтобы оно
       // показало индикатор загрузки и не мигало пустым конструктором до заполнения.
-      const initMsg: HostMsg = { type: 'init', hasInitialQuery: !!initialQueryText };
+      const queryTextEditorV2 = vscode.workspace.getConfiguration('queryConsole').get<boolean>('queryTextEditorV2', false);
+      const initMsg: HostMsg = { type: 'init', hasInitialQuery: !!initialQueryText, queryTextEditorV2 };
       panel.webview.postMessage(initMsg);
       await metadataReady;
       const reply: HostMsg = { type: 'metadataTree', tables: metadataModel.tables };

@@ -265,6 +265,32 @@ test.describe('Query Constructor Webview', () => {
     await expect(page.locator('[data-field-idx="0"]')).toContainText('Код');
   });
 
+  // Стадия 1 плана «Текст запроса v2»: с включённым флагом рендерится новая раскладка
+  // (QueryTextDialog), но Apply/Close используют ТЕ ЖЕ обработчики, что и старая модалка —
+  // поведение (что происходит по кнопкам) остаётся тем же, что проверяют тесты выше.
+  test('Текст запроса v2: с флагом queryTextEditorV2 — новая раскладка, Apply/Close работают', async ({ page }) => {
+    await page.goto(BASE);
+    await page.evaluate(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
+      }));
+    });
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+
+    await page.locator('button:has-text("Запрос")').click();
+    // Новая раскладка — виден тулбар с кнопкой «Структура» (её не было в старой модалке).
+    await expect(page.locator('button:has-text("Структура")')).toBeVisible();
+    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+    await expect(editor).toContainText(/Код/);
+
+    await editor.fill('ВЫБРАТЬ\n\tВалюты.Наименование КАК Наименование\nИЗ\n\tСправочник.Валюты КАК Валюты');
+    await page.locator('button:has-text("Применить")').click();
+    await expect(page.locator('text=Текст запроса')).toHaveCount(0);
+    await expect(page.locator('[data-field-idx="0"]')).toContainText('Наименование');
+  });
+
   test('нижняя панель: ОК постит insertText, Отмена постит cancel', async ({ page }) => {
     await page.goto(BASE);
     await expect(page.locator('button:has-text("Запрос")')).toBeVisible();

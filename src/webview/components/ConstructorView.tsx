@@ -20,6 +20,7 @@ import { TempTableDialog } from './TempTableDialog';
 import { ResizeHandle } from './ResizeHandle';
 import { CodeEditor } from './CodeEditor';
 import { IconButton } from './IconButton';
+import { QueryTextDialog } from './QueryTextDialog';
 import type { VirtualParams } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import type { MetaField, MetaTable } from '../../core/metadata/types';
@@ -52,12 +53,14 @@ export interface ConstructorViewProps {
   onRefreshCache?: () => void;
   preserveComments?: boolean;
   onSetPreserveComments?: (value: boolean) => void;
+  /** Стадия 1 плана «Текст запроса v2» — см. queryConsole.queryTextEditorV2. */
+  queryTextEditorV2?: boolean;
 }
 
 export function ConstructorView(props: ConstructorViewProps): React.ReactElement {
   const {
     state, dispatch, onExpandRef, onOk, onCancel, okDisabled, okError, nested,
-    refreshState, onRefreshCache, preserveComments, onSetPreserveComments,
+    refreshState, onRefreshCache, preserveComments, onSetPreserveComments, queryTextEditorV2,
   } = props;
   const [activeTab, setActiveTab] = useState('Таблицы и поля');
   const [queryModalText, setQueryModalText] = useState<string | null>(null);
@@ -621,6 +624,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           expandedRefs={state.expandedRefs}
           onExpandRef={onExpandRef}
           initialDoc={subqueryEditor.initialDoc}
+          queryTextEditorV2={queryTextEditorV2}
           onCancel={() => setSubqueryEditor(null)}
           onOk={doc => {
             const columns = deriveUnionColumns(doc.members).map(c => c.alias);
@@ -654,8 +658,20 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
         );
       })()}
 
-      {/* Query preview modal */}
-      {queryModalText !== null && (
+      {/* Query preview modal. queryTextEditorV2 (queryConsole.queryTextEditorV2, по
+          умолчанию выключено) переключает на новую раскладку из QueryTextDialog —
+          Apply/Close остаются теми же обработчиками в обеих ветках (стадия 1 плана
+          редизайна, см. docs/superpowers/specs/2026-09-02-query-text-dialog-v2-design.md). */}
+      {queryModalText !== null && queryTextEditorV2 && (
+        <QueryTextDialog
+          text={queryModalText}
+          error={queryModalError}
+          onChange={setQueryModalText}
+          onApply={handleApplyQueryEdit}
+          onClose={() => { setQueryModalText(null); setQueryModalError(null); }}
+        />
+      )}
+      {queryModalText !== null && !queryTextEditorV2 && (
         <div
           style={{
             position: 'fixed', inset: 0,
@@ -738,6 +754,7 @@ interface NestedConstructorModalProps {
   initialDoc?: QueryDocument;
   onOk: (doc: QueryDocument) => void;
   onCancel: () => void;
+  queryTextEditorV2?: boolean;
 }
 
 /**
@@ -745,7 +762,7 @@ interface NestedConstructorModalProps {
  * reducer'ом; метаданные/ссылки приходят сверху (не перезапрашиваются). ОК собирает
  * единый документ объединения и возвращает его через onOk.
  */
-function NestedConstructorModal({ metadataTables, expandedRefs, onExpandRef, initialDoc, onOk, onCancel }: NestedConstructorModalProps): React.ReactElement {
+function NestedConstructorModal({ metadataTables, expandedRefs, onExpandRef, initialDoc, onOk, onCancel, queryTextEditorV2 }: NestedConstructorModalProps): React.ReactElement {
   const [nestedState, nestedDispatch] = useReducer(reducer, undefined, initialState);
 
   // Посев метаданных и предзаполнения — только на mount. Повторная синхронизация
@@ -804,6 +821,7 @@ function NestedConstructorModal({ metadataTables, expandedRefs, onExpandRef, ini
           onCancel={onCancel}
           okDisabled={!nestedBatchText.trim()}
           nested
+          queryTextEditorV2={queryTextEditorV2}
         />
       </div>
     </div>
