@@ -62,6 +62,23 @@ function joinKeyword(leftAll: boolean, rightAll: boolean): QueryAnalysisJoin['ke
   return 'ВНУТРЕННЕЕ';
 }
 
+/**
+ * Лучшее из возможного извлечение позиции ошибки из готового текста сообщения —
+ * синтаксическая (`sdblLexer`/`sdblParser`: «Ошибка разбора 5:2 — …») и семантическая
+ * (`semanticValidator`: «{(5, 2)}: Таблица не найдена…») ошибки форматируют позицию
+ * по-разному, единого структурированного объекта ошибки эти модули не отдают (см.
+ * design-док, раздел 21.1 — их трогать нельзя). Если ни один формат не совпал —
+ * `undefined`, вызывающая сторона показывает сообщение без точной позиции (раздел 6
+ * design-дока: маркер — «если возможно», не обязательное условие).
+ */
+function parseErrorPosition(message: string): { line?: number; col?: number } {
+  const syntax = message.match(/Ошибка разбора (\d+):(\d+)/);
+  if (syntax) return { line: Number(syntax[1]), col: Number(syntax[2]) };
+  const semantic = message.match(/\{\((\d+),\s*(\d+)\)\}/);
+  if (semantic) return { line: Number(semantic[1]), col: Number(semantic[2]) };
+  return {};
+}
+
 /** Человекочитаемый текст условия — только для отображения в панели «Структура»,
  * не претендует на байт-в-байт совпадение с тем, что напечатал бы генератор. */
 function conditionText(c: Condition, aliases: Map<string, string>): string {
@@ -93,7 +110,7 @@ function conditionText(c: Condition, aliases: Map<string, string>): string {
 export function analyze(text: string, resolver?: MetadataResolver): QueryAnalysisResult {
   const r = tryOpenBatch(text, resolver);
   if (!r.ok) {
-    return { ...EMPTY_RESULT, diagnostics: [{ message: r.error }] };
+    return { ...EMPTY_RESULT, diagnostics: [{ message: r.error, ...parseErrorPosition(r.error) }] };
   }
 
   const model: QueryModel | undefined = r.doc.members[0]?.members[0]?.model;

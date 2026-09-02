@@ -27,6 +27,9 @@ export interface CodeEditorHandle {
    * Требует `richFeatures` (без него `linter()` не подключён, вызов — no-op).
    */
   setDiagnostics: (diagnostics: Diagnostic[]) => void;
+  /** Переносит курсор на символьное смещение в тексте и прокручивает к нему —
+   * клик по ошибке в статус-панели/диагностике (стадия 4 плана). */
+  moveCursorTo: (offset: number) => void;
 }
 
 interface Props {
@@ -99,6 +102,13 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
     setDiagnostics(diagnostics: Diagnostic[]) {
       const view = viewRef.current;
       if (view) view.dispatch(setDiagnostics(view.state, diagnostics));
+    },
+    moveCursorTo(offset: number) {
+      const view = viewRef.current;
+      if (!view) return;
+      const pos = Math.max(0, Math.min(offset, view.state.doc.length));
+      view.dispatch({ selection: { anchor: pos }, scrollIntoView: true });
+      view.focus();
     },
   }), []);
 

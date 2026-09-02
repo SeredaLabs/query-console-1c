@@ -3,6 +3,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { analyze } from '../../src/core/query/queryAnalysisService';
 import { tryOpenBatch } from '../../src/core/query/validateBatch';
+import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
+import type { MetaTable } from '../../src/core/metadata/types';
 
 describe('analyze: разбор полей/источников/соединений/условий/параметров', () => {
   const TEXT =
@@ -55,6 +57,22 @@ describe('analyze: разбор полей/источников/соединен
     expect(r.diagnostics.length).toBeGreaterThan(0);
     expect(r.fields).toEqual([]);
     expect(r.sources).toEqual([]);
+  });
+
+  it('синтаксическая ошибка: diagnostics несут line/col из сообщения парсера', () => {
+    const r = analyze('ВЫБРАТЬ ИЗ КАК Поле1 ИЗ Справочник.Контрагенты');
+    expect(r.diagnostics[0].line).toBe(1);
+    expect(r.diagnostics[0].col).toBe(9);
+  });
+
+  it('семантическая ошибка (таблица не найдена): diagnostics тоже несут line/col', () => {
+    const resolver = buildResolverFromTables([
+      { fullName: 'Справочник.Валюты', kind: 'Справочник', name: 'Валюты', fields: [{ name: 'Код', kind: 'standard', types: [] }] } as MetaTable,
+    ]);
+    const r = analyze('ВЫБРАТЬ Валюты.Код КАК Код ИЗ Справочник.Валюты1 КАК Валюты', resolver);
+    expect(r.diagnostics.length).toBe(1);
+    expect(r.diagnostics[0].line).toBe(1);
+    expect(r.diagnostics[0].col).toBe(31);
   });
 
   it('несколько использований одного параметра считаются все', () => {

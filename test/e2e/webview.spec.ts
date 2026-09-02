@@ -291,6 +291,38 @@ test.describe('Query Constructor Webview', () => {
     await expect(page.locator('[data-field-idx="0"]')).toContainText('Наименование');
   });
 
+  // Стадия 4 плана «Текст запроса v2»: статус-бар и «Проверить» используют один и тот
+  // же QueryAnalysisService.analyze() — здесь проверяем видимое поведение статус-бара
+  // (design-док, раздел 6/10), а не сам analyze() (уже покрыт queryAnalysisService.test.ts).
+  test('Текст запроса v2: статус-бар — ✓ на валидном тексте, ошибка + переход к ней на невалидном', async ({ page }) => {
+    await page.goto(BASE);
+    await page.evaluate(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
+      }));
+    });
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+    await page.locator('button:has-text("Запрос")').click();
+
+    const status = page.locator('[data-testid="query-text-status"]');
+    await expect(status).toContainText('Синтаксис корректен');
+
+    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+    await editor.fill('ВЫБРАТЬ ИЗ КАК Поле1 ИЗ Справочник.Валюты');
+    // «Проверить» форсирует немедленную проверку вместо ожидания дебаунса.
+    await page.locator('button[title="Проверить сейчас"]').click();
+    await expect(status).toContainText('Ошибка разбора');
+
+    // Клик по ошибке переводит курсор в редактор (сам факт фокуса — минимальная,
+    // устойчивая проверка перехода без завязки на внутренние координаты CodeMirror).
+    // Кликаем именно по тексту ошибки (кликабельный span), а не по всей полосе статус-бара —
+    // та шире самого span, и клик по центру полосы промахивается мимо inline-элемента.
+    await status.locator('[role="button"]').click();
+    await expect(editor).toBeFocused();
+  });
+
   test('нижняя панель: ОК постит insertText, Отмена постит cancel', async ({ page }) => {
     await page.goto(BASE);
     await expect(page.locator('button:has-text("Запрос")')).toBeVisible();

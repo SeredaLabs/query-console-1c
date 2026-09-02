@@ -87,14 +87,23 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
     setQueryModalError(null);
   }
 
+  // Один и тот же резолвер и для «Применить», и для фонового QueryAnalysisService
+  // (стадия 4 плана «Текст запроса v2», design-док риск п.0.2/0.14) — иначе семантика
+  // проверки в редакторе могла бы разойтись с тем, что реально проверит Apply.
+  // useMemo — резолвер пересобирается только при смене состава таблиц конструктора,
+  // а не на каждый ре-рендер ConstructorView (в т.ч. на каждое изменение текста).
+  const queryModalResolver = React.useMemo(
+    () => (state.tables.length ? buildResolverFromTables(state.tables) : undefined),
+    [state.tables]
+  );
+
   // Ручная правка текста запроса (кнопка «Применить» в модалке «Текст запроса»):
   // тот же разбор + семантическая проверка, что при открытии существующего запроса
   // из .bsl (tryOpenBatch), поэтому правки из свободного текста возвращаются в модель
   // конструктора, а не остаются «в стороне» от визуальных вкладок.
   function handleApplyQueryEdit() {
     if (queryModalText === null) return;
-    const resolver = state.tables.length ? buildResolverFromTables(state.tables) : undefined;
-    const r = tryOpenBatch(queryModalText, resolver, { preserveComments: true });
+    const r = tryOpenBatch(queryModalText, queryModalResolver, { preserveComments: true });
     if (!r.ok) { setQueryModalError(r.error); return; }
     dispatch({ type: 'LOAD_BATCH', doc: r.doc });
     setQueryModalError(null);
@@ -666,6 +675,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
         <QueryTextDialog
           text={queryModalText}
           error={queryModalError}
+          resolver={queryModalResolver}
           onChange={setQueryModalText}
           onApply={handleApplyQueryEdit}
           onClose={() => { setQueryModalText(null); setQueryModalError(null); }}
