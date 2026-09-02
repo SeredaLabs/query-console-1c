@@ -74,7 +74,7 @@ function toCmDiagnostics(text: string, diagnostics: QueryDiagnostic[]): Diagnost
  * Стадия 4: кнопка «Проверить» и фоновая проверка с дебаунсом ведут на ОДИН и тот же
  * `QueryAnalysisService.analyze()` (design-док риск п.0.5) — кнопка просто форсирует
  * немедленный вызов вместо ожидания дебаунса. `checked` хранит текст И результат ВМЕСТЕ —
- * `dirty` это просто `checked.text !== text`, без отдельного флага и race-condition
+ * `checkPending` это просто `checked.text !== text`, без отдельного флага и race-condition
  * между «что показывает статус» и «для какого текста».
  *
  * `onApply`/`onClose` — ТЕ ЖЕ обработчики, что использовала старая модалка.
@@ -85,8 +85,15 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
   // а не открывают два независимых окна.
   const [panelTab, setPanelTab] = React.useState<'structure' | 'parameters' | null>(null);
   const editorRef = React.useRef<CodeEditorHandle>(null);
+  // Захват текста НА МОМЕНТ ОТКРЫТИЯ (design-док, раздел 13) — ленивый инициализатор
+  // `useState` выполняется один раз при монтировании; диалог размонтируется при
+  // закрытии, так что каждое новое открытие снова фиксирует актуальный `text`.
+  // Сравнение СТРОГО по фактическому тексту, не по AST/форматированному виду.
+  const [originalText] = React.useState(text);
+  const hasUnsavedChanges = text !== originalText;
+  const [confirmingClose, setConfirmingClose] = React.useState(false);
   const [checked, setChecked] = React.useState(() => ({ text, result: runAnalysisSafe(text, resolver) }));
-  const dirty = checked.text !== text;
+  const checkPending = checked.text !== text;
   const isMountRef = React.useRef(true);
 
   React.useEffect(() => {
@@ -120,6 +127,17 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
     if (idx >= 0) editorRef.current?.moveCursorTo(idx);
   }
 
+  /**
+   * Единая точка закрытия для ВСЕХ трёх путей — `×`, клик по фону, «Отмена» (design-док,
+   * риск п.0.7: до этой стадии все три закрывали без подтверждения, что явное
+   * расхождение с design-доком, а не «оставить как есть»). Если текст менялся с момента
+   * открытия — показываем подтверждение вместо немедленного закрытия.
+   */
+  function requestClose() {
+    if (hasUnsavedChanges) setConfirmingClose(true);
+    else onClose();
+  }
+
   const lineCount = text.split('\n').length;
   const firstDiagnostic = checked.result.diagnostics[0];
 
@@ -131,7 +149,7 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 100,
       }}
-      onClick={onClose}
+      onClick={requestClose}
     >
       <div
         style={{
@@ -155,7 +173,7 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
           }}
         >
           <span style={{ fontWeight: 'bold', fontSize: 13 }}>Текст запроса</span>
-          <IconButton icon="close" title="Закрыть" onClick={onClose} />
+          <IconButton icon="close" title="Закрыть" onClick={requestClose} />
         </div>
 
         <div
@@ -249,7 +267,7 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
             fontSize: 12, display: 'flex', alignItems: 'center', gap: 6,
           }}
         >
-          {dirty ? (
+          {checkPending ? (
             <span style={{ color: 'var(--vscode-descriptionForeground)' }}>● Есть непроверенные изменения</span>
           ) : firstDiagnostic ? (
             <span
@@ -278,10 +296,39 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: 12, borderTop: '1px solid var(--qc-border)' }}>
-          <button style={BTN_SECONDARY} onClick={onClose}>Отмена</button>
+          <button data-testid="query-text-cancel" style={BTN_SECONDARY} onClick={requestClose}>Отмена</button>
           <button style={BTN} onClick={onApply}>Применить</button>
         </div>
       </div>
+
+      {confirmingClose && (
+        <div
+          data-testid="query-text-close-confirm"
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div
+            style={{
+              background: 'var(--vscode-editor-background, #1e1e1e)',
+              border: '1px solid var(--qc-border)', borderRadius: 4,
+              padding: 16, width: 360, display: 'flex', flexDirection: 'column', gap: 12,
+            }}
+          >
+            <div style={{ fontSize: 13 }}>
+              Текст запроса был изменён.
+              <br />
+              Изменения не применены.
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button style={BTN_SECONDARY} onClick={() => setConfirmingClose(false)}>Продолжить редактирование</button>
+              <button style={BTN} onClick={onClose}>Закрыть без сохранения</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

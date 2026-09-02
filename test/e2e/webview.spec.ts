@@ -407,6 +407,55 @@ test.describe('Query Constructor Webview', () => {
     await expect(paramsPanel).toHaveCount(0);
   });
 
+  // Стадия 8 плана «Текст запроса v2» (design-док, раздел 12, риск п.0.7): все ТРИ пути
+  // закрытия (×, клик по фону, «Отмена») должны спрашивать подтверждение, если текст
+  // менялся с момента открытия, и закрывать сразу, если нет.
+  test('Текст запроса v2: dirty-guard — подтверждение на всех трёх путях закрытия, мгновенное закрытие без правок', async ({ page }) => {
+    await page.goto(BASE);
+    await page.evaluate(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
+      }));
+    });
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+
+    const dialogTitle = page.locator('text=Текст запроса');
+    const confirm = page.locator('[data-testid="query-text-close-confirm"]');
+    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+
+    // Без правок — закрытие (крестиком) мгновенное, без подтверждения.
+    await page.locator('button:has-text("Запрос")').click();
+    await page.locator('button[title="Закрыть"]').click();
+    await expect(dialogTitle).toHaveCount(0);
+
+    // С правкой — крестик спрашивает подтверждение; «Продолжить редактирование» не закрывает.
+    await page.locator('button:has-text("Запрос")').click();
+    await editor.fill('ВЫБРАТЬ Валюты.Наименование КАК Наименование ИЗ Справочник.Валюты КАК Валюты');
+    await page.locator('button[title="Закрыть"]').click();
+    await expect(confirm).toBeVisible();
+    await confirm.locator('button:has-text("Продолжить редактирование")').click();
+    await expect(confirm).toHaveCount(0);
+    await expect(dialogTitle).toBeVisible();
+
+    // Клик по фону — тот же guard.
+    await page.locator('div[style*="rgba(0, 0, 0, 0.5)"]').first().click({ position: { x: 5, y: 5 } });
+    await expect(confirm).toBeVisible();
+    await confirm.locator('button:has-text("Закрыть без сохранения")').click();
+    await expect(dialogTitle).toHaveCount(0);
+    // Правка не применилась — поле в конструкторе осталось прежним (Код).
+    await expect(page.locator('[data-field-idx="0"]')).toContainText('Код');
+
+    // «Отмена» — тот же guard.
+    await page.locator('button:has-text("Запрос")').click();
+    await editor.fill('ВЫБРАТЬ Валюты.Наименование КАК Наименование ИЗ Справочник.Валюты КАК Валюты');
+    await page.locator('[data-testid="query-text-cancel"]').click();
+    await expect(confirm).toBeVisible();
+    await confirm.locator('button:has-text("Закрыть без сохранения")').click();
+    await expect(dialogTitle).toHaveCount(0);
+  });
+
   test('нижняя панель: ОК постит insertText, Отмена постит cancel', async ({ page }) => {
     await page.goto(BASE);
     await expect(page.locator('button:has-text("Запрос")')).toBeVisible();
