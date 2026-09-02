@@ -1,7 +1,12 @@
 import * as React from 'react';
-import { EditorState } from '@codemirror/state';
-import { EditorView, keymap } from '@codemirror/view';
-import { defaultKeymap, historyKeymap, history, indentWithTab } from '@codemirror/commands';
+import { EditorState, type Extension } from '@codemirror/state';
+import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view';
+import { defaultKeymap, historyKeymap, history, indentWithTab, undo as cmUndo, redo as cmRedo } from '@codemirror/commands';
+import { bracketMatching, foldGutter, codeFolding, foldKeymap } from '@codemirror/language';
+import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
+import { search, searchKeymap, openSearchPanel } from '@codemirror/search';
+import { linter, lintGutter, setDiagnostics } from '@codemirror/lint';
+import type { Diagnostic } from '@codemirror/lint';
 import { sdblHighlight, sdblHighlightTheme } from '../cmHighlight';
 import { CSP_NONCE } from '../cspNonce';
 
@@ -9,6 +14,19 @@ export interface CodeEditorHandle {
   /** Вставляет текст в позицию курсора (заменяя выделение, если оно есть) и переносит туда курсор. */
   insertAtCursor: (snippet: string) => void;
   focus: () => void;
+  /** Требуют `richFeatures` — см. CodeMirror `history()`, уже подключён всегда. */
+  undo: () => void;
+  redo: () => void;
+  /** Требует `richFeatures` (без него `search()` не подключён, вызов — no-op). */
+  openSearch: () => void;
+  /**
+   * Обновляет маркеры диагностики (стадия 4 плана «Текст запроса v2») через
+   * `setDiagnostics` — это обычная транзакция редактора, не пересоздание
+   * `EditorView`/`EditorState`, поэтому НЕ трогает undo/redo-историю (риск п.0.11
+   * design-дока: перестроение view на каждое обновление диагностики стёрло бы её).
+   * Требует `richFeatures` (без него `linter()` не подключён, вызов — no-op).
+   */
+  setDiagnostics: (diagnostics: Diagnostic[]) => void;
 }
 
 interface Props {
@@ -22,6 +40,15 @@ interface Props {
   wrapperStyle: React.CSSProperties;
   /** Стили текста — шрифт/перенос/отступы/цвет обычного текста. */
   textStyle: React.CSSProperties;
+  /**
+   * Расширенный набор возможностей редактора (номера строк, активная строка,
+   * парные скобки, автозакрытие скобок, folding, поиск/замена, гуттер диагностики) —
+   * стадия 2 плана «Текст запроса v2». Опционально и по умолчанию выключено, чтобы
+   * НЕ менять поведение остальных мест использования `CodeEditor` (произвольные
+   * выражения, окно временной таблицы и т.п.) — там эти возможности не нужны и не
+   * запрашивались.
+   */
+  richFeatures?: boolean;
 }
 
 /**
@@ -33,7 +60,7 @@ interface Props {
  * токенизатора (queryHighlight.ts), без Lezer-грамматики.
  */
 export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function CodeEditor(
-  { value, onChange, onDragOver, onDrop, spellCheck, testId, wrapperStyle, textStyle },
+  { value, onChange, onDragOver, onDrop, spellCheck, testId, wrapperStyle, textStyle, richFeatures },
   forwardedRef
 ) {
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -56,6 +83,22 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
     },
     focus() {
       viewRef.current?.focus();
+    },
+    undo() {
+      const view = viewRef.current;
+      if (view) cmUndo(view);
+    },
+    redo() {
+      const view = viewRef.current;
+      if (view) cmRedo(view);
+    },
+    openSearch() {
+      const view = viewRef.current;
+      if (view) openSearchPanel(view);
+    },
+    setDiagnostics(diagnostics: Diagnostic[]) {
+      const view = viewRef.current;
+      if (view) view.dispatch(setDiagnostics(view.state, diagnostics));
     },
   }), []);
 
@@ -106,9 +149,46 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
         background: 'var(--vscode-scrollbarSlider-activeBackground, rgba(191,191,191,0.4))',
         backgroundClip: 'padding-box',
       },
+      // Стадия 2 (richFeatures): без этих правил гуттер номеров строк/активная строка/
+      // панель поиска рендерятся дефолтным светлым скином CodeMirror — режут глаз на
+      // тёмном фоне VS Code. Селекторы применяются, только когда сами расширения
+      // подключены (richFeatures), в остальных местах использования CodeEditor — no-op.
+      '.cm-gutters': {
+        background: 'var(--vscode-editorGutter-background, var(--vscode-editor-background, #1e1e1e))',
+        color: 'var(--vscode-editorLineNumber-foreground, #858585)',
+        border: 'none',
+      },
+      '.cm-activeLineGutter': {
+        background: 'var(--vscode-editor-lineHighlightBackground, rgba(255,255,255,0.06))',
+        color: 'var(--vscode-editorLineNumber-activeForeground, #c6c6c6)',
+      },
+      '.cm-activeLine': {
+        background: 'var(--vscode-editor-lineHighlightBackground, rgba(255,255,255,0.06))',
+      },
+      '.cm-panels': {
+        background: 'var(--vscode-editorWidget-background, #252526)',
+        color: 'var(--vscode-editorWidget-foreground, #ccc)',
+      },
+      '.cm-panels-bottom': { borderTop: '1px solid var(--qc-border, #454545)' },
+      '.cm-textfield': {
+        background: 'var(--vscode-input-background, #3c3c3c)',
+        color: 'var(--vscode-input-foreground, #ccc)',
+        border: '1px solid var(--vscode-input-border, transparent)',
+        borderRadius: '2px',
+      },
+      '.cm-button': {
+        background: 'var(--vscode-button-secondaryBackground, #3a3d41)',
+        color: 'var(--vscode-button-secondaryForeground, #ccc)',
+        border: 'none',
+        borderRadius: '2px',
+        backgroundImage: 'none',
+      },
+      '.cm-button:hover': {
+        background: 'var(--vscode-button-secondaryHoverBackground, #45494e)',
+      },
     });
 
-    const extensions = [
+    const extensions: Extension[] = [
       EditorView.cspNonce.of(CSP_NONCE),
       history(),
       keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
@@ -121,6 +201,22 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
       EditorView.contentAttributes.of({ spellcheck: spellCheck === false ? 'false' : 'true' }),
     ];
     if (wrapLines) extensions.push(EditorView.lineWrapping);
+    if (richFeatures) {
+      extensions.push(
+        lineNumbers(),
+        highlightActiveLine(),
+        bracketMatching(),
+        closeBrackets(),
+        codeFolding(),
+        foldGutter(),
+        search(),
+        // Пустой источник — реальные диагностики приходят через handle.setDiagnostics()
+        // (стадия 4), а не через встроенный автоматический опрос `linter()`.
+        linter(() => []),
+        lintGutter(),
+        keymap.of([...closeBracketsKeymap, ...searchKeymap, ...foldKeymap])
+      );
+    }
 
     const view = new EditorView({
       state: EditorState.create({ doc: value, extensions }),
@@ -128,10 +224,10 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
     });
     viewRef.current = view;
     return () => view.destroy();
-    // Пересоздаём редактор только при смене режима переноса строк — остальные
-    // пропсы (onChange/цвета/spellCheck) читаются через рефы/статичные стили.
+    // Пересоздаём редактор при смене режима переноса строк или набора расширений —
+    // остальные пропсы (onChange/цвета/spellCheck) читаются через рефы/статичные стили.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wrapLines]);
+  }, [wrapLines, richFeatures]);
 
   // Синхронизация извне (например, сброс текста при повторном открытии диалога) —
   // свои же изменения (через onChange выше) сюда не возвращаются, так как

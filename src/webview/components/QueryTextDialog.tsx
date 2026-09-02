@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CodeEditor } from './CodeEditor';
+import { CodeEditor, type CodeEditorHandle } from './CodeEditor';
 import { IconButton } from './IconButton';
 import { BTN, BTN_SECONDARY } from '../sharedStyles';
 
@@ -43,6 +43,7 @@ const SEPARATOR: React.CSSProperties = { width: 1, alignSelf: 'stretch', backgro
  */
 export function QueryTextDialog({ text, error, onChange, onApply, onClose }: QueryTextDialogProps): React.ReactElement {
   const [structureOpen, setStructureOpen] = React.useState(false);
+  const editorRef = React.useRef<CodeEditorHandle>(null);
 
   return (
     <div
@@ -85,8 +86,20 @@ export function QueryTextDialog({ text, error, onChange, onApply, onClose }: Que
             padding: '4px 8px', borderBottom: '1px solid var(--qc-border)', fontSize: 12,
           }}
         >
-          <button disabled style={TOOLBAR_BTN_DISABLED} title="Отменить — появится на следующей стадии">↶</button>
-          <button disabled style={TOOLBAR_BTN_DISABLED} title="Повторить — появится на следующей стадии">↷</button>
+          <button
+            style={{ ...TOOLBAR_BTN, cursor: 'pointer' }}
+            title="Отменить (Ctrl/Cmd+Z)"
+            onClick={() => editorRef.current?.undo()}
+          >
+            ↶
+          </button>
+          <button
+            style={{ ...TOOLBAR_BTN, cursor: 'pointer' }}
+            title="Повторить (Ctrl/Cmd+Shift+Z)"
+            onClick={() => editorRef.current?.redo()}
+          >
+            ↷
+          </button>
           <span style={SEPARATOR} />
           <button disabled style={TOOLBAR_BTN_DISABLED} title="Форматировать — появится на следующей стадии">Форматировать</button>
           <button disabled style={TOOLBAR_BTN_DISABLED} title="Проверить — появится на следующей стадии">✓ Проверить</button>
@@ -97,15 +110,19 @@ export function QueryTextDialog({ text, error, onChange, onApply, onClose }: Que
           >
             Структура
           </button>
-          <button disabled style={TOOLBAR_BTN_DISABLED} title="Поиск — появится на следующей стадии">🔍</button>
+          {/* Ctrl/Cmd+F/H уже работают в самом редакторе (richFeatures → @codemirror/search) —
+              кнопка просто открывает ту же панель по клику, без своей логики поиска. */}
+          <button style={{ ...TOOLBAR_BTN, cursor: 'pointer' }} title="Поиск (Ctrl/Cmd+F)" onClick={() => editorRef.current?.openSearch()}>🔍</button>
         </div>
 
         <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
           <CodeEditor
+            ref={editorRef}
             testId="query-text-editor"
             value={text}
             onChange={onChange}
             spellCheck={false}
+            richFeatures
             wrapperStyle={{
               flex: 1,
               minHeight: 0,
