@@ -2,7 +2,7 @@
   "name": "query-console-1c",
   "displayName": "1C: Query Constructor",
   "description": "Visual query constructor for 1C",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "icon": "assets/images/icon.png",
   "license": "MIT",
   "publisher": "SeredaLabs",
@@ -25,19 +25,41 @@
     "commands": [
       {
         "command": "1c.queryConstructor",
-        "title": "1С: Конструктор запроса"
+        "title": "Только текст запроса",
+        "category": "1С"
+      },
+      {
+        "command": "1c.queryConstructorWithResult",
+        "title": "С обработкой результата",
+        "category": "1С"
       },
       {
         "command": "1c.parseMetadata",
         "title": "1С: Распарсить метаданные в YAML"
       }
     ],
+    "submenus": [
+      {
+        "id": "1c.queryConstructorSubmenu",
+        "label": "1С: Конструктор запроса"
+      }
+    ],
     "menus": {
       "editor/context": [
         {
-          "command": "1c.queryConstructor",
+          "submenu": "1c.queryConstructorSubmenu",
           "when": "resourceExtname == .bsl",
           "group": "1_modification@100"
+        }
+      ],
+      "1c.queryConstructorSubmenu": [
+        {
+          "command": "1c.queryConstructor",
+          "group": "1_main@1"
+        },
+        {
+          "command": "1c.queryConstructorWithResult",
+          "group": "1_main@2"
         }
       ]
     },

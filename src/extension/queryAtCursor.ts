@@ -68,11 +68,11 @@ function unpipe(rawBody: string): string {
 }
 
 /**
- * Сканирует `source`, находит строковый литерал-запрос, в чьих границах кавычек
- * (включительно) лежит `offset`, и возвращает его восстановленный текст с границами
- * `[openQuotePos, closeQuotePos+1)`. Если такого литерала нет — `null`.
+ * Сканирует `source` и возвращает ВСЕ строковые литералы-запросы (в порядке
+ * появления) с их восстановленным текстом и границами `[openQuotePos, closeQuotePos+1)`.
  */
-export function findQueryAt(source: string, offset: number): QueryHit | null {
+export function findAllQueryLiterals(source: string): QueryHit[] {
+  const hits: QueryHit[] = [];
   const n = source.length;
   let i = 0;
 
@@ -118,10 +118,7 @@ export function findQueryAt(source: string, offset: number): QueryHit | null {
       if (startsWithQueryKeyword(text)) {
         // Конец диапазона — за закрывающей кавычкой (или за концом строки, если её нет).
         const endExclusive = closePos === -1 ? n : closePos + 1;
-        // offset внутри `[openPos, closePos]` включительно (т.е. < endExclusive).
-        if (offset >= openPos && offset < endExclusive) {
-          return { text, start: openPos, end: endExclusive };
-        }
+        hits.push({ text, start: openPos, end: endExclusive });
       }
       continue;
     }
@@ -129,5 +126,13 @@ export function findQueryAt(source: string, offset: number): QueryHit | null {
     i++;
   }
 
-  return null;
+  return hits;
+}
+
+/**
+ * Находит среди `findAllQueryLiterals(source)` литерал, в чьих границах кавычек
+ * (включительно) лежит `offset`. Если такого литерала нет — `null`.
+ */
+export function findQueryAt(source: string, offset: number): QueryHit | null {
+  return findAllQueryLiterals(source).find((hit) => offset >= hit.start && offset < hit.end) ?? null;
 }
