@@ -401,6 +401,14 @@ test.describe('Query Constructor Webview', () => {
     await expect(paramsPanel).toContainText('&Код');
     await expect(paramsPanel).toContainText('Использований: 1');
 
+    // Панель не переполняется горизонтально даже на длинных именах параметров.
+    const overflowsX = await paramsPanel.evaluate(el => el.scrollWidth > el.clientWidth);
+    expect(overflowsX).toBe(false);
+
+    // Клик по параметру переводит курсор в текст — та же навигация, что и в «Структуре».
+    await paramsPanel.locator('text=&Код').click();
+    await expect(editor).toBeFocused();
+
     // Один слот: открытие «Структуры» закрывает «Параметры», а не открывает второй блок.
     await page.locator('button:has-text("Структура")').click();
     await expect(page.locator('[data-testid="query-text-structure-panel"]')).toBeVisible();

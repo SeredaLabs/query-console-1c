@@ -278,13 +278,16 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
               data-testid={panelTab === 'structure' ? 'query-text-structure-panel' : 'query-text-parameters-panel'}
               style={{
                 width: 220, flexShrink: 0, borderLeft: '1px solid var(--qc-border)',
-                padding: 8, fontSize: 12, overflow: 'auto',
+                padding: 8, fontSize: 12, overflowY: 'auto', overflowX: 'hidden',
+                // Длинные имена параметров/выражений (напр. &ИсключатьНесгораемыйОстаток)
+                // переносятся, а не обрезаются с горизонтальным скроллом.
+                overflowWrap: 'anywhere', wordBreak: 'break-word',
               }}
             >
               {panelTab === 'structure' ? (
                 <QueryStructurePanel result={checked.result} onNavigate={handleNavigate} />
               ) : (
-                <QueryParametersPanel parameters={checked.result.parameters} />
+                <QueryParametersPanel parameters={checked.result.parameters} onNavigate={handleNavigate} />
               )}
             </div>
           )}

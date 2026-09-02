@@ -17,14 +17,32 @@ const SECTION_HEADER: React.CSSProperties = {
   padding: '4px 0', fontWeight: 'bold',
 };
 
-const ITEM: React.CSSProperties = {
-  padding: '3px 0 3px 18px', cursor: 'pointer',
-};
-
 const ITEM_SUB: React.CSSProperties = {
   color: 'var(--vscode-descriptionForeground)',
   fontSize: 11,
 };
+
+/** Строка с hover-подсветкой (тот же приём, что и в QueryParametersPanel) — визуально
+ * показывает, что клик по ней переведёт курсор в текст. */
+function NavItem({ onClick, children }: { onClick: () => void; children: React.ReactNode }): React.ReactElement {
+  const [hover, setHover] = React.useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        padding: '3px 4px 3px 18px',
+        margin: '0 -4px',
+        borderRadius: 3,
+        cursor: 'pointer',
+        background: hover ? 'var(--vscode-toolbar-hoverBackground, rgba(90,93,94,0.4))' : 'transparent',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 function Section({ title, count, children }: { title: string; count: number; children: React.ReactNode }): React.ReactElement {
   const [open, setOpen] = React.useState(true);
@@ -53,36 +71,36 @@ export function QueryStructurePanel({ result, onNavigate }: QueryStructurePanelP
 
       <Section title="Поля" count={result.fields.length}>
         {result.fields.map((f, i) => (
-          <div key={i} style={ITEM} onClick={() => onNavigate(f.expression)}>
+          <NavItem key={i} onClick={() => onNavigate(f.expression)}>
             <div>{f.alias}</div>
             <div style={ITEM_SUB}>{f.expression}</div>
-          </div>
+          </NavItem>
         ))}
       </Section>
 
       <Section title="Источники" count={result.sources.length}>
         {result.sources.map((s, i) => (
-          <div key={i} style={ITEM} onClick={() => onNavigate(s.fullName)}>
+          <NavItem key={i} onClick={() => onNavigate(s.fullName)}>
             <div>{s.alias}</div>
             <div style={ITEM_SUB}>{s.fullName}</div>
-          </div>
+          </NavItem>
         ))}
       </Section>
 
       <Section title="Соединения" count={result.joins.length}>
         {result.joins.map((j, i) => (
-          <div key={i} style={ITEM} onClick={() => onNavigate(j.rightAlias)}>
+          <NavItem key={i} onClick={() => onNavigate(j.rightAlias)}>
             <div>{j.leftAlias} → {j.rightAlias}</div>
             <div style={ITEM_SUB}>{j.keyword}</div>
-          </div>
+          </NavItem>
         ))}
       </Section>
 
       <Section title="Условия" count={result.conditions.length}>
         {result.conditions.map((c, i) => (
-          <div key={i} style={ITEM} onClick={() => onNavigate(c.text)}>
+          <NavItem key={i} onClick={() => onNavigate(c.text)}>
             {c.text}
-          </div>
+          </NavItem>
         ))}
       </Section>
     </div>
