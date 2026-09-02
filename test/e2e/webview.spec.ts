@@ -378,6 +378,35 @@ test.describe('Query Constructor Webview', () => {
     await expect(editor).toBeFocused();
   });
 
+  // Стадия 7 плана «Текст запроса v2»: панель «Параметры» (read-only) и «Структура»
+  // делят один слот правой панели, а не открываются одновременно (design-док, раздел 2).
+  test('Текст запроса v2: панель «Параметры» показывает имя/использования, делит слот со «Структурой»', async ({ page }) => {
+    await page.goto(BASE);
+    await page.evaluate(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
+      }));
+    });
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+    await page.locator('button:has-text("Запрос")').click();
+
+    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+    await editor.fill('ВЫБРАТЬ Валюты.Код КАК Код ИЗ Справочник.Валюты КАК Валюты ГДЕ Валюты.Код = &Код');
+    await page.locator('button[title="Проверить сейчас"]').click();
+
+    await page.locator('button:has-text("Параметры")').click();
+    const paramsPanel = page.locator('[data-testid="query-text-parameters-panel"]');
+    await expect(paramsPanel).toContainText('&Код');
+    await expect(paramsPanel).toContainText('Использований: 1');
+
+    // Один слот: открытие «Структуры» закрывает «Параметры», а не открывает второй блок.
+    await page.locator('button:has-text("Структура")').click();
+    await expect(page.locator('[data-testid="query-text-structure-panel"]')).toBeVisible();
+    await expect(paramsPanel).toHaveCount(0);
+  });
+
   test('нижняя панель: ОК постит insertText, Отмена постит cancel', async ({ page }) => {
     await page.goto(BASE);
     await expect(page.locator('button:has-text("Запрос")')).toBeVisible();

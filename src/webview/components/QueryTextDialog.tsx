@@ -5,6 +5,7 @@ import { BTN, BTN_SECONDARY } from '../sharedStyles';
 import { analyze, type QueryAnalysisResult, type QueryDiagnostic } from '../../core/query/queryAnalysisService';
 import { formatQueryText } from '../../core/query/queryTextFormatter';
 import { QueryStructurePanel } from './QueryStructurePanel';
+import { QueryParametersPanel } from './QueryParametersPanel';
 import type { MetadataResolver } from '../../core/query/metadataResolver';
 import type { Diagnostic } from '@codemirror/lint';
 
@@ -27,12 +28,6 @@ const TOOLBAR_BTN: React.CSSProperties = {
   padding: '4px 8px',
   fontSize: 12,
   borderRadius: 3,
-};
-
-const TOOLBAR_BTN_DISABLED: React.CSSProperties = {
-  ...TOOLBAR_BTN,
-  color: 'var(--vscode-disabledForeground, #6b6b6b)',
-  cursor: 'default',
 };
 
 const SEPARATOR: React.CSSProperties = { width: 1, alignSelf: 'stretch', background: 'var(--qc-border)', margin: '4px 4px' };
@@ -82,11 +77,13 @@ function toCmDiagnostics(text: string, diagnostics: QueryDiagnostic[]): Diagnost
  * `dirty` это просто `checked.text !== text`, без отдельного флага и race-condition
  * между «что показывает статус» и «для какого текста».
  *
- * Форматирование/Параметры/Структура — по-прежнему заглушки (стадии 5-7).
  * `onApply`/`onClose` — ТЕ ЖЕ обработчики, что использовала старая модалка.
  */
 export function QueryTextDialog({ text, error, resolver, onChange, onApply, onClose }: QueryTextDialogProps): React.ReactElement {
-  const [structureOpen, setStructureOpen] = React.useState(false);
+  // Единый слот правой панели — «Структура» и «Параметры» переключают его содержимое
+  // (design-док, раздел 2: одна сворачиваемая правая панель, закрыта по умолчанию),
+  // а не открывают два независимых окна.
+  const [panelTab, setPanelTab] = React.useState<'structure' | 'parameters' | null>(null);
   const editorRef = React.useRef<CodeEditorHandle>(null);
   const [checked, setChecked] = React.useState(() => ({ text, result: runAnalysisSafe(text, resolver) }));
   const dirty = checked.text !== text;
@@ -187,10 +184,15 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
               один Ctrl/Cmd+Z полностью откатывает форматирование (design-док, раздел 5). */}
           <button style={{ ...TOOLBAR_BTN, cursor: 'pointer' }} title="Форматировать" onClick={() => onChange(formatQueryText(text))}>Форматировать</button>
           <button style={{ ...TOOLBAR_BTN, cursor: 'pointer' }} title="Проверить сейчас" onClick={runCheckNow}>✓ Проверить</button>
-          <button disabled style={TOOLBAR_BTN_DISABLED} title="Параметры — появятся на следующей стадии">Параметры</button>
           <button
-            style={{ ...TOOLBAR_BTN, cursor: 'pointer', fontWeight: structureOpen ? 'bold' : 'normal' }}
-            onClick={() => setStructureOpen(v => !v)}
+            style={{ ...TOOLBAR_BTN, cursor: 'pointer', fontWeight: panelTab === 'parameters' ? 'bold' : 'normal' }}
+            onClick={() => setPanelTab(v => (v === 'parameters' ? null : 'parameters'))}
+          >
+            Параметры
+          </button>
+          <button
+            style={{ ...TOOLBAR_BTN, cursor: 'pointer', fontWeight: panelTab === 'structure' ? 'bold' : 'normal' }}
+            onClick={() => setPanelTab(v => (v === 'structure' ? null : 'structure'))}
           >
             Структура
           </button>
@@ -223,15 +225,19 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
               padding: 8,
             }}
           />
-          {structureOpen && (
+          {panelTab != null && (
             <div
-              data-testid="query-text-structure-panel"
+              data-testid={panelTab === 'structure' ? 'query-text-structure-panel' : 'query-text-parameters-panel'}
               style={{
                 width: 220, flexShrink: 0, borderLeft: '1px solid var(--qc-border)',
                 padding: 8, fontSize: 12, overflow: 'auto',
               }}
             >
-              <QueryStructurePanel result={checked.result} onNavigate={handleNavigate} />
+              {panelTab === 'structure' ? (
+                <QueryStructurePanel result={checked.result} onNavigate={handleNavigate} />
+              ) : (
+                <QueryParametersPanel parameters={checked.result.parameters} />
+              )}
             </div>
           )}
         </div>
