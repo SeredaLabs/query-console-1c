@@ -21,16 +21,56 @@ export interface QueryTextDialogProps {
   onClose: () => void;
 }
 
-const TOOLBAR_BTN: React.CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: 'inherit',
-  padding: '4px 8px',
-  fontSize: 12,
-  borderRadius: 3,
-};
-
 const SEPARATOR: React.CSSProperties = { width: 1, alignSelf: 'stretch', background: 'var(--qc-border)', margin: '4px 4px' };
+
+interface ToolbarButtonProps {
+  /** Имя codicon без префикса (см. node_modules/@vscode/codicons для полного списка). */
+  icon: string;
+  label?: string;
+  active?: boolean;
+  disabled?: boolean;
+  title: string;
+  onClick?: () => void;
+  /** Разворот глифа (нет отдельной иконки «отменить» в codicons — берём «redo» зеркально). */
+  mirrorIcon?: boolean;
+}
+
+/**
+ * Кнопка тулбара «иконка (+ подпись)» в стиле нативных VS Code toolbar-кнопок —
+ * тот же hover-фон, что и у `IconButton`, плюс `active`-подсветка для кнопок-тумблеров
+ * (Параметры/Структура). Раньше тулбар был из голого текста — по просьбе пользователя
+ * заменён на codicon-иконки, как в остальном UI конструктора.
+ */
+function ToolbarButton({ icon, label, active, disabled, title, onClick, mirrorIcon }: ToolbarButtonProps): React.ReactElement {
+  const [hover, setHover] = React.useState(false);
+  return (
+    <button
+      title={title}
+      disabled={disabled}
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 5,
+        background: active
+          ? 'var(--vscode-toolbar-activeBackground, rgba(90,93,94,0.55))'
+          : hover && !disabled ? 'var(--vscode-toolbar-hoverBackground, rgba(90,93,94,0.4))' : 'transparent',
+        border: 'none',
+        borderRadius: 4,
+        padding: '4px 8px',
+        fontSize: 12,
+        color: disabled ? 'var(--vscode-disabledForeground, #6b6b6b)' : 'var(--vscode-foreground, #ccc)',
+        cursor: disabled ? 'default' : 'pointer',
+      }}
+    >
+      <span
+        className={`codicon codicon-${icon}`}
+        style={{ fontSize: 14, transform: mirrorIcon ? 'scaleX(-1)' : undefined }}
+      />
+      {label && <span>{label}</span>}
+    </button>
+  );
+}
 
 const DEBOUNCE_MS = 400;
 
@@ -182,41 +222,31 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
             padding: '4px 8px', borderBottom: '1px solid var(--qc-border)', fontSize: 12,
           }}
         >
-          <button
-            style={{ ...TOOLBAR_BTN, cursor: 'pointer' }}
-            title="Отменить (Ctrl/Cmd+Z)"
-            onClick={() => editorRef.current?.undo()}
-          >
-            ↶
-          </button>
-          <button
-            style={{ ...TOOLBAR_BTN, cursor: 'pointer' }}
-            title="Повторить (Ctrl/Cmd+Shift+Z)"
-            onClick={() => editorRef.current?.redo()}
-          >
-            ↷
-          </button>
+          <ToolbarButton icon="redo" mirrorIcon title="Отменить (Ctrl/Cmd+Z)" onClick={() => editorRef.current?.undo()} />
+          <ToolbarButton icon="redo" title="Повторить (Ctrl/Cmd+Shift+Z)" onClick={() => editorRef.current?.redo()} />
           <span style={SEPARATOR} />
           {/* onChange идёт тем же путём, что и обычная правка текста, и триггерит
               value-sync эффект CodeEditor (единая транзакция CodeMirror) — поэтому
               один Ctrl/Cmd+Z полностью откатывает форматирование (design-док, раздел 5). */}
-          <button style={{ ...TOOLBAR_BTN, cursor: 'pointer' }} title="Форматировать" onClick={() => onChange(formatQueryText(text))}>Форматировать</button>
-          <button style={{ ...TOOLBAR_BTN, cursor: 'pointer' }} title="Проверить сейчас" onClick={runCheckNow}>✓ Проверить</button>
-          <button
-            style={{ ...TOOLBAR_BTN, cursor: 'pointer', fontWeight: panelTab === 'parameters' ? 'bold' : 'normal' }}
+          <ToolbarButton icon="wand" label="Форматировать" title="Форматировать" onClick={() => onChange(formatQueryText(text))} />
+          <ToolbarButton icon="pass" label="Проверить" title="Проверить сейчас" onClick={runCheckNow} />
+          <ToolbarButton
+            icon="json"
+            label="Параметры"
+            title="Параметры"
+            active={panelTab === 'parameters'}
             onClick={() => setPanelTab(v => (v === 'parameters' ? null : 'parameters'))}
-          >
-            Параметры
-          </button>
-          <button
-            style={{ ...TOOLBAR_BTN, cursor: 'pointer', fontWeight: panelTab === 'structure' ? 'bold' : 'normal' }}
+          />
+          <ToolbarButton
+            icon="list-tree"
+            label="Структура"
+            title="Структура"
+            active={panelTab === 'structure'}
             onClick={() => setPanelTab(v => (v === 'structure' ? null : 'structure'))}
-          >
-            Структура
-          </button>
+          />
           {/* Ctrl/Cmd+F/H уже работают в самом редакторе (richFeatures → @codemirror/search) —
               кнопка просто открывает ту же панель по клику, без своей логики поиска. */}
-          <button style={{ ...TOOLBAR_BTN, cursor: 'pointer' }} title="Поиск (Ctrl/Cmd+F)" onClick={() => editorRef.current?.openSearch()}>🔍</button>
+          <ToolbarButton icon="search" label="Поиск" title="Поиск (Ctrl/Cmd+F)" onClick={() => editorRef.current?.openSearch()} />
         </div>
 
         <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
