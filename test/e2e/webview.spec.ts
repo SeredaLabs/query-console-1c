@@ -225,6 +225,46 @@ test.describe('Query Constructor Webview', () => {
     await expect(editor).toContainText(/Валюты/);
   });
 
+  // Стадия 0 плана «Текст запроса v2»: базовый e2e-снимок ТЕКУЩЕГО поведения модалки
+  // редактирования текста запроса — до любых изменений в рамках этой задачи. Служит
+  // страховочной сеткой: новый диалог должен вести себя точно так же.
+  test('Текст запроса: «Применить» обновляет модель конструктора', async ({ page }) => {
+    await page.goto(BASE);
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+
+    await page.locator('button:has-text("Запрос")').click();
+    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+    await expect(editor).toContainText(/Код/);
+
+    // Заменяем текст запроса на запрос с ДРУГИМ полем.
+    await editor.fill('ВЫБРАТЬ\n\tВалюты.Наименование КАК Наименование\nИЗ\n\tСправочник.Валюты КАК Валюты');
+    await page.locator('button:has-text("Применить")').click();
+
+    // Модалка закрылась, конструктор обновлён — поле в «Поля» теперь Наименование.
+    await expect(page.locator('text=Текст запроса')).toHaveCount(0);
+    await expect(page.locator('[data-field-idx="0"]')).toContainText('Наименование');
+  });
+
+  test('Текст запроса: закрытие без «Применить» не меняет модель конструктора', async ({ page }) => {
+    await page.goto(BASE);
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+
+    await page.locator('button:has-text("Запрос")').click();
+    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+    await editor.fill('ВЫБРАТЬ\n\tВалюты.Наименование КАК Наименование\nИЗ\n\tСправочник.Валюты КАК Валюты');
+
+    // Закрываем крестиком, НЕ применяя правку.
+    await page.locator('button[title="Закрыть"]').click();
+    await expect(page.locator('text=Текст запроса')).toHaveCount(0);
+
+    // Поле в конструкторе осталось прежним (Код) — правка не применилась.
+    await expect(page.locator('[data-field-idx="0"]')).toContainText('Код');
+  });
+
   test('нижняя панель: ОК постит insertText, Отмена постит cancel', async ({ page }) => {
     await page.goto(BASE);
     await expect(page.locator('button:has-text("Запрос")')).toBeVisible();
