@@ -352,6 +352,32 @@ test.describe('Query Constructor Webview', () => {
     await expect(editor).toHaveText(oneLiner);
   });
 
+  // Стадия 6 плана «Текст запроса v2»: панель «Структура» показывает поля/источники
+  // из QueryAnalysisService.analyze() и переводит курсор в текст по клику (design-док,
+  // разделы 7-8; навигация — best-effort поиск по тексту, риск п.0.3).
+  test('Текст запроса v2: панель «Структура» показывает поля/источники, клик переводит курсор', async ({ page }) => {
+    await page.goto(BASE);
+    await page.evaluate(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
+      }));
+    });
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+    await page.locator('button:has-text("Запрос")').click();
+
+    await page.locator('button:has-text("Структура")').click();
+    const panel = page.locator('[data-testid="query-text-structure-panel"]');
+    await expect(panel).toContainText('Поля (1)');
+    await expect(panel).toContainText('Источники (1)');
+    await expect(panel).toContainText('Валюты.Код');
+
+    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+    await panel.locator('text=Валюты.Код').click();
+    await expect(editor).toBeFocused();
+  });
+
   test('нижняя панель: ОК постит insertText, Отмена постит cancel', async ({ page }) => {
     await page.goto(BASE);
     await expect(page.locator('button:has-text("Запрос")')).toBeVisible();

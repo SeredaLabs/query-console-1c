@@ -4,6 +4,7 @@ import { IconButton } from './IconButton';
 import { BTN, BTN_SECONDARY } from '../sharedStyles';
 import { analyze, type QueryAnalysisResult, type QueryDiagnostic } from '../../core/query/queryAnalysisService';
 import { formatQueryText } from '../../core/query/queryTextFormatter';
+import { QueryStructurePanel } from './QueryStructurePanel';
 import type { MetadataResolver } from '../../core/query/metadataResolver';
 import type { Diagnostic } from '@codemirror/lint';
 
@@ -116,6 +117,12 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
     editorRef.current?.moveCursorTo(lineColToOffset(checked.text, d.line, d.col));
   }
 
+  /** Best-effort переход из панели «Структура» к тексту — см. QueryStructurePanel. */
+  function handleNavigate(searchText: string) {
+    const idx = text.indexOf(searchText);
+    if (idx >= 0) editorRef.current?.moveCursorTo(idx);
+  }
+
   const lineCount = text.split('\n').length;
   const firstDiagnostic = checked.result.diagnostics[0];
 
@@ -218,15 +225,13 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
           />
           {structureOpen && (
             <div
+              data-testid="query-text-structure-panel"
               style={{
                 width: 220, flexShrink: 0, borderLeft: '1px solid var(--qc-border)',
                 padding: 8, fontSize: 12, overflow: 'auto',
               }}
             >
-              <div style={{ fontWeight: 'bold', marginBottom: 8 }}>Структура запроса</div>
-              <div style={{ color: 'var(--vscode-descriptionForeground)' }}>
-                Появится на следующей стадии.
-              </div>
+              <QueryStructurePanel result={checked.result} onNavigate={handleNavigate} />
             </div>
           )}
         </div>
