@@ -415,6 +415,40 @@ test.describe('Query Constructor Webview', () => {
     await expect(paramsPanel).toHaveCount(0);
   });
 
+  // Один и тот же параметр часто используется в нескольких местах (см. usageCount) —
+  // повторный клик должен переходить к СЛЕДУЮЩЕМУ вхождению, а не залипать на первом.
+  test('Текст запроса v2: клик по параметру с несколькими вхождениями циклически переходит между ними', async ({ page }) => {
+    await page.goto(BASE);
+    await page.evaluate(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
+      }));
+    });
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+    await page.locator('button:has-text("Запрос")').click();
+
+    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+    await editor.fill(
+      'ВЫБРАТЬ Валюты.Код КАК Код\nИЗ Справочник.Валюты КАК Валюты\nГДЕ Валюты.Код = &Код\nИ Валюты.Наименование <> &Код'
+    );
+    await page.locator('button[title="Проверить сейчас"]').click();
+    await page.locator('button:has-text("Параметры")').click();
+
+    const activeLineNumber = () => page.locator('.cm-activeLineGutter').first().textContent();
+    const paramRow = page.locator('[data-testid="query-text-parameters-panel"] >> text=&Код');
+
+    await paramRow.click();
+    expect(await activeLineNumber()).toBe('3'); // первое вхождение — строка ГДЕ
+
+    await paramRow.click();
+    expect(await activeLineNumber()).toBe('4'); // второе вхождение — строка И
+
+    await paramRow.click();
+    expect(await activeLineNumber()).toBe('3'); // конец текста — цикл на первое вхождение
+  });
+
   // Стадия 8 плана «Текст запроса v2» (design-док, раздел 12, риск п.0.7): все ТРИ пути
   // закрытия (×, клик по фону, «Отмена») должны спрашивать подтверждение, если текст
   // менялся с момента открытия, и закрывать сразу, если нет.

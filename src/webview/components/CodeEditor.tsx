@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { EditorState, type Extension } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view';
+import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
 import { defaultKeymap, historyKeymap, history, indentWithTab, undo as cmUndo, redo as cmRedo, isolateHistory } from '@codemirror/commands';
 import { bracketMatching, foldGutter, codeFolding, foldKeymap } from '@codemirror/language';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
@@ -215,6 +215,7 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
       extensions.push(
         lineNumbers(),
         highlightActiveLine(),
+        highlightActiveLineGutter(),
         bracketMatching(),
         closeBrackets(),
         codeFolding(),

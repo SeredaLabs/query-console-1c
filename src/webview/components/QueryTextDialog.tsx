@@ -161,10 +161,23 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
     editorRef.current?.moveCursorTo(lineColToOffset(checked.text, d.line, d.col));
   }
 
-  /** Best-effort переход из панели «Структура» к тексту — см. QueryStructurePanel. */
+  /**
+   * Best-effort переход из панели «Структура»/«Параметры» к тексту. Один и тот же
+   * параметр/выражение часто встречается НЕСКОЛЬКО раз (см. `usageCount` в панели
+   * параметров) — повторный клик по тому же элементу переходит к СЛЕДУЮЩЕМУ
+   * вхождению, а не залипает на первом; клик по другому элементу начинает поиск заново
+   * с начала текста. Индекс не хранится в state — навигация не должна влиять на
+   * рендер/дебаунс проверки.
+   */
+  const lastNavRef = React.useRef<{ searchText: string; index: number } | null>(null);
   function handleNavigate(searchText: string) {
-    const idx = text.indexOf(searchText);
-    if (idx >= 0) editorRef.current?.moveCursorTo(idx);
+    const prev = lastNavRef.current;
+    const searchFrom = prev && prev.searchText === searchText ? prev.index + 1 : 0;
+    let idx = text.indexOf(searchText, searchFrom);
+    if (idx < 0) idx = text.indexOf(searchText); // конец текста — переходим к первому вхождению
+    if (idx < 0) return;
+    lastNavRef.current = { searchText, index: idx };
+    editorRef.current?.moveCursorTo(idx);
   }
 
   /**
