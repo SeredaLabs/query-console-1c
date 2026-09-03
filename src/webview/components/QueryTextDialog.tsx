@@ -108,7 +108,7 @@ function toCmDiagnostics(text: string, diagnostics: QueryDiagnostic[]): Diagnost
 
 /**
  * Раскладка v2 окна «Текст запроса» (см.
- * docs/superpowers/specs/2026-09-02-query-text-dialog-v2-design.md):
+ * docs/history/superpowers/specs/2026-09-02-query-text-dialog-v2-design.md):
  * тулбар / редактор + сворачиваемая панель «Структура» / статусная строка.
  *
  * Стадия 4: кнопка «Проверить» и фоновая проверка с дебаунсом ведут на ОДИН и тот же

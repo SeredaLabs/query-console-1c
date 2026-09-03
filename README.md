@@ -1,230 +1,231 @@
 # 1C: Query Constructor
 
-[🇺🇦 Українська](#українська) · [🇷🇺 Русский](#русский) · [🇬🇧 English](#english)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/SeredaLabs.query-console-1c?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/SeredaLabs.query-console-1c?label=Installs)](https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c)
+[![License: MIT](https://img.shields.io/badge/license-MIT-0f766e.svg)](LICENSE)
+
+> A visual SDBL query constructor for 1C in VS Code.
 
 ![1C: Query Constructor](assets/images/constructor.png)
 
+[🇺🇦 Українська](#-українська) · [🇷🇺 Русский](#-русский) · [🇬🇧 English](#-english)
+
 ---
 
-## Українська
+## 🇺🇦 Українська
 
-Візуальний конструктор запитів 1С для VS Code — аналог «Конструктора запиту» з
-Конфігуратора/EDT. Працює з конфігурацією 1С, вивантаженою у файли (`.xml` —
-метадані, `.bsl` — код): будує дерево «таблиці → поля → типи → зв'язки», дає
-зібрати запит мишею і генерує текст мовою запитів 1С (SDBL).
+### Що це
+
+**1C: Query Constructor** -- візуальний конструктор запитів 1С для VS Code,
+натхненний «Конструктором запиту» з Конфігуратора та EDT. Він читає XML-вивантаження
+конфігурації, будує дерево таблиць і полів та генерує SDBL-запит у форматі BSL-рядка.
+
+**Потрібно:** VS Code 1.90+ і, для роботи з метаданими, файлове XML-вивантаження
+конфігурації 1С.
 
 ### Можливості
 
-- Парсинг метаданих конфігурації в кеш (без Конфігуратора/EDT).
-- Візуальна побудова запиту — таблиці, поля, умови, групування, з'єднання,
-  об'єднання, тимчасові таблиці, пакет запитів.
-- Пошук по дереву метаданих за кількома ключовими словами одразу, з
-  підсвіткою збігів і навігацією між результатами (стрілочки/`Enter`).
-- Підсвітка синтаксису SDBL (ключові слова, функції, рядки, дати, параметри)
-  у тексті запиту й виразів.
-- Відкриття вже збереженого тексту запиту з перевіркою синтаксису й наявності
-  таблиць у метаданих.
-- Ручне редагування тексту запиту з поверненням правок у модель конструктора.
-- Збереження коментарів `//…` у тексті запиту між циклами «відкрити → правити
-  → зберегти».
-- (Експериментально, вимкнено за замовчуванням) нове вікно «Текст запроса»:
-  тулбар (форматування, перевірка, пошук), панелі «Структура»/«Параметри»,
-  захист від втрати незбережених змін — вмикається налаштуванням
-  `queryConsole.queryTextEditorV2`.
+- Візуальна побудова запитів: таблиці, поля, умови, групування, з'єднання,
+  об'єднання, тимчасові таблиці та пакетні запити.
+- Дерево метаданих «таблиці → поля → типи → зв'язки» з багатослівним пошуком.
+- Відкриття підтримуваного SDBL-тексту під курсором, структурна перевірка та
+  повернення ручних правок у модель конструктора.
+- Підсвітка SDBL, форматування виразів і збереження коментарів `//...` між
+  циклами «відкрити → правити → зберегти».
+- Експериментальний редактор «Текст запроса» v2 з перевіркою, пошуком і панелями
+  «Структура»/«Параметри».
 
-### Як користуватись
+### Швидкий старт
 
-1. У файлі `.bsl` викликати команду **«1С: Конструктор запроса»** — з
-   контекстного меню (права кнопка миші) або палітри команд (`Ctrl+Shift+P`).
-2. Якщо курсор стоїть усередині вже збереженого запиту — відкриється саме він;
-   інакше розширення запропонує створити новий.
-3. Зберіть запит мишею (вкладки «Таблиці і поля», «Умови», «Групування» тощо),
-   або натисніть **«Запрос»** внизу, щоб побачити й за потреби вручну
-   відредагувати текст SDBL — кнопка **«Применить»** перепарсить правки назад
-   у модель конструктора (з тією ж перевіркою, що й при відкритті запиту).
-4. **ОК** — вставляє (для нового запиту) або замінює (для вже відкритого)
-   текст у позиції курсора, у форматі, потрібному синтаксису 1С (рядковий
-   літерал з переносами `|`).
+1. Встановіть розширення з [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c).
+2. Відкрийте `.bsl` файл, поставте курсор у запит або в потрібну позицію.
+3. Оберіть у контекстному меню **«1С: Конструктор запроса»** →
+   **«Только текст запроса»** або **«С обработкой результата»**.
+4. Зберіть або відредагуйте запит, натисніть **«ОК»** -- розширення вставить новий
+   або замінить відкритий BSL-літерал.
 
-Прапорець **«Сохранять комментарии»** (увімкнено за замовчуванням) визначає,
-чи переживуть коментарі `//…` цикл правки. Вони прив'язані до полів/контейнерів
-запиту, а не до позиції в тексті, тому переживають перестановку полів і
-зникають разом зі своїм полем.
+Для конфігурації з власними таблицями вкажіть шлях до XML-вивантаження або
+дозвольте розширенню знайти `Configuration.xml`, після чого натисніть
+**«Обновить кэш»**.
 
-### Кеш метаданих
+### Команди та налаштування
 
-Конструктор працює з кешем розібраних метаданих, а не з вивантаженням напряму.
-
-- Шлях до вивантаження автовизначається (пошук `Configuration.xml` по всій
-  робочій області) або задається вручну через `queryConsole.metadataPath`.
-- Після зміни метаданих конфігурації натисніть **«Обновить кэш»** — це
-  перепарсить вивантаження.
-
-### Налаштування
-
-| Налаштування | Опис |
+| Команда | Призначення |
 |---|---|
-| `queryConsole.metadataPath` | Шлях до каталогу вивантаження `cf` (пусто → автовизначення) |
-| `queryConsole.parserOutputPath` | Каталог результату парсингу (за замовчуванням `tmp/parser_data`) |
+| `1С: Только текст запроса` | Відкрити конструктор без обробки результату |
+| `1С: С обработкой результата` | Відкрити конструктор у сценарії з обробкою результату |
+| `1С: Распарсить метаданные в YAML` | Примусово перебудувати metadata cache |
+
+| Налаштування | Призначення |
+|---|---|
+| `queryConsole.metadataPath` | Шлях до каталогу XML-вивантаження `cf`; порожній -- автовизначення |
+| `queryConsole.parserOutputPath` | Каталог metadata cache; за замовчуванням `tmp/parser_data` |
 | `queryConsole.openInNewWindow` | Відкривати конструктор в окремому вікні VS Code |
-| `queryConsole.queryTextEditorV2` | Експериментальне вікно «Текст запроса» v2 (вимкнено за замовчуванням) |
+| `queryConsole.queryTextEditorV2` | Увімкнути експериментальний редактор тексту запиту v2 |
 
-### Розробка
+### Важливо знати
 
-Архітектура, структура коду, збірка з джерел, тести й реліз — у
-[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+- Валідація не є повним компілятором SDBL: вона не гарантує коректність усіх
+  довільних виразів, полів і навігації через крапку.
+- Пошук запиту під курсором підтримує статичні BSL-рядки, що починаються з
+  `ВЫБРАТЬ` або `УНИЧТОЖИТЬ`.
+- Round-trip небезпечний для `РегистрБухгалтерии.*.Субконто(...)` та деяких
+  віртуальних таблиць із трьома+ параметрами. Не застосовуйте до них ручні зміни
+  через конструктор до виправлення.
+
+Повні межі підтримки: [CORE_LIMITATIONS.md](docs/CORE_LIMITATIONS.md).
+
+### Документація та внесок
+
+[Документація проєкту](docs/README.md) містить архітектуру, поточні відомі
+проблеми, roadmap, інструкції розробки та corpus testing.
 
 ---
 
-## Русский
+## 🇷🇺 Русский
 
-Визуальный конструктор запросов 1С для VS Code — аналог «Конструктора запроса»
-из Конфигуратора/EDT. Работает с конфигурацией 1С, выгруженной в файлы
-(`.xml` — метаданные, `.bsl` — код): строит дерево «таблицы → поля → типы →
-связи», даёт собрать запрос мышью и генерирует текст на языке запросов 1С
-(SDBL).
+### Что это
+
+**1C: Query Constructor** -- визуальный конструктор запросов 1С для VS Code,
+вдохновлённый «Конструктором запроса» из Конфигуратора и EDT. Он читает
+XML-выгрузку конфигурации, строит дерево таблиц и полей и генерирует SDBL-запрос
+в формате BSL-строки.
+
+**Требуется:** VS Code 1.90+ и, для работы с метаданными, файловая XML-выгрузка
+конфигурации 1С.
 
 ### Возможности
 
-- Парсинг метаданных конфигурации в кэш (без Конфигуратора/EDT).
-- Визуальное построение запроса — таблицы, поля, условия, группировка,
-  соединения, объединения, временные таблицы, пакет запросов.
-- Поиск по дереву метаданных сразу по нескольким ключевым словам, с
-  подсветкой совпадений и навигацией между результатами (стрелочки/`Enter`).
-- Подсветка синтаксиса SDBL (ключевые слова, функции, строки, даты,
-  параметры) в тексте запроса и выражений.
-- Открытие уже сохранённого текста запроса с проверкой синтаксиса и наличия
-  таблиц в метаданных.
-- Ручное редактирование текста запроса с возвратом правок в модель
-  конструктора.
-- Сохранение комментариев `//…` в тексте запроса между циклами «открыть →
-  править → сохранить».
-- (Экспериментально, выключено по умолчанию) новое окно «Текст запроса»:
-  тулбар (форматирование, проверка, поиск), панели «Структура»/«Параметры»,
-  защита от потери несохранённых изменений — включается настройкой
-  `queryConsole.queryTextEditorV2`.
+- Визуальное построение запросов: таблицы, поля, условия, группировка, соединения,
+  объединения, временные таблицы и пакетные запросы.
+- Дерево метаданных «таблицы → поля → типы → связи» с поиском по нескольким словам.
+- Открытие поддерживаемого SDBL-текста под курсором, структурная проверка и
+  возврат ручных правок в модель конструктора.
+- Подсветка SDBL, форматирование выражений и сохранение комментариев `//...`
+  между циклами «открыть → править → сохранить».
+- Экспериментальный редактор «Текст запроса» v2 с проверкой, поиском и панелями
+  «Структура»/«Параметры».
 
-### Как пользоваться
+### Быстрый старт
 
-1. В файле `.bsl` вызвать команду **«1С: Конструктор запроса»** — из
-   контекстного меню (правая кнопка мыши) или палитры команд
-   (`Ctrl+Shift+P`).
-2. Если курсор стоит внутри уже сохранённого запроса — откроется именно он;
-   иначе расширение предложит создать новый.
-3. Соберите запрос мышью (вкладки «Таблицы и поля», «Условия», «Группировка»
-   и т.д.), либо нажмите **«Запрос»** внизу, чтобы увидеть и при необходимости
-   вручную отредактировать текст SDBL — кнопка **«Применить»** перепарсит
-   правки обратно в модель конструктора (с той же проверкой, что и при
-   открытии запроса).
-4. **ОК** — вставляет (для нового запроса) или заменяет (для уже открытого)
-   текст в позиции курсора, в формате, требуемом синтаксисом 1С (строковый
-   литерал с переносами `|`).
+1. Установите расширение из [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c).
+2. Откройте `.bsl` файл, поставьте курсор в запрос или в нужную позицию.
+3. Выберите в контекстном меню **«1С: Конструктор запроса»** →
+   **«Только текст запроса»** или **«С обработкой результата»**.
+4. Соберите или отредактируйте запрос, нажмите **«ОК»** -- расширение вставит новый
+   или заменит открытый BSL-литерал.
 
-Флажок **«Сохранять комментарии»** (включён по умолчанию) определяет,
-переживут ли комментарии `//…` цикл правки. Они привязаны к полям/контейнерам
-запроса, а не к позиции в тексте, поэтому переживают перестановку полей и
-исчезают вместе со своим полем.
+Для конфигурации с собственными таблицами укажите путь к XML-выгрузке или
+разрешите расширению найти `Configuration.xml`, затем нажмите **«Обновить кэш»**.
 
-### Кэш метаданных
+### Команды и настройки
 
-Конструктор работает с кэшем разобранных метаданных, а не с выгрузкой
-напрямую.
-
-- Путь к выгрузке автоопределяется (поиск `Configuration.xml` по всей рабочей
-  области) или задаётся вручную через `queryConsole.metadataPath`.
-- После изменения метаданных конфигурации нажмите **«Обновить кэш»** — это
-  перепарсит выгрузку.
-
-### Настройки
-
-| Настройка | Описание |
+| Команда | Назначение |
 |---|---|
-| `queryConsole.metadataPath` | Путь к каталогу выгрузки `cf` (пусто → автоопределение) |
-| `queryConsole.parserOutputPath` | Каталог результата парсинга (по умолчанию `tmp/parser_data`) |
+| `1С: Только текст запроса` | Открыть конструктор без обработки результата |
+| `1С: С обработкой результата` | Открыть конструктор в сценарии с обработкой результата |
+| `1С: Распарсить метаданные в YAML` | Принудительно пересобрать metadata cache |
+
+| Настройка | Назначение |
+|---|---|
+| `queryConsole.metadataPath` | Путь к каталогу XML-выгрузки `cf`; пусто -- автоопределение |
+| `queryConsole.parserOutputPath` | Каталог metadata cache; по умолчанию `tmp/parser_data` |
 | `queryConsole.openInNewWindow` | Открывать конструктор в отдельном окне VS Code |
-| `queryConsole.queryTextEditorV2` | Экспериментальное окно «Текст запроса» v2 (выключено по умолчанию) |
+| `queryConsole.queryTextEditorV2` | Включить экспериментальный редактор текста запроса v2 |
 
-### Разработка
+### Важно знать
 
-Архитектура, структура кода, сборка из исходников, тесты и релиз — в
-[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+- Валидация не является полным компилятором SDBL: она не гарантирует корректность
+  всех произвольных выражений, полей и навигации через точку.
+- Поиск запроса под курсором поддерживает статические BSL-строки, начинающиеся с
+  `ВЫБРАТЬ` или `УНИЧТОЖИТЬ`.
+- Round-trip небезопасен для `РегистрБухгалтерии.*.Субконто(...)` и некоторых
+  виртуальных таблиц с тремя+ параметрами. Не применяйте к ним ручные изменения
+  через конструктор до исправления.
+
+Полные границы поддержки: [CORE_LIMITATIONS.md](docs/CORE_LIMITATIONS.md).
+
+### Документация и участие
+
+[Документация проекта](docs/README.md) содержит архитектуру, текущие известные
+проблемы, roadmap, инструкции разработки и corpus testing.
 
 ---
 
-## English
+## 🇬🇧 English
 
-A visual SDBL query constructor for 1C in VS Code — equivalent to the "Query
-Constructor" from Configurator/EDT. Works against a 1C configuration exported
-to files (`.xml` — metadata, `.bsl` — code): builds a "tables → fields →
-types → joins" tree, lets you assemble a query with the mouse, and generates
-1C query-language (SDBL) text.
+### What It Is
 
-### Features
+**1C: Query Constructor** is a visual SDBL query constructor for VS Code,
+inspired by the query constructor in 1C Configurator and EDT. It reads a 1C
+configuration XML export, builds a table-and-field tree, and emits an SDBL query
+as a BSL string literal.
 
-- Parses configuration metadata into a cache (no Configurator/EDT needed).
-- Visual query building — tables, fields, conditions, grouping, joins,
-  unions, temp tables, query batches.
-- Multi-keyword search across the metadata tree, with match highlighting and
-  next/previous navigation (arrows/`Enter`).
-- SDBL syntax highlighting (keywords, functions, strings, dates, parameters)
-  in the query and expression text.
-- Opens an existing query's text with syntax and metadata validation.
-- Manual text editing that round-trips back into the constructor's model.
-- Preserves `//…` comments in the query text across edit cycles.
-- (Experimental, off by default) a new "Query text" dialog: toolbar (format,
-  check, search), "Structure"/"Parameters" panels, unsaved-changes
-  protection — enabled via `queryConsole.queryTextEditorV2`.
+**Requirements:** VS Code 1.90+ and, for metadata-aware work, a file-based XML
+export of a 1C configuration.
 
-### Usage
+### Highlights
 
-1. In a `.bsl` file, run **"1С: Конструктор запроса"** — from the right-click
-   context menu or the command palette (`Ctrl+Shift+P`).
-2. If the cursor is inside an existing saved query, that query opens; if not,
-   the extension offers to start a new one.
-3. Build the query with the mouse ("Tables and fields", "Conditions",
-   "Grouping", etc.), or click **"Запрос"** at the bottom to view — and if
-   needed, hand-edit — the generated SDBL text. **"Применить"** re-parses
-   your edits back into the constructor's model, with the same validation
-   used when opening a query.
-4. **OK** inserts (for a new query) or replaces (for an already-open one) the
-   text at the cursor, formatted the way 1C's syntax requires (a string
-   literal with `|` line continuations).
+- Visual query building: tables, fields, conditions, grouping, joins, unions,
+  temporary tables, and query batches.
+- A metadata tree of tables, fields, types, and relations with multi-keyword search.
+- Opening supported SDBL text at the cursor, structural validation, and manual
+  edits that round-trip into the constructor model.
+- SDBL highlighting, expression formatting, and `//...` comment preservation
+  across open, edit, and save cycles.
+- An experimental Query Text v2 editor with validation, search, and Structure /
+  Parameters panels.
 
-The **"Сохранять комментарии"** checkbox (on by default) controls whether
-`//…` comments survive an edit cycle. They're attached to the query's
-fields/containers rather than to a text position, so they survive field
-reordering and disappear along with their field.
+### Quick Start
 
-### Metadata cache
+1. Install the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c).
+2. Open a `.bsl` file and place the cursor in a query or at the desired insertion point.
+3. In the context menu choose **"1С: Конструктор запроса"** →
+   **"Только текст запроса"** or **"С обработкой результата"**.
+4. Build or edit the query, then select **OK**. The extension inserts a new BSL
+   literal or replaces the one that was opened.
 
-The constructor works off a cache of parsed metadata rather than the raw
-export.
+For a configuration with custom tables, set the XML-export path or let the
+extension find `Configuration.xml`, then select **"Обновить кэш"**.
 
-- The export path is auto-detected (searches the workspace for
-  `Configuration.xml`) or set explicitly via `queryConsole.metadataPath`.
-- After changing the configuration's metadata, click **"Обновить кэш"** to
-  re-parse the export.
+### Commands and Settings
 
-### Settings
-
-| Setting | Description |
+| Command | Purpose |
 |---|---|
-| `queryConsole.metadataPath` | Path to the `cf` export directory (empty → auto-detect) |
-| `queryConsole.parserOutputPath` | Directory for parser output (default `tmp/parser_data`) |
+| `1С: Только текст запроса` | Open the constructor without result handling |
+| `1С: С обработкой результата` | Open the constructor in the result-handling flow |
+| `1С: Распарсить метаданные в YAML` | Force a metadata-cache rebuild |
+
+| Setting | Purpose |
+|---|---|
+| `queryConsole.metadataPath` | Path to the `cf` XML export; empty means auto-detect |
+| `queryConsole.parserOutputPath` | Metadata-cache directory; defaults to `tmp/parser_data` |
 | `queryConsole.openInNewWindow` | Open the constructor in a separate VS Code window |
-| `queryConsole.queryTextEditorV2` | Experimental "Query text" v2 dialog (off by default) |
+| `queryConsole.queryTextEditorV2` | Enable the experimental Query Text v2 editor |
 
-### Development
+### Important Limitations
 
-Architecture, code layout, building from source, tests and releases — see
-[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+- Validation is not a complete SDBL compiler: it does not guarantee every
+  arbitrary expression, field, or dotted navigation.
+- Cursor lookup supports static BSL strings beginning with `ВЫБРАТЬ` or
+  `УНИЧТОЖИТЬ`.
+- Round-tripping is unsafe for `РегистрБухгалтерии.*.Субконто(...)` and some
+  virtual tables with three or more parameters. Do not apply manual edits to
+  these queries through the constructor until this is fixed.
+
+Read the complete [core limitations](docs/CORE_LIMITATIONS.md).
+
+### Documentation and Contributing
+
+The [project documentation](docs/README.md) covers architecture, current known
+issues, the roadmap, development, and corpus testing.
 
 ---
 
-## Лицензия / License
+## License
 
-MIT — see [`LICENSE`](LICENSE). Third-party notices (icons) —
-[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
+MIT -- see [LICENSE](LICENSE). Third-party notices for icons are in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 This project started as a fork of
 [AlekseyUAM/query_console_vscode](https://github.com/AlekseyUAM/query_console_vscode)

@@ -1,224 +1,85 @@
 # Разработка
 
-Документация для разработчиков: архитектура, структура кода, сборка, тесты и релизы.
-Пользовательское описание расширения — в корневом [`README.md`](../README.md).
+Текущая архитектура и границы слоёв описаны в
+[ARCHITECTURE.md](ARCHITECTURE.md). Пользовательское описание расширения -- в
+[корневом README](../README.md).
 
-## Архитектура
+## Предпосылки и быстрый старт
 
-Проект разбит на 4 изолированные подсистемы. Логика живёт в `core` (pure-TS, без
-зависимости от `vscode`/React — тестируется в Node), webview — «тонкий» UI, контракт
-между слоями сосредоточен в `src/shared/messages.ts`.
-
-| Слой | Каталог | Роль |
-|---|---|---|
-| Метаданные | `src/core/metadata` | Парсинг выгрузки `cf` → модель/YAML «таблицы → поля → типы» |
-| Запрос (SDBL) | `src/core/query` | Двунаправленно: `QueryModel` ↔ текст SDBL (`sdblParser.ts`/`sdblGenerator.ts`), плюс трансформации (`qualifyBareFields`, `exprFormatter`, …), локальная семантическая валидация (`semanticValidator.ts`) и сервис анализа для окна «Текст запроса» (`queryAnalysisService.ts`) |
-| UI конструктора | `src/webview` | React-панели: База данных / Таблицы / Поля / вкладки (Условия, Группировка, Итоги, Объединения, Порядок, Индекс, Построитель, Пакет) / окно «Текст запроса» (v2, opt-in) |
-| Интеграция VS Code | `src/extension` | Команды, webview-панель, вставка результата в редактор |
-
-## Структура каталогов
-
-```
-query-console-1c/
-├── src/
-│   ├── extension/            # СЛОЙ VS Code (тонкий, зависит от vscode)
-│   │   ├── extension.ts      #   activate(): регистрация команд
-│   │   ├── panel.ts          #   WebviewPanel, мост postMessage
-│   │   ├── parseCommand.ts   #   команда 1c.parseMetadata (обёртка над ядром)
-│   │   ├── resolveCfPath.ts  #   поиск каталога выгрузки cf
-│   │   └── insertResult.ts   #   вставка текста в активный редактор
-│   ├── core/                 # PURE-TS ядро (без vscode/React, тестируется в Node)
-│   │   ├── metadata/
-│   │   │   ├── parser/        #   парсер выгрузки → YAML (см. ниже)
-│   │   │   ├── cfParser.ts    #   XML → MetadataModel (старый путь конструктора)
-│   │   │   ├── cacheBuilder.ts / cacheLoader.ts   # JSON-кэш модели
-│   │   │   └── types.ts       #   модель метаданных
-│   │   └── query/              # ~30 файлов, двунаправленное ядро (см. docs/PHASE_6.md, PHASE_9.md)
-│   │       ├── queryModel.ts        # модель выбора пользователя
-│   │       ├── sdblLexer.ts         # текст SDBL → токены
-│   │       ├── sdblParser.ts        # токены → QueryModel (обратный разбор, Фаза 6)
-│   │       ├── sdblGenerator.ts     # QueryModel → текст SDBL
-│   │       ├── exprFormatter.ts     # форматирование выражений (общее для генератора/парсера)
-│   │       ├── qualifyBareFields.ts, dropRedundantGroupDerefs.ts, canonicalizeFieldCasing.ts, …  # трансформации модели
-│   │       ├── semanticValidator.ts # локальная семантическая проверка при открытии (Фаза 8.4)
-│   │       ├── validateBatch.ts     # единая точка синтаксис+семантика (tryOpenBatch)
-│   │       ├── queryAnalysisService.ts, queryTextFormatter.ts  # для окна «Текст запроса» v2 (Фаза 9)
-│   │       └── unionModel.ts, commentBinder.ts, …
-│   ├── webview/              # СЛОЙ UI (React + TypeScript)
-│   │   ├── App.tsx, main.tsx, bridge.ts
-│   │   ├── components/        #   DbTreePanel / TablesPanel / FieldsPanel / TabsBar / *Tab.tsx
-│   │   │                      #   (Условия, Группировка, Итоги, …) / QueryTextDialog (v2, opt-in)
-│   │   └── state/
-│   │       ├── queryStore.ts    # reducer і сумісний фасад стану
-│   │       └── queryStore/
-│   │           └── snapshots.ts # snapshot/restore і складання запитів
-│   ├── shared/
-│   │   └── messages.ts       # контракт сообщений host ↔ webview
-│   ├── cli/
-│   │   ├── parseMetadata.ts  # CLI-вход парсера метаданных
-│   │   └── *.ts              #   инструменты corpus/oracle-тестирования
-│   └── cf/                   # пример выгрузки конфигурации 1С (в .gitignore)
-├── tooling/                  # инструменты corpus/oracle-тестирования и сверки UI; не входят в VSIX
-├── docs/
-│   ├── ROADMAP.md            # общий план проекта (фазы и статусы)
-│   └── superpowers/
-│       ├── specs/            #   дизайн-документы (спеки) по итерациям
-│       └── plans/            #   планы реализации
-├── test/
-│   ├── unit/                 # юнит-тесты ядра (Vitest)
-│   ├── e2e/                  # Playwright e2e для webview
-│   ├── fixtures/             # мини-выгрузка cf + tree-sitter.wasm
-│   └── helpers/              # assertValidSdbl (валидатор SDBL на tree-sitter)
-├── .devcontainer/           # dev-контейнер (node:22 + Claude Code CLI)
-├── package.json             # манифест расширения + npm-скрипты
-└── tsconfig*.json, vitest.config.ts, playwright.config.ts
-```
-
-### `src/core/metadata/parser/` — парсер метаданных в YAML
-
-```
-dom.ts                 DOM-хелперы (childByLocalName / nodeText, фикс UTF-8 BOM)
-typeParser.ts          <Type> → Type[] (логический тип 1С + квалификаторы)
-attribute.ts           <Attribute> → Field
-catalog.ts             XML Справочника  → ParsedObject
-document.ts            XML Документа    → ParsedObject
-constant.ts            XML Константы    → ParsedObject
-enum.ts                XML Перечисления → ParsedObject
-model.ts               TS-интерфейсы результата (ParsedObject, Field, Type, …)
-yamlWriter.ts          ParsedObject / индекс → YAML-файл
-parseConfiguration.ts  оркестратор: обход cf/, диспетч по типам, запись дерева
-```
-
-## Сборка и запуск
-
-Быстрый старт — команда `npm run setup` (скрипт [`tooling/setup/install.sh`](../tooling/setup/install.sh), проверка Node, системные пакеты
-для node-gyp, `npm install` и сборка одной командой):
-
-```bash
-npm run setup --              # окружение + npm install + build
-npm run setup -- --e2e        # + браузеры Playwright для e2e-тестов
-npm run setup -- --docker     # + Docker Engine и devcontainers CLI (для DevContainer)
-npm run setup -- --help       # все опции (--wasm, --no-system)
-```
-
-Для разработки в контейнере (`.devcontainer/`) нужен Docker на хосте: `npm run setup --
---docker` ставит Docker Engine (buildx/compose), добавляет пользователя в группу
-`docker` и `@devcontainers/cli`. Дальше — «Dev Containers: Reopen in Container» в VS
-Code или `devcontainer up --workspace-folder .` из терминала.
-
-Требуется **Node.js ≥ 20** (рекомендуется 22) и npm. Вручную то же самое:
+Нужны Node.js 20+ (рекомендуется 22), npm и VS Code. Для базовой работы:
 
 ```bash
 npm install
-npm run build          # сборка extension + webview в out/
-npm run dev            # build + запуск VS Code с расширением (--extensionDevelopmentPath)
+npm run build
+npm run dev
 ```
 
-## Релизы (VSIX)
-
-Готовый `.vsix` собирается автоматически в GitHub Actions по git-тегу и
-прикладывается к GitHub Release — в репозитории файл не хранится.
+`npm run dev` собирает extension и webview и запускает VS Code с
+`--extensionDevelopmentPath=.`. Полная подготовка локального окружения:
 
 ```bash
-npm version 0.1.0        # version в package.json + коммит + тег v0.1.0
-git push --follow-tags   # пуш тега запускает workflow .github/workflows/release.yml
+npm run setup --              # зависимости и сборка
+npm run setup -- --e2e        # дополнительно браузер Playwright
+npm run setup -- --help       # другие опции, включая локальный WASM oracle
 ```
 
-Workflow ([`.github/workflows/release.yml`](../.github/workflows/release.yml)) на пуше
-тега `v*` ставит зависимости, упаковывает расширение через `@vscode/vsce` и создаёт
-Release с файлом `query-console-1c-<тег>.vsix` в Assets. Локально собрать пакет можно
-командой `npm run package`.
+Dev Container необязателен: для него нужен Docker, а `npm run setup -- --docker`
+устанавливает нужные инструменты. Конфигурация контейнера хранится в `.devcontainer/`.
 
-Тот же workflow запускает job `verify` (`typecheck`, сборка, unit- и e2e-тесты) на
-каждый pull request и push в `main`; упаковка и публикация релиза выполняются только
-для тега `v*`.
+## Основные команды
 
-### Установка VSIX
+| Команда | Назначение |
+|---|---|
+| `npm run build` | собрать extension и webview в `out/` |
+| `npm run typecheck` | проверить TypeScript отдельно для extension/core и webview |
+| `npm test` | основной локальный gate: typecheck + unit тесты |
+| `npm run test:e2e` | Playwright-проверка статического webview harness |
+| `npm run parse -- --cf <dir> --out <dir>` | собрать YAML метаданных из XML-выгрузки |
+| `npm run package` | собрать VSIX |
 
-Скачайте `query-console-1c-<тег>.vsix` со страницы
-[Releases](https://github.com/SeredaLabs/query-console-1c/releases) и установите
-одним из способов.
+`npm run test:e2e` не запускает реальный VS Code Extension Host. Этот пробел
+зафиксирована в [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 
-Через UI VS Code: панель **Extensions** (`Ctrl+Shift+X`) → меню «**...**» →
-**Install from VSIX...** → выбрать файл.
-
-Через командную строку (`--force` — для обновления поверх установленной версии):
+## Метаданные и локальный cache
 
 ```bash
-code --install-extension query-console-1c-<тег>.vsix
-code --install-extension query-console-1c-<тег>.vsix --force
+npm run parse -- --cf <путь-к-выгрузке> --out <путь-к-выводу>
 ```
 
-Скачать и установить одной командой:
+- `--cf` -- каталог XML-выгрузки 1С; по умолчанию CLI ищет `src/cf`.
+- `--out` -- каталог YAML; по умолчанию `tmp/parser_data`.
+
+Результат содержит `cf/configuration.yaml` и YAML-объекты по видам метаданных.
+Это производный cache: не коммитьте его и обновляйте после изменения XML. Текущий
+импорт неатомарен и может пропустить отдельные XML -- см.
+[CORE_LIMITATIONS.md](CORE_LIMITATIONS.md) и [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
+
+## Тесты и регрессия SDBL
+
+- Unit тесты находятся в `test/unit/`; закоммиченный корпус из 1976 запросов
+  проверяет `parseBatch`/`generateBatch` в `corpusRegression.test.ts`.
+- E2E тесты находятся в `test/e2e/` и проверяют webview через Playwright.
+- `assertValidSdbl` использует tree-sitter только когда локально есть
+  `test/fixtures/tree-sitter-sdbl.wasm`. Артефакт не коммитится и не собирается
+  CI, поэтому не является независимой CI-гарантией.
+
+Для oracle-прогона против другой конфигурации нужны XML-выгрузка, база 1С и MCP
+`1c-md`. Инструкция и правила обновления snapshot -- в
+[corpus-testing.md](corpus-testing.md).
+
+## Релиз
 
 ```bash
-curl -L -o qc.vsix \
-  https://github.com/SeredaLabs/query-console-1c/releases/latest/download/query-console-1c-<тег>.vsix
-code --install-extension qc.vsix
+npm version <version>
+git push --follow-tags
 ```
 
-Для VS Code Insiders используйте `code-insiders`, для VSCodium — `codium`. После
-установки при необходимости перезагрузите окно (`Ctrl+Shift+P` → **Reload Window**).
-
-## Парсер метаданных (CLI)
-
-```bash
-npm run parse -- --cf <путь-к-cf> --out <путь-вывода>
-```
-
-- `--cf` — каталог выгрузки (где `Catalogs/`, `Documents/`, …). По умолчанию — автоопределение `src/cf`.
-- `--out` — каталог вывода. По умолчанию `tmp/parser_data`.
-
-На выходе — дерево YAML (полная перегенерация при каждом прогоне):
-
-```
-cf/
-  configuration.yaml          # имя конфигурации + индекс всех объектов
-  Catalogs/<Имя>.yaml         # Справочники
-  Documents/<Имя>.yaml        # Документы
-  Constants/<Имя>.yaml        # Константы
-  Enums/<Имя>.yaml            # Перечисления
-```
-
-Каждый YAML содержит исчерпывающую информацию о таблице: свойства, стандартные поля,
-реквизиты с типами и квалификаторами, табличные части, ссылку на исходный XML.
-Подробности схемы — в [спеке парсера](superpowers/specs/2026-06-01-metadata-parser-yaml-design.md).
-
-## Тесты
-
-Разработка ведётся по **TDD**.
-
-```bash
-npm run typecheck      # tsc для extension/core/cli и отдельно для webview
-npm test               # typecheck + test:unit; основной локальный gate
-npm run test:unit      # юнит-тесты ядра (Vitest): cfParser, sdblGenerator, typeParser, cache
-npm run test:e2e       # Playwright e2e для webview
-```
-
-Генератор SDBL дополнительно проверяется тест-оракулом `assertValidSdbl` —
-сгенерированный текст парсится через `tree-sitter-sdbl` (WASM) без ошибок.
-
-## Тестирование на другой конфигурации
-
-Парсер запроса можно прогнать против произвольной конфигурации 1С: из базы выгружаются
-эталонные запросы и тексты запросов из кода, валидируются через MCP-оракул `1c-md`,
-прогоняются через конструктор, и на каждое расхождение пишется отдельный JSON-файл с
-ошибкой. Механизм конфигурируется через `.env` (см. [`.env.example`](../.env.example)),
-запускается одной командой `npm run corpus:test`.
-
-Полная пошаговая инструкция — в [`docs/corpus-testing.md`](corpus-testing.md);
-1С-сторона (внешняя обработка выгрузки запросов) — в
-[`tooling/1c-export/`](../tooling/1c-export/README.md).
+Workflow [release.yml](../.github/workflows/release.yml) выполняет verify на pull
+request и push в `main`, а для тега `v*` упаковывает VSIX и создаёт GitHub Release.
+Локальная сборка: `npm run package`.
 
 ## Документация
 
-- [`docs/ROADMAP.md`](ROADMAP.md) — общий план проекта, фазы и статусы.
-- [`docs/KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — подтверждённые, но пока не
-  исправленные находки (бэклог).
-- [`docs/superpowers/specs/`](superpowers/specs/) — дизайн-документы (спеки) по итерациям.
-- [`docs/superpowers/plans/`](superpowers/plans/) — планы реализации.
-
-Спецификации и планы в `superpowers/`, а также `docs/PHASE_*.md` — точечные записи
-соответствующих прошлых итераций; они могут описывать уже изменившиеся предположения
-(например, `src/cf` как обязательный вход). Текущую работу сверяйте по коду, тестам и
-этой документации.
+Начинайте с [docs/README.md](README.md). Текущими источниками являются архитектура,
+границы ядра, backlog и roadmap; фазовые отчёты и старые планы находятся в
+[history/](history/README.md) только как архив доказательств.

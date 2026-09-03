@@ -686,7 +686,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
       {/* Query preview modal. queryTextEditorV2 (queryConsole.queryTextEditorV2, по
           умолчанию выключено) переключает на новую раскладку из QueryTextDialog —
           Apply/Close остаются теми же обработчиками в обеих ветках (стадия 1 плана
-          редизайна, см. docs/superpowers/specs/2026-09-02-query-text-dialog-v2-design.md). */}
+          редизайна, см. docs/history/superpowers/specs/2026-09-02-query-text-dialog-v2-design.md). */}
       {queryModalText !== null && queryTextEditorV2 && (
         <QueryTextDialog
           text={queryModalText}

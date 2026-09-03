@@ -1,6 +1,6 @@
 # Фаза 7. Открытие конструктором существующего текста запроса
 
-← [Дорожная карта](ROADMAP.md)
+← [Дорожная карта](../ROADMAP.md)
 
 ✅ Готово (2026-06-17). Опирается на [Фазу 6](PHASE_6.md) (обратный разбор `parseBatch` →
 `QueryModel`).
@@ -18,7 +18,7 @@
 **Итог.** `1c.queryConstructorFromCursor` удалена (`package.json` + `extension.ts`);
 её парсящее поведение стало поведением основной `1c.queryConstructor`. Развилка
 «найден / не найден» вынесена в чистый планировщик
-[`src/extension/queryConstructorPlan.ts`](../src/extension/queryConstructorPlan.ts)
+[`src/extension/queryConstructorPlan.ts`](../../src/extension/queryConstructorPlan.ts)
 (`planQueryConstructor` → `findQueryAt`), покрыта юнит-тестами
 `test/unit/queryConstructorPlan.test.ts`. Спек и план:
 [спек](superpowers/specs/2026-06-17-phase7-single-command-design.md) ·
@@ -86,7 +86,7 @@ cold (сборка кэша из YAML):  13481 ms
 warm (чтение model-cache):     299 ms   ← ~45x
 ```
 
-Реализация — pure-TS [`src/core/metadata/modelCache.ts`](../src/core/metadata/modelCache.ts)
+Реализация — pure-TS [`src/core/metadata/modelCache.ts`](../../src/core/metadata/modelCache.ts)
 (`loadMetadataCached`), подключён в `panel.ts` (с таймингом в OutputChannel),
 юнит-тесты `test/unit/modelCache.test.ts` (build-on-miss / cache-hit /
 инвалидация по mtime / по версии). Спек+план:
@@ -95,7 +95,7 @@ warm (чтение model-cache):     299 ms   ← ~45x
 
 ## Подфаза 3. Разведка реального конструктора через Playwright — ✅ закрыто
 
-Tooling-драйвер [`tooling/real-constructor/`](../tooling/real-constructor) управляет
+Tooling-драйвер [`tooling/real-constructor/`](../../tooling/real-constructor) управляет
 **живым** веб-клиентом 1С (УНФ, публикация `host.docker.internal/smallb`) и собирает
 визуальный референс настоящего «Конструктора запроса». Это доказывает выполнимость
 автоматической сверки (оракул 7.4) и даёт вход для доработки нашего webview.
@@ -122,7 +122,7 @@ Tooling-драйвер [`tooling/real-constructor/`](../tooling/real-constructor
 
 **Инфраструктура (этой же подфазы):** read-only bind-mount платформы 1С + `rac` в
 контейнере для снятия зомби-сессий через RAS (держат единственную лицензию —
-[`docs/ras-sessions.md`](ras-sessions.md)); установка Microsoft Core Fonts в
+[`tooling/real-constructor/README.md`](../../tooling/real-constructor/README.md)); установка Microsoft Core Fonts в
 `post-create.sh` (без них веб-клиент показывает блокирующий диалог о шрифтах).
 
 Pure-логика (конфиг, страж рекурсии, имена скриншотов, логгер) — под vitest
@@ -136,7 +136,7 @@ Pure-логика (конфиг, страж рекурсии, имена скр�
 
 Симметрично описи реального конструктора (7.3) снят визуальный референс **нашего**
 webview-«Конструктора запроса» на тех же 10 сложных запросах корпуса. Tooling-драйвер
-[`tooling/our-constructor/`](../tooling/our-constructor) поднимает собранный бандл webview
+[`tooling/our-constructor/`](../../tooling/our-constructor) поднимает собранный бандл webview
 (`out/webview/main.js`) в headless Chromium, наполняет его реальными метаданными
 (`tmp/parser_data/model-cache.json`, 6899 таблиц), на каждый запрос шлёт `loadModel` (текст
 разбирается обратным парсером Фазы 6, `parseBatch`) и обходит **видимые** вкладки (набор
@@ -185,7 +185,7 @@ production-кода — атрибут `data-tab` на вкладках `TabsBar
 
 ## Подфаза 6. Корпусная проверка UI по фиче-векторам — ✅ закрыто
 
-Pure-TS ядро [`tooling/corpus-verify/`](../tooling/corpus-verify): разбирает каждый из
+Pure-TS ядро [`tooling/corpus-verify/`](../../tooling/corpus-verify): разбирает каждый из
 **17 933** запросов корпуса обратным парсером Фазы 6 (`parseBatch`), извлекает фиче-вектор
 (`features.ts`: пакет/объединение/число таблиц/виды соединений/тип запроса/индексы/
 группировка/итоги/порядок/условия/подзапросы/виртуальные таблицы/параметры/построитель/

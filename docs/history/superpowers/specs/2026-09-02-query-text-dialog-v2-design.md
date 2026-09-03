@@ -28,7 +28,7 @@
    `@codemirror/autocomplete`). Обсяг — «з нуля», не «не чіпати без потреби».
 2. **Один парсер для Apply і для аналізу.** `Применить` вже сьогодні викликає
    `tryOpenBatch(text, resolver, {...})`
-   ([ConstructorView.tsx:94](../../../src/webview/components/ConstructorView.tsx#L94)) — той
+   ([ConstructorView.tsx:94](../../../../src/webview/components/ConstructorView.tsx#L94)) — той
    самий шлях, що й відкриття існуючого запиту з `.bsl`. Новий `QueryAnalysisService` (п.14)
    МУСИТЬ використовувати саме цей шлях (чи те, що під ним), інакше Structure-панель і
    реальний Apply можуть розійтися в результаті.
@@ -53,7 +53,7 @@
    вимірюванням, а не припущенням.
 7. **Три шляхи закриття модалки, а в чернетці — два.** Сьогодні закриття відбувається трьома
    шляхами: `×`, клік по backdrop
-   ([ConstructorView.tsx:666](../../../src/webview/components/ConstructorView.tsx#L666) —
+   ([ConstructorView.tsx:666](../../../../src/webview/components/ConstructorView.tsx#L666) —
    закриває без підтвердження вже зараз) і, в новому дизайні, кнопка `Отмена`. Dirty-guard (п.12)
    мусить покривати всі три, не тільки `×`/`Esc`.
 8. **Позитив, який важливо не зламати:** текст модалки вже сьогодні живе в ізольованому
@@ -408,7 +408,7 @@ per-node source-range через `sdblLexer`/`sdblParser` до результа�
 
 1. кнопка `×`;
 2. клік по backdrop (уже сьогодні закриває без підтвердження —
-   [ConstructorView.tsx:666](../../../src/webview/components/ConstructorView.tsx#L666));
+   [ConstructorView.tsx:666](../../../../src/webview/components/ConstructorView.tsx#L666));
 3. нова кнопка `Отмена` (якщо трактується як «закрити без застосування», а не як «Esc-синонім
    без diff-перевірки»).
 
@@ -460,7 +460,7 @@ UI не повинен знати внутрішню реалізацію parser
 **⚠ Ризик (п.0.2, найважливіший пункт цього ТЗ):** `QueryAnalysisService.analyze()` МУСИТЬ
 використовувати той самий парсер/валідатор, що й реальний `Применить`
 (`tryOpenBatch`/`sdblParser`/`semanticValidator` — див.
-[ConstructorView.tsx:94](../../../src/webview/components/ConstructorView.tsx#L94)), а не окрему
+[ConstructorView.tsx:94](../../../../src/webview/components/ConstructorView.tsx#L94)), а не окрему
 паралельну реалізацію. Інакше Structure-панель і статус-бар можуть показувати результат, що
 розходиться з тим, що насправді зробить Apply — довіра до панелі впаде миттєво після першого
 такого розбіжного кейсу.

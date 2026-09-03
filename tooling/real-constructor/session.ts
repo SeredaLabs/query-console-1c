@@ -74,7 +74,7 @@ export async function login(s: Session): Promise<void> {
   // Step 1: «В данный момент вход в приложение невозможен» — занята ЕДИНСТВЕННАЯ лицензия 1С.
   // Диалог даёт кнопку «Выполнить запуск (NN)» — счётчик автоповтора. Терпеливо жмём её и ждём,
   // пока прежняя сессия не освободит лицензию и приложение не загрузится. Окно ожидания — до ~4 мин.
-  // Зомби-сессию, держащую лицензию, снимают через RAS (см. docs/ras-sessions.md).
+  // Зомби-сессию, держащую лицензию, снимают через RAS (см. tooling/real-constructor/README.md).
   const launchBtn = page
     .locator('button, input[type="button"]')
     .filter({ hasText: /Выполнить запуск/i });
@@ -90,7 +90,7 @@ export async function login(s: Session): Promise<void> {
   if ((await launchBtn.count()) > 0) {
     throw new Error(
       'Лицензия 1С занята: за окно ожидания (4 мин) единственная лицензия не освободилась. ' +
-        'Снимите зомби-сессию через RAS (docs/ras-sessions.md) и повторите.',
+        'Снимите зомби-сессию через RAS (tooling/real-constructor/README.md) и повторите.',
     );
   }
 
