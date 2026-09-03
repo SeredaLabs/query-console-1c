@@ -67,6 +67,7 @@ import { qualifyBareFields, qualifyBareSectionFields, setSubqueryParser } from '
 import { resolveBuilderStar } from './resolveBuilderStar';
 import { dropRedundantGroupDerefs, moveLeadingMovementCaseToEnd, moveBeforePrefixGroupDerefToEnd, substituteGroupFieldWithSelectExpr, dropFunctionallyDeterminedMovementCase, relocateKeptMovementCase } from './dropRedundantGroupDerefs';
 import { canonicalizeFieldCasing } from './canonicalizeFieldCasing';
+import { LITERAL_WORDS } from './sdblKeywordSets';
 
 // Инжектируем разборщик подзапросов в пасс квалификации голых полей (для подзапросов,
 // встроенных в СЫРЫЕ выражения условий/полей), избегая циклического импорта.
@@ -2409,7 +2410,7 @@ function soleSourceOf(tables: SelectedTable[], joins: RawJoin[]): SoleSource | u
 }
 
 /** Литералы-значения, которые НЕ являются голыми полями (одиночный токен). */
-const LITERAL_VALUES = new Set(['НЕОПРЕДЕЛЕНО', 'ИСТИНА', 'ЛОЖЬ', 'NULL']);
+const LITERAL_VALUES = LITERAL_WORDS;
 
 /**
  * Голое поле = чистый точечный путь идентификаторов (`Ссылка`, `Владелец.Код`),

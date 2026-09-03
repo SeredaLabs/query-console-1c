@@ -14,6 +14,7 @@
  */
 import { tokenize, type Token } from './sdblLexer';
 import { FUNCTION_CATALOG, type FunctionGroup, type FunctionLeaf } from './functionCatalog';
+import { LITERAL_WORDS, AGGREGATE_WORDS, COMPARISON_OPERATORS, PERIOD_WORDS as SHARED_PERIOD_WORDS } from './sdblKeywordSets';
 
 export type ExprSlot = 'where' | 'having' | 'join' | 'select';
 
@@ -50,12 +51,6 @@ const FUNCTION_WORDS: Set<string> = (() => {
   return new Set(acc.filter((l) => wordRe.test(l)).map((l) => l.toUpperCase()));
 })();
 
-/** Литералы-ключевые слова: всегда верхний регистр (вне пути/параметра). */
-const LITERAL_WORDS = new Set(['НЕОПРЕДЕЛЕНО', 'ИСТИНА', 'ЛОЖЬ', 'NULL']);
-
-/** Агрегатные функции — вызов `ИМЯ(…)` без пробела перед скобкой. */
-const AGGREGATE_WORDS = new Set(['СУММА', 'КОЛИЧЕСТВО', 'МАКСИМУМ', 'МИНИМУМ', 'СРЕДНЕЕ']);
-
 /**
  * Функции-вызовы, у которых конструктор 1С УБИРАЕТ пробел перед открывающей скобкой
  * (`ЗНАЧЕНИЕ (…)` → `ЗНАЧЕНИЕ(…)`), в отличие от булевых/группирующих скобок (`И (…)`,
@@ -74,9 +69,7 @@ const PRIMITIVE_TYPE_WORDS = new Set(['СТРОКА', 'ЧИСЛО', 'ДАТА', 
  * в позиции аргумента (после `,` или `(`), НЕ как `.`-квалифицированное поле и НЕ как
  * имя функции (за словом не следует `(`).
  */
-const PERIOD_WORDS = new Set([
-  'ГОД', 'ПОЛУГОДИЕ', 'КВАРТАЛ', 'МЕСЯЦ', 'ДЕКАДА', 'НЕДЕЛЯ', 'ДЕНЬ', 'ЧАС', 'МИНУТА', 'СЕКУНДА',
-]);
+const PERIOD_WORDS = SHARED_PERIOD_WORDS;
 
 /** Функции дат, принимающие аргумент `<Период>` (гранулярность). */
 const PERIOD_FUNCTIONS = new Set(['НАЧАЛОПЕРИОДА', 'КОНЕЦПЕРИОДА', 'ДОБАВИТЬКДАТЕ', 'РАЗНОСТЬДАТ']);
@@ -100,7 +93,7 @@ function tokUpper(t: Token): string {
 // часть текста токена, а лексер выдаёт литерал одним токеном.
 
 /** Операторы сравнения (пунктуация), вокруг которых конструктор ставит ровно один пробел. */
-const COMPARISON_PUNCT = new Set(['=', '<>', '<', '>', '<=', '>=']);
+const COMPARISON_PUNCT = COMPARISON_OPERATORS;
 
 // Слова, после которых `-` — УНАРНЫЙ (начинает выражение-операнд), а не бинарное
 // вычитание. Конструктор 1С печатает унарный минус БЕЗ пробела после него
@@ -195,7 +188,7 @@ export function appendIsNotNullTrailingSpace(text: string): string {
  * Применяется к листу булева слота (ГДЕ/ИМЕЮЩИЕ/ПО). Лист с переводом строки или с
  * верхнеуровневым булевым оператором сюда не приходит (это уже не лист-сравнение).
  */
-const COMPARE_OPS = new Set(['=', '<>', '<', '>', '<=', '>=']);
+const COMPARE_OPS = COMPARISON_OPERATORS;
 // 6.16.69: бинарные операторы, к которым применимо правило обёртки голого ВЫРАЗИТЬ-
 // операнда: сравнение И арифметика (`* / % + -`). Конструктор оборачивает голый
 // ВЫРАЗИТЬ(…), стоящий ОПЕРАНДОМ любого такого оператора, в любом контексте
@@ -2565,7 +2558,7 @@ export function canonicalizeLeafLexemes(raw: string): string {
  * Фаза 6.16.76.
  */
 const CMP_MIRROR: Record<string, string> = { '<': '>', '>': '<', '<=': '>=', '>=': '<=', '=': '=', '<>': '<>' };
-const LITERAL_KEYWORDS = new Set(['ЛОЖЬ', 'ИСТИНА', 'НЕОПРЕДЕЛЕНО', 'NULL']);
+const LITERAL_KEYWORDS = LITERAL_WORDS;
 export function canonicalizeComparisonOperands(raw: string): string {
   if (!raw || raw.includes('\n')) return raw;
   let toks: Token[];
@@ -2803,7 +2796,7 @@ class ArithReprinter {
 const PRED_NEIGHBOR_WORDS = new Set([
   'НЕ', 'И', 'ИЛИ', 'КОГДА', 'ТОГДА', 'ИНАЧЕ', 'ЕСТЬ', 'МЕЖДУ', 'ПОДОБНО', 'ССЫЛКА',
 ]);
-const COMPARISON_PUNCT_SET = new Set(['=', '<>', '<', '>', '<=', '>=']);
+const COMPARISON_PUNCT_SET = COMPARISON_OPERATORS;
 const ARITH_PUNCT_SET = new Set(['+', '-', '*', '/', '%']);
 
 /**
@@ -4542,7 +4535,7 @@ function renderCaseE(node: Node & { kind: 'case' }, E: number, ctx: RenderCtx): 
  *     Сравнение скобочной защиты не требует — оно всегда граница условия.
  */
 function caseHasNestedVyborInWhen(text: string): boolean {
-  const COMPARE = new Set(['<=', '>=', '<>', '=', '<', '>']);
+  const COMPARE = COMPARISON_OPERATORS;
   for (const line of text.split('\n')) {
     const m = /(^|[^\p{L}\p{N}_])(<=|>=|<>|=|<|>|\+|-|\*|\/)\s+ВЫБОР\s*$/u.exec(line);
     if (!m) continue;

@@ -3,6 +3,7 @@ import { defaultTableAlias } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable, MetaField } from '../metadata/types';
 import { tokenize } from './sdblLexer';
+import { META_FUNCTION_WORDS } from './sdblKeywordSets';
 
 const AGG_RE = /(?:^|[^\p{L}])(СУММА|КОЛИЧЕСТВО|МАКСИМУМ|МИНИМУМ|СРЕДНЕЕ|SUM|COUNT|MAX|MIN|AVG)\s*\(/iu;
 
@@ -407,7 +408,7 @@ function firstRef(field: MetaField): { kind: string; name: string } | undefined 
 // движения в УСЛОВИИ (`КОГДА X.ВидДвижения = ЗНАЧЕНИЕ(…) ТОГДА <другое>`), сюда НЕ
 // относится — иначе оверфайр (УчетНДФЛ bsl_65/66, ФормаРасшифровкиПлатежа, РаботаСПодарочными).
 const MOVEMENT_RE = /(?:^|[^\p{L}\p{N}_])(?:ТОГДА|ИНАЧЕ)\s+(?:-\s*)?ЗНАЧЕНИЕ\s*\(\s*ВИДДВИЖЕНИЯ(?:НАКОПЛЕНИЯ|БУХГАЛТЕРИИ)\s*\./iu;
-const META_FUNCS = new Set(['ЗНАЧЕНИЕ', 'ТИП', 'ПРЕДСТАВЛЕНИЕ', 'ПРЕДСТАВЛЕНИЕССЫЛКИ']);
+const META_FUNCS = META_FUNCTION_WORDS;
 
 /**
  * Извлекает множество ссылок-цепочек `Алиас.путь` (в исходном написании), реально

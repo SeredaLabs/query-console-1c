@@ -29,6 +29,7 @@ import type { QueryModel, SelectedField, Condition, FieldRef } from './queryMode
 import type { MetadataResolver } from './metadataResolver';
 import type { QueryDocument } from './unionModel';
 import { resolveAliases } from './sdblGenerator';
+import { LITERAL_WORDS, PERIOD_WORDS } from './sdblKeywordSets';
 
 /** Структурные слова-операторы, никогда не являющиеся полем. */
 const STRUCTURAL = new Set([
@@ -47,12 +48,7 @@ const STRUCTURAL = new Set([
 ]);
 
 /** Литералы-ключевые слова. */
-const LITERALS = new Set(['НЕОПРЕДЕЛЕНО', 'ИСТИНА', 'ЛОЖЬ', 'NULL']);
-
-/** Гранулярность периода (аргумент функций дат) — не поле. */
-const PERIOD_WORDS = new Set([
-  'ГОД', 'ПОЛУГОДИЕ', 'КВАРТАЛ', 'МЕСЯЦ', 'ДЕКАДА', 'НЕДЕЛЯ', 'ДЕНЬ', 'ЧАС', 'МИНУТА', 'СЕКУНДА',
-]);
+const LITERALS = LITERAL_WORDS;
 
 /** Примитивные типы (позиция типа после КАК/в ТИП(…)) — не поле. */
 const PRIMITIVE_TYPES = new Set(['СТРОКА', 'ЧИСЛО', 'ДАТА', 'БУЛЕВО']);

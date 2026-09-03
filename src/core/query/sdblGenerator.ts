@@ -6,6 +6,7 @@ import type { BatchDocument } from './batchModel';
 import { parseDocument } from './sdblParser';
 import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpression, formatJoinConjunct, normalizeLeafCase, stripNegatedFieldParens, stripNotFieldParens, stripRedundantLeafParens, appendIsNotNullTrailingSpace, renderOperatorRhs, flattenMultilineLeaf, reindentLeafSubquery, reindentLeafCase, reindentLeafBool, wrapBareCastOperand, reprintLeafArithmetic, canonicalizeComparisonOperands, setInlineSubqueryReflow, tightenLeafInOperator } from './exprFormatter';
 import { tokenize } from './sdblLexer';
+import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
 
 // Регистрируем в exprFormatter канонический ре-рендер инлайн-подзапроса членства
 // (`Поле В (ВЫБРАТЬ …)` в листе ГДЕ/ПО/ИМЕЮЩИЕ): exprFormatter не может импортировать
@@ -1008,7 +1009,7 @@ function isPlainFieldComparison(expr: string): boolean {
   // Операнд-ЛИТЕРАЛ (`ИСТИНА`/`ЛОЖЬ`/`NULL`/`НЕОПРЕДЕЛЕНО`) — это НЕ сравнение двух полей:
   // оракул `field = ЛОЖЬ` печатает В СКОБКАХ (а `field = field` — без), фаза корпус
   // РаботаСПодарочнымиСертификатами (живой оракул `ПО (Т.Код = ЛОЖЬ)`).
-  const LIT = new Set(['ИСТИНА', 'ЛОЖЬ', 'NULL', 'НЕОПРЕДЕЛЕНО']);
+  const LIT = LITERAL_WORDS;
   if (LIT.has(m[1].toUpperCase()) || LIT.has(m[2].toUpperCase())) return false;
   return true;
 }
@@ -2575,8 +2576,8 @@ function fieldRefExpr(f: FieldRef, aliases: Map<string, string>): string {
   return `${tableAlias}.${f.path}`;
 }
 
-const AGG_WORDS_GROUP = new Set(['СУММА', 'КОЛИЧЕСТВО', 'МАКСИМУМ', 'МИНИМУМ', 'СРЕДНЕЕ']);
-const DISPLAY_META_WORDS = new Set(['ЗНАЧЕНИЕ', 'ТИП', 'ПРЕДСТАВЛЕНИЕ', 'ПРЕДСТАВЛЕНИЕССЫЛКИ']);
+const AGG_WORDS_GROUP = AGGREGATE_WORDS;
+const DISPLAY_META_WORDS = META_FUNCTION_WORDS;
 /**
  * Разбор произвольного выражения выборки (`ВЫБОР…КОНЕЦ`, `ЕСТЬNULL(…)`,
  * `ВЫРАЗИТЬ(…)`, арифметика) на: (а) содержит ли оно агрегат

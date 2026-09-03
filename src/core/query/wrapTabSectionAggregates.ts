@@ -1,6 +1,7 @@
 import type { QueryModel, SelectedField, SelectedTabSectionField } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import { tokenize } from './sdblLexer';
+import { AGGREGATE_WORDS } from './sdblKeywordSets';
 
 /**
  * Обёртка поля выборки с АГРЕГАТОМ НАД КОЛОНКОЙ ТАБЛИЧНОЙ ЧАСТИ в проекцию этой ТЧ
@@ -47,7 +48,7 @@ export function wrapTabSectionAggregates(model: QueryModel, resolver?: MetadataR
     return set;
   };
 
-  const AGG = new Set(['КОЛИЧЕСТВО', 'СУММА', 'МАКСИМУМ', 'МИНИМУМ', 'СРЕДНЕЕ']);
+  const AGG = AGGREGATE_WORDS;
 
   /**
    * Если выражение поля содержит РОВНО ОДИН агрегат над колонкой ТЧ и эта ТЧ —
