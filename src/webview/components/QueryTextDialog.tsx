@@ -86,7 +86,7 @@ function runAnalysisSafe(text: string, resolver?: MetadataResolver): QueryAnalys
   } catch {
     return {
       diagnostics: [{ message: 'Не удалось полностью разобрать структуру запроса. Редактирование текста доступно.' }],
-      result: null, tempTables: [], parameters: [],
+      warnings: [], result: null, tempTables: [], parameters: [],
     };
   }
 }
@@ -324,37 +324,61 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
           data-testid="query-text-status"
           style={{
             padding: '4px 12px', borderTop: '1px solid var(--qc-border)',
-            fontSize: 12, display: 'flex', alignItems: 'center', gap: 6,
+            fontSize: 12, display: 'flex', flexDirection: 'column', gap: 3,
           }}
         >
-          {checkPending ? (
-            <span style={{ color: 'var(--vscode-descriptionForeground)' }}>● Есть непроверенные изменения</span>
-          ) : firstDiagnostic ? (
-            <span
-              role="button"
-              onClick={handleJumpToError}
-              style={{
-                color: 'var(--vscode-errorForeground, #f44747)',
-                cursor: firstDiagnostic.line != null ? 'pointer' : 'default',
-                textDecoration: firstDiagnostic.line != null ? 'underline' : 'none',
-              }}
-            >
-              {firstDiagnostic.message}
-            </span>
-          ) : checked.result.result === null ? (
-            // Пустой/из одних пробелов текст `tryOpenBatch` считает валидным пустым
-            // пакетом (0 diagnostics) — но применять тут нечего (см. handleApplyQueryEdit
-            // в ConstructorView.tsx), поэтому это НЕ «✓ Синтаксис корректен».
-            <span style={{ color: 'var(--vscode-editorWarning-foreground, #cca700)' }}>
-              ⚠ Текст пуст — нечего применить
-            </span>
-          ) : (
-            <span style={{ color: 'var(--vscode-descriptionForeground)' }}>
-              {/* Источники/соединения — сумма по «Результату» и всем временным таблицам
-                  (весь пакет целиком), не только последнего запроса. */}
-              ✓ Синтаксис корректен &nbsp;&nbsp; Строк: {lineCount} &nbsp;&nbsp; Параметров: {checked.result.parameters.length}
-              &nbsp;&nbsp; Источников: {totalSources} &nbsp;&nbsp; Соединений: {totalJoins}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {checkPending ? (
+              <span style={{ color: 'var(--vscode-descriptionForeground)' }}>● Есть непроверенные изменения</span>
+            ) : firstDiagnostic ? (
+              <span
+                role="button"
+                onClick={handleJumpToError}
+                style={{
+                  color: 'var(--vscode-errorForeground, #f44747)',
+                  cursor: firstDiagnostic.line != null ? 'pointer' : 'default',
+                  textDecoration: firstDiagnostic.line != null ? 'underline' : 'none',
+                }}
+              >
+                {firstDiagnostic.message}
+              </span>
+            ) : checked.result.result === null ? (
+              // Пустой/из одних пробелов текст `tryOpenBatch` считает валидным пустым
+              // пакетом (0 diagnostics) — но применять тут нечего (см. handleApplyQueryEdit
+              // в ConstructorView.tsx), поэтому это НЕ «✓ Синтаксис корректен».
+              <span style={{ color: 'var(--vscode-editorWarning-foreground, #cca700)' }}>
+                ⚠ Текст пуст — нечего применить
+              </span>
+            ) : (
+              <span style={{ color: 'var(--vscode-descriptionForeground)' }}>
+                {/* Источники/соединения — сумма по «Результату» и всем временным таблицам
+                    (весь пакет целиком), не только последнего запроса. */}
+                ✓ Синтаксис корректен &nbsp;&nbsp; Строк: {lineCount} &nbsp;&nbsp; Параметров: {checked.result.parameters.length}
+                &nbsp;&nbsp; Источников: {totalSources} &nbsp;&nbsp; Соединений: {totalJoins}
+              </span>
+            )}
+          </div>
+          {/* Advisory-предупреждения о качестве запроса (queryLinter.ts) — НЕ блокируют
+              и НЕ заменяют строку "✓ Синтаксис корректен" выше, показываются рядом с ней
+              (только когда текст успешно разобран — нечего линтить при синтаксической
+              ошибке или пустом тексте). */}
+          {!checkPending && !firstDiagnostic && checked.result.result !== null && checked.result.warnings.length > 0 && (
+            <div data-testid="query-text-warnings" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {checked.result.warnings.map((w, i) => (
+                <span
+                  key={i}
+                  role="button"
+                  onClick={() => w.searchText && handleNavigate(w.searchText)}
+                  style={{
+                    color: 'var(--vscode-editorWarning-foreground, #cca700)',
+                    cursor: w.searchText ? 'pointer' : 'default',
+                    textDecoration: w.searchText ? 'underline' : 'none',
+                  }}
+                >
+                  ⚠ {w.message}
+                </span>
+              ))}
+            </div>
           )}
         </div>
 

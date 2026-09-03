@@ -4,6 +4,7 @@ import { resolveAliases, fieldExpr, synthesizedFieldAlias } from './sdblGenerato
 import { extractQueryParamNames } from './resultProcessingTemplate';
 import { getBatchStatementSpans } from './sdblParser';
 import type { QueryModel, Condition } from './queryModel';
+import { lintBatch, type LintWarning } from './queryLinter';
 
 /** Диапазон в СЫРОМ тексте запроса — см. `getBatchStatementSpans`. */
 export interface TextRange {
@@ -75,6 +76,13 @@ export interface QueryAnalysisQuery {
 
 export interface QueryAnalysisResult {
   diagnostics: QueryDiagnostic[];
+  /**
+   * Advisory-попередження про якість/ефективність запиту (повне з'єднання,
+   * `ПЕРВЫЕ N` без сортування, `ПОДОБНО` з провідним `%` тощо) — на відміну від
+   * `diagnostics`, НІКОЛИ не означають, що запит некоректний чи не відкриється;
+   * порожні, коли `diagnostics` непорожній (лінтити нічого — розбір не вдався).
+   */
+  warnings: LintWarning[];
   /** Последний запрос всего пакета — то, что `Запрос.Выполнить()` реально возвращает
    * вызывающему коду. `null` только если документ пуст (пустой текст/только пробелы). */
   result: QueryAnalysisQuery | null;
@@ -85,7 +93,7 @@ export interface QueryAnalysisResult {
   parameters: QueryAnalysisParameter[];
 }
 
-const EMPTY_RESULT: QueryAnalysisResult = { diagnostics: [], result: null, tempTables: [], parameters: [] };
+const EMPTY_RESULT: QueryAnalysisResult = { diagnostics: [], warnings: [], result: null, tempTables: [], parameters: [] };
 
 /**
  * Зеркало приватной `joinKeyword` из sdblGenerator.ts (не экспортирована оттуда).
@@ -208,6 +216,7 @@ export function analyze(text: string, resolver?: MetadataResolver): QueryAnalysi
 
   return {
     diagnostics: [],
+    warnings: lintBatch(r.doc),
     result: queries.length > 0 ? queries[queries.length - 1] : null,
     tempTables: queries.slice(0, -1),
     parameters,

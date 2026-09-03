@@ -191,4 +191,13 @@ describe('analyze/tryOpenBatch parity (design-док, риск п.0.2/0.14; пл
       expect(analyzed.diagnostics.length === 0).toBe(opened.ok);
     }
   });
+
+  // queryLinter (advisory-предупреждения о качестве) — smoke-прогон по той же выборке:
+  // проверяем только отсутствие падений, НЕ «ноль предупреждений» — реальные запросы
+  // корпуса вполне законно могут содержать ПОЛНОЕ соединение и т.п.
+  it('warnings не падает на репрезентативной выборке корпуса', () => {
+    for (const g of sample) {
+      expect(() => analyze(g.input), g.file).not.toThrow();
+    }
+  });
 });
