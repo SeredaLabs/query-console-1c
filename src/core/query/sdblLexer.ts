@@ -207,6 +207,7 @@ export function tokenize(text: string, opts?: { comments?: boolean }): Token[] {
     if (ch === '"') {
       advance();
       let value = '"';
+      let closed = false;
       while (i < text.length) {
         if (text[i] === '"') {
           if (text[i + 1] === '"') {
@@ -216,10 +217,14 @@ export function tokenize(text: string, opts?: { comments?: boolean }): Token[] {
           }
           value += '"';
           advance();
+          closed = true;
           break;
         }
         value += text[i];
         advance();
+      }
+      if (!closed) {
+        throw lexError('незакрытый строковый литерал', startLine, startCol);
       }
       push('string', value, startPos, startLine, startCol);
       continue;
@@ -233,10 +238,11 @@ export function tokenize(text: string, opts?: { comments?: boolean }): Token[] {
         value += text[i];
         advance();
       }
-      if (text[i] === "'") {
-        value += "'";
-        advance();
+      if (text[i] !== "'") {
+        throw lexError('незакрытый литерал даты', startLine, startCol);
       }
+      value += "'";
+      advance();
       push('date', value, startPos, startLine, startCol);
       continue;
     }
