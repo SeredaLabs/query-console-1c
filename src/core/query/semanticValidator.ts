@@ -1,17 +1,26 @@
 /**
- * Фаза 8.4 — локальная семантическая валидация открытия запроса.
+ * Фаза 8.4 (+ «дорожная карта валидатора», фаза 1) — локальная семантическая
+ * валидация открытия запроса.
  *
  * Работает ПОСЛЕ синтаксического разбора (`parseBatch`) и НЕ влияет на генерацию:
- * проверяет уже построенную модель пакета по кэшу метаданных (`MetadataResolver`).
- * Ведущий принцип — отсутствие ложных срабатываний: при отсутствии резолвера
- * проверка пропускается целиком (fail-open). См. дизайн §2.
+ * проверяет уже построенную модель пакета. Ведущий принцип — отсутствие ложных
+ * срабатываний. См. дизайн §2 (docs/superpowers/specs/2026-06-27-phase8.4-…).
  *
- * Объём (§2.1): существование таблицы-источника по полному имени `Тип.Имя`
- * (реальные объекты, виртуальные таблицы регистров, табличные части) и повтор
- * ЯВНОГО псевдонима поля выборки. Поля/реквизиты/навигация НЕ проверяются (§2.2).
+ * Две группы проверок с РАЗНЫМ отношением к резолверу метаданных:
+ * - Проверки, требующие кэша метаданных (`MetadataResolver`) — только
+ *   существование таблицы-источника по полному имени `Тип.Имя` (§2.1). Без
+ *   резолвера — fail-open, пропускаются (`checkTable`).
+ * - Чисто СТРУКТУРНЫЕ проверки, метаданные не нужны — работают ВСЕГДА, даже без
+ *   резолвера: повтор ЯВНОГО псевдонима поля выборки (§2.1), несовпадение числа
+ *   колонок между ветвями ОБЪЕДИНЕНИЯ (`checkUnionColumnCount`, добавлено фазой 1
+ *   дорожной карты валидатора — см. docs/1c-query-language.md, §5).
+ *
+ * Поля/реквизиты/навигация через точку НЕ проверяются (§2.2) — это остаётся
+ * отдельной, значительно более крупной задачей (см. docs/1c-query-language.md).
  */
 import type { BatchDocument } from './batchModel';
-import type { QueryDocument } from './unionModel';
+import type { QueryDocument, UnionMember } from './unionModel';
+import { orderedSelectElements } from './unionModel';
 import type { QueryModel, SelectedTable, Condition } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import { tokenize } from './sdblLexer';
@@ -71,19 +80,20 @@ export function validateBatchSemantics(
   resolver: MetadataResolver | undefined,
   text: string,
 ): SemanticError[] {
-  // Fail-open: без резолвера (кэш не построен) проверка пропускается целиком.
-  if (!resolver) return [];
   const tokens = tokenize(text);
   const errors: SemanticError[] = [];
 
-  const resolvable = (fullName: string): boolean =>
-    !!(
-      resolver.tableByFullName(fullName) ||
-      resolver.virtualTableByFullName?.(fullName) ||
-      resolver.canonicalFullName?.(fullName)
-    );
-
   const checkTable = (table: SelectedTable): void => {
+    // Fail-open: без резолвера (кэш не построен) существование таблицы не
+    // проверяем — но это НЕ должно гасить остальные, не зависящие от метаданных
+    // структурные проверки (см. checkDuplicateAliases/checkUnionColumnCount
+    // ниже) — раньше единый ранний `return []` на весь `validateBatchSemantics`
+    // ошибочно пропускал и их тоже, если резолвер ещё не построен (например, окно
+    // «Текст запроса» открыто до того, как подтянулись метаданные конструктора).
+    if (!resolver) return;
+    const r = resolver;
+    const resolvable = (fullName: string): boolean =>
+      !!(r.tableByFullName(fullName) || r.virtualTableByFullName?.(fullName) || r.canonicalFullName?.(fullName));
     // Подзапрос-источник: проверяется рекурсией, не как имя метаданных.
     if (table.subquery) return;
     const fullName = table.fullName;
@@ -135,6 +145,24 @@ export function validateBatchSemantics(
     }
   };
 
+  // Фаза «структурная семантика» (без метаданных, риск ложных срабатываний
+  // минимальный — считается прямо по модели, как и checkDuplicateAliases).
+  // Ветви ОБЪЕДИНЕНИЯ обязаны иметь ОДИНАКОВОЕ число колонок результата (как и в
+  // стандартном SQL — это унаследовано, книга Хрусталевой гл. 1 «Синтаксис текста
+  // запроса», рис. 1.13 показывает ветви с равным числом полей). Единица счёта —
+  // элемент `orderedSelectElements` (скалярное поле ИЛИ ОДНА проекция ТЧ целиком —
+  // именно так считает ширину сам генератор при выравнивании столбцов union, см.
+  // `unionModel.ts`/`buildUnionBlocksWithTabSection`), а не число физических полей.
+  const checkUnionColumnCount = (qdoc: QueryDocument): void => {
+    if (qdoc.members.length < 2) return;
+    const counts = qdoc.members.map(m => orderedSelectElements(m.model).length);
+    if (counts.some(c => c !== counts[0])) {
+      errors.push({
+        message: `Количество столбцов в результате запроса с объединением не совпадает (${counts.join(', ')})`,
+      });
+    }
+  };
+
   const walkModel = (model: QueryModel): void => {
     for (const t of model.tables) {
       if (t.subquery) walkDocument(t.subquery);
@@ -146,6 +174,7 @@ export function validateBatchSemantics(
   };
 
   function walkDocument(qdoc: QueryDocument): void {
+    checkUnionColumnCount(qdoc);
     for (const member of qdoc.members) walkModel(member.model);
   }
 
