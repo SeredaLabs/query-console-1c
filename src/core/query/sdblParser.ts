@@ -85,6 +85,27 @@ let sourceResolver: MetadataResolver | undefined;
 // сохраняет дословно. Используется substituteGroupFieldWithSelectExpr.
 let subquerySourceDepth = 0;
 
+/**
+ * Глубина рекурсии разбора вложенных подзапросов (`ИЗ (…)`, `В (…)`) — НЕ путать с
+ * `subquerySourceDepth` выше (тот про семантику СГРУППИРОВАТЬ ПО, не про безопасность
+ * стека). Без этого счётчика патологически глубокая вложенность роняла процесс по
+ * памяти (`heap out of memory`, не перехватывается никаким try/catch), а не просто
+ * бросала обычную ошибку — каждый уровень заново токенизирует и разбирает почти весь
+ * остаток текста. Максимум по золотому корпусу — 3; лимит взят с 10-кратным запасом.
+ */
+let subqueryRecursionDepth = 0;
+const MAX_SUBQUERY_RECURSION_DEPTH = 32;
+class SubqueryRecursionLimitError extends Error {}
+function withSubqueryRecursionGuard<T>(fn: () => T): T {
+  if (subqueryRecursionDepth >= MAX_SUBQUERY_RECURSION_DEPTH) {
+    throw new SubqueryRecursionLimitError(
+      `превышена максимальная глубина вложенности подзапросов (${MAX_SUBQUERY_RECURSION_DEPTH})`
+    );
+  }
+  subqueryRecursionDepth++;
+  try { return fn(); } finally { subqueryRecursionDepth--; }
+}
+
 /** Обратная карта SDBL-функции агрегирования (инверсия `wrapAggregate`). */
 const AGG_KEYWORD_TO_FUNC: Record<string, AggregateFunction> = {
   СУММА: 'Сумма',
@@ -1242,6 +1263,14 @@ function parseTabColumn(cur: Cursor, tsName: string, tableAlias: string): RawTab
     if (t.type === 'eof') break;
     if (depth === 0) {
       if (t.type === 'punct' && (t.value === ',' || t.value === ')')) break;
+      // Структурное ключевое слово (ПОМЕСТИТЬ/ДОБАВИТЬ/ИЗ/…) на верхнем уровне
+      // никогда не бывает частью выражения-колонки ТЧ — если оно тут встретилось,
+      // это опечатка/неверная перестановка, а не «сырое» выражение (тот же класс
+      // бага, что и в WHERE_STOP/HAVING_STOP/JOIN_COND_STOP/SECTION_KEYWORDS).
+      // Прерываем сбор токенов НЕ поглощая его — вызывающий код (`tryParseTabSection`,
+      // ожидающий `,`/`)`) споткнётся об него и бросит обычную синтаксическую ошибку
+      // вместо того, чтобы молча проглотить хвост выражения как «сырой» текст.
+      if (t.type === 'keyword' && isSectionKeyword(t.value)) break;
       if (t.type === 'keyword' && t.value === 'КАК') {
         cur.next();
         const a = cur.peek();
@@ -1823,8 +1852,14 @@ function parseTableSource(cur: Cursor, index: number): SelectedTable {
     // условие могло потеряться/сместиться (фаза 6.16.70).
     subquerySourceDepth++;
     let subquery: QueryDocument;
-    try { subquery = parseDocument(innerText, sourceResolver); }
-    finally { subquerySourceDepth--; }
+    try {
+      subquery = withSubqueryRecursionGuard(() => parseDocument(innerText, sourceResolver));
+    } catch (e) {
+      if (e instanceof SubqueryRecursionLimitError) throw cur.error(e.message, open);
+      throw e;
+    } finally {
+      subquerySourceDepth--;
+    }
     if (!cur.matchKeyword('КАК')) {
       throw cur.error('ожидалось КАК <псевдоним> после подзапроса в источнике ИЗ', cur.peek());
     }
@@ -3076,8 +3111,9 @@ function trySubqueryParam(paramTokens: Token[], source: string): QueryDocument |
   const close = paramTokens[closeIdx];
   const innerText = source.slice(open.pos + 1, close.pos);
   try {
-    return parseDocument(innerText);
-  } catch {
+    return withSubqueryRecursionGuard(() => parseDocument(innerText));
+  } catch (e) {
+    if (e instanceof SubqueryRecursionLimitError) throw e;
     return undefined;
   }
 }
