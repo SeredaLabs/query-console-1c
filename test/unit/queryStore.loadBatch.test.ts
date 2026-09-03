@@ -109,6 +109,19 @@ describe('LOAD_BATCH round-trip', () => {
     expect(roundTrip(INDEXED)).toBe(generateBatch(parseBatch(INDEXED)));
   });
 
+  // Баг: lockForUpdateBare (голая ДЛЯ ИЗМЕНЕНИЯ без списка таблиц) не было в SavedQuery,
+  // поэтому LOAD_BATCH → ассемблировать снова молча теряло секцию блокировки целиком.
+  it('ДЛЯ ИЗМЕНЕНИЯ с явным списком таблиц', () => {
+    const withTables = SINGLE + '\nДЛЯ ИЗМЕНЕНИЯ\n\tВалюты';
+    expect(roundTrip(withTables)).toBe(generateBatch(parseBatch(withTables)));
+  });
+
+  it('голая ДЛЯ ИЗМЕНЕНИЯ (без списка таблиц) — не теряется при LOAD_BATCH', () => {
+    const bare = SINGLE + '\nДЛЯ ИЗМЕНЕНИЯ';
+    expect(roundTrip(bare)).toBe(generateBatch(parseBatch(bare)));
+    expect(roundTrip(bare)).toContain('ДЛЯ ИЗМЕНЕНИЯ');
+  });
+
   it('loads multiple batch members into batchSaved slots', () => {
     const doc = parseBatch(BATCH);
     const state = reducer(initialState(), { type: 'LOAD_BATCH', doc });

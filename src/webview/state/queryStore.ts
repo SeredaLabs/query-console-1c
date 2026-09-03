@@ -60,6 +60,13 @@ export interface SavedQuery {
   queryType: QueryType;
   tempTableName: string;
   lockForUpdate: string[];
+  /**
+   * Отдельно от `lockForUpdate.length > 0`: включённая блокировка БЕЗ выбранных
+   * таблиц — это голая `ДЛЯ ИЗМЕНЕНИЯ` (блокировка всех источников), а не «блокировки
+   * нет». Раньше это состояние не сохранялось в снимке и терялось при разборе текста/
+   * переключении между запросами пакета — блокировка молча пропадала при перегенерации.
+   */
+  lockEnabled: boolean;
   order: Order;
   totals: Totals;
   builder: ReportBuilder;
@@ -565,9 +572,20 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
           .filter(set => set.length > 0),
       };
       const conditions = state.conditions.filter(c => c.custom || c.tableId !== action.tableId);
-      const joins = state.joins.filter(
-        j => j.leftTableId !== action.tableId && j.rightTableId !== action.tableId
-      );
+      // Основные таблицы соединения удаляют его целиком. Доп. конъюнкты
+      // (`j.conditions[1+]`) могут ссылаться на ТРЕТЬЮ таблицу независимо от
+      // leftTableId/rightTableId соединения (SET_JOIN_TABLE с condIndex>0,
+      // syncMirror зеркалирует в верхний уровень только conditions[0]) — без этой
+      // фильтрации удаление такой таблицы оставляло висячую ссылку на неё.
+      const joins = state.joins.flatMap(j => {
+        if (j.leftTableId === action.tableId || j.rightTableId === action.tableId) return [];
+        if (!j.conditions) return [j];
+        const nextConds = j.conditions.filter(
+          c => c.leftTableId !== action.tableId && c.rightTableId !== action.tableId
+        );
+        if (nextConds.length === 0) return [];
+        return [syncMirror({ ...j, conditions: nextConds })];
+      });
       const lockForUpdate = removed
         ? state.lockForUpdate.filter(n => n !== removed.fullName)
         : state.lockForUpdate;

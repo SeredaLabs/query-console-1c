@@ -29,6 +29,7 @@ export function snapshotActive(state: QueryState): SavedQuery {
     selectedTables: state.selectedTables, selectedFields: state.selectedFields, tabSectionFields: state.tabSectionFields,
     grouping: state.grouping, conditions: state.conditions, joins: state.joins, selection: state.selection,
     queryType: state.queryType, tempTableName: state.tempTableName, lockForUpdate: state.lockForUpdate,
+    lockEnabled: state.lockEnabled,
     order: state.order, totals: state.totals, builder: state.builder, indexing: state.indexing,
     comments: state.queryComments,
   };
@@ -43,6 +44,7 @@ export function restoreSaved(_state: QueryState, saved: SavedQuery | null): Part
     selectedTables: [], selectedFields: [], tabSectionFields: [],
     grouping: { multiple: false, groupFields: [], groupSets: [], aggregates: [] } as Grouping,
     conditions: [], joins: [], selection: {}, queryType: 'select' as QueryType, tempTableName: '', lockForUpdate: [],
+    lockEnabled: false,
     order: { fields: [], auto: false } as Order,
     totals: { groupFields: [], totalFields: [], grand: false } as Totals,
     builder: emptyBuilder(), indexing: { indexes: [] } as Indexing, comments: undefined,
@@ -52,7 +54,7 @@ export function restoreSaved(_state: QueryState, saved: SavedQuery | null): Part
     grouping: base.grouping, conditions: base.conditions, joins: base.joins, selection: base.selection,
     queryType: base.queryType, tempTableName: base.tempTableName, lockForUpdate: base.lockForUpdate,
     order: base.order, totals: base.totals, builder: base.builder, indexing: base.indexing,
-    queryComments: base.comments, lockEnabled: base.lockForUpdate.length > 0,
+    queryComments: base.comments, lockEnabled: base.lockEnabled,
     focusedSelectedTableId: null, focusedSelectedFieldIdx: null,
   };
 }
@@ -63,6 +65,10 @@ export function buildModelFromFlat(flat: SavedQuery): QueryModel {
     tables: flat.selectedTables, fields: flat.selectedFields, tabSectionFields: flat.tabSectionFields,
     grouping: flat.grouping, conditions: flat.conditions, joins: flat.joins, selection: flat.selection,
     queryType: flat.queryType, tempTableName: flat.tempTableName, lockForUpdate: flat.lockForUpdate,
+    // Блокировка включена, но ни одной таблицы не выбрано — это голая `ДЛЯ ИЗМЕНЕНИЯ`
+    // (блокировка всех источников), а не отсутствие секции (см. комментарий у
+    // SavedQuery.lockEnabled и QueryModel.lockForUpdateBare).
+    lockForUpdateBare: flat.lockEnabled && flat.lockForUpdate.length === 0,
     order: flat.order, totals: flat.totals, builder: flat.builder, indexing: flat.indexing, comments: flat.comments,
   };
 }
@@ -77,6 +83,7 @@ export function modelToFlat(model: QueryModel): SavedQuery {
     grouping: model.grouping ?? { multiple: false, groupFields: [], groupSets: [], aggregates: [] },
     conditions: model.conditions ?? [], joins: model.joins ?? [], selection: model.selection ?? {},
     queryType: model.queryType ?? 'select', tempTableName: model.tempTableName ?? '', lockForUpdate: model.lockForUpdate ?? [],
+    lockEnabled: (model.lockForUpdate?.length ?? 0) > 0 || !!model.lockForUpdateBare,
     order: model.order ?? { fields: [], auto: false }, totals: model.totals ?? { groupFields: [], totalFields: [], grand: false },
     builder: model.builder ?? emptyBuilder(), indexing: model.indexing ?? { indexes: [] }, comments: model.comments,
   };

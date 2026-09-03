@@ -688,6 +688,42 @@ describe('queryStore — union document layer (multiple sub-queries)', () => {
       s = reducer(s, { type: 'REMOVE_TABLE', tableId: t1 });
       expect(s.grouping.groupSets).toEqual([]);
     });
+
+    it('removing a table referenced only by a non-first join conjunct drops just that conjunct, not the whole join', () => {
+      // A join B (conditions[0], mirrored to top-level leftTableId/rightTableId) —
+      // второй конъюнкт (conditions[1]) отдельно ссылается на третью таблицу C
+      // (SET_JOIN_TABLE с condIndex=1 не зеркалируется в верхний уровень, см.
+      // syncMirror — баг: REMOVE_TABLE проверял только верхний уровень и оставлял
+      // висячую ссылку на C во втором конъюнкте после его удаления).
+      let s = reducer(initialState(), { type: 'ADD_TABLE', table: mockTable });   // A
+      s = reducer(s, { type: 'ADD_TABLE', table: mockTable2 });                   // B
+      s = reducer(s, { type: 'ADD_TABLE', table: mockSlice });                    // C
+      const [tA, tB, tC] = s.selectedTables.map(t => t.id);
+
+      s = reducer(s, { type: 'ADD_JOIN' }); // A ↔ B
+      s = reducer(s, { type: 'ADD_JOIN_CONDITION', index: 0 });
+      s = reducer(s, { type: 'SET_JOIN_TABLE', index: 0, side: 'left', tableId: tC, condIndex: 1 });
+
+      s = reducer(s, { type: 'REMOVE_TABLE', tableId: tC });
+
+      expect(s.joins).toHaveLength(1);
+      expect(s.joins[0].leftTableId).toBe(tA);
+      expect(s.joins[0].rightTableId).toBe(tB);
+      // Второй конъюнкт (ссылавшийся на C) удалён, первый (A/B) остался.
+      expect(s.joins[0].conditions).toHaveLength(1);
+      expect(s.joins[0].conditions?.every(c => c.leftTableId !== tC && c.rightTableId !== tC)).toBe(true);
+    });
+
+    it('removing a table used by BOTH top-level join sides drops the whole join, even with extra conjuncts', () => {
+      let s = reducer(initialState(), { type: 'ADD_TABLE', table: mockTable });   // A
+      s = reducer(s, { type: 'ADD_TABLE', table: mockTable2 });                   // B
+      const [tA] = s.selectedTables.map(t => t.id);
+      s = reducer(s, { type: 'ADD_JOIN' }); // A ↔ B
+      s = reducer(s, { type: 'ADD_JOIN_CONDITION', index: 0 });
+
+      s = reducer(s, { type: 'REMOVE_TABLE', tableId: tA });
+      expect(s.joins).toEqual([]);
+    });
   });
 
   describe('REMOVE_FIELD cascades into grouping (not conditions)', () => {
