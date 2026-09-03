@@ -3,6 +3,7 @@ import type { SelectedField, Indexing, FieldRef } from '../../core/query/queryMo
 import { distinctFieldRefs } from '../fieldSource';
 import { ResizeHandle } from './ResizeHandle';
 import { IconButton } from './IconButton';
+import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
 import { SECTION_HEADER, panelBox, ROW } from '../sharedStyles';
 
 interface Props {
@@ -65,32 +66,7 @@ export function IndexTab(props: Props): React.ReactElement {
         .map(f => ({ tableId: f.tableId, path: f.path! }))
     : [];
 
-  function dragStart(e: React.DragEvent, tableId: string, path: string) {
-    e.dataTransfer.setData('text/plain', JSON.stringify({ tableId, path }));
-    e.dataTransfer.effectAllowed = 'copy';
-  }
-
-  function parseDrop(e: React.DragEvent): { tableId: string; path: string } | null {
-    try {
-      const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-      if (data && typeof data.tableId === 'string' && typeof data.path === 'string') {
-        return { tableId: data.tableId, path: data.path };
-      }
-    } catch { /* ignore */ }
-    return null;
-  }
-
-  function allowDrop(e: React.DragEvent) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  }
-
-  const dropZone: React.CSSProperties = {
-    flex: 1,
-    overflowY: 'auto',
-    fontSize: 13,
-    minHeight: 40,
-  };
+  const { dragStart, parseDrop, allowDrop, dropZone } = useFieldDragDrop();
 
   const emptyHint: React.CSSProperties = {
     padding: 6,

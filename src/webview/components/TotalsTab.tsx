@@ -5,6 +5,7 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { findMetaField, isRefField } from './GroupingTab';
 import { ResizeHandle } from './ResizeHandle';
+import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
 import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox } from '../sharedStyles';
 
 interface Props {
@@ -73,32 +74,7 @@ export function TotalsTab(props: Props): React.ReactElement {
     return f.path || (f.expression ?? '');
   }
 
-  function dragStart(e: React.DragEvent, tableId: string, path: string) {
-    e.dataTransfer.setData('text/plain', JSON.stringify({ tableId, path }));
-    e.dataTransfer.effectAllowed = 'copy';
-  }
-
-  function parseDrop(e: React.DragEvent): { tableId: string; path: string } | null {
-    try {
-      const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-      if (data && typeof data.tableId === 'string' && typeof data.path === 'string') {
-        return { tableId: data.tableId, path: data.path };
-      }
-    } catch { /* ignore */ }
-    return null;
-  }
-
-  function allowDrop(e: React.DragEvent) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  }
-
-  const dropZone: React.CSSProperties = {
-    flex: 1,
-    overflowY: 'auto',
-    fontSize: 13,
-    minHeight: 40,
-  };
+  const { dragStart, parseDrop, allowDrop, dropZone } = useFieldDragDrop();
 
   return (
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
