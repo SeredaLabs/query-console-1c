@@ -213,6 +213,8 @@ npm run test:e2e       # Playwright e2e для webview
 ## Документация
 
 - [`docs/ROADMAP.md`](ROADMAP.md) — общий план проекта, фазы и статусы.
+- [`docs/KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — подтверждённые, но пока не
+  исправленные находки (бэклог).
 - [`docs/superpowers/specs/`](superpowers/specs/) — дизайн-документы (спеки) по итерациям.
 - [`docs/superpowers/plans/`](superpowers/plans/) — планы реализации.
 
