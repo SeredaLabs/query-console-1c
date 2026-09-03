@@ -21,7 +21,8 @@ describe('analyze: разбор полей/источников/соединен
   it('поля: alias + человекочитаемое выражение', () => {
     const r = analyze(TEXT);
     expect(r.diagnostics).toEqual([]);
-    expect(r.fields).toEqual([
+    expect(r.tempTables).toEqual([]); // одиночный запрос без ПОМЕСТИТЬ — это result, а не временная таблица
+    expect(r.result?.fields).toEqual([
       { alias: 'Ссылка', expression: 'Контрагенты.Ссылка' },
       { alias: 'email', expression: 'Контрагенты.Наименование' },
     ]);
@@ -29,7 +30,7 @@ describe('analyze: разбор полей/источников/соединен
 
   it('источники: alias + полное имя', () => {
     const r = analyze(TEXT);
-    expect(r.sources).toEqual([
+    expect(r.result?.sources).toEqual([
       { alias: 'Контрагенты', fullName: 'Справочник.Контрагенты' },
       { alias: 'Получатели', fullName: 'Справочник.Получатели' },
     ]);
@@ -37,14 +38,14 @@ describe('analyze: разбор полей/источников/соединен
 
   it('соединения: ключевое слово + псевдонимы сторон', () => {
     const r = analyze(TEXT);
-    expect(r.joins).toEqual([
+    expect(r.result?.joins).toEqual([
       { keyword: 'ЛЕВОЕ', leftAlias: 'Контрагенты', rightAlias: 'Получатели' },
     ]);
   });
 
   it('условия: текст условия', () => {
     const r = analyze(TEXT);
-    expect(r.conditions).toEqual([{ text: 'Контрагенты.Ссылка = &Ссылка' }]);
+    expect(r.result?.conditions).toEqual([{ text: 'Контрагенты.Ссылка = &Ссылка' }]);
   });
 
   it('параметры: имя + количество использований (по сырому тексту, не только из Condition.param)', () => {
@@ -52,11 +53,11 @@ describe('analyze: разбор полей/источников/соединен
     expect(r.parameters).toEqual([{ name: 'Ссылка', usageCount: 1 }]);
   });
 
-  it('невалидный текст → diagnostics с сообщением ошибки, пустые остальные поля', () => {
+  it('невалидный текст → diagnostics с сообщением ошибки, пустой result', () => {
     const r = analyze('ВЫБРАТЬ ИЗ КАК Поле1 ИЗ Справочник.Контрагенты');
     expect(r.diagnostics.length).toBeGreaterThan(0);
-    expect(r.fields).toEqual([]);
-    expect(r.sources).toEqual([]);
+    expect(r.result).toBeNull();
+    expect(r.tempTables).toEqual([]);
   });
 
   it('синтаксическая ошибка: diagnostics несут line/col из сообщения парсера', () => {
@@ -80,6 +81,76 @@ describe('analyze: разбор полей/источников/соединен
       'ВЫБРАТЬ 1 КАК Поле\nИЗ Справочник.Валюты КАК Валюты\nГДЕ Валюты.Код = &Код И Валюты.Наименование <> &Код'
     );
     expect(r.parameters).toEqual([{ name: 'Код', usageCount: 2 }]);
+  });
+});
+
+describe('analyze: пакетные запросы (ПОМЕСТИТЬ/ДОБАВИТЬ, несколько ;-блоков)', () => {
+  // Реальные отчётные запросы 1С почти всегда состоят из нескольких временных
+  // таблиц + финального запроса — v1 показывал только ПЕРВЫЙ ;-блок, что вводило
+  // в заблуждение (пользовательский баг-репорт на реальном 11-блочном запросе).
+  const BATCH =
+    'ВЫБРАТЬ\n\tВалюты.Ссылка КАК Ссылка\nПОМЕСТИТЬ ВТ_Валюты\nИЗ\n\tСправочник.Валюты КАК Валюты\n' +
+    ';\n\n' + '/'.repeat(80) + '\n' +
+    'ВЫБРАТЬ\n\tВТ_Валюты.Ссылка КАК Ссылка\nИЗ\n\tВТ_Валюты КАК ВТ_Валюты\nГДЕ\n\tВТ_Валюты.Ссылка = &Ссылка';
+
+  it('result — это ПОСЛЕДНИЙ запрос пакета (что реально возвращает Запрос.Выполнить())', () => {
+    const r = analyze(BATCH);
+    expect(r.diagnostics).toEqual([]);
+    expect(r.result?.sources).toEqual([{ alias: 'ВТ_Валюты', fullName: 'ВТ_Валюты' }]);
+  });
+
+  it('tempTables содержит все ;-блоки ДО последнего, под именем временной таблицы', () => {
+    const r = analyze(BATCH);
+    expect(r.tempTables).toHaveLength(1);
+    expect(r.tempTables[0].name).toBe('ВТ_Валюты');
+    expect(r.tempTables[0].sources).toEqual([{ alias: 'Валюты', fullName: 'Справочник.Валюты' }]);
+  });
+
+  it('параметры считаются по ВСЕМУ пакету, а не только по последнему ;-блоку', () => {
+    const r = analyze(BATCH);
+    expect(r.parameters).toEqual([{ name: 'Ссылка', usageCount: 1 }]);
+  });
+
+  it('textRange у result/tempTables — непересекающиеся диапазоны СВОИХ ;-блоков (навигация не должна путать блоки)', () => {
+    // Регресс на баг-репорт: клик по полю в «Результате» находил одноимённое поле
+    // в чужом временном блоке, потому что навигация искала по всему тексту пакета.
+    const r = analyze(BATCH);
+    const tt = r.tempTables[0];
+    const res = r.result!;
+    expect(tt.textRange).toBeDefined();
+    expect(res.textRange).toBeDefined();
+    expect(tt.textRange!.end).toBeLessThanOrEqual(res.textRange!.start);
+    expect(BATCH.slice(tt.textRange!.start, tt.textRange!.end)).toContain('ПОМЕСТИТЬ ВТ_Валюты');
+    expect(BATCH.slice(tt.textRange!.start, tt.textRange!.end)).not.toContain('&Ссылка');
+    expect(BATCH.slice(res.textRange!.start, res.textRange!.end)).toContain('&Ссылка');
+    expect(BATCH.slice(res.textRange!.start, res.textRange!.end)).not.toContain('ПОМЕСТИТЬ');
+  });
+
+  it('одиночный запрос без ПОМЕСТИТЬ — result без временных таблиц (обычный случай не меняется)', () => {
+    const r = analyze('ВЫБРАТЬ Валюты.Код ИЗ Справочник.Валюты КАК Валюты');
+    expect(r.tempTables).toEqual([]);
+    expect(r.result?.sources).toEqual([{ alias: 'Валюты', fullName: 'Справочник.Валюты' }]);
+  });
+
+  it('ОБЪЕДИНИТЬ внутри ПОМЕСТИТЬ-блока: имя временной таблицы у ОБЕИХ ветвей, не только первой', () => {
+    // Регресс конкретно на баг, найденный вручную: парсер ставит tempTableName только
+    // на первую ветвь UnionMember — вторая ветвь не должна из-за этого «терять» ВТ в имени.
+    //
+    // Известная неточность (сознательно не решается сейчас — редкий случай): «result» =
+    // последний запрос ВСЕГО пакета, без знания о том, что обе ветви ОБЪЕДИНИТЬ питают
+    // ОДНУ временную таблицу. Если ПОМЕСТИТЬ+ОБЪЕДИНИТЬ — ПОСЛЕДНИЙ и единственный блок
+    // пакета (как здесь, без завершающего обычного ВЫБРАТЬ), вторая ветвь попадёт в
+    // `result`, а не в `tempTables`, хотя семантически обе ветви — один временный блок.
+    // В реальных отчётных запросах (см. пользовательский пример) временная таблица
+    // почти всегда не последняя — после неё идёт обычный ВЫБРАТЬ-результат, и этот
+    // случай не возникает.
+    const text =
+      'ВЫБРАТЬ\n\tВалюты.Ссылка КАК Ссылка\nПОМЕСТИТЬ ВТ_Тест\nИЗ\n\tСправочник.Валюты КАК Валюты\n' +
+      '\nОБЪЕДИНИТЬ ВСЕ\n\n' +
+      'ВЫБРАТЬ\n\tБанки.Ссылка\nИЗ\n\tСправочник.Банки КАК Банки';
+    const r = analyze(text);
+    expect(r.result?.name).toBe('ВТ_Тест · Запрос 2');
+    expect(r.tempTables.map(t => t.name)).toEqual(['ВТ_Тест · Запрос 1']);
   });
 });
 

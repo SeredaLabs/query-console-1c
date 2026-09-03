@@ -378,6 +378,45 @@ test.describe('Query Constructor Webview', () => {
     await expect(editor).toBeFocused();
   });
 
+  // Реальные отчётные запросы 1С почти всегда пакетные (несколько ПОМЕСТИТЬ ВТ_… блоков
+  // + финальный ВЫБРАТЬ) — v1 показывал только первый блок пакета целиком игнорируя
+  // остальные (баг-репорт на реальном 11-блочном запросе). «Результат» — последний
+  // запрос пакета, временные таблицы — отдельно и свёрнуты по умолчанию.
+  test('Текст запроса v2: панель «Структура» на пакетном запросе — Результат = последний блок, ВТ отдельно', async ({ page }) => {
+    await page.goto(BASE);
+    await page.evaluate(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
+      }));
+    });
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+    await page.locator('button:has-text("Запрос")').click();
+
+    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+    await editor.fill(
+      'ВЫБРАТЬ\n\tВалюты.Ссылка КАК Ссылка\nПОМЕСТИТЬ ВТ_Валюты\nИЗ\n\tСправочник.Валюты КАК Валюты\n' +
+      ';\n\n' + '/'.repeat(80) + '\n' +
+      'ВЫБРАТЬ\n\tВТ_Валюты.Ссылка КАК Ссылка\nИЗ\n\tВТ_Валюты КАК ВТ_Валюты'
+    );
+    await page.locator('button[title="Проверить сейчас"]').click();
+    await page.locator('button:has-text("Структура")').click();
+    const panel = page.locator('[data-testid="query-text-structure-panel"]');
+
+    // «Результат» виден сразу и относится к ВТОРОМУ (последнему) блоку — источник ВТ_Валюты.
+    await expect(panel).toContainText('Результат');
+    await expect(panel).toContainText('ВТ_Валюты');
+
+    // «Временные таблицы» свёрнуты по умолчанию — источник первого блока не виден сразу.
+    await expect(panel).toContainText('Временные таблицы (1)');
+    await expect(panel).not.toContainText('Справочник.Валюты');
+
+    // Разворачиваем — виден первый блок под своим именем ВТ.
+    await panel.locator('text=Временные таблицы (1)').click();
+    await expect(panel).toContainText('Справочник.Валюты');
+  });
+
   // Стадия 7 плана «Текст запроса v2»: панель «Параметры» (read-only) и «Структура»
   // делят один слот правой панели, а не открываются одновременно (design-док, раздел 2).
   test('Текст запроса v2: панель «Параметры» показывает имя/использования, делит слот со «Структурой»', async ({ page }) => {

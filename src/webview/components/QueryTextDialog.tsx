@@ -2,7 +2,7 @@ import * as React from 'react';
 import { CodeEditor, type CodeEditorHandle } from './CodeEditor';
 import { IconButton } from './IconButton';
 import { BTN, BTN_SECONDARY } from '../sharedStyles';
-import { analyze, type QueryAnalysisResult, type QueryDiagnostic } from '../../core/query/queryAnalysisService';
+import { analyze, type QueryAnalysisResult, type QueryDiagnostic, type TextRange } from '../../core/query/queryAnalysisService';
 import { formatQueryText } from '../../core/query/queryTextFormatter';
 import { QueryStructurePanel } from './QueryStructurePanel';
 import { QueryParametersPanel } from './QueryParametersPanel';
@@ -86,7 +86,7 @@ function runAnalysisSafe(text: string, resolver?: MetadataResolver): QueryAnalys
   } catch {
     return {
       diagnostics: [{ message: 'Не удалось полностью разобрать структуру запроса. Редактирование текста доступно.' }],
-      fields: [], sources: [], joins: [], conditions: [], parameters: [],
+      result: null, tempTables: [], parameters: [],
     };
   }
 }
@@ -165,18 +165,29 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
    * Best-effort переход из панели «Структура»/«Параметры» к тексту. Один и тот же
    * параметр/выражение часто встречается НЕСКОЛЬКО раз (см. `usageCount` в панели
    * параметров) — повторный клик по тому же элементу переходит к СЛЕДУЮЩЕМУ
-   * вхождению, а не залипает на первом; клик по другому элементу начинает поиск заново
-   * с начала текста. Индекс не хранится в state — навигация не должна влиять на
-   * рендер/дебаунс проверки.
+   * вхождению, а не залипает на первом; клик по другому элементу начинает поиск заново.
+   * Индекс не хранится в state — навигация не должна влиять на рендер/дебаунс проверки.
+   *
+   * `range`, если задан (поля/источники/соединения/условия — у каждых свой `;`-блок,
+   * см. `QueryAnalysisQuery.textRange`), ограничивает поиск ИМ: иначе клик по полю
+   * «Результата» мог бы подсветить одноимённое поле в чужом временном блоке пакета —
+   * реальная жалоба на батч-запросах, где колонки часто повторяются между ВТ и
+   * финальной выборкой. Не нашли в границах блока (редкий случай, напр. отличие
+   * форматирования условия от сырого текста) — последний шанс: ищем по всему тексту,
+   * чтобы клик не был просто «немым» вместо навигации не туда.
    */
-  const lastNavRef = React.useRef<{ searchText: string; index: number } | null>(null);
-  function handleNavigate(searchText: string) {
+  const lastNavRef = React.useRef<{ searchText: string; index: number; rangeStart: number; rangeEnd: number } | null>(null);
+  function handleNavigate(searchText: string, range?: TextRange) {
+    const scopeStart = range?.start ?? 0;
+    const scopeEnd = range?.end ?? text.length;
     const prev = lastNavRef.current;
-    const searchFrom = prev && prev.searchText === searchText ? prev.index + 1 : 0;
-    let idx = text.indexOf(searchText, searchFrom);
-    if (idx < 0) idx = text.indexOf(searchText); // конец текста — переходим к первому вхождению
+    const sameTarget = prev && prev.searchText === searchText && prev.rangeStart === scopeStart && prev.rangeEnd === scopeEnd;
+    const searchFrom = sameTarget ? prev.index + 1 : scopeStart;
+    let idx = text.indexOf(searchText, Math.max(searchFrom, scopeStart));
+    if (idx < 0 || idx >= scopeEnd) idx = text.indexOf(searchText, scopeStart); // конец блока — к первому вхождению В БЛОКЕ
+    if (idx < 0 || idx >= scopeEnd) idx = text.indexOf(searchText); // не нашли в блоке вообще — по всему тексту
     if (idx < 0) return;
-    lastNavRef.current = { searchText, index: idx };
+    lastNavRef.current = { searchText, index: idx, rangeStart: scopeStart, rangeEnd: scopeEnd };
     editorRef.current?.moveCursorTo(idx);
   }
 
@@ -193,6 +204,9 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
 
   const lineCount = text.split('\n').length;
   const firstDiagnostic = checked.result.diagnostics[0];
+  const allQueries = checked.result.result ? [checked.result.result, ...checked.result.tempTables] : [];
+  const totalSources = allQueries.reduce((n, q) => n + q.sources.length, 0);
+  const totalJoins = allQueries.reduce((n, q) => n + q.joins.length, 0);
 
   return (
     <div
@@ -327,10 +341,19 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
             >
               {firstDiagnostic.message}
             </span>
+          ) : checked.result.result === null ? (
+            // Пустой/из одних пробелов текст `tryOpenBatch` считает валидным пустым
+            // пакетом (0 diagnostics) — но применять тут нечего (см. handleApplyQueryEdit
+            // в ConstructorView.tsx), поэтому это НЕ «✓ Синтаксис корректен».
+            <span style={{ color: 'var(--vscode-editorWarning-foreground, #cca700)' }}>
+              ⚠ Текст пуст — нечего применить
+            </span>
           ) : (
             <span style={{ color: 'var(--vscode-descriptionForeground)' }}>
+              {/* Источники/соединения — сумма по «Результату» и всем временным таблицам
+                  (весь пакет целиком), не только последнего запроса. */}
               ✓ Синтаксис корректен &nbsp;&nbsp; Строк: {lineCount} &nbsp;&nbsp; Параметров: {checked.result.parameters.length}
-              &nbsp;&nbsp; Источников: {checked.result.sources.length} &nbsp;&nbsp; Соединений: {checked.result.joins.length}
+              &nbsp;&nbsp; Источников: {totalSources} &nbsp;&nbsp; Соединений: {totalJoins}
             </span>
           )}
         </div>
@@ -351,26 +374,37 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
         <div
           data-testid="query-text-close-confirm"
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
           }}
           onClick={e => e.stopPropagation()}
         >
           <div
             style={{
-              background: 'var(--vscode-editor-background, #1e1e1e)',
-              border: '1px solid var(--qc-border)', borderRadius: 4,
-              padding: 16, width: 360, display: 'flex', flexDirection: 'column', gap: 12,
+              background: 'var(--vscode-editorWidget-background, #252526)',
+              border: '1px solid var(--qc-border)', borderRadius: 8,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+              padding: 20, width: 380, display: 'flex', flexDirection: 'column', gap: 18,
             }}
           >
-            <div style={{ fontSize: 13 }}>
-              Текст запроса был изменён.
-              <br />
-              Изменения не применены.
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{
+                flexShrink: 0, width: 32, height: 32, borderRadius: '50%',
+                background: 'var(--vscode-inputValidation-warningBackground, rgba(204,167,0,0.15))',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span className="codicon codicon-warning" style={{ fontSize: 17, color: 'var(--vscode-editorWarning-foreground, #cca700)' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 2 }}>
+                <div style={{ fontSize: 13, fontWeight: 'bold' }}>Текст запроса был изменён</div>
+                <div style={{ fontSize: 12, color: 'var(--vscode-descriptionForeground)' }}>
+                  Изменения не применены и будут потеряны при закрытии.
+                </div>
+              </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button style={BTN_SECONDARY} onClick={() => setConfirmingClose(false)}>Продолжить редактирование</button>
-              <button style={BTN} onClick={onClose}>Закрыть без сохранения</button>
+              <button style={BTN_SECONDARY} onClick={onClose}>Закрыть без сохранения</button>
+              <button style={BTN} onClick={() => setConfirmingClose(false)}>Продолжить редактирование</button>
             </div>
           </div>
         </div>

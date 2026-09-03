@@ -1,17 +1,20 @@
 import * as React from 'react';
-import type { QueryAnalysisParameter } from '../../core/query/queryAnalysisService';
+import type { QueryAnalysisParameter, NavigateFn } from '../../core/query/queryAnalysisService';
 
 export interface QueryParametersPanelProps {
   parameters: QueryAnalysisParameter[];
   /** Best-effort переход к первому вхождению `&Имя` в тексте — тот же принцип, что и
    * навигация из QueryStructurePanel (design-док, риск п.0.3: поиск по тексту, без
-   * точных source-range). */
-  onNavigate: (searchText: string) => void;
+   * точных source-range). Параметр общий для всего пакета — диапазон не передаётся,
+   * поиск идёт по всему тексту (в отличие от полей/источников из QueryStructurePanel,
+   * у которых есть свой `;`-блок). */
+  onNavigate: NavigateFn;
 }
 
 const LABEL: React.CSSProperties = { color: 'var(--vscode-descriptionForeground)', fontSize: 11 };
+const ICON: React.CSSProperties = { fontSize: 13, opacity: 0.75, flexShrink: 0 };
 
-function ParameterItem({ p, onNavigate }: { p: QueryAnalysisParameter; onNavigate: (searchText: string) => void }): React.ReactElement {
+function ParameterItem({ p, onNavigate }: { p: QueryAnalysisParameter; onNavigate: NavigateFn }): React.ReactElement {
   const [hover, setHover] = React.useState(false);
   return (
     <div
@@ -27,8 +30,11 @@ function ParameterItem({ p, onNavigate }: { p: QueryAnalysisParameter; onNavigat
         background: hover ? 'var(--vscode-toolbar-hoverBackground, rgba(90,93,94,0.4))' : 'transparent',
       }}
     >
-      <div style={{ fontWeight: 'bold' }}>&{p.name}</div>
-      <div style={LABEL}>Использований: {p.usageCount}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span className="codicon codicon-symbol-parameter" style={ICON} />
+        <span style={{ fontWeight: 'bold', fontSize: 12.5 }}>&{p.name}</span>
+      </div>
+      <div style={{ ...LABEL, paddingLeft: 19 }}>Использований: {p.usageCount}</div>
     </div>
   );
 }
@@ -55,7 +61,15 @@ export function QueryParametersPanel({ parameters, onNavigate }: QueryParameters
   }
   return (
     <div>
-      <div style={{ fontWeight: 'bold', marginBottom: 8 }}>Параметры запроса</div>
+      <div style={{
+        fontWeight: 'bold',
+        fontSize: 13,
+        paddingBottom: 8,
+        marginBottom: 12,
+        borderBottom: '1px solid var(--qc-border)',
+      }}>
+        Параметры запроса
+      </div>
       {parameters.map(p => (
         <ParameterItem key={p.name} p={p} onNavigate={onNavigate} />
       ))}

@@ -83,7 +83,17 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
   function handleShowQuery() {
     const text = generateBatch(assembleBatch(state));
-    setQueryModalText(text || '-- нет полей для генерации запроса');
+    // CodeMirror нормализует \r\n/\r → \n при первой же синхронизации своего
+    // внутреннего Text (см. CodeEditor.tsx: value-sync эффект сверяет view.state.doc.
+    // toString() с value) — если исходный текст комментариев (сохранённых буквально
+    // из .bsl при preserveComments) содержит \r\n, эта САМОкоррекция сама по себе
+    // считается «изменением» и уходит через onChange, разойдясь с originalText,
+    // захваченным ДО неё. В итоге диалог считает текст изменённым сразу после
+    // открытия, без единого действия пользователя. Нормализуем здесь же, до того как
+    // текст попадёт в originalText/CodeMirror — тогда сравнивать текст с самим собой
+    // после прохождения через редактор всегда безопасно.
+    const normalized = text.replace(/\r\n?/g, '\n');
+    setQueryModalText(normalized || '-- нет полей для генерации запроса');
     setQueryModalError(null);
   }
 
@@ -105,6 +115,12 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
     if (queryModalText === null) return;
     const r = tryOpenBatch(queryModalText, queryModalResolver, { preserveComments: true });
     if (!r.ok) { setQueryModalError(r.error); return; }
+    // Пустой/из одних пробелов текст `tryOpenBatch` считает валидным ПУСТЫМ пакетом
+    // (`{ok:true, doc:{members:[]}}`) — это осознанное поведение парсера, но здесь
+    // означало бы «Применить» молча стирает всю модель конструктора (проверено вручную:
+    // очистить текст и нажать «Применить» — таблицы/поля пропадают без единого
+    // предупреждения). Явно блокируем, а не полагаемся на `!r.ok`.
+    if (r.doc.members.length === 0) { setQueryModalError('Текст запроса пуст — нечего применять.'); return; }
     dispatch({ type: 'LOAD_BATCH', doc: r.doc });
     setQueryModalError(null);
     setQueryModalText(null);

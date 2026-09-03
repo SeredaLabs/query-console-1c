@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
-import { defaultKeymap, historyKeymap, history, indentWithTab, undo as cmUndo, redo as cmRedo, isolateHistory } from '@codemirror/commands';
+import { defaultKeymap, historyKeymap, history, undo as cmUndo, redo as cmRedo, isolateHistory } from '@codemirror/commands';
 import { bracketMatching, foldGutter, codeFolding, foldKeymap } from '@codemirror/language';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { search, searchKeymap, openSearchPanel } from '@codemirror/search';
@@ -196,12 +196,33 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
       '.cm-button:hover': {
         background: 'var(--vscode-button-secondaryHoverBackground, #45494e)',
       },
+      // Кнопка «×» закрытия панели поиска рендерится CodeMirror БЕЗ класса cm-button
+      // (см. @codemirror/search) — только `background: inherit`, цвет текста не
+      // задан вовсе, поэтому она наследует дефолтный тёмный цвет кнопки браузера на
+      // тёмном фоне и почти не видна. Стилизуем отдельно, раз общий .cm-button её не
+      // покрывает.
+      '.cm-search [name="close"]': {
+        color: 'var(--vscode-editorWidget-foreground, #ccc)',
+        fontSize: '16px',
+        opacity: 0.8,
+      },
+      '.cm-search [name="close"]:hover': {
+        opacity: 1,
+        color: 'var(--vscode-foreground, #fff)',
+      },
     });
 
     const extensions: Extension[] = [
       EditorView.cspNonce.of(CSP_NONCE),
       history(),
-      keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
+      // Без indentWithTab: этот редактор — не полноценная IDE для ручной раскладки
+      // отступов, а поле для просмотра/точечной правки уже готового текста запроса
+      // (отступы расставляет «Форматировать»). Со связкой Tab→вставить отступ клик в
+      // редактор + машинальный Tab (или попытка переключить фокус клавиатурой) молча
+      // вставляет символ табуляции — почти незаметно на строке, уже начинающейся с
+      // табов, но реально меняет текст, из-за чего guard «не применены изменения»
+      // (стадия 8) срабатывает на правках, которые пользователь не считал правкой.
+      keymap.of([...defaultKeymap, ...historyKeymap]),
       sdblHighlight,
       sdblHighlightTheme,
       theme,
