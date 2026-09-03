@@ -49,6 +49,7 @@ async function runQueryConstructorCommand(context: vscode.ExtensionContext, resu
         document: doc,
         selection: editor.selection,
         queryRange: plan.queryRange,
+        documentVersion: doc.version,
         wrapAsBslString: true,
       },
       plan.queryText
@@ -67,6 +68,7 @@ async function runQueryConstructorCommand(context: vscode.ExtensionContext, resu
     document: doc,
     selection: editor.selection,
     queryRange: { start: offset, end: offset },
+    documentVersion: doc.version,
     wrapAsBslString: true,
     resultProcessing,
   });
