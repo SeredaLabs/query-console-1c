@@ -27,6 +27,10 @@
 - Ручне редагування тексту запиту з поверненням правок у модель конструктора.
 - Збереження коментарів `//…` у тексті запиту між циклами «відкрити → правити
   → зберегти».
+- (Експериментально, вимкнено за замовчуванням) нове вікно «Текст запроса»:
+  тулбар (форматування, перевірка, пошук), панелі «Структура»/«Параметри»,
+  захист від втрати незбережених змін — вмикається налаштуванням
+  `queryConsole.queryTextEditorV2`.
 
 ### Як користуватись
 
@@ -63,6 +67,7 @@
 | `queryConsole.metadataPath` | Шлях до каталогу вивантаження `cf` (пусто → автовизначення) |
 | `queryConsole.parserOutputPath` | Каталог результату парсингу (за замовчуванням `tmp/parser_data`) |
 | `queryConsole.openInNewWindow` | Відкривати конструктор в окремому вікні VS Code |
+| `queryConsole.queryTextEditorV2` | Експериментальне вікно «Текст запроса» v2 (вимкнено за замовчуванням) |
 
 ### Розробка
 
@@ -94,6 +99,10 @@
   конструктора.
 - Сохранение комментариев `//…` в тексте запроса между циклами «открыть →
   править → сохранить».
+- (Экспериментально, выключено по умолчанию) новое окно «Текст запроса»:
+  тулбар (форматирование, проверка, поиск), панели «Структура»/«Параметры»,
+  защита от потери несохранённых изменений — включается настройкой
+  `queryConsole.queryTextEditorV2`.
 
 ### Как пользоваться
 
@@ -133,6 +142,7 @@
 | `queryConsole.metadataPath` | Путь к каталогу выгрузки `cf` (пусто → автоопределение) |
 | `queryConsole.parserOutputPath` | Каталог результата парсинга (по умолчанию `tmp/parser_data`) |
 | `queryConsole.openInNewWindow` | Открывать конструктор в отдельном окне VS Code |
+| `queryConsole.queryTextEditorV2` | Экспериментальное окно «Текст запроса» v2 (выключено по умолчанию) |
 
 ### Разработка
 
@@ -161,6 +171,9 @@ types → joins" tree, lets you assemble a query with the mouse, and generates
 - Opens an existing query's text with syntax and metadata validation.
 - Manual text editing that round-trips back into the constructor's model.
 - Preserves `//…` comments in the query text across edit cycles.
+- (Experimental, off by default) a new "Query text" dialog: toolbar (format,
+  check, search), "Structure"/"Parameters" panels, unsaved-changes
+  protection — enabled via `queryConsole.queryTextEditorV2`.
 
 ### Usage
 
@@ -199,6 +212,7 @@ export.
 | `queryConsole.metadataPath` | Path to the `cf` export directory (empty → auto-detect) |
 | `queryConsole.parserOutputPath` | Directory for parser output (default `tmp/parser_data`) |
 | `queryConsole.openInNewWindow` | Open the constructor in a separate VS Code window |
+| `queryConsole.queryTextEditorV2` | Experimental "Query text" v2 dialog (off by default) |
 
 ### Development
 

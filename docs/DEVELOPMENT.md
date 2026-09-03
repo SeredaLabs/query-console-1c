@@ -12,8 +12,8 @@
 | Слой | Каталог | Роль |
 |---|---|---|
 | Метаданные | `src/core/metadata` | Парсинг выгрузки `cf` → модель/YAML «таблицы → поля → типы» |
-| Запрос (SDBL) | `src/core/query` | Модель конструктора → текст запроса 1С |
-| UI конструктора | `src/webview` | React-панели: База данных / Таблицы / Поля |
+| Запрос (SDBL) | `src/core/query` | Двунаправленно: `QueryModel` ↔ текст SDBL (`sdblParser.ts`/`sdblGenerator.ts`), плюс трансформации (`qualifyBareFields`, `exprFormatter`, …), локальная семантическая валидация (`semanticValidator.ts`) и сервис анализа для окна «Текст запроса» (`queryAnalysisService.ts`) |
+| UI конструктора | `src/webview` | React-панели: База данных / Таблицы / Поля / вкладки (Условия, Группировка, Итоги, Объединения, Порядок, Индекс, Построитель, Пакет) / окно «Текст запроса» (v2, opt-in) |
 | Интеграция VS Code | `src/extension` | Команды, webview-панель, вставка результата в редактор |
 
 ## Структура каталогов
@@ -33,12 +33,21 @@ query-console-1c/
 │   │   │   ├── cfParser.ts    #   XML → MetadataModel (старый путь конструктора)
 │   │   │   ├── cacheBuilder.ts / cacheLoader.ts   # JSON-кэш модели
 │   │   │   └── types.ts       #   модель метаданных
-│   │   └── query/
-│   │       ├── queryModel.ts      # модель выбора пользователя
-│   │       └── sdblGenerator.ts   # QueryModel → текст SDBL
+│   │   └── query/              # ~30 файлов, двунаправленное ядро (см. docs/PHASE_6.md, PHASE_9.md)
+│   │       ├── queryModel.ts        # модель выбора пользователя
+│   │       ├── sdblLexer.ts         # текст SDBL → токены
+│   │       ├── sdblParser.ts        # токены → QueryModel (обратный разбор, Фаза 6)
+│   │       ├── sdblGenerator.ts     # QueryModel → текст SDBL
+│   │       ├── exprFormatter.ts     # форматирование выражений (общее для генератора/парсера)
+│   │       ├── qualifyBareFields.ts, dropRedundantGroupDerefs.ts, canonicalizeFieldCasing.ts, …  # трансформации модели
+│   │       ├── semanticValidator.ts # локальная семантическая проверка при открытии (Фаза 8.4)
+│   │       ├── validateBatch.ts     # единая точка синтаксис+семантика (tryOpenBatch)
+│   │       ├── queryAnalysisService.ts, queryTextFormatter.ts  # для окна «Текст запроса» v2 (Фаза 9)
+│   │       └── unionModel.ts, commentBinder.ts, …
 │   ├── webview/              # СЛОЙ UI (React + TypeScript)
 │   │   ├── App.tsx, main.tsx, bridge.ts
-│   │   ├── components/        #   DbTreePanel / TablesPanel / FieldsPanel / TabsBar
+│   │   ├── components/        #   DbTreePanel / TablesPanel / FieldsPanel / TabsBar / *Tab.tsx
+│   │   │                      #   (Условия, Группировка, Итоги, …) / QueryTextDialog (v2, opt-in)
 │   │   └── state/
 │   │       ├── queryStore.ts    # reducer і сумісний фасад стану
 │   │       └── queryStore/
