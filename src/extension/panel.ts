@@ -7,6 +7,7 @@ import { isCacheValid, readCache } from '../core/metadata/cacheLoader';
 import { loadMetadataCached, rebuildModelCache } from '../core/metadata/modelCache';
 import { parseConfiguration } from '../core/metadata/parser/parseConfiguration';
 import { resolveManagedCfDir } from '../core/metadata/parser/generationStore';
+import { loadMetadataSnapshotFirst } from '../core/metadata/parser/loadMetadataSafe';
 import { createMetadataRepository } from '../core/metadata/metadataRepository';
 import { generate } from '../core/query/sdblGenerator';
 import { insertResult } from './insertResult';
@@ -49,22 +50,32 @@ async function loadMetadata(
   context: vscode.ExtensionContext,
   channel: vscode.OutputChannel
 ): Promise<MetadataModel> {
-  let cfYamlDir = resolveManagedCfDir(outPath);
-  let configYaml = path.join(cfYamlDir, 'configuration.yaml');
+  const cfYamlDir = resolveManagedCfDir(outPath);
+  const configYaml = path.join(cfYamlDir, 'configuration.yaml');
 
-  // Auto-parse: if no YAML cache exists and cfPath is set, try parsing first
+  // PR-10 (ТЗ §55 P1.4, Production Metadata Switch): пока НЕТ управляемой YAML-
+  // генерации — пробуем прямой XML→JSON снимок первым (быстрее на холодной
+  // сборке, см. docs/PERFORMANCE_BASELINE.md: 1.6-1.9x на двух независимых
+  // реальных конфигурациях), с тёплым переиспользованием уже закоммиченного
+  // снимка на повторных открытиях (source: 'direct-snapshot-cached') — так что
+  // после первого успеха этот путь остаётся быстрым, а не только один раз.
+  // При ЛЮБОМ сбое direct-пути (в т.ч. на конфигурации, которую мы не видели
+  // при валидации PR-08/09) — прозрачный откат на существующий, годами
+  // проверенный YAML-путь (см. loadMetadataSafe.ts) — поведение НЕ хуже, чем
+  // было до этого PR. Область применения намеренно узкая (ТЗ §47): УЖЕ
+  // существующая YAML-генерация (обычный случай для возвращающегося
+  // пользователя) продолжает идти НИЖЕ, через `loadMetadataCached`, вообще не
+  // тронутый этим PR; «Обновить кэш» (refreshCache-обработчик) тоже не
+  // переключён — остаётся отдельным, ещё не сделанным шагом.
   if (!fs.existsSync(configYaml) && cfPath) {
-    channel.appendLine(`[1C Query] YAML не найден, попытка авто-парсинга: ${cfPath}`);
-    try {
-      const s = parseConfiguration(cfPath, outPath);
-      // Каталог сборки мог быть перенаправлен в cf-managed (ТЗ §7) — используем
-      // РЕАЛЬНЫЙ committed-каталог, а не пересчитывать resolveManagedCfDir заново.
-      cfYamlDir = s.outCfDir;
-      configYaml = path.join(cfYamlDir, 'configuration.yaml');
-      channel.appendLine(`[1C Query] Авто-парсинг завершён`);
-    } catch (e) {
-      channel.appendLine(`[1C Query] Авто-парсинг не удался: ${e}`);
-    }
+    const snapshotOutPath = path.join(outPath, 'snapshot');
+    const t = Date.now();
+    const r = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, outPath);
+    const fallbackNote = r.fallbackReason ? ` (direct-путь не удался: ${r.fallbackReason})` : '';
+    channel.appendLine(
+      `[1C Query] metadata built via ${r.source} in ${Date.now() - t}ms (${r.model.tables.length} tables)${fallbackNote}`
+    );
+    return r.model;
   }
 
   if (fs.existsSync(configYaml)) {

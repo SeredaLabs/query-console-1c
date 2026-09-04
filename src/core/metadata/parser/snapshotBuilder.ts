@@ -68,11 +68,18 @@ export function commitMetadataSnapshot(model: MetadataModel, snapshotOutPath: st
 }
 
 /** Читает уже закоммиченный снимок (каталог — см. `resolveManagedCfDir` из
- * generationStore.ts). Используется тестами и будущей валидацией (PR-09) — ещё
- * НЕ production consumer path. */
+ * generationStore.ts). */
 export function readMetadataSnapshot(committedDir: string): MetadataSnapshotFile {
   const raw = fs.readFileSync(path.join(committedDir, SNAPSHOT_FILE_NAME), 'utf8');
   return JSON.parse(raw) as MetadataSnapshotFile;
+}
+
+/** mtime самого файла снимка (не каталога) — используется
+ * `loadMetadataSnapshotCached`-логикой (loadMetadataSafe.ts, PR-10) для проверки
+ * свежести относительно XML-источника, тем же приёмом, что и `modelCache.ts`
+ * (сравнение mtime кэша с newest mtime исходников), но без промежуточного YAML. */
+export function snapshotFileMtimeMs(committedDir: string): number {
+  return fs.statSync(path.join(committedDir, SNAPSHOT_FILE_NAME)).mtimeMs;
 }
 
 export interface SnapshotBuildResult {
