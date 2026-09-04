@@ -10,6 +10,7 @@ import {
   restoreBatch,
   batchMemberName,
   assembleBatch,
+  metadataCatalogRef,
 } from '../../src/webview/state/queryStore';
 import { deriveUnionColumns } from '../../src/core/query/unionModel';
 import { parseBatch } from '../../src/core/query/sdblParser';
@@ -42,10 +43,10 @@ const mockSlice: MetaTable = {
 };
 
 describe('queryStore reducer', () => {
-  it('SET_METADATA updates tables', () => {
-    const state = reducer(initialState(), { type: 'SET_METADATA', tables: [mockTable] });
-    expect(state.tables).toHaveLength(1);
-    expect(state.tables[0].fullName).toBe('Справочник.Валюты');
+  it('SET_METADATA updates the shared metadataCatalogRef (ТЗ §56 P1.7 — not QueryState)', () => {
+    reducer(initialState(), { type: 'SET_METADATA', tables: [mockTable] });
+    expect(metadataCatalogRef.current).toHaveLength(1);
+    expect(metadataCatalogRef.current[0].fullName).toBe('Справочник.Валюты');
   });
 
   it('ADD_FIELD_WITH_TABLE adds table and field atomically', () => {

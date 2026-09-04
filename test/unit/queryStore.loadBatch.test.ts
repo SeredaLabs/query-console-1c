@@ -8,6 +8,7 @@ import {
   buildModelFromFlat,
   tempTableDialogInitial,
   availableTempTables,
+  metadataCatalogRef,
 } from '../../src/webview/state/queryStore';
 import { generateBatch } from '../../src/core/query/sdblGenerator';
 import { parseBatch } from '../../src/core/query/sdblParser';
@@ -141,7 +142,10 @@ describe('LOAD_BATCH round-trip', () => {
     state = { ...state, expandedRefs: expanded };
     const doc = parseBatch(SINGLE);
     const after = reducer(state, { type: 'LOAD_BATCH', doc });
-    expect(after.tables).toBe(tables);
+    // ТЗ §56 P1.7: реальный каталог метаданных больше не в QueryState — LOAD_BATCH
+    // никогда не трогает metadataCatalogRef (только syntheticTables), поэтому это
+    // даже более сильная гарантия сохранности, чем прежняя reference-equality.
+    expect(metadataCatalogRef.current).toBe(tables);
     expect(after.expandedRefs).toBe(expanded);
   });
 
@@ -195,7 +199,7 @@ describe('LOAD_BATCH subquery source columns (7.8.8-fix)', () => {
     // Источник-подзапрос из текста должен получить непустой fullName для резолва колонок.
     expect(subSel!.fullName).not.toBe('');
 
-    const meta = state.tables.find(m => m.fullName === subSel!.fullName);
+    const meta = state.syntheticTables.find(m => m.fullName === subSel!.fullName);
     expect(meta).toBeDefined();
     expect(meta!.kind).toBe('ТабличнаяЧасть');
     expect(meta!.fields.map(f => f.name)).toContain('ВерсияДанных');
@@ -206,8 +210,8 @@ describe('LOAD_BATCH subquery source columns (7.8.8-fix)', () => {
       { kind: 'Справочник', name: 'Валюты', fullName: 'Справочник.Валюты', fields: [] },
     ];
     const state = reducer(initialState(), { type: 'SET_METADATA', tables });
-    const after = reducer(state, { type: 'LOAD_BATCH', doc: parseBatch(SINGLE) });
-    expect(after.tables).toBe(tables);
+    reducer(state, { type: 'LOAD_BATCH', doc: parseBatch(SINGLE) });
+    expect(metadataCatalogRef.current).toBe(tables);
   });
 
   it('round-trips the subquery source text unchanged (alias preserved)', () => {
@@ -244,7 +248,7 @@ describe('LOAD_BATCH temp-table reference (7.8.8-fix3)', () => {
     expect(vt!.tempTable).toBe(true);
     expect(vt!.subquery).toBeUndefined();
 
-    const meta = state.tables.find(m => m.fullName === 'ВТ');
+    const meta = state.syntheticTables.find(m => m.fullName === 'ВТ');
     expect(meta).toBeDefined();
     expect(meta!.kind).toBe('ТабличнаяЧасть');
     expect(meta!.fields.map(f => f.name)).toContain('asdfa');
@@ -262,7 +266,7 @@ describe('LOAD_BATCH temp-table reference (7.8.8-fix3)', () => {
     let state = reducer(initialState(), { type: 'SET_METADATA', tables });
     state = reducer(state, { type: 'LOAD_BATCH', doc: parseBatch(SINGLE) });
     expect(state.selectedTables.every(t => !t.tempTable)).toBe(true);
-    expect(state.tables.find(m => m.kind === 'ТабличнаяЧасть')).toBeUndefined();
+    expect(state.syntheticTables.find(m => m.kind === 'ТабличнаяЧасть')).toBeUndefined();
   });
 
   it('round-trips the temp-table reference text unchanged', () => {
@@ -286,7 +290,7 @@ describe('LOAD_BATCH temp-table reference (7.8.8-fix3)', () => {
     expect(vt).toBeDefined();
     expect(vt!.tempTable).toBe(true);
 
-    const meta = state.tables.find(m => m.fullName === '&ВТ');
+    const meta = state.syntheticTables.find(m => m.fullName === '&ВТ');
     expect(meta).toBeDefined();
     expect(meta!.kind).toBe('ТабличнаяЧасть');
     expect(meta!.fields.map(f => f.name)).toContain('asdfa');

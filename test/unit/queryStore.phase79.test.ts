@@ -102,12 +102,12 @@ describe('7.8.14 — UPDATE_TEMP_TABLE renames + replaces columns + prunes field
     // rename ВТТовары → ВТ2, dropping Количество (keep Товар).
     s = reducer(s, { type: 'UPDATE_TEMP_TABLE', tableId: tid, name: 'ВТ2', fields: [{ name: 'Товар' }] });
 
-    const meta = s.tables.find(t => t.fullName === 'ВТ2');
+    const meta = s.syntheticTables.find(t => t.fullName === 'ВТ2');
     expect(meta).toBeDefined();
     expect(meta!.fields.map(f => f.name)).toEqual(['Товар']);
     expect(meta!.fields[0].types).toEqual([]);
     // old synthetic meta is gone.
-    expect(s.tables.find(t => t.fullName === 'ВТТовары')).toBeUndefined();
+    expect(s.syntheticTables.find(t => t.fullName === 'ВТТовары')).toBeUndefined();
     // the selected table is renamed (same id, still tempTable).
     const sel = s.selectedTables.find(t => t.id === tid)!;
     expect(sel.fullName).toBe('ВТ2');
@@ -118,7 +118,7 @@ describe('7.8.14 — UPDATE_TEMP_TABLE renames + replaces columns + prunes field
     // a second update dropping Товар too → the selected field is pruned.
     s = reducer(s, { type: 'UPDATE_TEMP_TABLE', tableId: tid, name: 'ВТ2', fields: [] });
     expect(s.selectedFields.filter(f => f.tableId === tid && f.path === 'Товар')).toHaveLength(0);
-    const meta2 = s.tables.find(t => t.fullName === 'ВТ2');
+    const meta2 = s.syntheticTables.find(t => t.fullName === 'ВТ2');
     expect(meta2!.fields).toHaveLength(0);
   });
 
@@ -166,7 +166,7 @@ describe('7.8.15 — UPDATE_SUBQUERY_TABLE replaces subquery + columns + prunes 
     const tid = sel0.id;
     const fullName = sel0.fullName;
     // synthetic meta has both columns.
-    expect(s.tables.find(t => t.fullName === fullName)!.fields.map(f => f.name)).toEqual(['Код', 'Наименование']);
+    expect(s.syntheticTables.find(t => t.fullName === fullName)!.fields.map(f => f.name)).toEqual(['Код', 'Наименование']);
 
     s = reducer(s, { type: 'ADD_FIELD_WITH_TABLE', tableFullName: fullName, fieldPath: 'Код' });
     expect(s.selectedFields.filter(f => f.tableId === tid && f.path === 'Код')).toHaveLength(1);
@@ -174,7 +174,7 @@ describe('7.8.15 — UPDATE_SUBQUERY_TABLE replaces subquery + columns + prunes 
     // update to a doc with just Код.
     s = reducer(s, { type: 'UPDATE_SUBQUERY_TABLE', tableId: tid, subquery: docKod, columns: ['Код'] });
 
-    const meta = s.tables.find(t => t.fullName === fullName)!;
+    const meta = s.syntheticTables.find(t => t.fullName === fullName)!;
     expect(meta.fields.map(f => f.name)).toEqual(['Код']);
     expect(meta.fields[0].types).toEqual([]);
     const sel = s.selectedTables.find(t => t.id === tid)!;
@@ -185,7 +185,7 @@ describe('7.8.15 — UPDATE_SUBQUERY_TABLE replaces subquery + columns + prunes 
 
     // a second update with columns ['X'] prunes the Код selected field.
     s = reducer(s, { type: 'UPDATE_SUBQUERY_TABLE', tableId: tid, subquery: docX, columns: ['X'] });
-    expect(s.tables.find(t => t.fullName === fullName)!.fields.map(f => f.name)).toEqual(['X']);
+    expect(s.syntheticTables.find(t => t.fullName === fullName)!.fields.map(f => f.name)).toEqual(['X']);
     expect(s.selectedFields.filter(f => f.tableId === tid && f.path === 'Код')).toHaveLength(0);
   });
 

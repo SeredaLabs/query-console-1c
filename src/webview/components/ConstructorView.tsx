@@ -27,7 +27,7 @@ import type { MetaField, MetaTable } from '../../core/metadata/types';
 import type { RefId } from '../../shared/messages';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import type { QueryState, QueryAction } from '../state/queryStore';
-import { assembleMembers, batchMemberName, initialState, reducer, tempTableDialogInitial, availableTempTables } from '../state/queryStore';
+import { assembleMembers, batchMemberName, initialState, reducer, tempTableDialogInitial, availableTempTables, allTables, metadataCatalogRef } from '../state/queryStore';
 import { computeBatchTextSafe } from '../computeBatchText';
 import { deriveUnionColumns } from '../../core/query/unionModel';
 import type { QueryDocument } from '../../core/query/unionModel';
@@ -112,10 +112,15 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   // проверки в редакторе могла бы разойтись с тем, что реально проверит Apply.
   // useMemo — резолвер пересобирается только при смене состава таблиц конструктора,
   // а не на каждый ре-рендер ConstructorView (в т.ч. на каждое изменение текста).
-  const queryModalResolver = React.useMemo(
-    () => (state.tables.length ? buildResolverFromTables(state.tables) : undefined),
-    [state.tables]
-  );
+  const queryModalResolver = React.useMemo(() => {
+    const tables = allTables(state);
+    return tables.length ? buildResolverFromTables(tables) : undefined;
+    // metadataCatalogRef.current как зависимость — ТЗ §56 P1.7: реальный каталог
+    // больше не часть QueryState, но SET_METADATA всё равно возвращает НОВУЮ
+    // ссылку state (см. reducer), так что both deps корректно обнаруживают
+    // изменение состава таблиц (не на каждый ре-рендер).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.syntheticTables, metadataCatalogRef.current]);
 
   // Ручная правка текста запроса (кнопка «Применить» в модалке «Текст запроса»):
   // тот же разбор + семантическая проверка, что при открытии существующего запроса
@@ -141,7 +146,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   function fieldsForTable(tableId: string, qualified: boolean): string[] {
     const sel = state.selectedTables.find(t => t.id === tableId);
     if (!sel) return [];
-    const meta: MetaTable | undefined = state.tables.find(m => m.fullName === sel.fullName);
+    const meta: MetaTable | undefined = allTables(state).find(m => m.fullName === sel.fullName);
     if (!meta) return [];
     const alias = defaultTableAlias(sel);
     const periodFields: MetaField[] =
@@ -162,7 +167,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   const vtSel = vtDialogTableId !== null
     ? state.selectedTables.find(t => t.id === vtDialogTableId) ?? null
     : null;
-  const vtMeta = vtSel ? state.tables.find(m => m.fullName === vtSel.fullName) : undefined;
+  const vtMeta = vtSel ? allTables(state).find(m => m.fullName === vtSel.fullName) : undefined;
   const vtSlice = vtMeta?.virtual?.slice ?? 'СрезПоследних';
   const vtKind = vtMeta?.kind ?? 'РегистрСведений';
   const vtCorr = vtMeta?.virtual?.correspondence ?? false;
@@ -318,7 +323,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
       <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
         <div style={{ ...panelStyle, flex: 'none', width: dbPanelWidth }}>
           <DbTreePanel
-            tables={state.tables}
+            tables={allTables(state)}
             tempTables={availableTempTables(state)}
             expandedRefs={state.expandedRefs}
             focusedTableFullName={state.focusedDbTableFullName}
@@ -333,7 +338,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
         <ResizeHandle onResize={d => setDbPanelWidth(w => Math.max(160, w + d))} />
         <div style={{ ...panelStyle, flex: 'none', width: tablesPanelWidth }}>
           <TablesPanel
-            metaTables={state.tables}
+            metaTables={allTables(state)}
             selectedTables={state.selectedTables}
             focusedSelectedTableId={state.focusedSelectedTableId}
             expandedRefs={state.expandedRefs}
@@ -409,7 +414,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
             }}
             onDropTable={tableFullName => {
               // 7.8.6: таблица брошена в «Поля» → добавить все её поля.
-              const meta = state.tables.find(m => m.fullName === tableFullName);
+              const meta = allTables(state).find(m => m.fullName === tableFullName);
               if (!meta) return;
               dispatch({ type: 'ADD_ALL_FIELDS_WITH_TABLE', tableFullName, fieldPaths: meta.fields.map(f => f.name) });
             }}
@@ -421,7 +426,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
       {activeTab === 'Связи' && (
         <ConnectionsTab
           selectedTables={state.selectedTables}
-          metaTables={state.tables}
+          metaTables={allTables(state)}
           joins={state.joins}
           onAddJoin={() => dispatch({ type: 'ADD_JOIN' })}
           onRemoveJoin={index => dispatch({ type: 'REMOVE_JOIN', index })}
@@ -449,7 +454,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
         <GroupingTab
           selectedTables={state.selectedTables}
           selectedFields={state.selectedFields}
-          metaTables={state.tables}
+          metaTables={allTables(state)}
           grouping={state.grouping}
           onSetMultiple={multiple => dispatch({ type: 'SET_GROUPING_MULTIPLE', multiple })}
           onAddGroupField={(tableId, path) => dispatch({ type: 'ADD_GROUP_FIELD', tableId, path })}
@@ -467,7 +472,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
       {activeTab === 'Условия' && (
         <ConditionsTab
           selectedTables={state.selectedTables}
-          metaTables={state.tables}
+          metaTables={allTables(state)}
           conditions={state.conditions}
           expandedRefs={state.expandedRefs}
           onExpandRef={onExpandRef}
@@ -560,7 +565,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
         <TotalsTab
           selectedTables={state.selectedTables}
           selectedFields={state.selectedFields}
-          metaTables={state.tables}
+          metaTables={allTables(state)}
           totals={state.totals}
           onAddGroupField={(tableId, path) => dispatch({ type: 'ADD_TOTAL_GROUP_FIELD', tableId, path })}
           onRemoveGroupField={(tableId, path) => dispatch({ type: 'REMOVE_TOTAL_GROUP_FIELD', tableId, path })}
@@ -577,7 +582,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
         <BuilderTab
           selectedTables={state.selectedTables}
           selectedFields={state.selectedFields}
-          metaTables={state.tables}
+          metaTables={allTables(state)}
           builder={state.builder}
           onAdd={(section, field) => dispatch({ type: 'ADD_BUILDER_FIELD', section, field })}
           onRemove={(section, index) => dispatch({ type: 'REMOVE_BUILDER_FIELD', section, index })}
@@ -655,7 +660,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
       {/* 7.8.8 / 7.8.15: вложенный рекурсивный конструктор подзапроса. */}
       {subqueryEditor && (
         <NestedConstructorModal
-          metadataTables={state.tables}
+          metadataTables={allTables(state)}
           expandedRefs={state.expandedRefs}
           onExpandRef={onExpandRef}
           initialDoc={subqueryEditor.initialDoc}
@@ -801,10 +806,16 @@ interface NestedConstructorModalProps {
 function NestedConstructorModal({ metadataTables, expandedRefs, onExpandRef, initialDoc, onOk, onCancel, queryTextEditorV2 }: NestedConstructorModalProps): React.ReactElement {
   const [nestedState, nestedDispatch] = useReducer(reducer, undefined, initialState);
 
-  // Посев метаданных и предзаполнения — только на mount. Повторная синхронизация
-  // tables затёрла бы синтетические таблицы (ВТ/подзапросы), добавленные внутри.
+  // Посев предзаполнения — только на mount. ТЗ §56 P1.7: SET_METADATA больше НЕ
+  // диспатчится здесь — metadataCatalogRef общий на весь webview (одна реальная
+  // конфигурация 1С), уже заполнен верхним ConstructorView из настоящего
+  // metadataTree; повторный дубль-дисптач с `metadataTables` (а это ЧУЖОЙ,
+  // объединённый список: каталог + СИНТЕТИЧЕСКИЕ таблицы ВНЕШНЕГО запроса, см.
+  // allTables(state) на месте вызова) перезаписал бы общий ref и сломал бы
+  // изоляцию между внешним и вложенным конструктором — раньше, при отдельном
+  // поле `state.tables` на КАЖДЫЙ инстанс `useReducer`, эта путаница была не
+  // видна (перезаписывалась только своя копия).
   useEffect(() => {
-    nestedDispatch({ type: 'SET_METADATA', tables: metadataTables });
     if (initialDoc) {
       nestedDispatch({ type: 'LOAD_BATCH', doc: { members: [initialDoc] } });
     }

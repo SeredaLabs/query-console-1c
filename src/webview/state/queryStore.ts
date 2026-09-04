@@ -95,7 +95,11 @@ export interface BatchSnapshot {
 }
 
 export interface QueryState {
-  tables: MetaTable[];
+  /** ТОЛЬКО синтетические источники (подзапросы/временные таблицы, см.
+   * `syntheticSourceTable`) — реальный каталог метаданных хоста в `QueryState`
+   * НЕ хранится (ТЗ §56 P1.7 "MetaTable[] покидает QueryState"), см.
+   * `metadataCatalogRef`/`allTables` ниже. */
+  syntheticTables: MetaTable[];
   selectedTables: SelectedTable[];
   selectedFields: SelectedField[];
   tabSectionFields: SelectedTabSectionField[];
@@ -245,9 +249,29 @@ export type QueryAction =
   | { type: 'CLEAR_INDEX_FIELDS'; index: number }
   | { type: 'MOVE_INDEX_FIELD'; index: number; tableId: string; path: string; dir: 'up' | 'down' };
 
+/**
+ * Каталог реальных метаданных хоста (ТЗ §56 P1.7) — живёт ВНЕ `QueryState`,
+ * обновляется `SET_METADATA` как побочный эффект (единственное отступление от
+ * чистоты редюсера здесь: React StrictMode в этом webview не используется,
+ * см. main.tsx — двойной вызов редюсера в dev не грозит). Тот же паттерн, что
+ * и `metaTablesRef` в App.tsx (там — узкий locale для построения резолвера
+ * при валидации текста); здесь — единый источник для ВСЕХ читателей, включая
+ * сам редюсер (`uniqueSourceName`/`ADD_ALL_FIELDS_DUP`/LOAD_BATCH и т. д.),
+ * которым без этого пришлось бы протаскивать каталог через каждый action.
+ */
+export interface MetadataCatalogRef { current: MetaTable[] }
+export const metadataCatalogRef: MetadataCatalogRef = { current: [] };
+
+/** Реальные метаданные хоста + синтетические источники запроса вместе — то,
+ * что раньше было единым `state.tables`. Читатели (ConstructorView и т. п.)
+ * зовут это вместо прямого чтения поля состояния. */
+export function allTables(state: QueryState): MetaTable[] {
+  return [...metadataCatalogRef.current, ...state.syntheticTables];
+}
+
 export function initialState(): QueryState {
   return {
-    tables: [],
+    syntheticTables: [],
     selectedTables: [],
     selectedFields: [],
     tabSectionFields: [],
@@ -292,7 +316,7 @@ function syntheticSourceTable(fullName: string, fields: MetaField[]): MetaTable 
 /** Уникальное имя источника среди метатаблиц и уже выбранных таблиц (base, base2, …). */
 function uniqueSourceName(state: QueryState, base: string): string {
   const taken = new Set<string>([
-    ...state.tables.map(t => t.fullName),
+    ...allTables(state).map(t => t.fullName),
     ...state.selectedTables.map(t => t.fullName),
   ]);
   if (!taken.has(base)) return base;
@@ -518,7 +542,12 @@ function updateJoinConjunct(
 export function reducer(state: QueryState, action: QueryAction): QueryState {
   switch (action.type) {
     case 'SET_METADATA':
-      return { ...state, tables: action.tables };
+      // ТЗ §56 P1.7: реальный каталог метаданных хоста больше не хранится в
+      // QueryState — обновляем общий metadataCatalogRef (см. выше) и возвращаем
+      // НОВУЮ ссылку на state (пустой spread), чтобы React перерендерил
+      // читателей allTables(state)/metadataCatalogRef.current.
+      metadataCatalogRef.current = action.tables;
+      return { ...state };
 
     case 'SET_REF_FIELDS': {
       const key = `${action.ref.kind}.${action.ref.name}`;
@@ -680,7 +709,7 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
       // дубли разрешены (ordinal-синонимы по правилу 7.8.11).
       const sel = state.selectedTables.find(t => t.id === action.tableId);
       if (!sel) return state;
-      const meta = state.tables.find(m => m.fullName === sel.fullName);
+      const meta = allTables(state).find(m => m.fullName === sel.fullName);
       if (!meta) return state;
       const selectedFields = [...state.selectedFields];
       for (const field of meta.fields) {
@@ -744,7 +773,7 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
       const sel: SelectedTable = { id, fullName, subquery: action.subquery };
       return {
         ...state,
-        tables: [...state.tables, meta],
+        syntheticTables: [...state.syntheticTables, meta],
         selectedTables: [...state.selectedTables, sel],
         focusedSelectedTableId: id,
       };
@@ -761,7 +790,7 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
       const id = `t${++_tableCounter}`;
       return {
         ...state,
-        tables: [...state.tables, meta],
+        syntheticTables: [...state.syntheticTables, meta],
         selectedTables: [...state.selectedTables, { id, fullName, tempTable: true }],
         focusedSelectedTableId: id,
       };
@@ -778,7 +807,7 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
         newFullName = oldFullName;
       } else {
         const taken = new Set<string>([
-          ...state.tables.filter(t => t.fullName !== oldFullName).map(t => t.fullName),
+          ...allTables(state).filter(t => t.fullName !== oldFullName).map(t => t.fullName),
           ...state.selectedTables.filter(t => t.id !== action.tableId).map(t => t.fullName),
         ]);
         if (!taken.has(trimmed)) {
@@ -794,7 +823,7 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
         .filter(f => f.name.trim())
         .map(f => ({ name: f.name.trim(), kind: 'attribute', types: [] }));
       const newMeta = syntheticSourceTable(newFullName, newFields);
-      const tables = state.tables.map(t => (t.fullName === oldFullName ? newMeta : t));
+      const syntheticTables = state.syntheticTables.map(t => (t.fullName === oldFullName ? newMeta : t));
       const selectedTables = state.selectedTables.map(t =>
         t.id === action.tableId ? { ...t, fullName: newFullName } : t
       );
@@ -837,7 +866,7 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
         })),
       };
 
-      return { ...state, tables, selectedTables, selectedFields, grouping, order, totals, indexing };
+      return { ...state, syntheticTables, selectedTables, selectedFields, grouping, order, totals, indexing };
     }
 
     case 'UPDATE_SUBQUERY_TABLE': {
@@ -848,7 +877,7 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
       const fullName = sel.fullName;
       const newFields: MetaField[] = action.columns.map(c => ({ name: c, kind: 'attribute', types: [] }));
       const newMeta = syntheticSourceTable(fullName, newFields);
-      const tables = state.tables.map(t => (t.fullName === fullName ? newMeta : t));
+      const syntheticTables = state.syntheticTables.map(t => (t.fullName === fullName ? newMeta : t));
       const selectedTables = state.selectedTables.map(t =>
         t.id === action.tableId ? { ...t, subquery: action.subquery } : t
       );
@@ -891,7 +920,7 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
         })),
       };
 
-      return { ...state, tables, selectedTables, selectedFields, grouping, order, totals, indexing };
+      return { ...state, syntheticTables, selectedTables, selectedFields, grouping, order, totals, indexing };
     }
 
     case 'ADD_TAB_SECTION_WITH_TABLE': {
@@ -1474,10 +1503,10 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
       syncTableCounter(action.doc);
       // Синтез метатаблиц источников-подзапросов и ссылок на ВТ ДО docToSnapshot
       // (мутирует fullName/tempTable тех же объектов SelectedTable, которые попадут в
-      // снимок). Новый массив tables создаём только при наличии синтетики — иначе
-      // ссылка на tables сохраняется.
-      const subqueryMetas = synthesizeSubqueryTables(action.doc, new Set(state.tables.map(t => t.fullName)));
-      const known = new Set([...state.tables.map(t => t.fullName), ...subqueryMetas.map(m => m.fullName)]);
+      // снимок). Новый массив syntheticTables создаём только при наличии синтетики —
+      // иначе ссылка на syntheticTables сохраняется.
+      const subqueryMetas = synthesizeSubqueryTables(action.doc, new Set(allTables(state).map(t => t.fullName)));
+      const known = new Set([...allTables(state).map(t => t.fullName), ...subqueryMetas.map(m => m.fullName)]);
       const tempMetas = synthesizeTempTables(action.doc, known);
       const newMetas = [...subqueryMetas, ...tempMetas];
       const snaps = action.doc.members.map(docToSnapshot);
@@ -1485,7 +1514,7 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
       savedQueries[0] = null;
       return {
         ...state,
-        ...(newMetas.length > 0 ? { tables: [...state.tables, ...newMetas] } : {}),
+        ...(newMetas.length > 0 ? { syntheticTables: [...state.syntheticTables, ...newMetas] } : {}),
         activeBatch: 0,
         batchSaved: snaps.map((s, i) => (i === 0 ? null : s)),
         queryList: snaps[0].queryList,

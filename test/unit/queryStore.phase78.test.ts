@@ -88,7 +88,7 @@ describe('7.8.9 ADD_TEMP_TABLE', () => {
         { name: 'Количество' },
       ],
     });
-    const meta = s.tables.find(t => t.fullName === 'ВТТовары');
+    const meta = s.syntheticTables.find(t => t.fullName === 'ВТТовары');
     expect(meta).toBeDefined();
     // 'ТабличнаяЧасть' kind keeps it out of DbTreePanel groups.
     expect(meta!.kind).toBe('ТабличнаяЧасть');
@@ -122,7 +122,7 @@ describe('7.8.8 ADD_SUBQUERY_TABLE', () => {
 
     let s = initialState();
     s = reducer(s, { type: 'ADD_SUBQUERY_TABLE', name: 'ВложенныйЗапрос', subquery: doc, columns });
-    const meta = s.tables.find(t => t.fullName === 'ВложенныйЗапрос');
+    const meta = s.syntheticTables.find(t => t.fullName === 'ВложенныйЗапрос');
     expect(meta).toBeDefined();
     expect(meta!.fields.map(f => f.name)).toContain('Код');
     const sel = s.selectedTables.find(t => t.fullName === 'ВложенныйЗапрос');

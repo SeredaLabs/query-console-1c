@@ -18,7 +18,7 @@ export function emptyBuilder(): ReportBuilder {
 export function tempTableDialogInitial(state: QueryState, editId: string): { name: string; fields: { name: string }[] } | undefined {
   const sel = state.selectedTables.find(t => t.id === editId);
   if (!sel) return undefined;
-  const meta = state.tables.find(t => t.fullName === sel.fullName);
+  const meta = state.syntheticTables.find(t => t.fullName === sel.fullName);
   if (!meta) return undefined;
   return { name: sel.fullName, fields: meta.fields.map(f => ({ name: f.name })) };
 }
