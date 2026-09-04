@@ -11,12 +11,16 @@
  * части, множественные виды метаданных).
  *
  * В репозитории нет исходного XML для БСП (только уже распарсенный YAML —
- * см. docs/corpus-testing.md) — поэтому вход здесь тот же, что получил бы
- * `buildMetadataSnapshotFromXml` ПОСЛЕ своего шага `parseConfiguration`:
- * `loadMetadataFromYaml` на уже закоммиченном YAML-каталоге. XML→YAML для этой
- * фикстуры не тестируется здесь (её и нельзя протестировать без исходного XML) —
- * важна ТОЛЬКО эквивалентность old-vs-new на уровне снимка (ТЗ §55 P1.3
- * "old-vs-new migration comparison").
+ * см. docs/corpus-testing.md), поэтому здесь снимок строится НЕ через
+ * `buildMetadataSnapshotFromXml` (тот теперь идёт direct-путём прямо от XML,
+ * см. snapshotBuilder.ts) — из XML для этой фикстуры собрать нечего. Вместо
+ * этого `commitMetadataSnapshot` вызывается напрямую над моделью от
+ * `loadMetadataFromYaml` на уже закоммиченном YAML-каталоге — эквивалентность
+ * direct-пути XML→YAML-пути на РЕАЛЬНОМ масштабе отдельно доказана в
+ * snapshotBuilder.test.ts (на маленькой XML-фикстуре, где оба пути доступны).
+ * Здесь важна ТОЛЬКО эквивалентность old-vs-new на уровне снимка (ТЗ §55 P1.3
+ * "old-vs-new migration comparison") — снимок против существующего production
+ * JSON-cache (`loadMetadataCached`) на боевом масштабе.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';

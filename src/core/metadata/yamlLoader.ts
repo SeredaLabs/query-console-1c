@@ -203,61 +203,32 @@ function mergeCommonAttributes(tables: MetaTable[], commonAttributes: ParsedComm
   }
 }
 
-export function loadMetadataFromYaml(cfYamlDir: string): MetadataModel {
-  const empty: MetadataModel = { version: 1, tables: [] };
-
-  const configPath = path.join(cfYamlDir, 'configuration.yaml');
-  if (!fs.existsSync(configPath)) {
-    return empty;
-  }
-
-  let index: ConfigurationIndex;
-  try {
-    const raw = fs.readFileSync(configPath, 'utf8');
-    index = parse(raw) as ConfigurationIndex;
-  } catch {
-    return empty;
-  }
-
-  if (!index?.objects?.length) {
-    return empty;
-  }
-
+/**
+ * Конверсия уже разобранных объектов (`ParsedObject[]`, из YAML ИЛИ напрямую из
+ * XML — см. `snapshotBuilder.ts`/`xmlScan.ts`, PR-08 completion) в `MetadataModel`.
+ * Извлечено из `loadMetadataFromYaml` без изменения поведения (чистое выделение) —
+ * эта логика не знает и не должна знать, откуда взялись `objects` (YAML-файлы или
+ * прямой разбор XML), поэтому она не должна дублироваться для второго источника.
+ * `objects` предполагается уже отфильтрованным по `SUPPORTED_KINDS` (как это
+ * делает `loadMetadataFromYaml`) — сам `buildMetadataModel` кинды не фильтрует,
+ * т.к. `xmlScan.ts`'s `HANDLERS` порождают только поддерживаемые кинды по
+ * построению (см. xmlScan.ts).
+ */
+export function buildMetadataModel(objects: ParsedObject[], commonAttributes: ParsedCommonAttribute[]): MetadataModel {
   const charts = new Map<string, AccChartInfo>();
-  for (const entry of index.objects) {
-    if (entry.type !== 'ПланСчетов') continue;
-    const fp = path.join(cfYamlDir, entry.file);
-    if (!fs.existsSync(fp)) continue;
-    try {
-      const o = parse(fs.readFileSync(fp, 'utf8')) as ParsedObject;
-      const p = o?.properties as { maxExtDimensionCount?: number; extDimensionTypes?: string } | undefined;
-      charts.set(o.name, {
-        maxExtDimensionCount: p?.maxExtDimensionCount ?? 0,
-        extDimensionTypes: p?.extDimensionTypes ?? '',
-      });
-    } catch { /* пропустить нечитаемый план счетов */ }
+  for (const obj of objects) {
+    if (obj.kind !== 'ПланСчетов') continue;
+    const p = obj.properties as { maxExtDimensionCount?: number; extDimensionTypes?: string } | undefined;
+    charts.set(obj.name, {
+      maxExtDimensionCount: p?.maxExtDimensionCount ?? 0,
+      extDimensionTypes: p?.extDimensionTypes ?? '',
+    });
   }
 
   const tables: MetaTable[] = [];
 
-  for (const entry of index.objects) {
-    if (!SUPPORTED_KINDS.has(entry.type)) {
-      continue;
-    }
-
-    const filePath = path.join(cfYamlDir, entry.file);
-    if (!fs.existsSync(filePath)) {
-      continue;
-    }
-
-    let obj: ParsedObject;
-    try {
-      const raw = fs.readFileSync(filePath, 'utf8');
-      obj = parse(raw) as ParsedObject;
-      if (!obj || !obj.name || !obj.kind) continue;
-    } catch {
-      continue;
-    }
+  for (const obj of objects) {
+    if (!obj || !obj.name || !obj.kind) continue;
 
     const metaTable = parsedObjectToMetaTable(obj);
     // Регистр бухгалтерии: пробрасываем число субконто плана счетов и корреспонденцию
@@ -286,9 +257,44 @@ export function loadMetadataFromYaml(cfYamlDir: string): MetadataModel {
     }
   }
 
-  if (index.commonAttributes?.length) {
-    mergeCommonAttributes(tables, index.commonAttributes);
+  if (commonAttributes.length) {
+    mergeCommonAttributes(tables, commonAttributes);
   }
 
   return { version: 1, tables };
+}
+
+export function loadMetadataFromYaml(cfYamlDir: string): MetadataModel {
+  const empty: MetadataModel = { version: 1, tables: [] };
+
+  const configPath = path.join(cfYamlDir, 'configuration.yaml');
+  if (!fs.existsSync(configPath)) {
+    return empty;
+  }
+
+  let index: ConfigurationIndex;
+  try {
+    const raw = fs.readFileSync(configPath, 'utf8');
+    index = parse(raw) as ConfigurationIndex;
+  } catch {
+    return empty;
+  }
+
+  if (!index?.objects?.length) {
+    return empty;
+  }
+
+  const objects: ParsedObject[] = [];
+  for (const entry of index.objects) {
+    if (!SUPPORTED_KINDS.has(entry.type)) continue;
+    const filePath = path.join(cfYamlDir, entry.file);
+    if (!fs.existsSync(filePath)) continue;
+    try {
+      const obj = parse(fs.readFileSync(filePath, 'utf8')) as ParsedObject;
+      if (!obj || !obj.name || !obj.kind) continue;
+      objects.push(obj);
+    } catch { /* пропустить нечитаемый объект */ }
+  }
+
+  return buildMetadataModel(objects, index.commonAttributes ?? []);
 }

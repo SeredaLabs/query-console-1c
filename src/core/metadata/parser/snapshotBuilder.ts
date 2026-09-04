@@ -8,15 +8,16 @@
  * atomic-switch guarantees that already protect the YAML generation apply to a
  * JSON snapshot exactly as-is, with zero changes to generationStore.ts.
  *
- * `buildMetadataSnapshotFromXml` reuses the CURRENT production path unchanged —
- * `parseConfiguration` (which itself calls the per-object-kind XML handlers) to
- * build/commit the YAML generation, then the already-exported
- * `loadMetadataFromYaml` to get a `MetadataModel` — rather than re-implementing
- * XML traversal/per-object issue-tracking a second time to reach the same
- * `MetaTable[]` a different way (see PR-08 investigation: that traversal lives
- * entirely inside `parseConfiguration.ts` and is not separable from YAML-writing
- * without duplicating it). The only genuinely new step is committing the
- * resulting model as a versioned JSON snapshot alongside the YAML generation.
+ * `buildMetadataSnapshotFromXml` reuses the SAME per-object-kind XML handlers as
+ * the production YAML path (`xmlScan.ts`'s `scanConfigurationObjects`/
+ * `scanCommonAttributes`, extracted from `parseConfiguration.ts` without changing
+ * its behavior) and the SAME `ParsedObject[] -> MetadataModel` conversion as the
+ * production YAML path (`yamlLoader.ts`'s `buildMetadataModel`, extracted from
+ * `loadMetadataFromYaml` without changing its behavior) — but skips the YAML
+ * file round-trip entirely: XML is parsed directly into memory, converted
+ * directly into a `MetadataModel`, and committed as JSON. This is "direct" per
+ * §55 P1.2's wording, not merely "reuses `parseConfiguration` as a black box"
+ * (an earlier version of this function did the latter — see git history).
  *
  * `snapshotOutPath` MUST be a directory root DIFFERENT from the YAML build's
  * `outPath` — `generationStore.ts` hardcodes a `cf`/`cf-managed` child name
@@ -30,10 +31,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   cleanupStaleSiblings, stagingDirFor, finalizeStaging, commitGeneration,
-  type CommitResult,
+  type CommitResult, type MetadataBuildIssue,
 } from './generationStore';
-import { parseConfiguration, type ParseSummary } from './parseConfiguration';
-import { loadMetadataFromYaml } from '../yamlLoader';
+import { scanConfigurationObjects, scanCommonAttributes } from './xmlScan';
+import { buildMetadataModel } from '../yamlLoader';
 import type { MetadataModel } from '../types';
 
 /** Расширяется только когда предыдущий persisted-формат перестаёт гарантировать
@@ -75,20 +76,24 @@ export function readMetadataSnapshot(committedDir: string): MetadataSnapshotFile
 }
 
 export interface SnapshotBuildResult {
-  yaml: ParseSummary;
   snapshot: CommitResult;
   model: MetadataModel;
+  /** Recoverable per-object проблемы разбора (ТЗ §8) — та же семантика, что и
+   * `ParseSummary.issues` у `parseConfiguration.ts` (per-object failure не
+   * останавливает сборку снимка). */
+  issues: MetadataBuildIssue[];
 }
 
-/** End-to-end прототип: XML → (существующий) parseConfiguration → (существующий)
- * loadMetadataFromYaml → committed JSON snapshot. См. комментарий модуля. */
-export function buildMetadataSnapshotFromXml(
-  cfPath: string,
-  yamlOutPath: string,
-  snapshotOutPath: string,
-): SnapshotBuildResult {
-  const yaml = parseConfiguration(cfPath, yamlOutPath);
-  const model = loadMetadataFromYaml(yaml.outCfDir);
+/**
+ * Direct end-to-end прототип (ТЗ §55 P1.2): XML → (общие с production YAML-
+ * путём) обработчики `xmlScan.ts` → (общая с production YAML-путём) конверсия
+ * `buildMetadataModel` → committed JSON snapshot. НЕ строит и не читает YAML —
+ * см. комментарий модуля.
+ */
+export function buildMetadataSnapshotFromXml(cfPath: string, snapshotOutPath: string): SnapshotBuildResult {
+  const { objects, issues } = scanConfigurationObjects(cfPath);
+  const commonAttributes = scanCommonAttributes(cfPath, issues);
+  const model = buildMetadataModel(objects, commonAttributes);
   const snapshot = commitMetadataSnapshot(model, snapshotOutPath);
-  return { yaml, snapshot, model };
+  return { snapshot, model, issues };
 }

@@ -2,55 +2,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parseXml, firstElementChild, childByLocalName, nodeText, clean } from './dom';
 import { writeYaml } from './yamlWriter';
-import { parseCatalog } from './catalog';
-import { parseDocument } from './document';
-import { parseConstant } from './constant';
-import { parseEnum } from './enum';
-import { parseExchangePlan } from './exchangePlan';
-import { parseChartOfCharacteristicTypes } from './chartOfCharacteristicTypes';
-import { parseChartOfAccounts } from './chartOfAccounts';
-import { parseChartOfCalculationTypes } from './chartOfCalculationTypes';
-import { parseBusinessProcess } from './businessProcess';
-import { parseTask } from './task';
-import { parseInformationRegister } from './informationRegister';
-import { parseAccumulationRegister } from './accumulationRegister';
-import { parseAccountingRegister } from './accountingRegister';
-import { parseCalculationRegister } from './calculationRegister';
-import { parseSequence } from './sequence';
-import { parseDocumentJournal } from './documentJournal';
-import { parseFilterCriteria } from './filterCriteria';
-import { parseCommonAttribute } from './commonAttribute';
-import type { ParsedObject, ParsedCommonAttribute } from './model';
+import type { ParsedCommonAttribute } from './model';
 import {
   cleanupStaleSiblings, stagingDirFor, finalizeStaging, commitGeneration,
   type MetadataBuildIssue,
 } from './generationStore';
+import { scanConfigurationObjects, scanCommonAttributes } from './xmlScan';
 export type { MetadataBuildIssue } from './generationStore';
-
-interface TypeHandler {
-  subdir: string;
-  parse: (el: any) => ParsedObject | null;
-}
-
-const HANDLERS: TypeHandler[] = [
-  { subdir: 'Catalogs',                    parse: parseCatalog },
-  { subdir: 'Documents',                   parse: parseDocument },
-  { subdir: 'Constants',                   parse: parseConstant },
-  { subdir: 'Enums',                       parse: parseEnum },
-  { subdir: 'ExchangePlans',               parse: parseExchangePlan },
-  { subdir: 'ChartsOfCharacteristicTypes', parse: parseChartOfCharacteristicTypes },
-  { subdir: 'ChartsOfAccounts',            parse: parseChartOfAccounts },
-  { subdir: 'ChartsOfCalculationTypes',    parse: parseChartOfCalculationTypes },
-  { subdir: 'BusinessProcesses',           parse: parseBusinessProcess },
-  { subdir: 'Tasks',                       parse: parseTask },
-  { subdir: 'InformationRegisters',        parse: parseInformationRegister },
-  { subdir: 'AccumulationRegisters',       parse: parseAccumulationRegister },
-  { subdir: 'AccountingRegisters',         parse: parseAccountingRegister },
-  { subdir: 'CalculationRegisters',        parse: parseCalculationRegister },
-  { subdir: 'Sequences',                   parse: parseSequence },
-  { subdir: 'DocumentJournals',            parse: parseDocumentJournal },
-  { subdir: 'FilterCriteria',              parse: parseFilterCriteria },
-];
 
 export interface ParseSummary {
   counts: Record<string, number>;
@@ -95,57 +53,37 @@ export function parseConfiguration(cfPath: string, outPath: string): ParseSummar
   fs.mkdirSync(stagingDir, { recursive: true });
 
   const counts: Record<string, number> = {};
-  let skipped = 0;
   const objects: IndexEntry[] = [];
-  const issues: MetadataBuildIssue[] = [];
+
+  // Обход XML → ParsedObject[] переиспользован как есть из xmlScan.ts (PR-08
+  // completion) — тот же самый код, что производит ParsedObject для прямого
+  // JSON-снимка (snapshotBuilder.ts), без изменения поведения этого пути:
+  // `issues`/`skipped` для parse-стадии остаются побайтово теми же.
+  const { objects: parsedObjects, issues } = scanConfigurationObjects(cfPath);
+  let skipped = issues.length;
 
   try {
-    for (const h of HANDLERS) {
-      const dir = path.join(cfPath, h.subdir);
-      if (!fs.existsSync(dir)) continue;
-      for (const file of fs.readdirSync(dir)) {
-        if (!file.endsWith('.xml')) continue;
-        const source = `${h.subdir}/${file}`;
-        let obj: ParsedObject | null = null;
-        let parseFailure: string | undefined;
-        try {
-          const xml = fs.readFileSync(path.join(dir, file), 'utf8');
-          const doc = parseXml(xml);
-          // parseXml/firstElementChild/h.parse деградируют до null на плохом XML,
-          // а не бросают (см. test/unit/cfParser.test.ts) — это НЕ то же самое,
-          // что "нет ошибки": без явного сообщения ниже такой файл молча пропадал
-          // бы из диагностики (§8 требует видимость recoverable-проблем).
-          const objectEl = doc ? firstElementChild(doc.documentElement) : null;
-          obj = objectEl ? h.parse(objectEl) : null;
-          if (!obj) parseFailure = doc ? 'не найден распознаваемый объект в XML' : 'не удалось разобрать XML';
-        } catch (e) {
-          parseFailure = message(e);
-          obj = null;
-        }
-        if (!obj) {
-          issues.push({ file: source, stage: 'parse', message: parseFailure ?? 'неизвестная ошибка разбора', fatal: false });
-          skipped++;
-          continue;
-        }
-        obj.source = source;
-        try {
-          writeYaml(path.join(stagingDir, h.subdir, `${obj.name}.yaml`), obj);
-        } catch (e) {
-          issues.push({ file: source, stage: 'write', message: message(e), fatal: false });
-          skipped++;
-          continue;
-        }
-        counts[obj.kind] = (counts[obj.kind] || 0) + 1;
-        objects.push({
-          type: obj.kind,
-          name: obj.name,
-          fullName: obj.fullName,
-          file: `${h.subdir}/${obj.name}.yaml`,
-        });
+    for (const obj of parsedObjects) {
+      // obj.source всегда задан scanConfigurationObjects как `${subdir}/${file}`
+      // (тот же subdir, что раньше использовался напрямую для пути записи).
+      const subdir = path.dirname(obj.source!);
+      try {
+        writeYaml(path.join(stagingDir, subdir, `${obj.name}.yaml`), obj);
+      } catch (e) {
+        issues.push({ file: obj.source, stage: 'write', message: message(e), fatal: false });
+        skipped++;
+        continue;
       }
+      counts[obj.kind] = (counts[obj.kind] || 0) + 1;
+      objects.push({
+        type: obj.kind,
+        name: obj.name,
+        fullName: obj.fullName,
+        file: `${subdir}/${obj.name}.yaml`,
+      });
     }
 
-    const commonAttributes = parseCommonAttributes(cfPath, issues);
+    const commonAttributes = scanCommonAttributes(cfPath, issues);
 
     try {
       writeConfigurationIndex(cfPath, stagingDir, objects, commonAttributes);
@@ -164,25 +102,6 @@ export function parseConfiguration(cfPath: string, outPath: string): ParseSummar
 
 function message(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
-}
-
-function parseCommonAttributes(cfPath: string, issues: MetadataBuildIssue[]): ParsedCommonAttribute[] {
-  const dir = path.join(cfPath, 'CommonAttributes');
-  if (!fs.existsSync(dir)) return [];
-  const result: ParsedCommonAttribute[] = [];
-  for (const file of fs.readdirSync(dir).sort()) {
-    if (!file.endsWith('.xml')) continue;
-    try {
-      const xml = fs.readFileSync(path.join(dir, file), 'utf8');
-      const doc = parseXml(xml);
-      const el = doc ? firstElementChild(doc.documentElement) : null;
-      const ca = el ? parseCommonAttribute(el) : null;
-      if (ca) result.push(ca);
-    } catch (e) {
-      issues.push({ file: `CommonAttributes/${file}`, stage: 'parse', message: message(e), fatal: false });
-    }
-  }
-  return result;
 }
 
 function writeConfigurationIndex(

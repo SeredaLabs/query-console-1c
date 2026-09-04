@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { loadMetadataFromYaml } from '../../src/core/metadata/yamlLoader';
+import { parseConfiguration } from '../../src/core/metadata/parser/parseConfiguration';
 import { isOwnedGeneration, resolveManagedCfDir } from '../../src/core/metadata/parser/generationStore';
 import {
   commitMetadataSnapshot, readMetadataSnapshot, buildMetadataSnapshotFromXml,
@@ -65,17 +66,16 @@ describe('commitMetadataSnapshot / readMetadataSnapshot — та же safety-и�
   });
 });
 
-describe('buildMetadataSnapshotFromXml — сквозной прототип на реальной фикстуре', () => {
-  it('снимок теряет данные не больше, чем сама YAML-генерация (тот же MetadataModel)', () => {
+describe('buildMetadataSnapshotFromXml — direct-путь (без YAML) на реальной фикстуре', () => {
+  it('снимок не теряет данные и не расходится с независимо построенным YAML-путём (old-vs-new)', () => {
     const root = freshTmpDir();
     const cfPath = path.join(root, 'cf-src');
     fs.cpSync(FIXTURE_CF, cfPath, { recursive: true });
-    const yamlOutPath = path.join(root, 'yaml-out');
     const snapshotOutPath = path.join(root, 'snapshot-out');
 
-    const built = buildMetadataSnapshotFromXml(cfPath, yamlOutPath, snapshotOutPath);
+    const built = buildMetadataSnapshotFromXml(cfPath, snapshotOutPath);
 
-    expect(built.yaml.issues).toEqual([]);
+    expect(built.issues).toEqual([]);
     expect(built.model.tables.length).toBeGreaterThan(0);
 
     // Снимок должен нести РОВНО ту же модель, что уже построена и возвращена
@@ -83,13 +83,15 @@ describe('buildMetadataSnapshotFromXml — сквозной прототип н�
     const persisted = readMetadataSnapshot(built.snapshot.targetDir);
     expect(persisted.model).toEqual(built.model);
 
-    // И независимо: снимок эквивалентен тому, что даёт существующий production
-    // путь (loadMetadataFromYaml на том же committed YAML-каталоге) — снимок не
-    // расходится с уже проверенной конверсией.
-    const viaYaml = loadMetadataFromYaml(built.yaml.outCfDir);
+    // Old-vs-new (ТЗ §55 P1.3): НЕЗАВИСИМО строим ту же конфигурацию через
+    // существующий production YAML-путь (parseConfiguration + loadMetadataFromYaml,
+    // отдельный XML→YAML прогон, не используемый direct-путём вообще) и сверяем
+    // итоговую модель — совпадение доказывает, что пропуск YAML-прослойки не
+    // меняет результат, а не просто "работает без исключений".
+    const yamlOutPath = path.join(root, 'yaml-out');
+    const yamlSummary = parseConfiguration(cfPath, yamlOutPath);
+    expect(yamlSummary.issues).toEqual([]);
+    const viaYaml = loadMetadataFromYaml(yamlSummary.outCfDir);
     expect(persisted.model).toEqual(viaYaml);
-
-    // Снимок закоммичен в СВОЙ, отдельный от YAML, каталог (не коллизия).
-    expect(built.snapshot.targetDir).not.toBe(built.yaml.outCfDir);
   });
 });
