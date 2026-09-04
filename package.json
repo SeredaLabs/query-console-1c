@@ -102,6 +102,7 @@
     "corpus:test": "esbuild src/cli/corpusTest.ts --bundle --outfile=out/cli/corpusTest.js --platform=node --format=cjs && node out/cli/corpusTest.js",
     "corpus:snapshot": "esbuild src/cli/corpusSnapshot.ts --bundle --outfile=out/cli/corpusSnapshot.js --platform=node --format=cjs && node out/cli/corpusSnapshot.js",
     "corpus:classify": "esbuild tooling/corpus-verify/corpusClassify.ts --bundle --outfile=out/corpus-verify/corpusClassify.js --platform=node --format=cjs --packages=external && node out/corpus-verify/corpusClassify.js",
+    "bench:metadata": "npx tsx --expose-gc bench/metadataPerf.ts",
     "build:oracle": "esbuild src/cli/harvestOracle.ts --bundle --outfile=out/cli/harvestOracle.js --platform=node --format=cjs && esbuild src/cli/oracleAcceptCli.ts --bundle --outfile=out/cli/oracleAcceptCli.js --platform=node --format=cjs",
     "harvest": "npm run build:oracle && node out/cli/harvestOracle.js",
     "accept:oracle": "npm run build:oracle && node out/cli/oracleAcceptCli.js",
