@@ -4,10 +4,9 @@ import * as fs from 'fs';
 import { parseCf } from '../core/metadata/cfParser';
 import { buildCachePath, writeCache } from '../core/metadata/cacheBuilder';
 import { isCacheValid, readCache } from '../core/metadata/cacheLoader';
-import { loadMetadataCached, rebuildModelCache } from '../core/metadata/modelCache';
-import { parseConfiguration } from '../core/metadata/parser/parseConfiguration';
+import { loadMetadataCached } from '../core/metadata/modelCache';
 import { resolveManagedCfDir } from '../core/metadata/parser/generationStore';
-import { loadMetadataSnapshotFirst } from '../core/metadata/parser/loadMetadataSafe';
+import { loadMetadataSnapshotFirst, loadMetadataWithFallback } from '../core/metadata/parser/loadMetadataSafe';
 import { createMetadataRepository } from '../core/metadata/metadataRepository';
 import { generate } from '../core/query/sdblGenerator';
 import { insertResult } from './insertResult';
@@ -66,9 +65,6 @@ async function loadMetadata(
   // код до PR-10. Перехватываем здесь и даём шанс уже прочитанному тёплому
   // YAML-кэшу (если он есть) или легаси XML-парсеру ниже — то же поведение,
   // что было всегда, на случай, когда откажут ОБА пути метаданных сразу.
-  //
-  // «Обновить кэш» (refreshCache-обработчик) пока НЕ переключён — остаётся
-  // отдельным, ещё не сделанным шагом.
   if (cfPath) {
     const snapshotOutPath = path.join(outPath, 'snapshot');
     const t = Date.now();
@@ -203,17 +199,21 @@ export function createPanel(
         return;
       }
       try {
-        const parsed = parseConfiguration(cfPath, outPath);
-        // 7.8.1: повторный парсинг переписывает YAML (новый mtime) и инвалидирует
-        // model-cache.json. Сразу перестраиваем консолидированный JSON-кэш, чтобы
-        // следующее открытие конструктора было «тёплым» (быстрым), а не платило
-        // полный холодный разбор YAML (~13 с). Каталог — РЕАЛЬНЫЙ committed (мог
-        // быть перенаправлен в cf-managed, ТЗ §7), не пересчитанный заново.
-        const cfYamlDir = parsed.outCfDir;
+        // PR-10 widened: «Обновить кэш» — явный запрос пользователя "пересобрать
+        // сейчас", поэтому используется `loadMetadataWithFallback` (ВСЕГДА
+        // rebuild), а не `loadMetadataSnapshotFirst` (у которого есть тёплая
+        // проверка свежести — неверная семантика для явного refresh). Прямой
+        // XML→JSON путь пробуется первым, с прозрачным откатом на существующий
+        // YAML-путь при сбое (см. loadMetadataSafe.ts) — тот же снимок, что и
+        // холодное открытие конструктора использует и переиспользует дальше.
+        const snapshotOutPath = path.join(outPath, 'snapshot');
         const t = Date.now();
-        const rebuilt = rebuildModelCache(cfYamlDir);
-        channel.appendLine(`[1C Query] model-cache rebuilt in ${Date.now() - t}ms (${rebuilt.tables.length} tables)`);
-        metadataModel = rebuilt;
+        const r = loadMetadataWithFallback(cfPath, snapshotOutPath, outPath);
+        const fallbackNote = r.fallbackReason ? ` (direct-путь не удался: ${r.fallbackReason})` : '';
+        channel.appendLine(
+          `[1C Query] refreshCache: metadata rebuilt via ${r.source} in ${Date.now() - t}ms (${r.model.tables.length} tables)${fallbackNote}`
+        );
+        metadataModel = r.model;
         const reply: HostMsg = { type: 'refreshResult', ok: true, message: 'Кэш обновлён.' };
         panel.webview.postMessage(reply);
       } catch (e) {
