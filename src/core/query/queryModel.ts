@@ -18,33 +18,48 @@ export interface VirtualParams {
   hadParens?: boolean;           // во вводе были скобки параметров (даже пустые `(, )`)
   subconto?: boolean;            // регистр бухгалтерии имеет субконто (план счетов с maxExtDimensionCount>0)
   accountingArgs?: string[];     // сырые позиционные аргументы регистра бухгалтерии (для пост-разбора по метаданным)
+  // ВидыСубконто — позиционный аргумент-фильтр по видам субконто, присутствует
+  // ТОЛЬКО при hasSubconto=true. Раньше был безымянным `null`-слотом (см. история
+  // accountingPositionKeys) — любое значение в нём молча терялось при generate
+  // (PR-04, подтверждённый той же проверкой, что нашла баг Субконто). Четыре
+  // отдельных ключа — потому что Обороты(corr) и ОборотыДтКт несут ДВА независимых
+  // среза (по счёту/кор.счёту, по Дт/Кт), а не один и тот же список видов.
+  subcontoTypes?: string;
+  corrSubcontoTypes?: string;   // Обороты(corr) — виды субконто корреспондирующего счёта
+  subcontoDtTypes?: string;     // ОборотыДтКт — виды субконто дебетового счёта
+  subcontoKtTypes?: string;     // ОборотыДтКт — виды субконто кредитового счёта
 }
 
 /**
  * Позиционная раскладка параметров виртуальной таблицы регистра бухгалтерии —
- * единый источник правды для парсера (инверсия) и генератора. `null` — пустой слот
- * (`ВидыСубконто`, который присутствует ТОЛЬКО при наличии субконто у плана счетов).
- * При `hasSubconto=true` совпадает с прежней захардкоженной раскладкой (фаза 6.16.11).
+ * единый источник правды для парсера (инверсия) и генератора.
  */
 export function accountingPositionKeys(
   slice: string,
   hasSubconto: boolean,
   corr: boolean
 ): (keyof VirtualParams | null)[] {
-  const sub: (keyof VirtualParams | null)[] = hasSubconto ? [null] : [];
+  const sub = (key: keyof VirtualParams): (keyof VirtualParams)[] => (hasSubconto ? [key] : []);
   switch (slice) {
     case 'Остатки':
-      return ['period', 'accountCondition', ...sub, 'condition'];
+      return ['period', 'accountCondition', ...sub('subcontoTypes'), 'condition'];
     case 'Обороты':
       return corr
-        ? ['startPeriod', 'endPeriod', 'periodicity', 'accountCondition', ...sub, 'condition', 'corrAccountCondition', ...sub]
-        : ['startPeriod', 'endPeriod', 'periodicity', 'accountCondition', ...sub, 'condition'];
+        ? ['startPeriod', 'endPeriod', 'periodicity', 'accountCondition', ...sub('subcontoTypes'), 'condition', 'corrAccountCondition', ...sub('corrSubcontoTypes')]
+        : ['startPeriod', 'endPeriod', 'periodicity', 'accountCondition', ...sub('subcontoTypes'), 'condition'];
     case 'ОборотыДтКт':
-      return ['startPeriod', 'endPeriod', 'periodicity', 'accountDtCondition', ...sub, 'accountKtCondition', ...sub, 'condition'];
+      return ['startPeriod', 'endPeriod', 'periodicity', 'accountDtCondition', ...sub('subcontoDtTypes'), 'accountKtCondition', ...sub('subcontoKtTypes'), 'condition'];
     case 'ОстаткиИОбороты':
-      return ['startPeriod', 'endPeriod', 'periodicity', 'fillMethod', 'accountCondition', ...sub, 'condition'];
+      return ['startPeriod', 'endPeriod', 'periodicity', 'fillMethod', 'accountCondition', ...sub('subcontoTypes'), 'condition'];
     case 'ДвиженияССубконто':
       return ['startPeriod', 'endPeriod', 'condition', 'order', 'top'];
+    case 'Субконто':
+      // Подтверждённый баг (PR-04, ТЗ v2.1 §31): раньше этот срез отсутствовал в
+      // switch — оба параметра `RегистрБухгалтерии.<Имя>.Субконто(&Период, &Условие)`
+      // молча терялись при parse→generate. Арность 2, без субконто-повтора и без
+      // корреспонденции (в отличие от Остатки/Обороты) — не варьируется параметрами
+      // hasSubconto/corr, поэтому они здесь намеренно не используются.
+      return ['period', 'accountCondition'];
     default:
       return [];
   }
