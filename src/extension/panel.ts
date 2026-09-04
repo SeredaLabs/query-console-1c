@@ -7,6 +7,7 @@ import { isCacheValid, readCache } from '../core/metadata/cacheLoader';
 import { loadMetadataCached, rebuildModelCache } from '../core/metadata/modelCache';
 import { parseConfiguration } from '../core/metadata/parser/parseConfiguration';
 import { resolveManagedCfDir } from '../core/metadata/parser/generationStore';
+import { createMetadataRepository } from '../core/metadata/metadataRepository';
 import { generate } from '../core/query/sdblGenerator';
 import { insertResult } from './insertResult';
 import type { SavedEditorState } from './insertResult';
@@ -141,19 +142,26 @@ export function createPanel(
       const initMsg: HostMsg = { type: 'init', hasInitialQuery: !!initialQueryText, queryTextEditorV2 };
       panel.webview.postMessage(initMsg);
       await metadataReady;
-      const reply: HostMsg = { type: 'metadataTree', tables: metadataModel.tables };
+      // PR-07 (ТЗ §11/§55 P1.1): доставка metadataTree в webview идёт через
+      // MetadataRepository, а не напрямую по `metadataModel.tables` — repository
+      // строится по требованию из ТЕКУЩЕГО массива, поэтому переживает переприсвоение
+      // `metadataModel` при refreshCache без отдельной синхронизации. `[...]` —
+      // getTables() возвращает readonly-массив (§11), а поле HostMsg.tables — нет.
+      const repository = createMetadataRepository(metadataModel.tables);
+      const reply: HostMsg = { type: 'metadataTree', tables: [...repository.getTables()] };
       panel.webview.postMessage(reply);
       if (initialQueryText) {
         const loadMsg: HostMsg = { type: 'loadModel', text: initialQueryText };
         panel.webview.postMessage(loadMsg);
       }
-      if (metadataModel.tables.length === 0 && !cfPath) {
+      if (repository.getTables().length === 0 && !cfPath) {
         vscode.window.showWarningMessage('Не найдена выгрузка конфигурации. Укажите путь в настройке queryConsole.metadataPath');
       }
     } else if (msg.type === 'expandRef') {
       await metadataReady;
       const ref = msg.ref;
-      const table = metadataModel.tables.find(t => t.kind === ref.kind && t.name === ref.name);
+      const repository = createMetadataRepository(metadataModel.tables);
+      const table = repository.findTable(ref.kind, ref.name);
       const reply: HostMsg = { type: 'refFields', ref, fields: table?.fields ?? [] };
       panel.webview.postMessage(reply);
     } else if (msg.type === 'generate') {
