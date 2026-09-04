@@ -13,11 +13,18 @@
   у `Остатки`/`Обороты`/`ОборотыДтКт`/`ОстаткиИОбороты` -- исправлено (PR-04),
   regression-тесты добавлены (`virtualTableRoundTrip.test.ts`,
   `accountingVirtualParams.test.ts`).
-- ⬜ Формы с тремя и более аргументами (`РегистрРасчета.*.ДанныеГрафика`,
+- ✅ Формы с тремя и более аргументами (`РегистрРасчета.*.ДанныеГрафика`,
   `ФактическийПериодДействия`, `Последовательность.*.Границы`) остаются lossy --
   настоящая раскладка параметров неизвестна, чинить вслепую нельзя (см.
-  KNOWN_ISSUES.md). До исправления или до Apply-blocking для этого случая (PR-05)
-  -- блокировать применение опасных моделей в UI или делать их read-only.
+  KNOWN_ISSUES.md). Apply-blocking реализован (PR-05, ТЗ §54 P0.5): парсер
+  помечает `VirtualParams.unsafeExtraArgs`, `findUnsafeVirtualTables`
+  (`semanticValidator.ts`) находит такие источники рекурсивно (включая
+  подзапросы), кнопка «ОК» в App.tsx блокируется до записи в редактор --
+  сам parse/generate по-прежнему теряет 3-й+ аргумент, но конструктор больше не
+  может молча применить такую модель. Открытие/просмотр текста в конструкторе
+  НЕ блокируется -- только запись (см. `findUnsafeVirtualTables` в
+  `semanticValidator.ts`). Regression-тесты: `virtualTableRoundTrip.test.ts`,
+  `semanticValidator.test.ts`, `webview.spec.ts` (e2e).
 
 ### 2. Разделить tolerant parsing и strict validation
 

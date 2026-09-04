@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
-import { validateBatchSemantics } from '../../src/core/query/semanticValidator';
+import { validateBatchSemantics, findUnsafeVirtualTables } from '../../src/core/query/semanticValidator';
 import type { MetaTable } from '../../src/core/metadata/types';
 
 // Инлайн-метаданные (мини-схема). Реальные объекты + виртуальные таблицы
@@ -255,5 +255,39 @@ describe('validateBatchSemantics (8.4)', () => {
     const e = errs(text, undefined);
     expect(e).toHaveLength(1);
     expect(e[0].message).toBe('Повторяющийся псевдоним "Поле1"');
+  });
+});
+
+describe('findUnsafeVirtualTables (PR-05, ТЗ §54 P0.5)', () => {
+  it('безопасная ВТ (≤2 аргумента) — пустой результат', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрСведений.КурсыВалют.СрезПоследних(&Дата, ИСТИНА) КАК Т';
+    expect(findUnsafeVirtualTables(parseBatch(text))).toEqual([]);
+  });
+
+  it('ВТ с потерянным 3-м аргументом — таблица попадает в результат', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК Т';
+    expect(findUnsafeVirtualTables(parseBatch(text))).toEqual(['РегистрРасчета.Начисления.ДанныеГрафика']);
+  });
+
+  it('находит небезопасную ВТ внутри подзапроса-источника (рекурсия)', () => {
+    const text =
+      'ВЫБРАТЬ Т.П КАК П ИЗ (\n' +
+      '\tВЫБРАТЬ В.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК В\n' +
+      ') КАК Т';
+    expect(findUnsafeVirtualTables(parseBatch(text))).toEqual(['РегистрРасчета.Начисления.ДанныеГрафика']);
+  });
+
+  it('находит небезопасную ВТ внутри подзапроса условия В(...) (рекурсия по conditions)', () => {
+    const text =
+      'ВЫБРАТЬ X.Ссылка КАК Ссылка ИЗ Справочник.Валюты КАК X\n' +
+      'ГДЕ X.Ссылка В (\n' +
+      '\tВЫБРАТЬ В.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК В\n' +
+      ')';
+    expect(findUnsafeVirtualTables(parseBatch(text))).toEqual(['РегистрРасчета.Начисления.ДанныеГрафика']);
+  });
+
+  it('НЕ пересекается с validateBatchSemantics — открытие текста с такой ВТ не блокируется', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК Т';
+    expect(errs(text, undefined)).toEqual([]);
   });
 });

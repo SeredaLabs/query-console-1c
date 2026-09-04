@@ -11,7 +11,13 @@
 import { describe, it, expect } from 'vitest';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { generateBatch } from '../../src/core/query/sdblGenerator';
+import { findUnsafeVirtualTables } from '../../src/core/query/semanticValidator';
 import type { BatchDocument } from '../../src/core/query/batchModel';
+
+/** Первая (единственная в фикстурах этого файла) виртуальная таблица разобранного пакета. */
+function firstTable(doc: BatchDocument) {
+  return doc.members[0].members[0].model.tables[0];
+}
 
 /** Несвязанная правка: добавляет ещё одно простое поле выборки к первой модели
  * пакета — имитация того, что пользователь в конструкторе добавил колонку,
@@ -66,27 +72,40 @@ describe('VT round-trip — LOSSLESS (несвязанная правка не �
 describe('VT round-trip — SEMANTIC LOSS (подтверждённые, известные границы)', () => {
   it('РегистрРасчета.*.ДанныеГрафика: ≤2 аргумента — LOSSLESS, 3-й аргумент — теряется молча', () => {
     const twoArgs = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б) КАК Т';
-    expect(generateBatch(parseBatch(twoArgs))).toContain('&А, &Б');
+    const twoArgsDoc = parseBatch(twoArgs);
+    expect(generateBatch(twoArgsDoc)).toContain('&А, &Б');
+    // ≤2 аргумента — раскладка [period, condition] полная, unsafeExtraArgs НЕ ставится
+    // (иначе Apply блокировал бы безопасные запросы — см. findUnsafeVirtualTables).
+    expect(firstTable(twoArgsDoc).virtual?.unsafeExtraArgs).toBeUndefined();
 
     const threeArgs = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК Т';
-    const out = generateBatch(parseBatch(threeArgs));
+    const threeArgsDoc = parseBatch(threeArgs);
+    const out = generateBatch(threeArgsDoc);
     expect(out, 'известная, ещё не исправленная потеря 3-го параметра — см. docs/KNOWN_ISSUES.md').not.toContain('&В');
+    // PR-05 (ТЗ §54 P0.5): потерянный аргумент помечен для Apply-blocking.
+    expect(firstTable(threeArgsDoc).virtual?.unsafeExtraArgs).toBe(true);
+    expect(findUnsafeVirtualTables(threeArgsDoc)).toEqual(['РегистрРасчета.Начисления.ДанныеГрафика']);
   });
 
   it('РегистрРасчета.*.ФактическийПериодДействия: тот же класс потери на 3-м аргументе', () => {
     const threeArgs = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ФактическийПериодДействия(&А, &Б, &В) КАК Т';
-    const out = generateBatch(parseBatch(threeArgs));
+    const doc = parseBatch(threeArgs);
+    const out = generateBatch(doc);
     expect(out).not.toContain('&В');
+    expect(firstTable(doc).virtual?.unsafeExtraArgs).toBe(true);
+    expect(findUnsafeVirtualTables(doc)).toHaveLength(1);
   });
 });
 
 describe('VT round-trip — FORMATTING ONLY (значение сохранено, текст может отличаться)', () => {
   it('Последовательность.*.Границы с одним аргументом: значение на месте, но появляется пустая позиция', () => {
     const oneArg = 'ВЫБРАТЬ Т.Период ИЗ Последовательность.Тест.Границы(&А) КАК Т';
-    const out = generateBatch(parseBatch(oneArg));
+    const doc = parseBatch(oneArg);
+    const out = generateBatch(doc);
     expect(out).toContain('&А'); // значение НЕ потеряно
     // Не byte-identical (генератор добавляет пустую вторую позицию) — задокументировано
     // как формат-квирк, не потеря данных; не входит в SUPPORTED corpus (маленькие
     // синтетические фикстуры этого файла, не golden.jsonl).
+    expect(firstTable(doc).virtual?.unsafeExtraArgs).toBeUndefined();
   });
 });

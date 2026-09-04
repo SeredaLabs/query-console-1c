@@ -28,6 +28,17 @@ export interface VirtualParams {
   corrSubcontoTypes?: string;   // Обороты(corr) — виды субконто корреспондирующего счёта
   subcontoDtTypes?: string;     // ОборотыДтКт — виды субконто дебетового счёта
   subcontoKtTypes?: string;     // ОборотыДтКт — виды субконто кредитового счёта
+  /**
+   * Позиция 3+ виртуальной таблицы, попавшей под generic-fallback раскладку
+   * `[period, condition]` (см. `parseVirtualParams`), содержала непустое значение —
+   * настоящая раскладка для таких форм (`РегистрРасчета.*.ДанныеГрафика`,
+   * `ФактическийПериодДействия`, `Последовательность.*.Границы`) неизвестна (нет
+   * evidence по конкретной арности/именам), поэтому она молча пропадает при
+   * generate (PR-04, ТЗ §31, KNOWN_ISSUES.md). Apply блокируется, пока это не
+   * исправлено (PR-05, ТЗ §54 P0.5, §27/28: unknown preservation → BLOCK) —
+   * см. `findUnsafeVirtualTables` в semanticValidator.ts.
+   */
+  unsafeExtraArgs?: boolean;
 }
 
 /**

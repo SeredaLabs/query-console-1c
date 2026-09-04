@@ -2,9 +2,10 @@ import * as React from 'react';
 import { useReducer, useEffect, useMemo, useState } from 'react';
 import { ConstructorView } from './components/ConstructorView';
 import { postToHost, onHostMessage } from './bridge';
-import { initialState, reducer, assembleBatch, stripBatchComments } from './state/queryStore';
-import { generateBatch } from '../core/query/sdblGenerator';
+import { initialState, reducer, assembleBatch } from './state/queryStore';
+import { computeBatchTextSafe } from './computeBatchText';
 import { tryOpenBatch, validateBatchText } from '../core/query/validateBatch';
+import { findUnsafeVirtualTables } from '../core/query/semanticValidator';
 import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
 import type { MetaTable } from '../core/metadata/types';
 import { BTN } from './sharedStyles';
@@ -83,10 +84,27 @@ export function App(): React.ReactElement {
   // перед генерацией (генератор печатает их только при наличии).
   // 8.3.6: мемоизация — не пересобирать большой запрос на ре-рендерах от локального
   // состояния (баннеры ошибок/загрузки, тулбар кэша), только при изменении модели.
-  const batchText = useMemo(() => {
-    const assembled = assembleBatch(state);
-    return generateBatch(preserveComments ? assembled : stripBatchComments(assembled));
-  }, [state, preserveComments]);
+  // PR-05 (ТЗ §28/§30): `computeBatchTextSafe` ловит исключение сборки/генерации
+  // вместо того, чтобы дать ему улететь из тела useMemo — раньше это падение
+  // сносило весь webview (нет Error Boundary), теперь — controlled `generationError`.
+  const { text: batchText, error: generationError } = useMemo(
+    () => computeBatchTextSafe(state, preserveComments),
+    [state, preserveComments]
+  );
+
+  // PR-05 (ТЗ §27/28/54 P0.5): capability/preservation gate ПЕРЕД записью в
+  // редактор. Виртуальная таблица с непокрытыми позициями 3+ (см.
+  // KNOWN_ISSUES.md, findUnsafeVirtualTables) не может быть безопасно применена
+  // конструктором — правка молча роняла бы эти аргументы. В отличие от
+  // generationError, это НЕ ошибка генерации (generateBatch отрабатывает штатно),
+  // а известная граница capability модели — поэтому отдельная переменная, хотя
+  // отображается тем же каналом okError/okDisabled.
+  const unsafeVtError = useMemo(() => {
+    const names = findUnsafeVirtualTables(assembleBatch(state));
+    return names.length > 0
+      ? `Виртуальная таблица "${names[0]}" содержит параметры (3-й и последующие аргументы), которые конструктор не может сохранить без потери данных — см. docs/KNOWN_ISSUES.md. Применить нельзя.`
+      : null;
+  }, [state]);
 
   return (
     <>
@@ -100,14 +118,19 @@ export function App(): React.ReactElement {
         preserveComments={preserveComments}
         onSetPreserveComments={setPreserveComments}
         onOk={() => {
+          // generationError/unsafeVtError уже делают okDisabled=true (см. ниже) —
+          // эта проверка на случай прямого вызова/будущей развязки условий, чтобы
+          // «ОК» никогда не мог отправить insertText при известной ошибке генерации
+          // ИЛИ известной потере данных виртуальной таблицы (ТЗ §27/§28).
+          if (generationError || unsafeVtError) return;
           const v = validateBatchText(batchText, buildResolver());
           if (!v.ok) { setOkError(v.error); return; }
           setOkError(null);
           handleInsert(batchText);
         }}
         onCancel={handleCancel}
-        okDisabled={!batchText.trim()}
-        okError={okError}
+        okDisabled={!batchText.trim() || generationError !== null || unsafeVtError !== null}
+        okError={generationError ? `Ошибка генерации запроса: ${generationError}` : (unsafeVtError ?? okError)}
       />
 
       {/* Синтаксическая ошибка открытия из текста — поверх конструктора, с номером строки. */}

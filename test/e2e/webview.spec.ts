@@ -576,6 +576,27 @@ test.describe('Query Constructor Webview', () => {
     expect(msgs.some((m: any) => m.type === 'insertText')).toBe(false);
   });
 
+  test('PR-05 (ТЗ §54 P0.5): Apply блокирован для ВТ с потерянным 3-м аргументом', async ({ page }) => {
+    await page.goto(BASE);
+    // РегистрРасчета.*.ДанныеГрафика с 3 аргументами — известный SEMANTIC LOSS
+    // (см. virtualTableRoundTrip.test.ts, KNOWN_ISSUES.md): 3-й аргумент молча
+    // теряется при generate, поэтому Apply должен блокироваться ДО генерации/записи.
+    const TEXT = 'ВЫБРАТЬ Т.Период КАК Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК Т';
+    await loadModelText(page, TEXT);
+
+    const err = page.locator('[data-testid="ok-error"]');
+    await expect(err).toBeVisible();
+    await expect(err).toContainText('РегистрРасчета.Начисления.ДанныеГрафика');
+    await expect(page.locator('button:has-text("ОК")')).toBeDisabled();
+
+    await page.evaluate(() => { (window as any).__webviewMessages = []; });
+    // Кнопка задизейблена нативным атрибутом; force-клик проверяет, что onOk тоже
+    // не отправит insertText (defense in depth, см. App.tsx onOk guard).
+    await page.locator('button:has-text("ОК")').click({ force: true });
+    const msgs = await page.evaluate(() => (window as any).__webviewMessages);
+    expect(msgs.some((m: any) => m.type === 'insertText')).toBe(false);
+  });
+
   test('Связи: селект таблицы имеет title с полным псевдонимом (anti-clip)', async ({ page }) => {
     await page.goto(BASE);
     // Inject a second table into the metadata so we can add two distinct tables

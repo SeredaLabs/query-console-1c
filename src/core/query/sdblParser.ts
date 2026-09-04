@@ -2078,9 +2078,16 @@ function parseVirtualParams(cur: Cursor, fullName: string): VirtualParams {
     return v;
   }
 
-  // РС срезы / РН Остатки: [period, condition], хвостовые пустые отброшены.
+  // РС срезы / РН Остатки / прочие неизвестные формы: [period, condition] —
+  // фиксированная раскладка, хвостовые пустые отброшены. Для форм с настоящей
+  // арностью 3+ (РегистрРасчета.*.ДанныеГрафика/ФактическийПериодДействия,
+  // Последовательность.*.Границы — раскладка позиций неизвестна, см.
+  // KNOWN_ISSUES.md) непустой аргумент на позиции 2+ молча терялся бы при
+  // generate — помечаем как unsafeExtraArgs, чтобы Apply мог заблокировать
+  // запись (PR-05, ТЗ §54 P0.5).
   set('period', arg(args, 0));
   set('condition', arg(args, 1));
+  if (args.slice(2).some(a => a !== '')) v.unsafeExtraArgs = true;
   return v;
 }
 

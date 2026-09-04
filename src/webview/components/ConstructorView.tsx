@@ -27,8 +27,8 @@ import type { MetaField, MetaTable } from '../../core/metadata/types';
 import type { RefId } from '../../shared/messages';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import type { QueryState, QueryAction } from '../state/queryStore';
-import { assembleMembers, assembleBatch, batchMemberName, initialState, reducer, tempTableDialogInitial, availableTempTables } from '../state/queryStore';
-import { generateBatch } from '../../core/query/sdblGenerator';
+import { assembleMembers, batchMemberName, initialState, reducer, tempTableDialogInitial, availableTempTables } from '../state/queryStore';
+import { computeBatchTextSafe } from '../computeBatchText';
 import { deriveUnionColumns } from '../../core/query/unionModel';
 import type { QueryDocument } from '../../core/query/unionModel';
 import { tryOpenBatch } from '../../core/query/validateBatch';
@@ -82,7 +82,17 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   const [tablesPanelWidth, setTablesPanelWidth] = useState(300);
 
   function handleShowQuery() {
-    const text = generateBatch(assembleBatch(state));
+    // PR-05 (ТЗ §28/§30): раньше исключение здесь (клик-обработчик, не рендер)
+    // не сносило весь webview, но тихо проваливало открытие диалога без единого
+    // сообщения пользователю — тот же класс "controlled failure", что и в App.tsx.
+    // Модалка всё равно открывается (оба рендера ниже завязаны на queryModalText
+    // !== null) — иначе баннеру ошибки негде появиться.
+    const { text, error } = computeBatchTextSafe(state, true);
+    if (error) {
+      setQueryModalText('-- не удалось сформировать текст запроса');
+      setQueryModalError(error);
+      return;
+    }
     // CodeMirror нормализует \r\n/\r → \n при первой же синхронизации своего
     // внутреннего Text (см. CodeEditor.tsx: value-sync эффект сверяет view.state.doc.
     // toString() с value) — если исходный текст комментариев (сохранённых буквально
@@ -814,7 +824,9 @@ function NestedConstructorModal({ metadataTables, expandedRefs, onExpandRef, ini
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expandedRefs]);
 
-  const nestedBatchText = useMemo(() => generateBatch(assembleBatch(nestedState)), [nestedState]);
+  // PR-05 (ТЗ §28/§30): та же защита, что и в App.tsx — исключение здесь тоже
+  // происходит в фазе рендера (useMemo) и без неё сносило бы весь webview.
+  const { text: nestedBatchText } = useMemo(() => computeBatchTextSafe(nestedState, true), [nestedState]);
 
   function handleOk() {
     const doc: QueryDocument = { members: assembleMembers(nestedState) };

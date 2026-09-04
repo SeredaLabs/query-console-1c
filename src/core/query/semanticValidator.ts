@@ -184,6 +184,36 @@ export function validateBatchSemantics(
 }
 
 /**
+ * PR-05 (ТЗ §54 P0.5, §27/28: known-lossy/unknown preservation → BLOCK) —
+ * виртуальные таблицы с непокрытыми позициями 3+ (`VirtualParams.unsafeExtraArgs`,
+ * см. `parseVirtualParams` generic-fallback в sdblParser.ts и KNOWN_ISSUES.md).
+ * Структурная проверка, резолвер не нужен. НАМЕРЕННО отдельна от
+ * `validateBatchSemantics`: та используется и для ОТКРЫТИЯ текста в конструктор
+ * (`tryOpenBatch`) — блокировать открытие/просмотр уже существующего запроса не
+ * требуется (ROADMAP.md: «не редактировать … через конструктор», не «не
+ * открывать»), это касается только записи (Apply) в редактор.
+ */
+export function findUnsafeVirtualTables(doc: BatchDocument): string[] {
+  const found: string[] = [];
+  const walkConditions = (conditions: Condition[] | undefined): void => {
+    for (const c of conditions ?? []) if (c.subquery) walkDocument(c.subquery);
+  };
+  const walkModel = (model: QueryModel): void => {
+    for (const t of model.tables) {
+      if (t.subquery) walkDocument(t.subquery);
+      else if (t.virtual?.unsafeExtraArgs) found.push(t.fullName);
+    }
+    walkConditions(model.conditions);
+    walkConditions(model.having);
+  };
+  function walkDocument(qdoc: QueryDocument): void {
+    for (const member of qdoc.members) walkModel(member.model);
+  }
+  for (const member of doc.members) walkDocument(member);
+  return found;
+}
+
+/**
  * Позиция первого сегмента полного имени в исходном тексте (best-effort): ищем
  * непрерывную последовательность токенов `сегмент . сегмент [ . сегмент ]`,
  * совпадающую с сегментами `fullName` регистронезависимо. Возвращаем строку/столбец
