@@ -1505,8 +1505,9 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
       // (мутирует fullName/tempTable тех же объектов SelectedTable, которые попадут в
       // снимок). Новый массив syntheticTables создаём только при наличии синтетики —
       // иначе ссылка на syntheticTables сохраняется.
-      const subqueryMetas = synthesizeSubqueryTables(action.doc, new Set(allTables(state).map(t => t.fullName)));
-      const known = new Set([...allTables(state).map(t => t.fullName), ...subqueryMetas.map(m => m.fullName)]);
+      const knownFullNames = allTables(state).map(t => t.fullName);
+      const subqueryMetas = synthesizeSubqueryTables(action.doc, new Set(knownFullNames));
+      const known = new Set([...knownFullNames, ...subqueryMetas.map(m => m.fullName)]);
       const tempMetas = synthesizeTempTables(action.doc, known);
       const newMetas = [...subqueryMetas, ...tempMetas];
       const snaps = action.doc.members.map(docToSnapshot);
