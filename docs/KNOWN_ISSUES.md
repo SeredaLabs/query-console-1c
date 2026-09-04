@@ -21,11 +21,6 @@
 
 ## Высокие: неверная модель, неполная проверка или отсутствие test gate
 
-- **XML-импорт публикует частичную metadata model.** `parseConfiguration` удаляет
-  старый YAML, пропускает отдельные XML с ошибкой и записывает новый индекс;
-  `panel.ts` не показывает `skipped`. Нужны staged output, атомарная замена и
-  диагностика. Владельцы: `src/core/metadata/parser/parseConfiguration.ts`,
-  `src/extension/panel.ts`.
 - **Cache метаданных может быть устаревшим.** Наличие `configuration.yaml`
   считается достаточным, XML-выгрузка автоматически не сравнивается с cache.
   Владелец: `src/extension/panel.ts`.
@@ -46,10 +41,9 @@
 
 ## Средние
 
-- `parseConfiguration.ts`: `writeYaml` находится вне `try/catch`; ошибка записи
-  одного объекта может прервать импорт всей конфигурации.
-- Запись YAML и JSON cache неатомарна: падение посреди записи оставляет
-  повреждённый файл без понятной диагностики.
+- Запись JSON-side-кэшей (`cacheBuilder.ts`, `modelCache.ts`) неатомарна: падение
+  посреди записи оставляет повреждённый файл без понятной диагностики (сама YAML-
+  генерация уже защищена staged-build + logical commit — PR-02, см. ниже).
 - Symlink-каталоги не находятся auto-discovery (`resolveCfPath.ts` /
   `findCfRoot.ts`).
 - `RENAME_QUERY` не сбрасывает комментарии участника `ОБЪЕДИНЕНИЕ`; влияние пока

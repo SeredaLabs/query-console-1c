@@ -27,6 +27,16 @@ export function registerParseCommand(channel: vscode.OutputChannel): vscode.Disp
         `[1C Query] Справочники: ${c['Справочник'] || 0} Документы: ${c['Документ'] || 0} ` +
           `Константы: ${c['Константа'] || 0} Перечисления: ${c['Перечисление'] || 0}; пропущено: ${s.skipped}`
       );
+      if (s.issues.length > 0) {
+        channel.appendLine(`[1C Query] Проблем при разборе объектов: ${s.issues.length}`);
+        for (const issue of s.issues) channel.appendLine(`[1C Query]   ${issue.stage} ${issue.file ?? ''}: ${issue.message}`);
+      }
+      if (s.redirected) {
+        channel.appendLine(
+          `[1C Query] Существующий каталог "cf" не распознан как созданный этим расширением — ` +
+            `новая генерация метаданных записана рядом, в "${s.outCfDir}".`
+        );
+      }
       vscode.window.showInformationMessage(`Распарсено объектов: ${total}. → ${s.outCfDir}`);
     } catch (e) {
       channel.appendLine(`[1C Query] Ошибка парсинга: ${e}`);

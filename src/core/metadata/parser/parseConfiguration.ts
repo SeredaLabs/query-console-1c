@@ -21,6 +21,11 @@ import { parseDocumentJournal } from './documentJournal';
 import { parseFilterCriteria } from './filterCriteria';
 import { parseCommonAttribute } from './commonAttribute';
 import type { ParsedObject, ParsedCommonAttribute } from './model';
+import {
+  cleanupStaleSiblings, stagingDirFor, finalizeStaging, commitGeneration,
+  type MetadataBuildIssue,
+} from './generationStore';
+export type { MetadataBuildIssue } from './generationStore';
 
 interface TypeHandler {
   subdir: string;
@@ -51,6 +56,11 @@ export interface ParseSummary {
   counts: Record<string, number>;
   skipped: number;
   outCfDir: string;
+  /** Recoverable per-object проблемы (не остановили генерацию) — ТЗ §8. */
+  issues: MetadataBuildIssue[];
+  /** true, если существующий `cf` не был распознан как наш и генерация
+   * закоммичена рядом, в `cf-managed` (ТЗ §7 — старый unowned вывод не тронут). */
+  redirected: boolean;
 }
 
 interface IndexEntry {
@@ -60,52 +70,103 @@ interface IndexEntry {
   file: string;
 }
 
+/**
+ * Строит новую генерацию метаданных и коммитит её (ТЗ §6-9, PR-02).
+ *
+ * Генерация N (текущий `cf`/`cf-managed`) остаётся полностью нетронутой и
+ * обслуживаемой на всём протяжении сборки — весь вывод пишется в staging-каталог,
+ * который никто ещё не читает. Переключение на N+1 — одна операция commit
+ * (см. `generationStore.ts`), выполняемая только после того, как staging-каталог
+ * полностью готов (индекс записан, маркер владения проставлен). Если сборка падает
+ * на любом этапе ДО commit — исключение прокидывается вызывающему коду, staging
+ * удаляется, N остаётся current (last-known-good, §9).
+ *
+ * Per-object ошибки чтения/разбора/записи — recoverable, попадают в `issues` и не
+ * останавливают генерацию (как и раньше — `skipped` считает то же самое). Ошибка
+ * записи индекса/маркера — generation-integrity failure, валит всю сборку.
+ */
 export function parseConfiguration(cfPath: string, outPath: string): ParseSummary {
-  const outCfDir = path.join(outPath, 'cf');
-  fs.rmSync(outCfDir, { recursive: true, force: true });
-  fs.mkdirSync(outCfDir, { recursive: true });
+  if (!fs.existsSync(cfPath)) {
+    throw new Error(`Каталог выгрузки конфигурации не найден: ${cfPath}`);
+  }
+
+  cleanupStaleSiblings(outPath);
+  const stagingDir = stagingDirFor(outPath);
+  fs.mkdirSync(stagingDir, { recursive: true });
 
   const counts: Record<string, number> = {};
   let skipped = 0;
   const objects: IndexEntry[] = [];
+  const issues: MetadataBuildIssue[] = [];
 
-  for (const h of HANDLERS) {
-    const dir = path.join(cfPath, h.subdir);
-    if (!fs.existsSync(dir)) continue;
-    for (const file of fs.readdirSync(dir)) {
-      if (!file.endsWith('.xml')) continue;
-      let obj: ParsedObject | null = null;
-      try {
-        const xml = fs.readFileSync(path.join(dir, file), 'utf8');
-        const doc = parseXml(xml);
-        const objectEl = doc ? firstElementChild(doc.documentElement) : null;
-        obj = objectEl ? h.parse(objectEl) : null;
-      } catch {
-        obj = null;
+  try {
+    for (const h of HANDLERS) {
+      const dir = path.join(cfPath, h.subdir);
+      if (!fs.existsSync(dir)) continue;
+      for (const file of fs.readdirSync(dir)) {
+        if (!file.endsWith('.xml')) continue;
+        const source = `${h.subdir}/${file}`;
+        let obj: ParsedObject | null = null;
+        let parseFailure: string | undefined;
+        try {
+          const xml = fs.readFileSync(path.join(dir, file), 'utf8');
+          const doc = parseXml(xml);
+          // parseXml/firstElementChild/h.parse деградируют до null на плохом XML,
+          // а не бросают (см. test/unit/cfParser.test.ts) — это НЕ то же самое,
+          // что "нет ошибки": без явного сообщения ниже такой файл молча пропадал
+          // бы из диагностики (§8 требует видимость recoverable-проблем).
+          const objectEl = doc ? firstElementChild(doc.documentElement) : null;
+          obj = objectEl ? h.parse(objectEl) : null;
+          if (!obj) parseFailure = doc ? 'не найден распознаваемый объект в XML' : 'не удалось разобрать XML';
+        } catch (e) {
+          parseFailure = message(e);
+          obj = null;
+        }
+        if (!obj) {
+          issues.push({ file: source, stage: 'parse', message: parseFailure ?? 'неизвестная ошибка разбора', fatal: false });
+          skipped++;
+          continue;
+        }
+        obj.source = source;
+        try {
+          writeYaml(path.join(stagingDir, h.subdir, `${obj.name}.yaml`), obj);
+        } catch (e) {
+          issues.push({ file: source, stage: 'write', message: message(e), fatal: false });
+          skipped++;
+          continue;
+        }
+        counts[obj.kind] = (counts[obj.kind] || 0) + 1;
+        objects.push({
+          type: obj.kind,
+          name: obj.name,
+          fullName: obj.fullName,
+          file: `${h.subdir}/${obj.name}.yaml`,
+        });
       }
-      if (!obj) {
-        skipped++;
-        continue;
-      }
-      obj.source = `${h.subdir}/${file}`;
-      writeYaml(path.join(outCfDir, h.subdir, `${obj.name}.yaml`), obj);
-      counts[obj.kind] = (counts[obj.kind] || 0) + 1;
-      objects.push({
-        type: obj.kind,
-        name: obj.name,
-        fullName: obj.fullName,
-        file: `${h.subdir}/${obj.name}.yaml`,
-      });
     }
+
+    const commonAttributes = parseCommonAttributes(cfPath, issues);
+
+    try {
+      writeConfigurationIndex(cfPath, stagingDir, objects, commonAttributes);
+    } catch (e) {
+      throw new Error(`Не удалось записать индекс генерации: ${message(e)}`);
+    }
+    finalizeStaging(stagingDir);
+  } catch (e) {
+    fs.rmSync(stagingDir, { recursive: true, force: true });
+    throw e instanceof Error ? e : new Error(message(e));
   }
 
-  const commonAttributes = parseCommonAttributes(cfPath);
-
-  writeConfigurationIndex(cfPath, outCfDir, objects, commonAttributes);
-  return { counts, skipped, outCfDir };
+  const { targetDir, redirected } = commitGeneration(stagingDir, outPath);
+  return { counts, skipped, outCfDir: targetDir, issues, redirected };
 }
 
-function parseCommonAttributes(cfPath: string): ParsedCommonAttribute[] {
+function message(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+function parseCommonAttributes(cfPath: string, issues: MetadataBuildIssue[]): ParsedCommonAttribute[] {
   const dir = path.join(cfPath, 'CommonAttributes');
   if (!fs.existsSync(dir)) return [];
   const result: ParsedCommonAttribute[] = [];
@@ -117,7 +178,9 @@ function parseCommonAttributes(cfPath: string): ParsedCommonAttribute[] {
       const el = doc ? firstElementChild(doc.documentElement) : null;
       const ca = el ? parseCommonAttribute(el) : null;
       if (ca) result.push(ca);
-    } catch { /* пропустить нечитаемый общий реквизит */ }
+    } catch (e) {
+      issues.push({ file: `CommonAttributes/${file}`, stage: 'parse', message: message(e), fatal: false });
+    }
   }
   return result;
 }

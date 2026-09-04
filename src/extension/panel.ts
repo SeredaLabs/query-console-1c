@@ -6,6 +6,7 @@ import { buildCachePath, writeCache } from '../core/metadata/cacheBuilder';
 import { isCacheValid, readCache } from '../core/metadata/cacheLoader';
 import { loadMetadataCached, rebuildModelCache } from '../core/metadata/modelCache';
 import { parseConfiguration } from '../core/metadata/parser/parseConfiguration';
+import { resolveManagedCfDir } from '../core/metadata/parser/generationStore';
 import { generate } from '../core/query/sdblGenerator';
 import { insertResult } from './insertResult';
 import type { SavedEditorState } from './insertResult';
@@ -47,14 +48,18 @@ async function loadMetadata(
   context: vscode.ExtensionContext,
   channel: vscode.OutputChannel
 ): Promise<MetadataModel> {
-  const cfYamlDir = path.join(outPath, 'cf');
-  const configYaml = path.join(cfYamlDir, 'configuration.yaml');
+  let cfYamlDir = resolveManagedCfDir(outPath);
+  let configYaml = path.join(cfYamlDir, 'configuration.yaml');
 
   // Auto-parse: if no YAML cache exists and cfPath is set, try parsing first
   if (!fs.existsSync(configYaml) && cfPath) {
     channel.appendLine(`[1C Query] YAML не найден, попытка авто-парсинга: ${cfPath}`);
     try {
-      parseConfiguration(cfPath, outPath);
+      const s = parseConfiguration(cfPath, outPath);
+      // Каталог сборки мог быть перенаправлен в cf-managed (ТЗ §7) — используем
+      // РЕАЛЬНЫЙ committed-каталог, а не пересчитывать resolveManagedCfDir заново.
+      cfYamlDir = s.outCfDir;
+      configYaml = path.join(cfYamlDir, 'configuration.yaml');
       channel.appendLine(`[1C Query] Авто-парсинг завершён`);
     } catch (e) {
       channel.appendLine(`[1C Query] Авто-парсинг не удался: ${e}`);
@@ -171,12 +176,13 @@ export function createPanel(
         return;
       }
       try {
-        parseConfiguration(cfPath, outPath);
+        const parsed = parseConfiguration(cfPath, outPath);
         // 7.8.1: повторный парсинг переписывает YAML (новый mtime) и инвалидирует
         // model-cache.json. Сразу перестраиваем консолидированный JSON-кэш, чтобы
         // следующее открытие конструктора было «тёплым» (быстрым), а не платило
-        // полный холодный разбор YAML (~13 с).
-        const cfYamlDir = path.join(outPath, 'cf');
+        // полный холодный разбор YAML (~13 с). Каталог — РЕАЛЬНЫЙ committed (мог
+        // быть перенаправлен в cf-managed, ТЗ §7), не пересчитанный заново.
+        const cfYamlDir = parsed.outCfDir;
         const t = Date.now();
         const rebuilt = rebuildModelCache(cfYamlDir);
         channel.appendLine(`[1C Query] model-cache rebuilt in ${Date.now() - t}ms (${rebuilt.tables.length} tables)`);
