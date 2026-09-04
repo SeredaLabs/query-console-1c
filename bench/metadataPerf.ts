@@ -14,10 +14,13 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { loadMetadataCached, rebuildModelCache, modelCachePath } from '../src/core/metadata/modelCache';
 import { parseBatch } from '../src/core/query/sdblParser';
 import { generateBatch } from '../src/core/query/sdblGenerator';
 import { buildYamlResolver } from '../src/core/metadata/buildYamlResolver';
+import { loadMetadataFromYaml } from '../src/core/metadata/yamlLoader';
+import { commitMetadataSnapshot, readMetadataSnapshot } from '../src/core/metadata/parser/snapshotBuilder';
 
 const CORPUS_DIR = path.resolve(__dirname, '../test/fixtures/corpus');
 const REAL_CF_YAML = path.join(CORPUS_DIR, 'metadata', 'cf'); // 558 объектов, БСП — реальная представительная конфигурация
@@ -123,6 +126,24 @@ function main(): void {
     `${largestByLines.input.length} симв., ${largestEntryMs?.ms.toFixed(2)} мс ` +
     `(длина в строках НЕ коррелирует напрямую со временем — самый длинный не самый медленный)`
   );
+
+  section('7. New snapshot (PR-08/09) vs существующий model-cache.json (тот же 558-объектный воркload)');
+  // PR-09 (ТЗ §55 P1.3): performance comparison нового backend против текущего
+  // production-кэша — обе стороны на ОДНОЙ и той же уже построенной модели
+  // (loadMetadataFromYaml), поэтому разница — это разница именно в commit/read
+  // I/O, а не в конверсии YAML→MetaTable[] (та не меняется этим PR).
+  const snapshotModel = loadMetadataFromYaml(REAL_CF_YAML);
+  const snapshotRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'snapshot-bench-'));
+  try {
+    const commitMs = ms(() => { commitMetadataSnapshot(snapshotModel, snapshotRoot); });
+    const committed = commitMetadataSnapshot(snapshotModel, snapshotRoot); // 2-й commit — staged replace, не первая сборка
+    const readMs = ms(() => { readMetadataSnapshot(committed.targetDir); });
+    console.log(`Снимок: commit (staged-build + ownership-marker + rename) : ${commitMs.toFixed(1)} мс`);
+    console.log(`Снимок: warm read (readMetadataSnapshot)                  : ${readMs.toFixed(1)} мс`);
+    console.log(`Для сравнения — существующий production warm load (раздел 2): см. выше.`);
+  } finally {
+    fs.rmSync(snapshotRoot, { recursive: true, force: true });
+  }
 
   console.log('\n(Итоговые числа этого прогона — в docs/PERFORMANCE_BASELINE.md; см. дату вверху отчёта.)');
 }
