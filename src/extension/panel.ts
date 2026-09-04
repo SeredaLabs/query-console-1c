@@ -50,34 +50,42 @@ async function loadMetadata(
   context: vscode.ExtensionContext,
   channel: vscode.OutputChannel
 ): Promise<MetadataModel> {
-  const cfYamlDir = resolveManagedCfDir(outPath);
-  const configYaml = path.join(cfYamlDir, 'configuration.yaml');
-
-  // PR-10 (ТЗ §55 P1.4, Production Metadata Switch): пока НЕТ управляемой YAML-
-  // генерации — пробуем прямой XML→JSON снимок первым (быстрее на холодной
-  // сборке, см. docs/PERFORMANCE_BASELINE.md: 1.6-1.9x на двух независимых
-  // реальных конфигурациях), с тёплым переиспользованием уже закоммиченного
-  // снимка на повторных открытиях (source: 'direct-snapshot-cached') — так что
-  // после первого успеха этот путь остаётся быстрым, а не только один раз.
-  // При ЛЮБОМ сбое direct-пути (в т.ч. на конфигурации, которую мы не видели
-  // при валидации PR-08/09) — прозрачный откат на существующий, годами
-  // проверенный YAML-путь (см. loadMetadataSafe.ts) — поведение НЕ хуже, чем
-  // было до этого PR. Область применения намеренно узкая (ТЗ §47): УЖЕ
-  // существующая YAML-генерация (обычный случай для возвращающегося
-  // пользователя) продолжает идти НИЖЕ, через `loadMetadataCached`, вообще не
-  // тронутый этим PR; «Обновить кэш» (refreshCache-обработчик) тоже не
-  // переключён — остаётся отдельным, ещё не сделанным шагом.
-  if (!fs.existsSync(configYaml) && cfPath) {
+  // PR-10 widened (ТЗ §55 P1.4, Production Metadata Switch): пробуем прямой
+  // XML→JSON снимок первым для ЛЮБОГО заданного cfPath — не только когда ещё
+  // нет YAML-генерации (изначальный узкий PR-10), но и когда она УЖЕ есть
+  // (обычный случай для возвращающегося пользователя). `loadMetadataSnapshotFirst`
+  // сам решает: тёплое чтение уже закоммиченного снимка (самый частый случай
+  // после первого перехода — быстрее на холодной сборке, см.
+  // docs/PERFORMANCE_BASELINE.md: 1.6-1.9x на двух независимых реальных
+  // конфигурациях) или rebuild с прозрачным откатом на существующий, годами
+  // проверенный YAML-путь при сбое direct-пути (см. loadMetadataSafe.ts).
+  //
+  // Если бы ДАЖЕ откат (сам YAML-путь) бросил исключение — раньше (до этого
+  // изменения) это стало бы необработанным отказом промиса `metadataReady`
+  // (см. createPanel), а не грациозным переходом дальше, как делал оригинальный
+  // код до PR-10. Перехватываем здесь и даём шанс уже прочитанному тёплому
+  // YAML-кэшу (если он есть) или легаси XML-парсеру ниже — то же поведение,
+  // что было всегда, на случай, когда откажут ОБА пути метаданных сразу.
+  //
+  // «Обновить кэш» (refreshCache-обработчик) пока НЕ переключён — остаётся
+  // отдельным, ещё не сделанным шагом.
+  if (cfPath) {
     const snapshotOutPath = path.join(outPath, 'snapshot');
     const t = Date.now();
-    const r = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, outPath);
-    const fallbackNote = r.fallbackReason ? ` (direct-путь не удался: ${r.fallbackReason})` : '';
-    channel.appendLine(
-      `[1C Query] metadata built via ${r.source} in ${Date.now() - t}ms (${r.model.tables.length} tables)${fallbackNote}`
-    );
-    return r.model;
+    try {
+      const r = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, outPath);
+      const fallbackNote = r.fallbackReason ? ` (direct-путь не удался: ${r.fallbackReason})` : '';
+      channel.appendLine(
+        `[1C Query] metadata built via ${r.source} in ${Date.now() - t}ms (${r.model.tables.length} tables)${fallbackNote}`
+      );
+      return r.model;
+    } catch (e) {
+      channel.appendLine(`[1C Query] direct-путь и YAML-откат оба не удались: ${e} — пробуем уже закоммиченный YAML/legacy XML`);
+    }
   }
 
+  const cfYamlDir = resolveManagedCfDir(outPath);
+  const configYaml = path.join(cfYamlDir, 'configuration.yaml');
   if (fs.existsSync(configYaml)) {
     channel.appendLine(`[1C Query] Loading metadata from YAML: ${cfYamlDir}`);
     const t = Date.now();
