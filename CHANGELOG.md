@@ -13,6 +13,18 @@ All notable changes are recorded here. The project uses
   compact Marketplace badges, and clearer language navigation.
 - Replaced the static constructor screenshot with an optimized animated demo
   based on SFK metadata.
+- Visually consolidated the custom-expression ("Довільний вираз") dialog with
+  the rest of the query constructor: shared panel/section-header styling,
+  icon-and-hover field rows, and a code-editor surface matching the query text
+  dialog.
+- Increased and unified vertical row spacing across every field/table list in
+  the constructor (previously an inconsistent 1-3px depending on tab), for
+  better readability.
+- Restyled the localized user-guide pages (English, Ukrainian, Russian) with
+  the same visual language as the README, fixed a stale command reference in
+  the Ukrainian and Russian troubleshooting pages, and moved the
+  translation-tracking metadata into a hidden comment so it no longer renders
+  as a visible table on GitHub.
 
 ## 0.1.25 - 2026-09-05
 
