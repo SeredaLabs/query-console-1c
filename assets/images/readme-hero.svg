@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="560" viewBox="0 60 1600 560" role="img" aria-labelledby="title description">
+  <title id="title">1C Query Constructor</title>
+  <desc id="description">Retro pixel interface showing a visual metadata-aware SDBL query being assembled in VS Code.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#09101e"/>
+      <stop offset="0.55" stop-color="#0d1628"/>
+      <stop offset="1" stop-color="#111b31"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#17243b"/>
+      <stop offset="1" stop-color="#101a2d"/>
+    </linearGradient>
+    <linearGradient id="blueButton" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#64a7ff"/>
+      <stop offset="1" stop-color="#397fd8"/>
+    </linearGradient>
+    <linearGradient id="greenButton" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#62d49a"/>
+      <stop offset="1" stop-color="#2b9b69"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#3b5576" stroke-opacity="0.18" stroke-width="1"/>
+      <rect x="30" y="30" width="2" height="2" fill="#6aa8f4" fill-opacity="0.18"/>
+    </pattern>
+    <filter id="shadow" x="-30%" y="-30%" width="180%" height="190%">
+      <feDropShadow dx="14" dy="18" stdDeviation="0" flood-color="#02050c" flood-opacity="0.9"/>
+    </filter>
+    <filter id="softShadow" x="-30%" y="-30%" width="180%" height="190%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#02050c" flood-opacity="0.7"/>
+    </filter>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="appClip">
+      <rect x="850" y="76" width="658" height="526" rx="14"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1600" height="720" fill="url(#background)"/>
+  <rect width="1600" height="720" fill="url(#grid)"/>
+  <path d="M0 610L320 290L530 500L780 250L1040 510L1335 215L1600 480V720H0Z" fill="#183052" opacity="0.18"/>
+  <path d="M0 655L375 360L565 555L800 330L1058 565L1365 300L1600 520" fill="none" stroke="#4f94e8" stroke-width="3" opacity="0.13"/>
+
+  <g opacity="0.8">
+    <rect x="38" y="48" width="10" height="10" fill="#4f94e8"/>
+    <rect x="58" y="48" width="34" height="10" fill="#203c61"/>
+    <rect x="1510" y="654" width="10" height="10" fill="#45c486"/>
+    <rect x="1530" y="654" width="34" height="10" fill="#204a46"/>
+    <rect x="760" y="80" width="8" height="8" fill="#f6bd60"/>
+    <rect x="780" y="80" width="8" height="8" fill="#4f94e8"/>
+  </g>
+
+  <!-- Brand block -->
+  <g filter="url(#softShadow)">
+    <rect x="78" y="74" width="128" height="128" rx="24" fill="#132744" stroke="#365d8e" stroke-width="3"/>
+    <rect x="88" y="84" width="108" height="108" rx="18" fill="#0b1424"/>
+    <image href="icon.png" x="88" y="84" width="108" height="108"/>
+    <path d="M94 93H177" stroke="#8ec3ff" stroke-width="4" opacity="0.7"/>
+    <path d="M194 105V175" stroke="#06101e" stroke-width="5" opacity="0.65"/>
+  </g>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+    <text x="238" y="122" fill="#7fa9da" font-size="21" font-weight="700" letter-spacing="3">VISUAL SDBL DESIGNER</text>
+    <text x="238" y="158" fill="#a8bad1" font-size="19" font-weight="700" letter-spacing="2">FOR VS CODE</text>
+
+    <text x="78" y="302" fill="#edf6ff" font-family="Arial Black, Arial, sans-serif" font-size="76" font-weight="900" letter-spacing="-2">1C: QUERY</text>
+    <text x="78" y="382" fill="#65a8ff" font-family="Arial Black, Arial, sans-serif" font-size="76" font-weight="900" letter-spacing="-2">CONSTRUCTOR</text>
+    <rect x="80" y="405" width="520" height="5" fill="#31567e"/>
+    <rect x="80" y="405" width="168" height="5" fill="#4f94e8"/>
+
+    <text x="80" y="466" fill="#a8bad1" font-size="24">Visual 1C query design. SDBL stays in code.</text>
+  </g>
+
+  <!-- Constructor window -->
+  <g filter="url(#shadow)">
+    <rect x="850" y="76" width="658" height="526" rx="14" fill="#07101e" stroke="#426a99" stroke-width="3"/>
+    <g clip-path="url(#appClip)">
+      <rect x="850" y="76" width="658" height="48" fill="#1b2a42"/>
+      <rect x="850" y="121" width="658" height="3" fill="#4f94e8" opacity="0.65"/>
+      <rect x="870" y="94" width="10" height="10" fill="#ff6b73"/>
+      <rect x="890" y="94" width="10" height="10" fill="#f6bd60"/>
+      <rect x="910" y="94" width="10" height="10" fill="#45c486"/>
+      <text x="950" y="108" fill="#a9bdd5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16">QUERY CONSTRUCTOR / order-analysis.bsl</text>
+
+      <!-- Metadata rail -->
+      <rect x="850" y="124" width="176" height="478" fill="#0e192a"/>
+      <rect x="872" y="148" width="132" height="28" rx="3" fill="#172b46"/>
+      <rect x="884" y="158" width="8" height="8" fill="#4f94e8"/>
+      <text x="902" y="168" fill="#9fb5cf" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">METADATA</text>
+      <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">
+        <text x="874" y="216" fill="#6d87a5">▾</text><text x="894" y="216" fill="#bed0e4">Documents</text>
+        <text x="894" y="246" fill="#6d87a5">├─</text><text x="922" y="246" fill="#7fb3f2">Sales</text>
+        <text x="894" y="276" fill="#6d87a5">└─</text><text x="922" y="276" fill="#9aadc5">Returns</text>
+        <text x="874" y="320" fill="#6d87a5">▾</text><text x="894" y="320" fill="#bed0e4">Catalogs</text>
+        <text x="894" y="350" fill="#6d87a5">├─</text><text x="922" y="350" fill="#7fd8a9">Items</text>
+        <text x="894" y="380" fill="#6d87a5">└─</text><text x="922" y="380" fill="#9aadc5">Partners</text>
+      </g>
+      <rect x="872" y="530" width="132" height="42" rx="3" fill="#11243c" stroke="#28486c"/>
+      <text x="888" y="555" fill="#7894b3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">128 OBJECTS</text>
+
+      <!-- Canvas -->
+      <rect x="1026" y="124" width="482" height="478" fill="#0a1322"/>
+      <rect x="1026" y="124" width="482" height="478" fill="url(#grid)"/>
+
+      <!-- Connectors behind cards -->
+      <path d="M1184 258H1240V323H1294" fill="none" stroke="#64a7ff" stroke-width="5"/>
+      <path d="M1184 258H1214V438H1250" fill="none" stroke="#45c486" stroke-width="4" stroke-dasharray="10 8"/>
+      <g filter="url(#glow)">
+        <rect x="1234" y="317" width="12" height="12" fill="#64a7ff"/>
+        <rect x="1208" y="432" width="12" height="12" fill="#45c486"/>
+      </g>
+
+      <!-- Nodes -->
+      <g>
+        <rect x="1058" y="174" width="182" height="132" rx="5" fill="#13233a" stroke="#4f94e8" stroke-width="3"/>
+        <rect x="1058" y="174" width="182" height="34" fill="url(#blueButton)"/>
+        <text x="1072" y="197" fill="#07111f" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" font-weight="800">DOCUMENT.SALES</text>
+        <text x="1072" y="233" fill="#d5e3f3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">☑ Ref</text>
+        <text x="1072" y="259" fill="#d5e3f3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">☑ Date</text>
+        <text x="1072" y="285" fill="#d5e3f3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">☑ Total</text>
+      </g>
+      <g>
+        <rect x="1294" y="258" width="180" height="132" rx="5" fill="#13233a" stroke="#45c486" stroke-width="3"/>
+        <rect x="1294" y="258" width="180" height="34" fill="url(#greenButton)"/>
+        <text x="1308" y="281" fill="#07111f" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" font-weight="800">CATALOG.ITEMS</text>
+        <text x="1308" y="317" fill="#d5e3f3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">☑ Ref</text>
+        <text x="1308" y="343" fill="#d5e3f3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">☑ Name</text>
+        <text x="1308" y="369" fill="#d5e3f3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">☐ Code</text>
+      </g>
+
+      <!-- Join capsule -->
+      <rect x="1122" y="414" width="226" height="52" rx="5" fill="#18273d" stroke="#3a5b7f" stroke-width="2"/>
+      <rect x="1134" y="426" width="28" height="28" fill="#f6bd60"/>
+      <text x="1140" y="446" fill="#162033" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="900">ON</text>
+      <text x="1174" y="446" fill="#c3d5e8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">Sales.Item = Items.Ref</text>
+
+      <!-- Generated query -->
+      <rect x="1050" y="495" width="426" height="82" rx="5" fill="#07101d" stroke="#274364" stroke-width="2"/>
+      <rect x="1050" y="495" width="8" height="82" fill="#4f94e8"/>
+      <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">
+        <text x="1076" y="523" fill="#b08cff">SELECT</text><text x="1136" y="523" fill="#d6e4f4"> Sales.Ref, Items.Name</text>
+        <text x="1076" y="548" fill="#b08cff">FROM</text><text x="1127" y="548" fill="#71b1ff"> Document.Sales</text>
+        <text x="1076" y="573" fill="#45c486">✓ QUERY VALID</text>
+      </g>
+
+      <!-- Pixel cursor -->
+      <g transform="translate(1452 430)">
+        <path d="M0 0V48L13 36L23 58L35 52L24 31H42Z" fill="#edf6ff" stroke="#0a1322" stroke-width="4" stroke-linejoin="miter"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- Outer pixel frame -->
+  <path d="M0 78V60H18M1582 60H1600V78M1600 602V620H1582M18 620H0V602" fill="none" stroke="#4f94e8" stroke-width="8"/>
+</svg>

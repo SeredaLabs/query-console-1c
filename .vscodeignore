@@ -4,6 +4,7 @@
 .claude/**
 .gitignore
 AGENTS.md
+assets/images/readme-hero.svg
 src/**
 test/**
 test-results/**

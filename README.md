@@ -1,28 +1,25 @@
 <p align="center">
-  <img src="assets/images/icon.png" width="112" alt="1C: Query Constructor icon">
+  <img src="assets/images/readme-hero.png" alt="1C: Query Constructor — visual metadata-aware SDBL query design in VS Code">
 </p>
 
-<h1 align="center">1C: Query Constructor</h1>
-
-<p align="center">
-  <strong>Build and edit 1C SDBL queries visually—without leaving VS Code.</strong>
+<p>
+  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.ru.md"><img align="right" src="https://img.shields.io/badge/%F0%9F%87%B7%F0%9F%87%BA-%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9-3B4658?style=flat-square" alt="Документация на русском"></a>
+  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.uk.md"><img align="right" src="https://img.shields.io/badge/%F0%9F%87%BA%F0%9F%87%A6-%D0%A3%D0%BA%D1%80%D0%B0%D1%97%D0%BD%D1%81%D1%8C%D0%BA%D0%B0-3B4658?style=flat-square" alt="Документація українською"></a>
+  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.md"><img align="right" src="https://img.shields.io/badge/%F0%9F%87%AC%F0%9F%87%A7-English-397FD8?style=flat-square" alt="English documentation"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://img.shields.io/badge/VS_Code-Marketplace-397FD8?style=flat-square&logo=visualstudiocode&logoColor=white" alt="Install from VS Code Marketplace"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://vsmarketplacebadges.dev/version-short/SeredaLabs.query-console-1c.svg" alt="VS Code Marketplace version"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://vsmarketplacebadges.dev/installs-short/SeredaLabs.query-console-1c.svg" alt="VS Code Marketplace installs"></a>
+  <img src="https://img.shields.io/badge/VS_Code-1.90%2B-4B5563?style=flat-square" alt="Requires VS Code 1.90 or later">
+  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-0F766E?style=flat-square" alt="MIT license"></a>
 </p>
 
-<p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://img.shields.io/visual-studio-marketplace/v/SeredaLabs.query-console-1c?style=flat-square&logo=visualstudiocode&label=Marketplace" alt="VS Code Marketplace version"></a>
-  <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://img.shields.io/visual-studio-marketplace/i/SeredaLabs.query-console-1c?style=flat-square&color=2563eb" alt="VS Code Marketplace installs"></a>
-  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-0f766e?style=flat-square" alt="MIT license"></a>
-</p>
+<br clear="both">
 
-<p align="center">
-  <strong>English</strong> · <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.uk.md">Українська</a> · <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.ru.md">Русский</a>
-</p>
+🧩 **1C: Query Constructor** is a VS Code extension for visually building and editing
+metadata-aware 1C SDBL queries and inserting them as static BSL strings—without
+connecting to a 1C database or executing the query.
 
-![The query designer showing metadata, selected tables, and fields](docs/images/query-constructor.png)
-
-The extension reads a file-based 1C configuration export, presents its tables
-and fields in a visual designer, and writes the result as a static BSL string.
-Open a supported query at the cursor to continue editing it visually.
+![Animated demo: searching SFK metadata, selecting fields, adding a condition and ordering, then validating the generated SDBL query](docs/images/query-constructor-demo.gif)
 
 ## ✨ What it does
 

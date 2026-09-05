@@ -1,28 +1,25 @@
 <p align="center">
-  <img src="assets/images/icon.png" width="112" alt="Иконка 1C: Конструктор запросов">
+  <img src="assets/images/readme-hero.png" alt="1C: Конструктор запросов — визуальное проектирование запросов SDBL с учётом метаданных в VS Code">
 </p>
 
-<h1 align="center">1C: Конструктор запросов</h1>
-
-<p align="center">
-  <strong>Создавайте и редактируйте запросы 1С SDBL визуально, не покидая VS Code.</strong>
+<p>
+  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.ru.md"><img align="right" src="https://img.shields.io/badge/%F0%9F%87%B7%F0%9F%87%BA-%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9-397FD8?style=flat-square" alt="Документация на русском"></a>
+  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.uk.md"><img align="right" src="https://img.shields.io/badge/%F0%9F%87%BA%F0%9F%87%A6-%D0%A3%D0%BA%D1%80%D0%B0%D1%97%D0%BD%D1%81%D1%8C%D0%BA%D0%B0-3B4658?style=flat-square" alt="Документація українською"></a>
+  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.md"><img align="right" src="https://img.shields.io/badge/%F0%9F%87%AC%F0%9F%87%A7-English-3B4658?style=flat-square" alt="English documentation"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://img.shields.io/badge/VS_Code-Marketplace-397FD8?style=flat-square&logo=visualstudiocode&logoColor=white" alt="Установить из VS Code Marketplace"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://vsmarketplacebadges.dev/version-short/SeredaLabs.query-console-1c.svg" alt="Версия в VS Code Marketplace"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://vsmarketplacebadges.dev/installs-short/SeredaLabs.query-console-1c.svg" alt="Количество установок из VS Code Marketplace"></a>
+  <img src="https://img.shields.io/badge/VS_Code-1.90%2B-4B5563?style=flat-square" alt="Требуется VS Code 1.90 или новее">
+  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-0F766E?style=flat-square" alt="Лицензия MIT"></a>
 </p>
 
-<p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://img.shields.io/visual-studio-marketplace/v/SeredaLabs.query-console-1c?style=flat-square&logo=visualstudiocode&label=Marketplace" alt="Версия в VS Code Marketplace"></a>
-  <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://img.shields.io/visual-studio-marketplace/i/SeredaLabs.query-console-1c?style=flat-square&color=2563eb" alt="Количество установок из VS Code Marketplace"></a>
-  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-0f766e?style=flat-square" alt="Лицензия MIT"></a>
-</p>
+<br clear="both">
 
-<p align="center">
-  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.md">English</a> · <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.uk.md">Українська</a> · <strong>Русский</strong>
-</p>
+🧩 **1C: Конструктор запросов** — расширение VS Code для визуального создания и
+редактирования SDBL-запросов с учётом метаданных и вставки их как статических
+BSL-строк — без подключения к базе и выполнения запроса.
 
-![Конструктор запроса с метаданными, выбранными таблицами и полями](docs/images/query-constructor.png)
-
-Расширение читает файловую выгрузку конфигурации 1С, показывает таблицы и поля
-в визуальном конструкторе и записывает результат как статическую BSL-строку.
-Поддерживаемый запрос под курсором можно снова открыть для визуального редактирования.
+![Анимированная демонстрация: поиск в метаданных SFK, выбор полей, добавление условия и сортировки и проверка сгенерированного SDBL-запроса](docs/images/query-constructor-demo.gif)
 
 ## ✨ Что умеет расширение
 

@@ -5,6 +5,15 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.26 - 2026-09-05
+
+### Changed
+
+- Redesigned the localized README headers with a responsive project banner,
+  compact Marketplace badges, and clearer language navigation.
+- Replaced the static constructor screenshot with an optimized animated demo
+  based on SFK metadata.
+
 ## 0.1.25 - 2026-09-05
 
 ### Added
