@@ -123,6 +123,7 @@
     "real:inventory": "esbuild tooling/real-constructor/inventory.ts --bundle --outfile=out/real-constructor/inventory.js --platform=node --format=cjs --packages=external && node out/real-constructor/inventory.js",
     "our:inventory": "npm run build:webview && esbuild tooling/our-constructor/inventory.ts --bundle --outfile=out/our-constructor/inventory.js --platform=node --format=cjs --packages=external && node out/our-constructor/inventory.js",
     "corpus:verify": "npm run build:webview && esbuild tooling/corpus-verify/verify.ts --bundle --outfile=out/corpus-verify/verify.js --platform=node --format=cjs --packages=external && node out/corpus-verify/verify.js",
+    "corpus:scan-unsafe-vt": "esbuild src/cli/scanUnsafeVirtualTables.ts --bundle --outfile=out/cli/scanUnsafeVirtualTables.js --platform=node --format=cjs && node out/cli/scanUnsafeVirtualTables.js",
     "test": "npm run typecheck && npm run test:unit",
     "dev": "npm run build && code --extensionDevelopmentPath=."
   },
