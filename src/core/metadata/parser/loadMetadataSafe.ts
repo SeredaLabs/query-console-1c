@@ -73,8 +73,16 @@ const RELEVANT_SUBDIRS = [...HANDLERS.map(h => h.subdir), 'CommonAttributes'];
  * matching its exact (non-recursive) read pattern here made this freshness
  * check ~6x cheaper (measured), turning a ~256ms warm check into one close to
  * `readMetadataSnapshot`'s own ~44ms.
+ *
+ * Exported (not just used internally by `loadMetadataSnapshotFirst`) so
+ * `panel.ts` can reuse the SAME freshness basis for the residual
+ * `loadMetadataCached`-only branch (KNOWN_ISSUES.md "Cache метаданных может
+ * быть устаревшим") — that branch only runs when the direct path AND its own
+ * YAML rebuild fallback have already both failed, so it cannot force a fresh
+ * rebuild there, but it CAN now detect and report staleness instead of
+ * silently trusting an old cache.
  */
-function newestRelevantMtime(cfPath: string): number {
+export function newestRelevantMtime(cfPath: string): number {
   let max = 0;
   for (const subdir of RELEVANT_SUBDIRS) {
     max = Math.max(max, newestTopLevelXmlMtime(path.join(cfPath, subdir)));

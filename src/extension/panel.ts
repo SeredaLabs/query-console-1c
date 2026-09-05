@@ -6,7 +6,7 @@ import { buildCachePath, writeCache } from '../core/metadata/cacheBuilder';
 import { isCacheValid, readCache } from '../core/metadata/cacheLoader';
 import { loadMetadataCached } from '../core/metadata/modelCache';
 import { resolveManagedCfDir } from '../core/metadata/parser/generationStore';
-import { loadMetadataSnapshotFirst, loadMetadataWithFallback } from '../core/metadata/parser/loadMetadataSafe';
+import { loadMetadataSnapshotFirst, loadMetadataWithFallback, newestRelevantMtime } from '../core/metadata/parser/loadMetadataSafe';
 import { createMetadataRepository } from '../core/metadata/metadataRepository';
 import { generate } from '../core/query/sdblGenerator';
 import { insertResult } from './insertResult';
@@ -87,6 +87,19 @@ async function loadMetadata(
     const t = Date.now();
     const model = loadMetadataCached(cfYamlDir);
     channel.appendLine(`[1C Query] metadata loaded in ${Date.now() - t}ms (${model.tables.length} tables)`);
+    // Residual gap (KNOWN_ISSUES.md "Cache метаданных может быть устаревшим"):
+    // эта ветка выполняется только когда direct-путь И его собственный
+    // YAML-откат уже оба упали (см. catch выше) — свежая пересборка сейчас
+    // недоступна, повторять тот же неудавшийся rebuild бессмысленно. Но мы
+    // всё ещё можем ОБНАРУЖИТЬ устаревание относительно XML (та же основа,
+    // что и у основного пути — `newestRelevantMtime`) и явно сообщить об
+    // этом, вместо тихой выдачи возможно устаревших метаданных как будто они
+    // актуальны.
+    if (cfPath && fs.statSync(configYaml).mtimeMs < newestRelevantMtime(cfPath)) {
+      channel.appendLine(
+        `[1C Query] ВНИМАНИЕ: YAML в ${cfYamlDir} устарел относительно XML в ${cfPath} — свежая пересборка не удалась (см. выше), показанные метаданные могут не отражать последнюю выгрузку конфигурации`
+      );
+    }
     return model;
   }
 

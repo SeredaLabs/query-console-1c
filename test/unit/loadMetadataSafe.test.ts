@@ -7,7 +7,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as snapshotBuilder from '../../src/core/metadata/parser/snapshotBuilder';
-import { loadMetadataWithFallback, loadMetadataSnapshotFirst } from '../../src/core/metadata/parser/loadMetadataSafe';
+import { loadMetadataWithFallback, loadMetadataSnapshotFirst, newestRelevantMtime } from '../../src/core/metadata/parser/loadMetadataSafe';
 import { parseConfiguration } from '../../src/core/metadata/parser/parseConfiguration';
 import { loadMetadataFromYaml } from '../../src/core/metadata/yamlLoader';
 import { modelCachePath } from '../../src/core/metadata/modelCache';
@@ -152,5 +152,23 @@ describe('loadMetadataSnapshotFirst (production entry point, panel.ts)', () => {
     expect(() => loadMetadataSnapshotFirst(cfPath, snapshotOutPath, yamlOutPath)).not.toThrow();
     const r = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, yamlOutPath);
     expect(r.model.tables.length).toBeGreaterThan(0);
+  });
+});
+
+describe('newestRelevantMtime (exported for panel.ts residual "оба пути упали" branch)', () => {
+  it('растёт при изменении mtime XML-файла в распознаваемом подкаталоге', () => {
+    const { cfPath } = freshCfCopy();
+    const before = newestRelevantMtime(cfPath);
+
+    const anyXml = path.join(cfPath, 'Catalogs', fs.readdirSync(path.join(cfPath, 'Catalogs'))[0]);
+    const future = new Date(Date.now() + 5000);
+    fs.utimesSync(anyXml, future, future);
+
+    expect(newestRelevantMtime(cfPath)).toBeGreaterThan(before);
+  });
+
+  it('0 для каталога без распознаваемых подкаталогов', () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'load-safe-empty-'));
+    expect(newestRelevantMtime(tmpDir)).toBe(0);
   });
 });
