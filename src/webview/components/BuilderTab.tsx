@@ -7,7 +7,7 @@ import { ResizeHandle } from './ResizeHandle';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
 import { IconButton } from './IconButton';
-import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox } from '../sharedStyles';
+import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox, ROW_PADDING_Y } from '../sharedStyles';
 import { t as i18nT, type MessageKey } from '../i18n';
 
 type Section = 'fields' | 'conditions' | 'order' | 'totals';
@@ -273,7 +273,7 @@ export function BuilderTab(props: Props): React.ReactElement {
             {rows.map((row: BuilderField, idx) => {
               const isRef = rowIsRef(row.ref);
               return (
-                <div key={`${active}:${idx}:${row.ref}`} style={{ display: 'flex', alignItems: 'center', padding: '2px 6px', gap: 4 }}>
+                <div key={`${active}:${idx}:${row.ref}`} style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 6px`, gap: 4 }}>
                   <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                     {row.ref}{row.child ? '.*' : ''}

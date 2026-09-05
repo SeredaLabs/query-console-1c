@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { MetaField } from '../../core/metadata/types';
 import type { RefId } from '../../shared/messages';
 import { Chevron } from './Chevron';
+import { ROW_PADDING_Y } from '../sharedStyles';
 
 interface Props {
   field: MetaField;
@@ -42,8 +43,8 @@ export function FieldTreeRow({ field, depth, expandedRefs, onExpandRef, onDragSt
         className="qc-row"
         style={{
           paddingLeft: 8 + depth * 16,
-          paddingTop: 1,
-          paddingBottom: 1,
+          paddingTop: ROW_PADDING_Y,
+          paddingBottom: ROW_PADDING_Y,
           fontSize: 12,
           color: 'var(--vscode-descriptionForeground, #aaa)',
           userSelect: 'none',

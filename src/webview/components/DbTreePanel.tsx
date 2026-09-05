@@ -4,7 +4,7 @@ import type { RefId } from '../../shared/messages';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
 import { IconButton } from './IconButton';
-import { SECTION_HEADER } from '../sharedStyles';
+import { SECTION_HEADER, ROW_PADDING_Y } from '../sharedStyles';
 import { t, type MessageKey } from '../i18n';
 
 interface Props {
@@ -244,8 +244,8 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
         onClick={() => onFocusField(tableFullName, fieldPath)}
         style={{
           paddingLeft: 8 + depth * 16,
-          paddingTop: 2,
-          paddingBottom: 2,
+          paddingTop: ROW_PADDING_Y,
+          paddingBottom: ROW_PADDING_Y,
           cursor: 'default',
           background: isFocused ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined,
           color: isFocused ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit',
@@ -319,8 +319,8 @@ function TabularSectionNode({ ts, fields, expandedRefs, collapsedRefs, onToggleC
         onClick={onToggle}
         style={{
           paddingLeft: 8 + depth * 16,
-          paddingTop: 2,
-          paddingBottom: 2,
+          paddingTop: ROW_PADDING_Y,
+          paddingBottom: ROW_PADDING_Y,
           cursor: 'default',
           display: 'flex',
           alignItems: 'center',
@@ -577,8 +577,8 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                     onClick={() => { toggleTable(rt.table.fullName); onFocusTable(rt.table.fullName); }}
                     style={{
                       paddingLeft: 24,
-                      paddingTop: 2,
-                      paddingBottom: 2,
+                      paddingTop: ROW_PADDING_Y,
+                      paddingBottom: ROW_PADDING_Y,
                       cursor: 'default',
                       background: isTableActiveMatch ? ACTIVE_MATCH_BG : (isFocused ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined),
                       color: isTableActiveMatch ? 'inherit' : (isFocused ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit'),
@@ -673,14 +673,14 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                       e.dataTransfer.effectAllowed = 'copy';
                     }}
                     onClick={() => toggleTable(table.fullName)}
-                    style={{ paddingLeft: 24, paddingTop: 2, paddingBottom: 2, cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
+                    style={{ paddingLeft: 24, paddingTop: ROW_PADDING_Y, paddingBottom: ROW_PADDING_Y, cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
                   >
                     <Chevron expanded={isTableExpanded} />
                     <MetaKindIcon kind={table.kind} />
                     <span>{table.name}</span>
                   </div>
                   {isTableExpanded && table.fields.map(field => (
-                    <div key={field.name} className="qc-row" style={{ paddingLeft: 48, paddingTop: 2, paddingBottom: 2, userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div key={field.name} className="qc-row" style={{ paddingLeft: 48, paddingTop: ROW_PADDING_Y, paddingBottom: ROW_PADDING_Y, userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                       {field.name}
                     </div>

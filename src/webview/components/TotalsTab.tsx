@@ -6,7 +6,7 @@ import { distinctFieldRefs } from '../fieldSource';
 import { findMetaField, isRefField } from './GroupingTab';
 import { ResizeHandle } from './ResizeHandle';
 import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
-import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox } from '../sharedStyles';
+import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox, ROW_PADDING_Y } from '../sharedStyles';
 import { t, type MessageKey } from '../i18n';
 
 interface Props {
@@ -126,7 +126,7 @@ export function TotalsTab(props: Props): React.ReactElement {
             {totals.groupFields.map((g: TotalGroupField) => {
               const isRef = isRefField(findMetaField(metaTables, selectedTables, g.tableId, g.path));
               return (
-                <div key={`${g.tableId}:${g.path}`} style={{ display: 'flex', alignItems: 'center', padding: '2px 6px', gap: 4 }}>
+                <div key={`${g.tableId}:${g.path}`} style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 6px`, gap: 4 }}>
                   <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                     {labelFor(g.tableId, g.path)}
@@ -182,7 +182,7 @@ export function TotalsTab(props: Props): React.ReactElement {
             }}
           >
             {totals.totalFields.map((f: TotalField, idx) => (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', padding: '2px 6px', gap: 4 }}>
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 6px`, gap: 4 }}>
                 <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                 <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={totalFieldLabel(f)}>
                   {totalFieldLabel(f)}

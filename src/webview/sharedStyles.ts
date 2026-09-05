@@ -99,8 +99,13 @@ export const panelBox: React.CSSProperties = {
   background: 'var(--vscode-editor-background, #1e1e1e)',
 };
 
+/** Единый вертикальный отступ строк списков (поля/таблицы/условия и т.д.) —
+ * раньше он расходился от вкладки к вкладке (1px/2px/3px), из-за чего текст
+ * в панелях «Поля» выглядел «сжатым» по сравнению с остальной формой. */
+export const ROW_PADDING_Y = 4;
+
 export const ROW: React.CSSProperties = {
-  padding: '3px 8px',
+  padding: `${ROW_PADDING_Y}px 8px`,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',

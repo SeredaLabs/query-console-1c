@@ -6,7 +6,7 @@ import { distinctFieldRefs } from '../fieldSource';
 import { ResizeHandle } from './ResizeHandle';
 import { IconButton } from './IconButton';
 import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
-import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
+import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox, ROW_PADDING_Y } from '../sharedStyles';
 import { t } from '../i18n';
 
 const ALL_FUNCS: AggregateFunction[] = ['Сумма', 'Количество', 'КоличествоРазличных', 'Максимум', 'Минимум', 'Среднее'];
@@ -207,7 +207,7 @@ export function GroupingTab(props: Props): React.ReactElement {
               const numeric = isNumericField(findMetaField(metaTables, selectedTables, a.tableId, a.path));
               const funcs = allowedFuncs(numeric);
               return (
-                <div key={`${a.tableId}:${a.path}`} style={{ display: 'flex', alignItems: 'center', padding: '2px 6px', gap: 4 }}>
+                <div key={`${a.tableId}:${a.path}`} style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 6px`, gap: 4 }}>
                   <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                     {labelFor(a.tableId, a.path)}

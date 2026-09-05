@@ -3,7 +3,7 @@ import type { QueryMeta } from '../state/queryStore';
 import type { UnionColumn } from '../../core/query/unionModel';
 import { ResizeHandle } from './ResizeHandle';
 import { IconButton } from './IconButton';
-import { BTN, SECTION_HEADER, panelBox } from '../sharedStyles';
+import { BTN, SECTION_HEADER, panelBox, ROW_PADDING_Y } from '../sharedStyles';
 import { t } from '../i18n';
 
 const ALIAS_RE = /^[A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*$/;
@@ -42,7 +42,7 @@ const TH: React.CSSProperties = { ...SECTION_HEADER, textAlign: 'left', whiteSpa
 
 const TD: React.CSSProperties = {
   fontSize: 12,
-  padding: '2px 6px',
+  padding: `${ROW_PADDING_Y}px 6px`,
   borderBottom: '1px solid var(--qc-border)',
 };
 

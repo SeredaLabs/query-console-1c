@@ -8,7 +8,7 @@ import { IconButton } from './IconButton';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
 import { FieldTreeRow } from './FieldTreeRow';
-import { SECTION_HEADER } from '../sharedStyles';
+import { SECTION_HEADER, ROW_PADDING_Y } from '../sharedStyles';
 import { t as i18nT } from '../i18n';
 
 interface Props {
@@ -171,7 +171,7 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                 onDoubleClick={() => onActivateTable(t.id)}
                 className="qc-row"
                 style={{
-                  padding: '2px 6px',
+                  padding: `${ROW_PADDING_Y}px 6px`,
                   cursor: 'default',
                   background: isSelected ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined,
                   color: isSelected ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit',
@@ -223,8 +223,8 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                           title={i18nT('tree.tabularSection')}
                           style={{
                             paddingLeft: 24,
-                            paddingTop: 1,
-                            paddingBottom: 1,
+                            paddingTop: ROW_PADDING_Y,
+                            paddingBottom: ROW_PADDING_Y,
                             fontSize: 12,
                             color: 'var(--vscode-descriptionForeground, #888)',
                             userSelect: 'none',
@@ -253,8 +253,8 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                             className="qc-row"
                             style={{
                               paddingLeft: 48,
-                              paddingTop: 1,
-                              paddingBottom: 1,
+                              paddingTop: ROW_PADDING_Y,
+                              paddingBottom: ROW_PADDING_Y,
                               fontSize: 12,
                               color: 'var(--vscode-descriptionForeground, #aaa)',
                               userSelect: 'none',

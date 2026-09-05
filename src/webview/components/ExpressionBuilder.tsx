@@ -3,7 +3,7 @@ import { FUNCTION_CATALOG, type FunctionGroup, type FunctionLeaf } from '../../c
 import { ResizeHandle } from './ResizeHandle';
 import { Chevron } from './Chevron';
 import { CodeEditor, type CodeEditorHandle } from './CodeEditor';
-import { BTN, BTN_SECONDARY } from '../sharedStyles';
+import { BTN, BTN_SECONDARY, panelBox, SECTION_HEADER, ROW_PADDING_Y } from '../sharedStyles';
 import { t } from '../i18n';
 
 interface Props {
@@ -39,7 +39,7 @@ function FunctionTree({ node, depth, onPick }: { node: FunctionGroup | FunctionL
         className="qc-row"
         onDragStart={e => { e.dataTransfer.setData('text/plain', node.template); e.dataTransfer.effectAllowed = 'copy'; }}
         onDoubleClick={() => onPick(node.template)}
-        style={{ paddingLeft: 8 + depth * 14 + 14, paddingTop: 1, fontSize: 12, cursor: 'default', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+        style={{ paddingLeft: 8 + depth * 14 + 14, paddingTop: ROW_PADDING_Y, paddingBottom: ROW_PADDING_Y, fontSize: 12, cursor: 'default', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
       >
         <span className="codicon codicon-symbol-method" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
         {node.label}
@@ -51,7 +51,7 @@ function FunctionTree({ node, depth, onPick }: { node: FunctionGroup | FunctionL
       <div
         onClick={() => setOpen(o => !o)}
         className="qc-row"
-        style={{ paddingLeft: 8 + depth * 14, fontSize: 12, cursor: 'default', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+        style={{ paddingLeft: 8 + depth * 14, paddingTop: ROW_PADDING_Y, paddingBottom: ROW_PADDING_Y, fontSize: 12, cursor: 'default', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
       >
         <Chevron expanded={open} />
         <span className={`codicon codicon-folder${open ? '-opened' : ''}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
@@ -88,22 +88,32 @@ export function ExpressionBuilder({ title = t('dialog.expression.title'), availa
       <div style={PANEL} onClick={e => e.stopPropagation()}>
         <div style={{ fontWeight: 'bold', fontSize: 13 }}>{title}</div>
         <div style={{ display: 'flex', flex: 1, gap: 0, minHeight: 0 }}>
-          <div style={{ width: fieldsWidth, flexShrink: 0, overflow: 'auto', border: '1px solid var(--qc-border)' }}>
-            <div style={{ fontSize: 11, padding: '2px 6px', opacity: 0.7 }}>{t('common.field')}</div>
-            {availableFields.map(f => (
-              <div
-                key={f}
-                draggable
-                onDragStart={e => { e.dataTransfer.setData('text/plain', f); e.dataTransfer.effectAllowed = 'copy'; }}
-                onDoubleClick={() => insertAtCursor(f)}
-                style={{ padding: '1px 8px', fontSize: 12, cursor: 'default', userSelect: 'none' }}
-              >
-                {f}
-              </div>
-            ))}
+          <div style={{ ...panelBox, width: fieldsWidth, flexShrink: 0 }}>
+            <div style={SECTION_HEADER}>{t('common.fields')}</div>
+            <div style={{ overflow: 'auto' }}>
+              {availableFields.map(f => (
+                <div
+                  key={f}
+                  data-field-item
+                  draggable
+                  className="qc-row"
+                  onDragStart={e => { e.dataTransfer.setData('text/plain', f); e.dataTransfer.effectAllowed = 'copy'; }}
+                  onDoubleClick={() => insertAtCursor(f)}
+                  style={{
+                    paddingTop: ROW_PADDING_Y, paddingBottom: ROW_PADDING_Y, paddingLeft: 8, paddingRight: 8,
+                    fontSize: 12, cursor: 'grab', userSelect: 'none',
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    color: 'var(--vscode-descriptionForeground, #aaa)',
+                  }}
+                >
+                  <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
+                  <span title={f}>{f}</span>
+                </div>
+              ))}
+            </div>
           </div>
           <ResizeHandle onResize={d => setFieldsWidth(w => Math.max(120, w + d))} />
-          <div style={{ flex: 1, minWidth: 0, overflow: 'auto', border: '1px solid var(--qc-border)' }}>
+          <div style={{ ...panelBox, flex: 1, minWidth: 0, overflow: 'auto' }}>
             <FunctionTree node={FUNCTION_CATALOG} depth={0} onPick={insertAtCursor} />
           </div>
         </div>
@@ -117,14 +127,17 @@ export function ExpressionBuilder({ title = t('dialog.expression.title'), availa
           onDrop={handleDrop}
           wrapperStyle={{
             height: editorHeight,
-            background: 'var(--vscode-input-background, #3c3c3c)',
+            // Тот же приём/токен, что и в QueryTextDialog — фон поля текста
+            // запроса должен отличаться от фона самой модалки, иначе поле
+            // визуально сливается с рамкой вокруг него.
+            background: 'var(--qc-frame-bg, var(--vscode-editor-background, #1e1e1e))',
             border: '1px solid var(--qc-border)',
           }}
           textStyle={{
             fontFamily: 'var(--vscode-editor-font-family, monospace)',
             fontSize: 13,
             whiteSpace: 'pre-wrap',
-            color: 'var(--vscode-input-foreground, #ccc)',
+            color: 'var(--vscode-editor-foreground, #ccc)',
           }}
         />
         <div style={{ display: 'flex', gap: 4, alignSelf: 'flex-end' }}>

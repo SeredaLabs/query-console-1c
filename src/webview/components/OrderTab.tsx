@@ -4,7 +4,7 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { ResizeHandle } from './ResizeHandle';
 import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
-import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
+import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox, ROW_PADDING_Y } from '../sharedStyles';
 import { t } from '../i18n';
 
 interface Props {
@@ -80,7 +80,7 @@ export function OrderTab(props: Props): React.ReactElement {
             }}
           >
             {order.fields.map((f: OrderField) => (
-              <div key={`${f.tableId}:${f.path}`} style={{ display: 'flex', alignItems: 'center', padding: '2px 6px', gap: 4 }}>
+              <div key={`${f.tableId}:${f.path}`} style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 6px`, gap: 4 }}>
                 <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                   {labelFor(f.tableId, f.path)}

@@ -4,7 +4,7 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import { IconButton } from './IconButton';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
-import { SECTION_HEADER, REMOVE_BTN } from '../sharedStyles';
+import { SECTION_HEADER, REMOVE_BTN, ROW_PADDING_Y } from '../sharedStyles';
 import { t } from '../i18n';
 
 interface Props {
@@ -133,7 +133,7 @@ export function FieldsPanel({
               title={t('fields.editExpression')}
               className="qc-row"
               style={{
-                padding: '2px 6px',
+                padding: `${ROW_PADDING_Y}px 6px`,
                 cursor: 'default',
                 background: focusedSelectedFieldIdx === i ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined,
                 color: focusedSelectedFieldIdx === i ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit',
@@ -167,7 +167,7 @@ export function FieldsPanel({
               <div
                 className="qc-row"
                 style={{
-                  padding: '2px 6px',
+                  padding: `${ROW_PADDING_Y}px 6px`,
                   cursor: 'default',
                   userSelect: 'none',
                   display: 'flex',
@@ -192,8 +192,8 @@ export function FieldsPanel({
                   className="qc-row"
                   style={{
                     paddingLeft: 24,
-                    paddingTop: 1,
-                    paddingBottom: 1,
+                    paddingTop: ROW_PADDING_Y,
+                    paddingBottom: ROW_PADDING_Y,
                     fontSize: 12,
                     color: 'var(--vscode-descriptionForeground, #aaa)',
                     userSelect: 'none',
