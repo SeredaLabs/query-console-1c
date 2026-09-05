@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Chevron } from './Chevron';
 import type { QueryAnalysisQuery, QueryAnalysisResult, NavigateFn } from '../../core/query/queryAnalysisService';
+import { t } from '../i18n';
 
 export interface QueryStructurePanelProps {
   result: QueryAnalysisResult;
@@ -88,7 +89,7 @@ function Section({ title, icon, count, defaultOpen = true, children }: {
 function QueryBlock({ query, onNavigate }: { query: QueryAnalysisQuery; onNavigate: NavigateFn }): React.ReactElement {
   return (
     <>
-      <Section title="Поля" icon="symbol-field" count={query.fields.length}>
+      <Section title={t('structure.fields')} icon="symbol-field" count={query.fields.length}>
         {query.fields.map((f, i) => (
           <NavItem key={i} onClick={() => onNavigate(f.expression, query.textRange)}>
             <div style={ITEM_MAIN}>{f.alias}</div>
@@ -97,7 +98,7 @@ function QueryBlock({ query, onNavigate }: { query: QueryAnalysisQuery; onNaviga
         ))}
       </Section>
 
-      <Section title="Источники" icon="table" count={query.sources.length}>
+      <Section title={t('structure.sources')} icon="table" count={query.sources.length}>
         {query.sources.map((s, i) => (
           <NavItem key={i} onClick={() => onNavigate(s.fullName, query.textRange)}>
             <div style={ITEM_MAIN}>{s.alias}</div>
@@ -106,7 +107,7 @@ function QueryBlock({ query, onNavigate }: { query: QueryAnalysisQuery; onNaviga
         ))}
       </Section>
 
-      <Section title="Соединения" icon="git-merge" count={query.joins.length}>
+      <Section title={t('structure.joins')} icon="git-merge" count={query.joins.length}>
         {query.joins.map((j, i) => (
           <NavItem key={i} onClick={() => onNavigate(j.rightAlias, query.textRange)}>
             <div style={ITEM_MAIN}>{j.leftAlias} → {j.rightAlias}</div>
@@ -115,7 +116,7 @@ function QueryBlock({ query, onNavigate }: { query: QueryAnalysisQuery; onNaviga
         ))}
       </Section>
 
-      <Section title="Условия" icon="filter" count={query.conditions.length}>
+      <Section title={t('structure.conditions')} icon="filter" count={query.conditions.length}>
         {query.conditions.map((c, i) => (
           <NavItem key={i} onClick={() => onNavigate(c.text, query.textRange)}>
             <div style={{ ...ITEM_MAIN, fontFamily: MONO, fontSize: 11 }}>{c.text}</div>
@@ -140,7 +141,7 @@ function QueryBlock({ query, onNavigate }: { query: QueryAnalysisQuery; onNaviga
  */
 export function QueryStructurePanel({ result, onNavigate }: QueryStructurePanelProps): React.ReactElement {
   if (!result.result) {
-    return <div style={{ color: 'var(--vscode-descriptionForeground)' }}>Пусто.</div>;
+    return <div style={{ color: 'var(--vscode-descriptionForeground)' }}>{t('structure.empty')}</div>;
   }
   return (
     <div>
@@ -151,19 +152,19 @@ export function QueryStructurePanel({ result, onNavigate }: QueryStructurePanelP
         marginBottom: 12,
         borderBottom: '1px solid var(--qc-border)',
       }}>
-        Структура запроса
+        {t('dialog.queryText.structure')}
       </div>
 
       <div style={{ marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, fontSize: 12, marginBottom: 6 }}>
           <span className="codicon codicon-output" style={ICON} />
-          <span>Результат</span>
+          <span>{t('structure.result')}</span>
         </div>
         <QueryBlock query={result.result} onNavigate={onNavigate} />
       </div>
 
       {result.tempTables.length > 0 && (
-        <Section title="Временные таблицы" icon="database" count={result.tempTables.length} defaultOpen={false}>
+        <Section title={t('structure.tempTables')} icon="database" count={result.tempTables.length} defaultOpen={false}>
           {result.tempTables.map((tt, i) => (
             <div
               key={i}

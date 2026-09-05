@@ -5,6 +5,7 @@ import { PERIODICITY_VALUES, FILL_METHOD_VALUES } from '../../core/query/accumVi
 import { accountingParamFields, type VtParamKey } from '../../core/query/accountingVirtualParams';
 import { IconButton } from './IconButton';
 import { BTN, BTN_SECONDARY, MODAL_INPUT } from '../sharedStyles';
+import { t } from '../i18n';
 
 interface Props {
   slice: VirtualTableInfo['slice'];
@@ -37,6 +38,21 @@ function Row({ label, children }: { label: string; children: React.ReactNode }):
 
 const ACC_SLICES = new Set(['Остатки', 'Обороты', 'ОборотыДтКт', 'ОстаткиИОбороты', 'ДвиженияССубконто']);
 
+function paramLabel(key: VtParamKey, fallback: string): string {
+  const labels: Partial<Record<VtParamKey, Parameters<typeof t>[0]>> = {
+    period: 'dialog.virtual.period', startPeriod: 'dialog.virtual.periodStart',
+    endPeriod: 'dialog.virtual.periodEnd', periodicity: 'dialog.virtual.periodicity',
+    fillMethod: 'dialog.virtual.fillMethod', condition: 'dialog.virtual.condition',
+    accountCondition: 'dialog.virtual.accountCondition', corrAccountCondition: 'dialog.virtual.corrAccountCondition',
+    accountDtCondition: 'dialog.virtual.accountDtCondition', accountKtCondition: 'dialog.virtual.accountKtCondition',
+    subcontoTypes: 'dialog.virtual.subcontoTypes', corrSubcontoTypes: 'dialog.virtual.corrSubcontoTypes',
+    subcontoDtTypes: 'dialog.virtual.subcontoDtTypes', subcontoKtTypes: 'dialog.virtual.subcontoKtTypes',
+    order: 'tabs.order', top: 'additional.first',
+  };
+  const keyName = labels[key];
+  return keyName ? t(keyName) : fallback;
+}
+
 function AccountingForm({ slice, correspondence, initial, onOpenConditionBuilder, onOk, onCancel }: Props): React.ReactElement {
   const fieldsDesc = accountingParamFields(slice, correspondence === true);
   const [values, setValues] = React.useState<Record<string, string>>(() => {
@@ -58,23 +74,23 @@ function AccountingForm({ slice, correspondence, initial, onOpenConditionBuilder
   return (
     <div style={OVERLAY} onClick={onCancel}>
       <div style={PANEL} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 'bold', fontSize: 13 }}>Параметры виртуальной таблицы</div>
+        <div style={{ fontWeight: 'bold', fontSize: 13 }}>{t('dialog.virtual.title')}</div>
         {fieldsDesc.map(f => (
-          <Row key={f.key} label={f.label}>
+          <Row key={f.key} label={paramLabel(f.key, f.label)}>
             {f.control === 'periodicity' ? (
               <select data-testid={`vt-${f.key}`} style={MODAL_INPUT} value={values[f.key]} onChange={e => set(f.key, e.target.value)}>
-                <option value="">(не выбрано)</option>
+                <option value="">{t('common.noneSelected')}</option>
                 {PERIODICITY_VALUES.map(v => <option key={v} value={v}>{v}</option>)}
               </select>
             ) : f.control === 'fillMethod' ? (
               <select data-testid={`vt-${f.key}`} style={MODAL_INPUT} value={values[f.key]} onChange={e => set(f.key, e.target.value)}>
-                <option value="">(не выбрано)</option>
+                <option value="">{t('common.noneSelected')}</option>
                 {FILL_METHOD_VALUES.map(v => <option key={v} value={v}>{v}</option>)}
               </select>
             ) : f.key === 'condition' ? (
               <>
                 <input data-testid={`vt-${f.key}`} style={MODAL_INPUT} value={values[f.key]} onChange={e => set(f.key, e.target.value)} />
-                <IconButton icon="ellipsis" title="Произвольное выражение"
+                <IconButton icon="ellipsis" title={t('dialog.expression.title')}
                   onClick={() => onOpenConditionBuilder(values[f.key], text => set('condition', text))} />
               </>
             ) : (
@@ -83,8 +99,8 @@ function AccountingForm({ slice, correspondence, initial, onOpenConditionBuilder
           </Row>
         ))}
         <div style={{ display: 'flex', gap: 4, alignSelf: 'flex-end', marginTop: 6 }}>
-          <button data-testid="vt-ok" style={BTN} onClick={handleOk}>ОК</button>
-          <button data-testid="vt-cancel" style={BTN_SECONDARY} onClick={onCancel}>Отмена</button>
+          <button data-testid="vt-ok" style={BTN} onClick={handleOk}>{t('actions.ok')}</button>
+          <button data-testid="vt-cancel" style={BTN_SECONDARY} onClick={onCancel}>{t('actions.cancel')}</button>
         </div>
       </div>
     </div>
@@ -125,44 +141,44 @@ function LegacyForm({ slice, initial, onOpenConditionBuilder, onOk, onCancel }: 
   return (
     <div style={OVERLAY} onClick={onCancel}>
       <div style={PANEL} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 'bold', fontSize: 13 }}>Параметры виртуальной таблицы</div>
+        <div style={{ fontWeight: 'bold', fontSize: 13 }}>{t('dialog.virtual.title')}</div>
         {!isRange && (
-          <Row label="Период">
+          <Row label={t('dialog.virtual.period')}>
             <input data-testid="vt-period" style={MODAL_INPUT} value={period} onChange={e => setPeriod(e.target.value)} />
           </Row>
         )}
         {isRange && (
           <>
-            <Row label="Начало периода">
+            <Row label={t('dialog.virtual.periodStart')}>
               <input data-testid="vt-start" style={MODAL_INPUT} value={startPeriod} onChange={e => setStartPeriod(e.target.value)} />
             </Row>
-            <Row label="Конец периода">
+            <Row label={t('dialog.virtual.periodEnd')}>
               <input data-testid="vt-end" style={MODAL_INPUT} value={endPeriod} onChange={e => setEndPeriod(e.target.value)} />
             </Row>
-            <Row label="Периодичность">
+            <Row label={t('dialog.virtual.periodicity')}>
               <select data-testid="vt-periodicity" style={MODAL_INPUT} value={periodicity} onChange={e => setPeriodicity(e.target.value)}>
-                <option value="">(не выбрано)</option>
+                <option value="">{t('common.noneSelected')}</option>
                 {PERIODICITY_VALUES.map(v => <option key={v} value={v}>{v}</option>)}
               </select>
             </Row>
           </>
         )}
         {isOIO && (
-          <Row label="Метод дополнения">
+          <Row label={t('dialog.virtual.fillMethod')}>
             <select data-testid="vt-fillmethod" style={MODAL_INPUT} value={fillMethod} onChange={e => setFillMethod(e.target.value)}>
-              <option value="">(не выбрано)</option>
+              <option value="">{t('common.noneSelected')}</option>
               {FILL_METHOD_VALUES.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
           </Row>
         )}
-        <Row label="Условие">
+        <Row label={t('dialog.virtual.condition')}>
           <input data-testid="vt-condition" style={MODAL_INPUT} value={condition} onChange={e => setCondition(e.target.value)} />
-          <IconButton icon="ellipsis" title="Произвольное выражение"
+          <IconButton icon="ellipsis" title={t('dialog.expression.title')}
             onClick={() => onOpenConditionBuilder(condition, setCondition)} />
         </Row>
         <div style={{ display: 'flex', gap: 4, alignSelf: 'flex-end', marginTop: 6 }}>
-          <button data-testid="vt-ok" style={BTN} onClick={handleOk}>ОК</button>
-          <button data-testid="vt-cancel" style={BTN_SECONDARY} onClick={onCancel}>Отмена</button>
+          <button data-testid="vt-ok" style={BTN} onClick={handleOk}>{t('actions.ok')}</button>
+          <button data-testid="vt-cancel" style={BTN_SECONDARY} onClick={onCancel}>{t('actions.cancel')}</button>
         </div>
       </div>
     </div>

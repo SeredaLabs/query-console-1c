@@ -1,6 +1,21 @@
 import * as React from 'react';
+import { t, type MessageKey } from '../i18n';
 
 export const TABS = ['Таблицы и поля', 'Группировка', 'Условия', 'Дополнительно', 'Индексы', 'Объединения/Псевдонимы', 'Порядок', 'Итоги', 'Построитель', 'Пакет запросов'];
+
+const TAB_LABELS: Record<string, MessageKey> = {
+  'Таблицы и поля': 'tabs.tablesAndFields',
+  'Связи': 'tabs.connections',
+  'Группировка': 'tabs.grouping',
+  'Условия': 'tabs.conditions',
+  'Дополнительно': 'tabs.additional',
+  'Индексы': 'tabs.indexes',
+  'Объединения/Псевдонимы': 'tabs.unionsAliases',
+  'Порядок': 'tabs.order',
+  'Итоги': 'tabs.totals',
+  'Построитель': 'tabs.builder',
+  'Пакет запросов': 'tabs.batch',
+};
 
 interface Props {
   /** Видимые вкладки (вычисляются в App в зависимости от состояния). */
@@ -61,7 +76,7 @@ export function TabsBar({ tabs, active, onSelect }: Props): React.ReactElement {
               marginBottom: -1,
             }}
           >
-            {tab}
+            {t(TAB_LABELS[tab])}
           </div>
         );
       })}

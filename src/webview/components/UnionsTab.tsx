@@ -4,9 +4,9 @@ import type { UnionColumn } from '../../core/query/unionModel';
 import { ResizeHandle } from './ResizeHandle';
 import { IconButton } from './IconButton';
 import { BTN, SECTION_HEADER, panelBox } from '../sharedStyles';
+import { t } from '../i18n';
 
 const ALIAS_RE = /^[A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*$/;
-const ALIAS_ERROR = "Псевдонимы полей должны начинаться с буквы и могут содержать только буквы, цифры, и символ '_'";
 
 interface Props {
   queryList: QueryMeta[];
@@ -89,7 +89,7 @@ export function UnionsTab({
       return;
     }
     if (!ALIAS_RE.test(next)) {
-      setAliasError(ALIAS_ERROR);
+      setAliasError(t('unions.aliasError'));
       // Откатить отображаемый текст к исходному псевдониму.
       setAliasDrafts(d => { const { [colIdx]: _omit, ...rest } = d; return rest; });
       return;
@@ -102,13 +102,13 @@ export function UnionsTab({
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
       {/* Список запросов */}
       <div style={{ ...panelBox, width: queryListWidth, flexShrink: 0 }}>
-        <div style={SECTION_HEADER}>Список запросов</div>
+        <div style={SECTION_HEADER}>{t('unions.queryList')}</div>
         <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
-          <IconButton icon="add" tone="add" title="Добавить запрос" onClick={onAddQuery} />
+          <IconButton icon="add" tone="add" title={t('unions.addQuery')} onClick={onAddQuery} />
           <IconButton
             icon="close"
             tone="remove"
-            title="Удалить запрос"
+            title={t('unions.deleteQuery')}
             disabled={queryList.length <= 1}
             onClick={() => onRemoveQuery(selectedRow)}
           />
@@ -117,8 +117,8 @@ export function UnionsTab({
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>
-                <th style={TH}>Имя</th>
-                <th style={{ ...TH, width: 90, textAlign: 'center' }}>Без дупликатов</th>
+                <th style={TH}>{t('common.name')}</th>
+                <th style={{ ...TH, width: 90, textAlign: 'center' }}>{t('unions.distinct')}</th>
               </tr>
             </thead>
             <tbody>
@@ -158,17 +158,17 @@ export function UnionsTab({
 
       {/* Список полей */}
       <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
-        <div style={SECTION_HEADER}>Список полей</div>
+        <div style={SECTION_HEADER}>{t('unions.fieldList')}</div>
         <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
           <IconButton
             icon="arrow-up"
-            title="Переместить вверх"
+            title={t('actions.moveUp')}
             disabled={selectedCol <= 0}
             onClick={() => moveColumn('up')}
           />
           <IconButton
             icon="arrow-down"
-            title="Переместить вниз"
+            title={t('actions.moveDown')}
             disabled={selectedCol >= columns.length - 1}
             onClick={() => moveColumn('down')}
           />
@@ -177,7 +177,7 @@ export function UnionsTab({
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>
-                <th style={TH}>Имя поля</th>
+                <th style={TH}>{t('common.field')}</th>
                 {queryList.map((q, i) => (
                   <th key={i} style={TH}>{q.name}</th>
                 ))}
@@ -212,7 +212,7 @@ export function UnionsTab({
                     </td>
                     {col.cells.map((cell, i) => (
                       <td key={i} style={{ ...TD, color: cell === null ? 'var(--vscode-descriptionForeground, #888)' : 'inherit', fontStyle: cell === null ? 'italic' : 'normal' }}>
-                        {cell === null ? '<Отсутствует>' : cell}
+                        {cell === null ? t('unions.missing') : cell}
                       </td>
                     ))}
                   </tr>
@@ -244,7 +244,7 @@ export function UnionsTab({
             onClick={e => e.stopPropagation()}
           >
             <span style={{ fontSize: 13 }}>{aliasError}</span>
-            <button style={{ ...BTN, alignSelf: 'center', padding: '5px 20px' }} onClick={() => setAliasError(null)}>ОК</button>
+            <button style={{ ...BTN, alignSelf: 'center', padding: '5px 20px' }} onClick={() => setAliasError(null)}>{t('actions.ok')}</button>
           </div>
         </div>
       )}

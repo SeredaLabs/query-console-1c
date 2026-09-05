@@ -8,6 +8,7 @@ import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
 import { IconButton } from './IconButton';
 import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox } from '../sharedStyles';
+import { t as i18nT, type MessageKey } from '../i18n';
 
 type Section = 'fields' | 'conditions' | 'order' | 'totals';
 
@@ -22,11 +23,11 @@ interface Props {
   onSetAlias: (section: Section, index: number, alias: string) => void;
 }
 
-const SUB_TABS: { key: Section; label: string }[] = [
-  { key: 'fields', label: 'Поля' },
-  { key: 'conditions', label: 'Условия' },
-  { key: 'order', label: 'Порядок' },
-  { key: 'totals', label: 'Итоги' },
+const SUB_TABS: { key: Section; label: MessageKey }[] = [
+  { key: 'fields', label: 'common.fields' },
+  { key: 'conditions', label: 'tabs.conditions' },
+  { key: 'order', label: 'tabs.order' },
+  { key: 'totals', label: 'tabs.totals' },
 ];
 
 /** Последний сегмент составного пути (Поле.Подполе → Подполе). */
@@ -163,7 +164,7 @@ export function BuilderTab(props: Props): React.ReactElement {
                 fontSize: 13,
               }}
             >
-              {st.label}
+              {i18nT(st.label)}
             </div>
           );
         })}
@@ -172,7 +173,7 @@ export function BuilderTab(props: Props): React.ReactElement {
       <div style={{ display: 'flex', flex: 1, gap: 4, overflow: 'hidden' }}>
         {/* Левый список: Поля */}
         <div style={{ ...panelBox, width: leftWidth, flexShrink: 0 }}>
-          <div style={SECTION_HEADER}>Поля</div>
+          <div style={SECTION_HEADER}>{i18nT('common.fields')}</div>
           <div style={dropZone}>
             {/* Группа 1: текущие поля выборки */}
             {sourceFields.map((f, i) => {
@@ -191,7 +192,7 @@ export function BuilderTab(props: Props): React.ReactElement {
                     <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                     {selectFieldLabel(t, f)}
                   </span>
-                  <IconButton icon="chevron-right" tone="add" title="Добавить" onClick={() => addSelectField(f)} />
+                  <IconButton icon="chevron-right" tone="add" title={i18nT('actions.add')} onClick={() => addSelectField(f)} />
                 </div>
               );
             })}
@@ -203,7 +204,7 @@ export function BuilderTab(props: Props): React.ReactElement {
               onClick={() => setExpandAll(v => !v)}
             >
               <Chevron expanded={expandAll} />
-              <span>Все поля</span>
+              <span>{i18nT('builder.allFields')}</span>
             </div>
             {expandAll && selectedTables.map(t => {
               const meta = metaForTable(t);
@@ -234,7 +235,7 @@ export function BuilderTab(props: Props): React.ReactElement {
                           <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                           {ref}
                         </span>
-                        <IconButton icon="chevron-right" tone="add" title="Добавить" onClick={() => addAllField(t, mf.name)} />
+                        <IconButton icon="chevron-right" tone="add" title={i18nT('actions.add')} onClick={() => addAllField(t, mf.name)} />
                       </div>
                     );
                   })}
@@ -244,7 +245,7 @@ export function BuilderTab(props: Props): React.ReactElement {
 
             {sourceFields.length === 0 && !expandAll && (
               <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
-                Нет полей. Добавьте поля на вкладке «Таблицы и поля» или раскройте «Все поля».
+                {i18nT('empty.noFieldsAddOrAll')}
               </div>
             )}
           </div>
@@ -255,9 +256,9 @@ export function BuilderTab(props: Props): React.ReactElement {
         {/* Правый список: строки построителя */}
         <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex' }}>
-            <div style={{ ...SECTION_HEADER, flex: 1 }}>Поле</div>
-            <div style={{ ...SECTION_HEADER, width: 40, flexShrink: 0, textAlign: 'center' }}>И.</div>
-            <div style={{ ...SECTION_HEADER, width: 160, flexShrink: 0 }}>Псевдоним</div>
+            <div style={{ ...SECTION_HEADER, flex: 1 }}>{i18nT('common.field')}</div>
+            <div style={{ ...SECTION_HEADER, width: 40, flexShrink: 0, textAlign: 'center' }}>{i18nT('builder.childShort')}</div>
+            <div style={{ ...SECTION_HEADER, width: 160, flexShrink: 0 }}>{i18nT('common.alias')}</div>
             <div style={{ ...SECTION_HEADER, width: 28, flexShrink: 0 }} />
           </div>
           <div
@@ -282,18 +283,18 @@ export function BuilderTab(props: Props): React.ReactElement {
                       type="checkbox"
                       checked={row.child}
                       disabled={!isRef}
-                      title={isRef ? 'Использовать дочерние' : 'Доступно только для ссылочных полей'}
+                      title={isRef ? i18nT('builder.useChildren') : i18nT('builder.refsOnly')}
                       onChange={e => onSetChild(active, idx, e.target.checked)}
                     />
                   </span>
                   <input
                     type="text"
                     value={row.alias ?? ''}
-                    placeholder="Псевдоним"
+                    placeholder={i18nT('common.alias')}
                     onChange={e => onSetAlias(active, idx, e.target.value)}
                     style={{ ...INPUT, width: 150, flexShrink: 0 }}
                   />
-                  <button style={REMOVE_BTN} title="Убрать" onClick={() => onRemove(active, idx)}>✕</button>
+                  <button style={REMOVE_BTN} title={i18nT('actions.remove')} onClick={() => onRemove(active, idx)}>✕</button>
                 </div>
               );
             })}

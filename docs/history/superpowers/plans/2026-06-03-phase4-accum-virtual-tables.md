@@ -919,7 +919,7 @@ Expected: PASS.
 В `docs/ROADMAP.md` в подразделе «#### 4.3» дополнить строку плана ссылкой на этот файл (рядом со ссылкой на спек):
 
 ```markdown
-План: [`plans/2026-06-03-phase4-accum-virtual-tables.md`](superpowers/plans/2026-06-03-phase4-accum-virtual-tables.md)
+План: [`plans/2026-06-03-phase4-accum-virtual-tables.md`](2026-06-03-phase4-accum-virtual-tables.md)
 ```
 
 - [ ] **Step 5: Commit**

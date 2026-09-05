@@ -28,6 +28,7 @@
         postMessage: function (msg) {
           window.__webviewMessages.push(msg);
           if (msg.type === 'ready') {
+            dispatchHost({ type: 'init', hasInitialQuery: false, queryTextEditorV2: false, locale: 'ru' });
             // На готовность webview — подгружаем реальные метаданные и шлём metadataTree.
             fetch('./metadata.json')
               .then(function (r) { return r.json(); })

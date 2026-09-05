@@ -23,6 +23,9 @@
           if (msg.type === 'ready') {
             setTimeout(function() {
               window.dispatchEvent(new MessageEvent('message', {
+                data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: false, locale: 'ru' }
+              }));
+              window.dispatchEvent(new MessageEvent('message', {
                 data: {
                   type: 'metadataTree',
                   tables: [

@@ -69,8 +69,8 @@ export async function insertResult(text: string, saved?: SavedEditorState): Prom
     await vscode.env.clipboard.writeText(payload);
     vscode.window.showInformationMessage(
       staleDocument
-        ? 'Исходный файл был изменён, пока конструктор был открыт — текст запроса скопирован в буфер обмена, вставьте его вручную'
-        : 'Текст запроса скопирован в буфер обмена'
+        ? vscode.l10n.t('The source file changed while Query Designer was open. The query text was copied to the clipboard; insert it manually.')
+        : vscode.l10n.t('The query text was copied to the clipboard.')
     );
   }
 }

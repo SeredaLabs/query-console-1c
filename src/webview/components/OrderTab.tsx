@@ -5,6 +5,7 @@ import { distinctFieldRefs } from '../fieldSource';
 import { ResizeHandle } from './ResizeHandle';
 import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
 import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
+import { t } from '../i18n';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -39,7 +40,7 @@ export function OrderTab(props: Props): React.ReactElement {
       <div style={{ display: 'flex', flex: 1, gap: 4, overflow: 'hidden' }}>
         {/* Левый список: Поля */}
         <div style={{ ...panelBox, width: leftWidth, flexShrink: 0 }}>
-          <div style={SECTION_HEADER}>Поля</div>
+          <div style={SECTION_HEADER}>{t('common.fields')}</div>
           <div style={dropZone} data-field-source="order-source">
             {sourceFields.map((f, i) => (
               <div
@@ -55,7 +56,7 @@ export function OrderTab(props: Props): React.ReactElement {
             ))}
             {sourceFields.length === 0 && (
               <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
-                Нет полей. Добавьте поля на вкладке «Таблицы и поля».
+                {t('empty.noFieldsAdd')}
               </div>
             )}
           </div>
@@ -66,8 +67,8 @@ export function OrderTab(props: Props): React.ReactElement {
         {/* Правый список: Сортировка */}
         <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex' }}>
-            <div style={{ ...SECTION_HEADER, flex: 1 }}>Поле</div>
-            <div style={{ ...SECTION_HEADER, width: 180, flexShrink: 0 }}>Сортировка</div>
+            <div style={{ ...SECTION_HEADER, flex: 1 }}>{t('common.field')}</div>
+            <div style={{ ...SECTION_HEADER, width: 180, flexShrink: 0 }}>{t('tabs.order')}</div>
           </div>
           <div
             style={dropZone}
@@ -96,10 +97,10 @@ export function OrderTab(props: Props): React.ReactElement {
                     fontSize: 12,
                   }}
                 >
-                  <option value="asc">Возрастание</option>
-                  <option value="desc">Убывание</option>
+                  <option value="asc">{t('order.ascending')}</option>
+                  <option value="desc">{t('order.descending')}</option>
                 </select>
-                <button style={REMOVE_BTN} title="Убрать" onClick={() => onRemoveOrderField(f.tableId, f.path)}>✕</button>
+                <button style={REMOVE_BTN} title={t('actions.remove')} onClick={() => onRemoveOrderField(f.tableId, f.path)}>✕</button>
               </div>
             ))}
           </div>
@@ -113,7 +114,7 @@ export function OrderTab(props: Props): React.ReactElement {
           checked={order.auto}
           onChange={e => onSetOrderAuto(e.target.checked)}
         />
-        Автоупорядочивание
+        {t('order.autoOrder')}
       </label>
     </div>
   );

@@ -9,6 +9,7 @@ import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
 import { FieldTreeRow } from './FieldTreeRow';
 import { SECTION_HEADER } from '../sharedStyles';
+import { t as i18nT } from '../i18n';
 
 interface Props {
   metaTables: MetaTable[];
@@ -98,40 +99,40 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={SECTION_HEADER}>Таблицы</div>
+      <div style={SECTION_HEADER}>{i18nT('common.tables')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 4, gap: 4 }}>
       <div style={{ display: 'flex', gap: 2 }}>
         <IconButton
           icon="close"
-          title="Убрать таблицу"
+          title={i18nT('tables.remove')}
           tone="remove"
           disabled={!focusedSelectedTableId}
           onClick={() => focusedSelectedTableId && onRemoveTable(focusedSelectedTableId)}
         />
         <IconButton
           icon="gear"
-          title="Параметры виртуальной таблицы"
+          title={i18nT('tables.virtualParams')}
           disabled={!focusedIsVirtual}
           onClick={() => focusedSelectedTableId && onOpenVirtualParams(focusedSelectedTableId)}
         />
         <IconButton
           testId="add-subquery"
           icon="list-tree"
-          title="Создать вложенный запрос (ВЗ)"
+          title={i18nT('tables.createSubquery')}
           tone="subquery"
           onClick={onAddSubquery}
         />
         <IconButton
           testId="add-temp-table"
           icon="table"
-          title="Создать описание временной таблицы"
+          title={i18nT('tables.createTemp')}
           tone="tempTable"
           onClick={onAddTempTable}
         />
         <IconButton
           testId="edit-source"
           icon="edit"
-          title="Редактирование"
+          title={i18nT('tables.editSource')}
           tone="edit"
           disabled={!focusedIsEditable}
           onClick={() => focusedSelectedTableId && onEditTable(focusedSelectedTableId)}
@@ -219,7 +220,7 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                           }}
                           onClick={() => toggleTs(tsKey)}
                           className="qc-row"
-                          title="Табличная часть"
+                          title={i18nT('tree.tabularSection')}
                           style={{
                             paddingLeft: 24,
                             paddingTop: 1,

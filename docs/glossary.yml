@@ -1,0 +1,70 @@
+version: 1
+canonical_locale: en
+terms:
+  - id: query
+    en: query
+    uk: запит
+    ru: запрос
+  - id: query_designer
+    en: query designer
+    uk: конструктор запитів
+    ru: конструктор запросов
+  - id: field
+    en: field
+    uk: поле
+    ru: поле
+  - id: join
+    en: join
+    uk: з’єднання
+    ru: соединение
+  - id: condition
+    en: condition
+    uk: умова
+    ru: условие
+  - id: grouping
+    en: grouping
+    uk: групування
+    ru: группировка
+  - id: ordering
+    en: ordering
+    uk: сортування
+    ru: сортировка
+  - id: metadata
+    en: metadata
+    uk: метадані
+    ru: метаданные
+  - id: metadata_cache
+    en: metadata cache
+    uk: кеш метаданих
+    ru: кеш метаданных
+  - id: temporary_table
+    en: temporary table
+    uk: тимчасова таблиця
+    ru: временная таблица
+  - id: virtual_table
+    en: virtual table
+    uk: віртуальна таблиця
+    ru: виртуальная таблица
+  - id: union
+    en: union
+    uk: об’єднання
+    ru: объединение
+  - id: batch
+    en: query batch
+    uk: пакет запитів
+    ru: пакет запросов
+  - id: result_handling
+    en: result handling
+    uk: обробка результату
+    ru: обработка результата
+protected_terms:
+  - BSL
+  - SDBL
+  - VS Code
+  - QueryModel
+  - MetadataModel
+  - Configuration.xml
+  - queryConsole.metadataPath
+  - queryConsole.parserOutputPath
+  - queryConsole.openInNewWindow
+  - queryConsole.queryTextEditorV2

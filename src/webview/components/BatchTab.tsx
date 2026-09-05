@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { IconButton } from './IconButton';
 import { SECTION_HEADER, panelBox } from '../sharedStyles';
+import { t } from '../i18n';
 
 interface Props {
   names: string[];
@@ -43,24 +44,24 @@ export function BatchTab({
   return (
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
       <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
-        <div style={SECTION_HEADER}>Запросы пакета</div>
+        <div style={SECTION_HEADER}>{t('batch.title')}</div>
         <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
-          <IconButton icon="add" tone="add" title="Добавить" onClick={onAdd} />
+          <IconButton icon="add" tone="add" title={t('actions.add')} onClick={onAdd} />
           <IconButton
             icon="close"
             tone="remove"
-            title="Удалить"
+            title={t('actions.delete')}
             disabled={names.length <= 1}
             onClick={() => onRemove(selectedRow)}
           />
-          <IconButton icon="arrow-up" title="Переместить вверх" onClick={() => move('up')} />
-          <IconButton icon="arrow-down" title="Переместить вниз" onClick={() => move('down')} />
+          <IconButton icon="arrow-up" title={t('actions.moveUp')} onClick={() => move('up')} />
+          <IconButton icon="arrow-down" title={t('actions.moveDown')} onClick={() => move('down')} />
         </div>
         <div style={{ overflow: 'auto', flex: 1 }}>
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>
-                <th style={TH}>Запрос</th>
+                <th style={TH}>{t('common.query')}</th>
               </tr>
             </thead>
             <tbody>

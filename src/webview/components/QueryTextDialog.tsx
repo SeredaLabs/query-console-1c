@@ -2,6 +2,7 @@ import * as React from 'react';
 import { CodeEditor, type CodeEditorHandle } from './CodeEditor';
 import { IconButton } from './IconButton';
 import { BTN, BTN_SECONDARY } from '../sharedStyles';
+import { localizeDiagnostic, localizeLintWarning, t } from '../i18n';
 import { analyze, type QueryAnalysisResult, type QueryDiagnostic, type TextRange } from '../../core/query/queryAnalysisService';
 import { formatQueryText } from '../../core/query/queryTextFormatter';
 import { QueryStructurePanel } from './QueryStructurePanel';
@@ -85,7 +86,7 @@ function runAnalysisSafe(text: string, resolver?: MetadataResolver): QueryAnalys
     return analyze(text, resolver);
   } catch {
     return {
-      diagnostics: [{ message: 'Не удалось полностью разобрать структуру запроса. Редактирование текста доступно.' }],
+      diagnostics: [{ message: t('dialog.queryText.analysisFailed') }],
       warnings: [], result: null, tempTables: [], parameters: [],
     };
   }
@@ -102,7 +103,7 @@ function lineColToOffset(text: string, line: number, col: number): number {
 function toCmDiagnostics(text: string, diagnostics: QueryDiagnostic[]): Diagnostic[] {
   return diagnostics.map(d => {
     const from = d.line != null && d.col != null ? lineColToOffset(text, d.line, d.col) : 0;
-    return { from, to: Math.min(text.length, from + 1), severity: 'error', message: d.message };
+    return { from, to: Math.min(text.length, from + 1), severity: 'error', message: localizeDiagnostic(d.message) };
   });
 }
 
@@ -239,8 +240,8 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
             padding: '10px 12px', borderBottom: '1px solid var(--qc-border)',
           }}
         >
-          <span style={{ fontWeight: 'bold', fontSize: 13 }}>Текст запроса</span>
-          <IconButton icon="close" title="Закрыть" onClick={requestClose} />
+          <span style={{ fontWeight: 'bold', fontSize: 13 }}>{t('dialog.queryText.title')}</span>
+          <IconButton icon="close" title={t('actions.close')} onClick={requestClose} />
         </div>
 
         <div
@@ -249,31 +250,31 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
             padding: '4px 8px', borderBottom: '1px solid var(--qc-border)', fontSize: 12,
           }}
         >
-          <ToolbarButton icon="redo" mirrorIcon title="Отменить (Ctrl/Cmd+Z)" onClick={() => editorRef.current?.undo()} />
-          <ToolbarButton icon="redo" title="Повторить (Ctrl/Cmd+Shift+Z)" onClick={() => editorRef.current?.redo()} />
+          <ToolbarButton icon="redo" mirrorIcon title={t('dialog.queryText.undo')} onClick={() => editorRef.current?.undo()} />
+          <ToolbarButton icon="redo" title={t('dialog.queryText.redo')} onClick={() => editorRef.current?.redo()} />
           <span style={SEPARATOR} />
           {/* onChange идёт тем же путём, что и обычная правка текста, и триггерит
               value-sync эффект CodeEditor (единая транзакция CodeMirror) — поэтому
               один Ctrl/Cmd+Z полностью откатывает форматирование (design-док, раздел 5). */}
-          <ToolbarButton icon="wand" label="Форматировать" title="Форматировать" onClick={() => onChange(formatQueryText(text))} />
-          <ToolbarButton icon="pass" label="Проверить" title="Проверить сейчас" onClick={runCheckNow} />
+          <ToolbarButton icon="wand" label={t('actions.format')} title={t('actions.format')} onClick={() => onChange(formatQueryText(text))} />
+          <ToolbarButton icon="pass" label={t('actions.validate')} title={t('dialog.queryText.validateNow')} onClick={runCheckNow} />
           <ToolbarButton
             icon="json"
-            label="Параметры"
-            title="Параметры"
+            label={t('dialog.queryText.parameters')}
+            title={t('dialog.queryText.parameters')}
             active={panelTab === 'parameters'}
             onClick={() => setPanelTab(v => (v === 'parameters' ? null : 'parameters'))}
           />
           <ToolbarButton
             icon="list-tree"
-            label="Структура"
-            title="Структура"
+            label={t('dialog.queryText.structure')}
+            title={t('dialog.queryText.structure')}
             active={panelTab === 'structure'}
             onClick={() => setPanelTab(v => (v === 'structure' ? null : 'structure'))}
           />
           {/* Ctrl/Cmd+F/H уже работают в самом редакторе (richFeatures → @codemirror/search) —
               кнопка просто открывает ту же панель по клику, без своей логики поиска. */}
-          <ToolbarButton icon="search" label="Поиск" title="Поиск (Ctrl/Cmd+F)" onClick={() => editorRef.current?.openSearch()} />
+          <ToolbarButton icon="search" label={t('actions.search')} title={t('dialog.queryText.searchShortcut')} onClick={() => editorRef.current?.openSearch()} />
         </div>
 
         <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
@@ -329,7 +330,7 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {checkPending ? (
-              <span style={{ color: 'var(--vscode-descriptionForeground)' }}>● Есть непроверенные изменения</span>
+              <span style={{ color: 'var(--vscode-descriptionForeground)' }}>● {t('dialog.queryText.pendingChanges')}</span>
             ) : firstDiagnostic ? (
               <span
                 role="button"
@@ -340,21 +341,25 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
                   textDecoration: firstDiagnostic.line != null ? 'underline' : 'none',
                 }}
               >
-                {firstDiagnostic.message}
+                {localizeDiagnostic(firstDiagnostic.message)}
               </span>
             ) : checked.result.result === null ? (
               // Пустой/из одних пробелов текст `tryOpenBatch` считает валидным пустым
               // пакетом (0 diagnostics) — но применять тут нечего (см. handleApplyQueryEdit
               // в ConstructorView.tsx), поэтому это НЕ «✓ Синтаксис корректен».
               <span style={{ color: 'var(--vscode-editorWarning-foreground, #cca700)' }}>
-                ⚠ Текст пуст — нечего применить
+                ⚠ {t('constructor.emptyQuery')}
               </span>
             ) : (
               <span style={{ color: 'var(--vscode-descriptionForeground)' }}>
                 {/* Источники/соединения — сумма по «Результату» и всем временным таблицам
                     (весь пакет целиком), не только последнего запроса. */}
-                ✓ Синтаксис корректен &nbsp;&nbsp; Строк: {lineCount} &nbsp;&nbsp; Параметров: {checked.result.parameters.length}
-                &nbsp;&nbsp; Источников: {totalSources} &nbsp;&nbsp; Соединений: {totalJoins}
+                ✓ {t('dialog.queryText.validSummary', {
+                  lines: lineCount,
+                  parameters: checked.result.parameters.length,
+                  sources: totalSources,
+                  joins: totalJoins,
+                })}
               </span>
             )}
           </div>
@@ -375,7 +380,7 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
                     textDecoration: w.searchText ? 'underline' : 'none',
                   }}
                 >
-                  ⚠ {w.message}
+                  ⚠ {localizeLintWarning(w.code, w.message)}
                 </span>
               ))}
             </div>
@@ -384,13 +389,13 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
 
         {error != null && (
           <div style={{ color: 'var(--vscode-errorForeground, #f44747)', fontSize: 12, whiteSpace: 'pre-wrap', padding: '4px 12px' }}>
-            {error}
+            {localizeDiagnostic(error)}
           </div>
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: 12, borderTop: '1px solid var(--qc-border)' }}>
-          <button data-testid="query-text-cancel" style={BTN_SECONDARY} onClick={requestClose}>Отмена</button>
-          <button style={BTN} onClick={onApply}>Применить</button>
+          <button data-testid="query-text-cancel" style={BTN_SECONDARY} onClick={requestClose}>{t('actions.cancel')}</button>
+          <button style={BTN} onClick={onApply}>{t('actions.apply')}</button>
         </div>
       </div>
 
@@ -420,15 +425,15 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
                 <span className="codicon codicon-warning" style={{ fontSize: 17, color: 'var(--vscode-editorWarning-foreground, #cca700)' }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 2 }}>
-                <div style={{ fontSize: 13, fontWeight: 'bold' }}>Текст запроса был изменён</div>
+                <div style={{ fontSize: 13, fontWeight: 'bold' }}>{t('dialog.queryText.unsavedTitle')}</div>
                 <div style={{ fontSize: 12, color: 'var(--vscode-descriptionForeground)' }}>
-                  Изменения не применены и будут потеряны при закрытии.
+                  {t('dialog.queryText.unsavedBody')}
                 </div>
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button style={BTN_SECONDARY} onClick={onClose}>Закрыть без сохранения</button>
-              <button style={BTN} onClick={() => setConfirmingClose(false)}>Продолжить редактирование</button>
+              <button style={BTN_SECONDARY} onClick={onClose}>{t('actions.closeWithoutSaving')}</button>
+              <button style={BTN} onClick={() => setConfirmingClose(false)}>{t('actions.continueEditing')}</button>
             </div>
           </div>
         </div>

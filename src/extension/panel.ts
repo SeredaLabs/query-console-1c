@@ -14,6 +14,7 @@ import type { SavedEditorState } from './insertResult';
 import type { HostMsg, WebviewMsg } from '../shared/messages';
 import type { MetadataModel } from '../core/metadata/types';
 import type { QueryModel } from '../core/query/queryModel';
+import { normalizeLocale } from '../shared/locale';
 
 function nonce(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -22,12 +23,12 @@ function nonce(): string {
 
 function getHtml(webview: vscode.Webview, scriptUri: vscode.Uri, codiconCssUri: vscode.Uri, n: string): string {
   return `<!DOCTYPE html>
-<html lang="ru">
+<html lang="${normalizeLocale(vscode.env.language)}">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${n}'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource};">
   <link rel="stylesheet" href="${webview.asWebviewUri(codiconCssUri)}">
-  <title>1С: Конструктор запроса</title>
+  <title>${vscode.l10n.t('1C: Query Designer')}</title>
 </head>
 <body style="margin:0;padding:0;height:100vh;">
   <div id="root" style="height:100%;"></div>
@@ -70,23 +71,32 @@ async function loadMetadata(
     const t = Date.now();
     try {
       const r = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, outPath);
-      const fallbackNote = r.fallbackReason ? ` (direct-путь не удался: ${r.fallbackReason})` : '';
+      const fallbackNote = r.fallbackReason
+        ? vscode.l10n.t(' (direct path failed: {reason})', { reason: r.fallbackReason })
+        : '';
       channel.appendLine(
-        `[1C Query] metadata built via ${r.source} in ${Date.now() - t}ms (${r.model.tables.length} tables)${fallbackNote}`
+        vscode.l10n.t('[1C Query] Metadata built via {source} in {duration} ms ({count} tables){fallback}', {
+          source: r.source, duration: Date.now() - t, count: r.model.tables.length, fallback: fallbackNote,
+        })
       );
       return r.model;
     } catch (e) {
-      channel.appendLine(`[1C Query] direct-путь и YAML-откат оба не удались: ${e} — пробуем уже закоммиченный YAML/legacy XML`);
+      channel.appendLine(vscode.l10n.t(
+        '[1C Query] Direct path and YAML fallback failed: {error}; trying committed YAML or legacy XML.',
+        { error: String(e) }
+      ));
     }
   }
 
   const cfYamlDir = resolveManagedCfDir(outPath);
   const configYaml = path.join(cfYamlDir, 'configuration.yaml');
   if (fs.existsSync(configYaml)) {
-    channel.appendLine(`[1C Query] Loading metadata from YAML: ${cfYamlDir}`);
+    channel.appendLine(vscode.l10n.t('[1C Query] Loading metadata from YAML: {path}', { path: cfYamlDir }));
     const t = Date.now();
     const model = loadMetadataCached(cfYamlDir);
-    channel.appendLine(`[1C Query] metadata loaded in ${Date.now() - t}ms (${model.tables.length} tables)`);
+    channel.appendLine(vscode.l10n.t('[1C Query] Metadata loaded in {duration} ms ({count} tables)', {
+      duration: Date.now() - t, count: model.tables.length,
+    }));
     // Residual gap (KNOWN_ISSUES.md "Cache метаданных может быть устаревшим"):
     // эта ветка выполняется только когда direct-путь И его собственный
     // YAML-откат уже оба упали (см. catch выше) — свежая пересборка сейчас
@@ -96,9 +106,10 @@ async function loadMetadata(
     // этом, вместо тихой выдачи возможно устаревших метаданных как будто они
     // актуальны.
     if (cfPath && fs.statSync(configYaml).mtimeMs < newestRelevantMtime(cfPath)) {
-      channel.appendLine(
-        `[1C Query] ВНИМАНИЕ: YAML в ${cfYamlDir} устарел относительно XML в ${cfPath} — свежая пересборка не удалась (см. выше), показанные метаданные могут не отражать последнюю выгрузку конфигурации`
-      );
+      channel.appendLine(vscode.l10n.t(
+        '[1C Query] WARNING: YAML at {yamlPath} is older than XML at {xmlPath}; rebuilding failed, so displayed metadata may be stale.',
+        { yamlPath: cfYamlDir, xmlPath: cfPath }
+      ));
     }
     return model;
   }
@@ -109,28 +120,28 @@ async function loadMetadata(
   if (isCacheValid(cachePath, cfPath)) {
     const cached = readCache(cachePath);
     if (cached && cached.tables.length > 0) {
-      channel.appendLine(`[1C Query] From cache: ${cached.tables.length} tables`);
+      channel.appendLine(vscode.l10n.t('[1C Query] Loaded from cache: {count} tables', { count: cached.tables.length }));
       return cached;
     }
   }
-  channel.appendLine(`[1C Query] Parsing metadata from XML: ${cfPath}`);
+  channel.appendLine(vscode.l10n.t('[1C Query] Parsing metadata from XML: {path}', { path: cfPath }));
   for (const sub of ['Catalogs', 'Documents']) {
     const dir = path.join(cfPath, sub);
     if (fs.existsSync(dir)) {
       const files = (fs.readdirSync(dir) as string[]).filter(f => f.endsWith('.xml'));
-      channel.appendLine(`[1C Query] ${sub}/: ${files.length} XML files`);
+      channel.appendLine(vscode.l10n.t('[1C Query] {directory}/: {count} XML files', { directory: sub, count: files.length }));
       if (files.length > 0) {
         const firstPath = path.join(dir, files[0]);
         const firstXml: string = fs.readFileSync(firstPath, 'utf8');
-        channel.appendLine(`[1C Query] First file: ${files[0]}`);
-        channel.appendLine(`[1C Query] First 300 chars: ${firstXml.slice(0, 300).replace(/\n/g, '↵')}`);
+        channel.appendLine(vscode.l10n.t('[1C Query] First file: {file}', { file: files[0] }));
+        channel.appendLine(vscode.l10n.t('[1C Query] First 300 characters: {text}', { text: firstXml.slice(0, 300).replace(/\n/g, '↵') }));
       }
     } else {
-      channel.appendLine(`[1C Query] ${sub}/: directory not found`);
+      channel.appendLine(vscode.l10n.t('[1C Query] {directory}/: directory not found', { directory: sub }));
     }
   }
   const model = parseCf(cfPath);
-  channel.appendLine(`[1C Query] Parsed ${model.tables.length} tables`);
+  channel.appendLine(vscode.l10n.t('[1C Query] Parsed {count} tables', { count: model.tables.length }));
   writeCache(cachePath, model);
   return model;
 }
@@ -144,7 +155,7 @@ export function createPanel(
 ): vscode.WebviewPanel {
   const panel = vscode.window.createWebviewPanel(
     '1c.queryConstructor',
-    '1С: Конструктор запроса',
+    vscode.l10n.t('1C: Query Designer'),
     vscode.ViewColumn.Beside,
     {
       enableScripts: true,
@@ -167,7 +178,12 @@ export function createPanel(
       // 7.8.2: сразу сообщаем вебвью, ждать ли загрузку модели запроса, чтобы оно
       // показало индикатор загрузки и не мигало пустым конструктором до заполнения.
       const queryTextEditorV2 = vscode.workspace.getConfiguration('queryConsole').get<boolean>('queryTextEditorV2', false);
-      const initMsg: HostMsg = { type: 'init', hasInitialQuery: !!initialQueryText, queryTextEditorV2 };
+      const initMsg: HostMsg = {
+        type: 'init',
+        hasInitialQuery: !!initialQueryText,
+        queryTextEditorV2,
+        locale: normalizeLocale(vscode.env.language),
+      };
       panel.webview.postMessage(initMsg);
       await metadataReady;
       // PR-07 (ТЗ §11/§55 P1.1): доставка metadataTree в webview идёт через
@@ -183,7 +199,9 @@ export function createPanel(
         panel.webview.postMessage(loadMsg);
       }
       if (repository.getTables().length === 0 && !cfPath) {
-        vscode.window.showWarningMessage('Не найдена выгрузка конфигурации. Укажите путь в настройке queryConsole.metadataPath');
+        vscode.window.showWarningMessage(
+          vscode.l10n.t('Configuration export not found. Set its path in queryConsole.metadataPath.')
+        );
       }
     } else if (msg.type === 'expandRef') {
       await metadataReady;
@@ -195,7 +213,7 @@ export function createPanel(
     } else if (msg.type === 'generate') {
       const text = generate(msg.model as QueryModel);
       if (!text) {
-        vscode.window.showInformationMessage('Выберите хотя бы одну таблицу и одно поле');
+        vscode.window.showInformationMessage(vscode.l10n.t('Select at least one table and one field.'));
         return;
       }
       const reply: HostMsg = { type: 'generatedText', text };
@@ -207,7 +225,11 @@ export function createPanel(
       panel.dispose();
     } else if (msg.type === 'refreshCache') {
       if (!cfPath) {
-        const reply: HostMsg = { type: 'refreshResult', ok: false, message: 'Не найден путь к выгрузке конфигурации' };
+        const reply: HostMsg = {
+          type: 'refreshResult',
+          ok: false,
+          message: vscode.l10n.t('Configuration export path not found.'),
+        };
         panel.webview.postMessage(reply);
         return;
       }
@@ -222,15 +244,23 @@ export function createPanel(
         const snapshotOutPath = path.join(outPath, 'snapshot');
         const t = Date.now();
         const r = loadMetadataWithFallback(cfPath, snapshotOutPath, outPath);
-        const fallbackNote = r.fallbackReason ? ` (direct-путь не удался: ${r.fallbackReason})` : '';
+        const fallbackNote = r.fallbackReason
+          ? vscode.l10n.t(' (direct path failed: {reason})', { reason: r.fallbackReason })
+          : '';
         channel.appendLine(
-          `[1C Query] refreshCache: metadata rebuilt via ${r.source} in ${Date.now() - t}ms (${r.model.tables.length} tables)${fallbackNote}`
+          vscode.l10n.t('[1C Query] Refresh: metadata rebuilt via {source} in {duration} ms ({count} tables){fallback}', {
+            source: r.source, duration: Date.now() - t, count: r.model.tables.length, fallback: fallbackNote,
+          })
         );
         metadataModel = r.model;
-        const reply: HostMsg = { type: 'refreshResult', ok: true, message: 'Кэш обновлён.' };
+        const reply: HostMsg = { type: 'refreshResult', ok: true, message: vscode.l10n.t('Metadata cache updated.') };
         panel.webview.postMessage(reply);
       } catch (e) {
-        const reply: HostMsg = { type: 'refreshResult', ok: false, message: `Ошибка парсинга: ${e}` };
+        const reply: HostMsg = {
+          type: 'refreshResult',
+          ok: false,
+          message: vscode.l10n.t('Metadata parsing failed: {error}', { error: String(e) }),
+        };
         panel.webview.postMessage(reply);
       }
     }

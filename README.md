@@ -1,233 +1,91 @@
-# 1C: Query Constructor
+<p align="center">
+  <img src="assets/images/icon.png" width="112" alt="1C: Query Constructor icon">
+</p>
 
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/SeredaLabs.query-console-1c?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/SeredaLabs.query-console-1c?label=Installs)](https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c)
-[![License: MIT](https://img.shields.io/badge/license-MIT-0f766e.svg)](LICENSE)
+<h1 align="center">1C: Query Constructor</h1>
 
-> A visual SDBL query constructor for 1C in VS Code.
+<p align="center">
+  <strong>Build and edit 1C SDBL queries visually—without leaving VS Code.</strong>
+</p>
 
-![1C: Query Constructor](assets/images/constructor.png)
+<p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://img.shields.io/visual-studio-marketplace/v/SeredaLabs.query-console-1c?style=flat-square&logo=visualstudiocode&label=Marketplace" alt="VS Code Marketplace version"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://img.shields.io/visual-studio-marketplace/i/SeredaLabs.query-console-1c?style=flat-square&color=2563eb" alt="VS Code Marketplace installs"></a>
+  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-0f766e?style=flat-square" alt="MIT license"></a>
+</p>
 
-[🇺🇦 Українська](#-українська) · [🇷🇺 Русский](#-русский) · [🇬🇧 English](#-english)
+<p align="center">
+  <strong>English</strong> · <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.uk.md">Українська</a> · <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.ru.md">Русский</a>
+</p>
 
----
+![The query designer showing metadata, selected tables, and fields](docs/images/query-constructor.png)
 
-## 🇺🇦 Українська
+The extension reads a file-based 1C configuration export, presents its tables
+and fields in a visual designer, and writes the result as a static BSL string.
+Open a supported query at the cursor to continue editing it visually.
 
-### Що це
+## ✨ What it does
 
-**1C: Query Constructor** -- візуальний конструктор запитів 1С для VS Code,
-натхненний «Конструктором запиту» з Конфігуратора та EDT. Він читає XML-вивантаження
-конфігурації, будує дерево таблиць і полів та генерує SDBL-запит у форматі BSL-рядка.
+| Capability | Included tools |
+| --- | --- |
+| 🧩 **Visual query design** | Tables, fields, joins, conditions, grouping, ordering, and totals |
+| 🧱 **Complex query structure** | Unions, temporary tables, batches, virtual-table parameters, and indexes |
+| 🗂️ **Metadata-aware workflow** | Search, field types, and relationships from a 1C XML export |
+| 🔄 **Round-trip editing** | Parse, validate, format, reopen, and replace supported static SDBL strings |
+| 🧪 **Query text tools** | Comments, expression editing, and optional experimental Query Text v2 |
+| 🌍 **Localized experience** | English, Ukrainian, and Russian UI and documentation |
 
-**Потрібно:** VS Code 1.90+ і, для роботи з метаданими, файлове XML-вивантаження
-конфігурації 1С.
-
-### Можливості
-
-- Візуальна побудова запитів: таблиці, поля, умови, групування, з'єднання,
-  об'єднання, тимчасові таблиці та пакетні запити.
-- Дерево метаданих «таблиці → поля → типи → зв'язки» з багатослівним пошуком.
-- Відкриття підтримуваного SDBL-тексту під курсором, структурна перевірка та
-  повернення ручних правок у модель конструктора.
-- Підсвітка SDBL, форматування виразів і збереження коментарів `//...` між
-  циклами «відкрити → правити → зберегти».
-- Експериментальний редактор «Текст запроса» v2 з перевіркою, пошуком і панелями
-  «Структура»/«Параметри».
-
-### Швидкий старт
-
-1. Встановіть розширення з [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c).
-2. Відкрийте `.bsl` файл, поставте курсор у запит або в потрібну позицію.
-3. Оберіть у контекстному меню **«1С: Конструктор запроса»** →
-   **«Только текст запроса»** або **«С обработкой результата»**.
-4. Зберіть або відредагуйте запит, натисніть **«ОК»** -- розширення вставить новий
-   або замінить відкритий BSL-літерал.
-
-Для конфігурації з власними таблицями вкажіть шлях до XML-вивантаження або
-дозвольте розширенню знайти `Configuration.xml`, після чого натисніть
-**«Обновить кэш»**.
-
-### Команди та налаштування
-
-| Команда | Призначення |
-|---|---|
-| `1С: Только текст запроса` | Відкрити конструктор без обробки результату |
-| `1С: С обработкой результата` | Відкрити конструктор у сценарії з обробкою результату |
-| `1С: Распарсить метаданные в YAML` | Примусово перебудувати metadata cache |
-
-| Налаштування | Призначення |
-|---|---|
-| `queryConsole.metadataPath` | Шлях до каталогу XML-вивантаження `cf`; порожній -- автовизначення |
-| `queryConsole.parserOutputPath` | Каталог metadata cache; за замовчуванням `tmp/parser_data` |
-| `queryConsole.openInNewWindow` | Відкривати конструктор в окремому вікні VS Code |
-| `queryConsole.queryTextEditorV2` | Увімкнути експериментальний редактор тексту запиту v2 |
-
-### Важливо знати
-
-- Валідація не є повним компілятором SDBL: вона не гарантує коректність усіх
-  довільних виразів, полів і навігації через крапку.
-- Пошук запиту під курсором підтримує статичні BSL-рядки, що починаються з
-  `ВЫБРАТЬ` або `УНИЧТОЖИТЬ`.
-- Round-trip небезпечний для `РегистрБухгалтерии.*.Субконто(...)` та деяких
-  віртуальних таблиць із трьома+ параметрами. Не застосовуйте до них ручні зміни
-  через конструктор до виправлення.
-
-Повні межі підтримки: [CORE_LIMITATIONS.md](docs/CORE_LIMITATIONS.md).
-
-### Документація та внесок
-
-[Документація проєкту](docs/README.md) містить архітектуру, поточні відомі
-проблеми, roadmap, інструкції розробки та corpus testing.
-
----
-
-## 🇷🇺 Русский
-
-### Что это
-
-**1C: Query Constructor** -- визуальный конструктор запросов 1С для VS Code,
-вдохновлённый «Конструктором запроса» из Конфигуратора и EDT. Он читает
-XML-выгрузку конфигурации, строит дерево таблиц и полей и генерирует SDBL-запрос
-в формате BSL-строки.
-
-**Требуется:** VS Code 1.90+ и, для работы с метаданными, файловая XML-выгрузка
-конфигурации 1С.
-
-### Возможности
-
-- Визуальное построение запросов: таблицы, поля, условия, группировка, соединения,
-  объединения, временные таблицы и пакетные запросы.
-- Дерево метаданных «таблицы → поля → типы → связи» с поиском по нескольким словам.
-- Открытие поддерживаемого SDBL-текста под курсором, структурная проверка и
-  возврат ручных правок в модель конструктора.
-- Подсветка SDBL, форматирование выражений и сохранение комментариев `//...`
-  между циклами «открыть → править → сохранить».
-- Экспериментальный редактор «Текст запроса» v2 с проверкой, поиском и панелями
-  «Структура»/«Параметры».
-
-### Быстрый старт
-
-1. Установите расширение из [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c).
-2. Откройте `.bsl` файл, поставьте курсор в запрос или в нужную позицию.
-3. Выберите в контекстном меню **«1С: Конструктор запроса»** →
-   **«Только текст запроса»** или **«С обработкой результата»**.
-4. Соберите или отредактируйте запрос, нажмите **«ОК»** -- расширение вставит новый
-   или заменит открытый BSL-литерал.
-
-Для конфигурации с собственными таблицами укажите путь к XML-выгрузке или
-разрешите расширению найти `Configuration.xml`, затем нажмите **«Обновить кэш»**.
-
-### Команды и настройки
-
-| Команда | Назначение |
-|---|---|
-| `1С: Только текст запроса` | Открыть конструктор без обработки результата |
-| `1С: С обработкой результата` | Открыть конструктор в сценарии с обработкой результата |
-| `1С: Распарсить метаданные в YAML` | Принудительно пересобрать metadata cache |
-
-| Настройка | Назначение |
-|---|---|
-| `queryConsole.metadataPath` | Путь к каталогу XML-выгрузки `cf`; пусто -- автоопределение |
-| `queryConsole.parserOutputPath` | Каталог metadata cache; по умолчанию `tmp/parser_data` |
-| `queryConsole.openInNewWindow` | Открывать конструктор в отдельном окне VS Code |
-| `queryConsole.queryTextEditorV2` | Включить экспериментальный редактор текста запроса v2 |
-
-### Важно знать
-
-- Валидация не является полным компилятором SDBL: она не гарантирует корректность
-  всех произвольных выражений, полей и навигации через точку.
-- Поиск запроса под курсором поддерживает статические BSL-строки, начинающиеся с
-  `ВЫБРАТЬ` или `УНИЧТОЖИТЬ`.
-- Round-trip небезопасен для `РегистрБухгалтерии.*.Субконто(...)` и некоторых
-  виртуальных таблиц с тремя+ параметрами. Не применяйте к ним ручные изменения
-  через конструктор до исправления.
-
-Полные границы поддержки: [CORE_LIMITATIONS.md](docs/CORE_LIMITATIONS.md).
-
-### Документация и участие
-
-[Документация проекта](docs/README.md) содержит архитектуру, текущие известные
-проблемы, roadmap, инструкции разработки и corpus testing.
-
----
-
-## 🇬🇧 English
-
-### What It Is
-
-**1C: Query Constructor** is a visual SDBL query constructor for VS Code,
-inspired by the query constructor in 1C Configurator and EDT. It reads a 1C
-configuration XML export, builds a table-and-field tree, and emits an SDBL query
-as a BSL string literal.
-
-**Requirements:** VS Code 1.90+ and, for metadata-aware work, a file-based XML
-export of a 1C configuration.
-
-### Highlights
-
-- Visual query building: tables, fields, conditions, grouping, joins, unions,
-  temporary tables, and query batches.
-- A metadata tree of tables, fields, types, and relations with multi-keyword search.
-- Opening supported SDBL text at the cursor, structural validation, and manual
-  edits that round-trip into the constructor model.
-- SDBL highlighting, expression formatting, and `//...` comment preservation
-  across open, edit, and save cycles.
-- An experimental Query Text v2 editor with validation, search, and Structure /
-  Parameters panels.
-
-### Quick Start
+## 🚀 Quick start
 
 1. Install the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c).
-2. Open a `.bsl` file and place the cursor in a query or at the desired insertion point.
-3. In the context menu choose **"1С: Конструктор запроса"** →
-   **"Только текст запроса"** or **"С обработкой результата"**.
-4. Build or edit the query, then select **OK**. The extension inserts a new BSL
-   literal or replaces the one that was opened.
+2. Open a `.bsl` file and place the cursor in a static query or at an insertion point.
+3. Open the editor context menu, select **1C: Query Constructor**, then choose
+   **Query text only** or **With result-processing code**.
+4. Build the query and select **OK** to insert or replace the BSL string.
 
-For a configuration with custom tables, set the XML-export path or let the
-extension find `Configuration.xml`, then select **"Обновить кэш"**.
+> ⚠️ **Important:** The result-processing option generates a BSL wrapper. The
+> extension does not connect to a 1C database or execute queries.
 
-### Commands and Settings
+## 🗂️ Metadata setup
 
-| Command | Purpose |
-|---|---|
-| `1С: Только текст запроса` | Open the constructor without result handling |
-| `1С: С обработкой результата` | Open the constructor in the result-handling flow |
-| `1С: Распарсить метаданные в YAML` | Force a metadata-cache rebuild |
+Set `queryConsole.metadataPath` to the `cf` directory of a file-based XML export,
+or leave it empty to search the workspace for `Configuration.xml`. Run
+**1C: Parse metadata to YAML** after the export changes.
 
-| Setting | Purpose |
-|---|---|
-| `queryConsole.metadataPath` | Path to the `cf` XML export; empty means auto-detect |
-| `queryConsole.parserOutputPath` | Metadata-cache directory; defaults to `tmp/parser_data` |
-| `queryConsole.openInNewWindow` | Open the constructor in a separate VS Code window |
-| `queryConsole.queryTextEditorV2` | Enable the experimental Query Text v2 editor |
+## ✅ Requirements
 
-### Important Limitations
+- VS Code 1.90 or later.
+- A `.bsl` file open in the editor.
+- A file-based XML export from 1C:Enterprise or BAS for metadata-aware work.
 
-- Validation is not a complete SDBL compiler: it does not guarantee every
-  arbitrary expression, field, or dotted navigation.
-- Cursor lookup supports static BSL strings beginning with `ВЫБРАТЬ` or
-  `УНИЧТОЖИТЬ`.
-- Round-tripping is unsafe for `РегистрБухгалтерии.*.Субконто(...)` and some
-  virtual tables with three or more parameters. Do not apply manual edits to
-  these queries through the constructor until this is fixed.
+## ⚠️ Known boundaries
 
-Read the complete [core limitations](docs/CORE_LIMITATIONS.md).
+- Only supported static BSL query strings can be reopened.
+- Validation is not a full 1C compiler.
+- A small set of virtual-table parameter forms cannot be round-tripped safely.
 
-### Documentation and Contributing
+See the [complete limitations](docs/en/limitations.md) before working with
+complex or generated query text.
 
-The [project documentation](docs/README.md) covers architecture, current known
-issues, the roadmap, development, and corpus testing.
+## 📚 Documentation
 
----
+| Start here | Project resources |
+| --- | --- |
+| [User guide](docs/en/index.md) | [Development guide](docs/development/index.md) |
+| [Getting started](docs/en/getting-started.md) | [Contributing](CONTRIBUTING.md) |
+| [Query designer](docs/en/query-designer.md) | [Changelog](CHANGELOG.md) |
+| [Troubleshooting](docs/en/troubleshooting.md) | [Known issues](docs/development/known-issues.md) |
 
-## License
+## 💬 Feedback
 
-MIT -- see [LICENSE](LICENSE). Third-party notices for icons are in
+Use [GitHub Issues](https://github.com/SeredaLabs/query-console-1c/issues) for
+reproducible bugs and feature proposals. Do not attach proprietary configurations.
+
+## 📄 License and credits
+
+MIT — see [LICENSE](LICENSE). Third-party attributions are listed in
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-This project started as a fork of
+This project began as a fork of
 [AlekseyUAM/query_console_vscode](https://github.com/AlekseyUAM/query_console_vscode)
-(original author: Aleksey Yudanov, [overview article](https://infostart.ru/1c/articles/2724730/))
-and is now developed and maintained independently.
+and is now maintained independently by SeredaLabs.

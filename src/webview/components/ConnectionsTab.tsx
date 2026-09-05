@@ -5,6 +5,7 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import { IconButton } from './IconButton';
 import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox } from '../sharedStyles';
+import { t } from '../i18n';
 
 const OPERATORS: ConditionOperator[] = ['=', '<>', '>', '>=', '<', '<=', 'В', 'МЕЖДУ', 'ПОДОБНО'];
 
@@ -116,18 +117,18 @@ export function ConnectionsTab(props: Props): React.ReactElement {
       <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
         {/* Тулбар */}
         <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
-          <IconButton icon="add" tone="add" title="Добавить связь" onClick={onAddJoin} />
+          <IconButton icon="add" tone="add" title={t('connections.add')} onClick={onAddJoin} />
         </div>
-        <div style={SECTION_HEADER}>Связи</div>
+        <div style={SECTION_HEADER}>{t('connections.title')}</div>
         {/* Заголовок столбцов */}
         <div style={{ display: 'flex', ...SECTION_HEADER, padding: 0 }}>
           <div style={{ width: W_NUM, padding: '2px 6px', flexShrink: 0, textAlign: 'right' }}>№</div>
-          <div style={{ width: W_TABLE, padding: '2px 6px', flexShrink: 0 }}>Таблица 1</div>
-          <div style={{ width: W_ALL, padding: '2px 2px', flexShrink: 0 }} title="Все (таблица 1)">Все</div>
-          <div style={{ width: W_TABLE, padding: '2px 6px', flexShrink: 0 }}>Таблица 2</div>
-          <div style={{ width: W_ALL, padding: '2px 2px', flexShrink: 0 }} title="Все (таблица 2)">Все</div>
-          <div style={{ width: W_CUSTOM, padding: '2px 2px', flexShrink: 0 }} title="Произвольное условие">П.</div>
-          <div style={{ flex: 1, padding: '2px 6px' }}>Условие связи</div>
+          <div style={{ width: W_TABLE, padding: '2px 6px', flexShrink: 0 }}>{t('connections.table1')}</div>
+          <div style={{ width: W_ALL, padding: '2px 2px', flexShrink: 0 }} title={t('connections.allTable1')}>{t('common.all')}</div>
+          <div style={{ width: W_TABLE, padding: '2px 6px', flexShrink: 0 }}>{t('connections.table2')}</div>
+          <div style={{ width: W_ALL, padding: '2px 2px', flexShrink: 0 }} title={t('connections.allTable2')}>{t('common.all')}</div>
+          <div style={{ width: W_CUSTOM, padding: '2px 2px', flexShrink: 0 }} title={t('connections.custom')}>C.</div>
+          <div style={{ flex: 1, padding: '2px 6px' }}>{t('connections.condition')}</div>
         </div>
         <div style={dropZone}>
           {joins.map((j, i) => {
@@ -146,7 +147,7 @@ export function ConnectionsTab(props: Props): React.ReactElement {
                   {tableSelect(i, ci, 'left', leftTableId)}
                   <input
                     type="checkbox"
-                    title="Все (таблица 1)"
+                    title={t('connections.allTable1')}
                     checked={j.leftAll}
                     onChange={e => onSetAll(i, 'left', e.target.checked)}
                     style={{ width: W_ALL, flexShrink: 0 }}
@@ -154,14 +155,14 @@ export function ConnectionsTab(props: Props): React.ReactElement {
                   {tableSelect(i, ci, 'right', rightTableId)}
                   <input
                     type="checkbox"
-                    title="Все (таблица 2)"
+                    title={t('connections.allTable2')}
                     checked={j.rightAll}
                     onChange={e => onSetAll(i, 'right', e.target.checked)}
                     style={{ width: W_ALL, flexShrink: 0 }}
                   />
                   <input
                     type="checkbox"
-                    title="Произвольное условие"
+                    title={t('connections.custom')}
                     checked={c.custom}
                     onChange={e => onSetCustom(i, e.target.checked, ci)}
                     style={{ width: W_CUSTOM, flexShrink: 0 }}
@@ -181,17 +182,17 @@ export function ConnectionsTab(props: Props): React.ReactElement {
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
                       <span
-                        title={c.expression || 'Произвольное условие…'}
+                        title={c.expression || t('connections.custom')}
                         style={{
                           flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           color: c.expression ? 'inherit' : 'var(--vscode-descriptionForeground, #888)',
                         }}
                       >
-                        {c.expression || 'Произвольное условие…'}
+                        {c.expression || t('connections.custom')}
                       </span>
                       <IconButton
                         icon="ellipsis"
-                        title="Открыть конструктор выражения"
+                        title={t('connections.openExpression')}
                         onClick={() => onOpenExpressionBuilder(i, c.expression ?? '', ci)}
                       />
                     </div>
@@ -199,12 +200,12 @@ export function ConnectionsTab(props: Props): React.ReactElement {
                   <IconButton
                     icon="add"
                     tone="add"
-                    title="Добавить условие к связи"
+                    title={t('connections.addCondition')}
                     onClick={() => onAddJoinCondition(i)}
                   />
                   <button
                     style={REMOVE_BTN}
-                    title={multi ? 'Удалить условие' : 'Удалить связь'}
+                    title={multi ? t('connections.deleteCondition') : t('connections.deleteJoin')}
                     onClick={() => multi ? onRemoveJoinCondition(i, ci) : onRemoveJoin(i)}
                   >
                     ✕
@@ -215,7 +216,7 @@ export function ConnectionsTab(props: Props): React.ReactElement {
           })}
           {joins.length === 0 && (
             <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
-              Нажмите «+», чтобы добавить связь между таблицами.
+              {t('connections.addHint')}
             </div>
           )}
         </div>

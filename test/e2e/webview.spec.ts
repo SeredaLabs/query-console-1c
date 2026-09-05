@@ -82,7 +82,39 @@ async function loadModelText(page: Page, text: string): Promise<void> {
   }, text);
 }
 
+/** Wait for the harness's initial message before overriding the feature flag. */
+async function enableQueryTextV2(page: Page): Promise<void> {
+  await expect(page.locator('[data-testid="loading-overlay"]')).toBeHidden();
+  await page.evaluate(() => {
+    window.dispatchEvent(new MessageEvent('message', {
+      data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true, locale: 'ru' },
+    }));
+  });
+}
+
 test.describe('Query Constructor Webview', () => {
+  test('switches UI locale while preserving metadata names', async ({ page }) => {
+    await page.goto(BASE);
+    await expect(page.locator('[data-testid="loading-overlay"]')).toBeHidden();
+
+    await page.evaluate(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: false, locale: 'en' },
+      }));
+    });
+    await expect(page.getByText('Catalogs', { exact: true })).toBeVisible();
+    await page.getByText('Catalogs', { exact: true }).click();
+    await expect(page.locator('[data-table-fullname="Справочник.Валюты"]')).toContainText('Валюты');
+
+    await page.evaluate(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: false, locale: 'uk' },
+      }));
+    });
+    await expect(page.getByText('Довідники', { exact: true })).toBeVisible();
+    await expect(page.locator('[data-table-fullname="Справочник.Валюты"]')).toContainText('Валюты');
+  });
+
   test('shows Справочники group in DB tree', async ({ page }) => {
     await page.goto(BASE);
     await expect(page.locator('text=Справочники')).toBeVisible();
@@ -270,11 +302,7 @@ test.describe('Query Constructor Webview', () => {
   // поведение (что происходит по кнопкам) остаётся тем же, что проверяют тесты выше.
   test('Текст запроса v2: с флагом queryTextEditorV2 — новая раскладка, Apply/Close работают', async ({ page }) => {
     await page.goto(BASE);
-    await page.evaluate(() => {
-      window.dispatchEvent(new MessageEvent('message', {
-        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
-      }));
-    });
+    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -296,11 +324,7 @@ test.describe('Query Constructor Webview', () => {
   // (design-док, раздел 6/10), а не сам analyze() (уже покрыт queryAnalysisService.test.ts).
   test('Текст запроса v2: статус-бар — ✓ на валидном тексте, ошибка + переход к ней на невалидном', async ({ page }) => {
     await page.goto(BASE);
-    await page.evaluate(() => {
-      window.dispatchEvent(new MessageEvent('message', {
-        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
-      }));
-    });
+    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -327,11 +351,7 @@ test.describe('Query Constructor Webview', () => {
   // строки, и один Ctrl/Cmd+Z полностью откатывает результат (design-док, раздел 5).
   test('Текст запроса v2: «Форматировать» переносит секции, Ctrl/Cmd+Z откатывает одним шагом', async ({ page }) => {
     await page.goto(BASE);
-    await page.evaluate(() => {
-      window.dispatchEvent(new MessageEvent('message', {
-        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
-      }));
-    });
+    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -357,11 +377,7 @@ test.describe('Query Constructor Webview', () => {
   // разделы 7-8; навигация — best-effort поиск по тексту, риск п.0.3).
   test('Текст запроса v2: панель «Структура» показывает поля/источники, клик переводит курсор', async ({ page }) => {
     await page.goto(BASE);
-    await page.evaluate(() => {
-      window.dispatchEvent(new MessageEvent('message', {
-        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
-      }));
-    });
+    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -384,11 +400,7 @@ test.describe('Query Constructor Webview', () => {
   // запрос пакета, временные таблицы — отдельно и свёрнуты по умолчанию.
   test('Текст запроса v2: панель «Структура» на пакетном запросе — Результат = последний блок, ВТ отдельно', async ({ page }) => {
     await page.goto(BASE);
-    await page.evaluate(() => {
-      window.dispatchEvent(new MessageEvent('message', {
-        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
-      }));
-    });
+    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -421,11 +433,7 @@ test.describe('Query Constructor Webview', () => {
   // делят один слот правой панели, а не открываются одновременно (design-док, раздел 2).
   test('Текст запроса v2: панель «Параметры» показывает имя/использования, делит слот со «Структурой»', async ({ page }) => {
     await page.goto(BASE);
-    await page.evaluate(() => {
-      window.dispatchEvent(new MessageEvent('message', {
-        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
-      }));
-    });
+    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -458,11 +466,7 @@ test.describe('Query Constructor Webview', () => {
   // повторный клик должен переходить к СЛЕДУЮЩЕМУ вхождению, а не залипать на первом.
   test('Текст запроса v2: клик по параметру с несколькими вхождениями циклически переходит между ними', async ({ page }) => {
     await page.goto(BASE);
-    await page.evaluate(() => {
-      window.dispatchEvent(new MessageEvent('message', {
-        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
-      }));
-    });
+    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -493,11 +497,7 @@ test.describe('Query Constructor Webview', () => {
   // менялся с момента открытия, и закрывать сразу, если нет.
   test('Текст запроса v2: dirty-guard — подтверждение на всех трёх путях закрытия, мгновенное закрытие без правок', async ({ page }) => {
     await page.goto(BASE);
-    await page.evaluate(() => {
-      window.dispatchEvent(new MessageEvent('message', {
-        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true },
-      }));
-    });
+    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');

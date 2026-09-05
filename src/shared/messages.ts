@@ -1,10 +1,11 @@
 import type { MetaField, MetaTable, TableKind } from '../core/metadata/types';
 import type { QueryModel } from '../core/query/queryModel';
+import type { SupportedLocale } from './locale';
 
 export type RefId = { kind: TableKind; name: string };
 
 export type HostMsg =
-  | { type: 'init'; hasInitialQuery: boolean; queryTextEditorV2: boolean }
+  | { type: 'init'; hasInitialQuery: boolean; queryTextEditorV2: boolean; locale?: SupportedLocale }
   | { type: 'metadataTree'; tables: MetaTable[] }
   | { type: 'refFields'; ref: RefId; fields: MetaField[] }
   | { type: 'generatedText'; text: string }

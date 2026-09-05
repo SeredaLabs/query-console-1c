@@ -12,10 +12,12 @@ let outputChannel: vscode.OutputChannel;
 function resolveCfPathWithLogging(): string {
   const config = vscode.workspace.getConfiguration('queryConsole');
   const setting = config.get<string>('metadataPath') ?? '';
-  outputChannel.appendLine(`[1C Query] metadataPath setting: "${setting}"`);
-  outputChannel.appendLine(`[1C Query] setting exists on disk: ${setting ? fs.existsSync(setting) : 'n/a'}`);
+  outputChannel.appendLine(vscode.l10n.t('[1C Query] metadataPath setting: "{path}"', { path: setting }));
+  outputChannel.appendLine(vscode.l10n.t('[1C Query] Configured path exists on disk: {value}', {
+    value: setting ? String(fs.existsSync(setting)) : 'n/a',
+  }));
   const cfPath = resolveCfPath();
-  outputChannel.appendLine(`[1C Query] resolved cfPath: "${cfPath}"`);
+  outputChannel.appendLine(vscode.l10n.t('[1C Query] Resolved cfPath: "{path}"', { path: cfPath }));
   return cfPath;
 }
 
@@ -30,7 +32,7 @@ function resolveCfPathWithLogging(): string {
 async function runQueryConstructorCommand(context: vscode.ExtensionContext, resultProcessing: boolean): Promise<void> {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
-    vscode.window.showWarningMessage('Откройте .bsl файл');
+    vscode.window.showWarningMessage(vscode.l10n.t('Open a .bsl file.'));
     return;
   }
   const doc = editor.document;
@@ -58,12 +60,12 @@ async function runQueryConstructorCommand(context: vscode.ExtensionContext, resu
   }
 
   const answer = await vscode.window.showWarningMessage(
-    'Не найден текст запроса. Создать новый запрос?',
+    vscode.l10n.t('No query text was found. Create a new query?'),
     { modal: true },
-    'Да',
-    'Нет'
+    vscode.l10n.t('Yes'),
+    vscode.l10n.t('No')
   );
-  if (answer !== 'Да') return;
+  if (answer !== vscode.l10n.t('Yes')) return;
   createPanel(context, cfPath, outputChannel, {
     document: doc,
     selection: editor.selection,

@@ -4,6 +4,7 @@ import { ResizeHandle } from './ResizeHandle';
 import { Chevron } from './Chevron';
 import { CodeEditor, type CodeEditorHandle } from './CodeEditor';
 import { BTN, BTN_SECONDARY } from '../sharedStyles';
+import { t } from '../i18n';
 
 interface Props {
   title?: string;
@@ -63,7 +64,7 @@ function FunctionTree({ node, depth, onPick }: { node: FunctionGroup | FunctionL
   );
 }
 
-export function ExpressionBuilder({ title = 'Произвольное выражение', availableFields, initialText = '', onOk, onCancel }: Props): React.ReactElement {
+export function ExpressionBuilder({ title = t('dialog.expression.title'), availableFields, initialText = '', onOk, onCancel }: Props): React.ReactElement {
   const [text, setText] = React.useState(initialText);
   const editorRef = React.useRef<CodeEditorHandle>(null);
   // 8.3.7: перетаскиваемые границы — ширина списка «Поле» и высота поля ввода.
@@ -88,7 +89,7 @@ export function ExpressionBuilder({ title = 'Произвольное выраж
         <div style={{ fontWeight: 'bold', fontSize: 13 }}>{title}</div>
         <div style={{ display: 'flex', flex: 1, gap: 0, minHeight: 0 }}>
           <div style={{ width: fieldsWidth, flexShrink: 0, overflow: 'auto', border: '1px solid var(--qc-border)' }}>
-            <div style={{ fontSize: 11, padding: '2px 6px', opacity: 0.7 }}>Поле</div>
+            <div style={{ fontSize: 11, padding: '2px 6px', opacity: 0.7 }}>{t('common.field')}</div>
             {availableFields.map(f => (
               <div
                 key={f}
@@ -127,8 +128,8 @@ export function ExpressionBuilder({ title = 'Произвольное выраж
           }}
         />
         <div style={{ display: 'flex', gap: 4, alignSelf: 'flex-end' }}>
-          <button data-testid="expr-ok" style={BTN} onClick={() => onOk(text)}>ОК</button>
-          <button data-testid="expr-cancel" style={BTN_SECONDARY} onClick={onCancel}>Отмена</button>
+          <button data-testid="expr-ok" style={BTN} onClick={() => onOk(text)}>{t('actions.ok')}</button>
+          <button data-testid="expr-cancel" style={BTN_SECONDARY} onClick={onCancel}>{t('actions.cancel')}</button>
         </div>
       </div>
     </div>

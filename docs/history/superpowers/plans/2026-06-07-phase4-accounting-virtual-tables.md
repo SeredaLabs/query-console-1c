@@ -1329,8 +1329,8 @@ git commit -m "feat(webview): окно параметров и период-по
 приведён к 1С-точному (имя объекта). За рамками: разворот небалансовых измерений в Дт/Кт,
 параметры-субконто в окне.
 
-- Спек: [`specs/2026-06-07-phase4-accounting-virtual-tables-design.md`](superpowers/specs/2026-06-07-phase4-accounting-virtual-tables-design.md)
-- План: [`plans/2026-06-07-phase4-accounting-virtual-tables.md`](superpowers/plans/2026-06-07-phase4-accounting-virtual-tables.md)
+- Спек: [`specs/2026-06-07-phase4-accounting-virtual-tables-design.md`](../specs/2026-06-07-phase4-accounting-virtual-tables-design.md)
+- План: [`plans/2026-06-07-phase4-accounting-virtual-tables.md`](2026-06-07-phase4-accounting-virtual-tables.md)
 ```
 
 - [ ] **Step 2: Финальный прогон всех тестов**

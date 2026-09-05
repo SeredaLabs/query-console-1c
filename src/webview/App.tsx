@@ -9,6 +9,7 @@ import { findUnsafeVirtualTables } from '../core/query/semanticValidator';
 import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
 import type { MetaTable } from '../core/metadata/types';
 import { BTN } from './sharedStyles';
+import { localizeDiagnostic, setLocale, t } from './i18n';
 
 export type RefreshState = 'idle' | 'loading' | { ok: boolean; message: string };
 
@@ -30,6 +31,7 @@ export function App(): React.ReactElement {
   // Стадия 1 плана «Текст запроса v2» — прокидывается хостом из настройки
   // `queryConsole.queryTextEditorV2` (по умолчанию выключено).
   const [queryTextEditorV2, setQueryTextEditorV2] = useState(false);
+  const [localeRevision, setLocaleRevision] = useState(0);
   // 8.4: таблицы метаданных для локальной семантической проверки открытия/ОК.
   // Резолвер строится из них только при непустом списке (иначе — fail-open: undefined).
   const metaTablesRef = React.useRef<MetaTable[]>([]);
@@ -39,6 +41,13 @@ export function App(): React.ReactElement {
   useEffect(() => {
     const unsub = onHostMessage(msg => {
       if (msg.type === 'init') {
+        // `locale` was added to a versionless host/WebView contract. A restored
+        // panel or older harness may still send the previous shape; keep the
+        // already selected locale instead of invalidating the dictionary.
+        if (msg.locale) {
+          setLocale(msg.locale);
+          setLocaleRevision(revision => revision + 1);
+        }
         expectModelRef.current = msg.hasInitialQuery;
         setQueryTextEditorV2(msg.queryTextEditorV2);
       } else if (msg.type === 'metadataTree') {
@@ -102,9 +111,9 @@ export function App(): React.ReactElement {
   const unsafeVtError = useMemo(() => {
     const names = findUnsafeVirtualTables(assembleBatch(state));
     return names.length > 0
-      ? `Виртуальная таблица "${names[0]}" содержит параметры (3-й и последующие аргументы), которые конструктор не может сохранить без потери данных — см. docs/KNOWN_ISSUES.md. Применить нельзя.`
+      ? t('constructor.unsafeVirtual', { name: names[0] })
       : null;
-  }, [state]);
+  }, [state, localeRevision]);
 
   return (
     <>
@@ -130,7 +139,7 @@ export function App(): React.ReactElement {
         }}
         onCancel={handleCancel}
         okDisabled={!batchText.trim() || generationError !== null || unsafeVtError !== null}
-        okError={generationError ? `Ошибка генерации запроса: ${generationError}` : (unsafeVtError ?? okError)}
+        okError={generationError ? t('constructor.generationError', { error: localizeDiagnostic(generationError) }) : (unsafeVtError ?? (okError && localizeDiagnostic(okError)))}
       />
 
       {/* Синтаксическая ошибка открытия из текста — поверх конструктора, с номером строки. */}
@@ -145,12 +154,12 @@ export function App(): React.ReactElement {
           }}
         >
           <div style={{ color: 'var(--vscode-errorForeground, #f44747)', fontSize: 14, fontWeight: 600 }}>
-            Не удалось открыть запрос
+            {t('constructor.openFailed')}
           </div>
           <div style={{ color: 'var(--vscode-errorForeground, #f44747)', fontSize: 13, whiteSpace: 'pre-wrap', maxWidth: 640 }}>
-            {loadError}
+            {localizeDiagnostic(loadError)}
           </div>
-          <button style={BTN} onClick={handleCancel}>Закрыть</button>
+          <button style={BTN} onClick={handleCancel}>{t('actions.close')}</button>
         </div>
       )}
 
@@ -166,7 +175,7 @@ export function App(): React.ReactElement {
             color: 'var(--vscode-descriptionForeground, #888)', fontSize: 14,
           }}
         >
-          Загрузка конструктора…
+          {t('constructor.loading')}
         </div>
       )}
     </>

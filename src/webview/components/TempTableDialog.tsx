@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { IconButton } from './IconButton';
 import { BTN, BTN_SECONDARY, REMOVE_BTN, MODAL_INPUT } from '../sharedStyles';
+import { t } from '../i18n';
 
 export interface TempTableField {
   name: string;
@@ -46,18 +47,18 @@ export function TempTableDialog({ onOk, onCancel, initial }: Props): React.React
   return (
     <div style={OVERLAY} onClick={onCancel}>
       <div style={PANEL} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 'bold', fontSize: 13 }}>Временная таблица</div>
+        <div style={{ fontWeight: 'bold', fontSize: 13 }}>{t('dialog.tempTable.title')}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ width: 90, fontSize: 12 }}>Имя таблицы</label>
+          <label style={{ width: 90, fontSize: 12 }}>{t('dialog.tempTable.name')}</label>
           <input data-testid="tt-name" style={MODAL_INPUT} value={name} onChange={e => setName(e.target.value)} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, fontWeight: 'bold' }}>Поля</span>
-          <IconButton testId="tt-add-row" icon="add" tone="add" title="Добавить поле" onClick={addRow} />
+          <span style={{ fontSize: 12, fontWeight: 'bold' }}>{t('common.fields')}</span>
+          <IconButton testId="tt-add-row" icon="add" tone="add" title={t('dialog.tempTable.addField')} onClick={addRow} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: '40vh', overflowY: 'auto' }}>
           <div style={{ display: 'flex', gap: 8, fontSize: 11, opacity: 0.7 }}>
-            <span style={{ flex: 1 }}>Имя поля</span>
+            <span style={{ flex: 1 }}>{t('common.name')}</span>
             <span style={{ width: 20 }} />
           </div>
           {fields.map((f, i) => (
@@ -68,7 +69,7 @@ export function TempTableDialog({ onOk, onCancel, initial }: Props): React.React
                 value={f.name}
                 onChange={e => setField(i, { name: e.target.value })}
               />
-              <button style={REMOVE_BTN} title="Убрать поле" onClick={() => removeRow(i)}>✕</button>
+              <button style={REMOVE_BTN} title={t('dialog.tempTable.removeField')} onClick={() => removeRow(i)}>✕</button>
             </div>
           ))}
         </div>
@@ -79,14 +80,14 @@ export function TempTableDialog({ onOk, onCancel, initial }: Props): React.React
             disabled={!canOk}
             onClick={() => onOk(name.trim(), validFields)}
           >
-            ОК
+            {t('actions.ok')}
           </button>
           <button
             data-testid="tt-cancel"
             style={BTN_SECONDARY}
             onClick={onCancel}
           >
-            Отмена
+            {t('actions.cancel')}
           </button>
         </div>
       </div>

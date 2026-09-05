@@ -1,0 +1,14 @@
+{
+  "extension.displayName": "1C: Конструктор запитів",
+  "extension.description": "Візуальний конструктор запитів для 1C:Enterprise і BAS",
+  "commands.category": "1C",
+  "commands.queryConstructor.title": "Лише текст запиту",
+  "commands.queryConstructorWithResult.title": "З кодом обробки результату",
+  "commands.parseMetadata.title": "1C: Розібрати метадані в YAML",
+  "menus.queryConstructor.label": "1C: Конструктор запитів",
+  "configuration.title": "Query Console 1C",
+  "configuration.metadataPath.description": "Абсолютний шлях до XML-вивантаження конфігурації 1C. Залиште порожнім для автоматичного пошуку в робочій області.",
+  "configuration.parserOutputPath.description": "Каталог для згенерованих файлів метаданих. Відносні шляхи обчислюються від кореня робочої області.",
+  "configuration.openInNewWindow.description": "Переміщувати Конструктор запитів в окреме вікно VS Code замість поточного вікна.",
+  "configuration.queryTextEditorV2.description": "Увімкнути експериментальне вікно Query Text v2 з панеллю інструментів, структурою, параметрами та перевіркою."
+}

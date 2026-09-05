@@ -7,6 +7,7 @@ import { ResizeHandle } from './ResizeHandle';
 import { IconButton } from './IconButton';
 import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
 import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
+import { t } from '../i18n';
 
 const ALL_FUNCS: AggregateFunction[] = ['Сумма', 'Количество', 'КоличествоРазличных', 'Максимум', 'Минимум', 'Среднее'];
 const NON_NUMERIC_FUNCS: AggregateFunction[] = ['КоличествоРазличных', 'Количество', 'Максимум', 'Минимум'];
@@ -83,7 +84,7 @@ export function GroupingTab(props: Props): React.ReactElement {
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
       {/* Левый список: Поля */}
       <div style={{ ...panelBox, width: leftWidth, flexShrink: 0 }}>
-        <div style={SECTION_HEADER}>Поля</div>
+        <div style={SECTION_HEADER}>{t('common.fields')}</div>
         <div style={dropZone} data-field-source="grouping-source">
           {sourceFields.map((f, i) => (
             <div
@@ -99,7 +100,7 @@ export function GroupingTab(props: Props): React.ReactElement {
           ))}
           {sourceFields.length === 0 && (
             <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
-              Нет полей. Добавьте поля на вкладке «Таблицы и поля».
+              {t('empty.noFieldsAdd')}
             </div>
           )}
         </div>
@@ -118,13 +119,13 @@ export function GroupingTab(props: Props): React.ReactElement {
                 checked={grouping.multiple}
                 onChange={e => onSetMultiple(e.target.checked)}
               />
-              Использовать несколько группировок
+              {t('grouping.multiple')}
             </label>
             {grouping.multiple && (
-              <IconButton icon="add" tone="add" title="Добавить группировку" onClick={onAddGroupSet} />
+              <IconButton icon="add" tone="add" title={t('grouping.addSet')} onClick={onAddGroupSet} />
             )}
           </div>
-          <div style={SECTION_HEADER}>Поле группировки</div>
+          <div style={SECTION_HEADER}>{t('grouping.groupFields')}</div>
 
           {!grouping.multiple ? (
             <div
@@ -142,7 +143,7 @@ export function GroupingTab(props: Props): React.ReactElement {
                     <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                     {labelFor(f.tableId, f.path)}
                   </span>
-                  <button style={REMOVE_BTN} title="Убрать" onClick={() => onRemoveGroupField(f.tableId, f.path)}>✕</button>
+                  <button style={REMOVE_BTN} title={t('actions.remove')} onClick={() => onRemoveGroupField(f.tableId, f.path)}>✕</button>
                 </div>
               ))}
             </div>
@@ -161,9 +162,9 @@ export function GroupingTab(props: Props): React.ReactElement {
                   >
                     <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span className="codicon codicon-list-flat" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
-                      Группировка {idx + 1}
+                      {t('grouping.setNumber', { number: idx + 1 })}
                     </span>
-                    <button style={REMOVE_BTN} title="Удалить группировку" onClick={() => onRemoveGroupSet(idx)}>✕</button>
+                    <button style={REMOVE_BTN} title={t('grouping.deleteSet')} onClick={() => onRemoveGroupSet(idx)}>✕</button>
                   </div>
                   {set.map((f: FieldRef) => (
                     <div key={`${f.tableId}:${f.path}`} style={{ ...ROW, paddingLeft: 24 }}>
@@ -171,14 +172,14 @@ export function GroupingTab(props: Props): React.ReactElement {
                         <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                         {labelFor(f.tableId, f.path)}
                       </span>
-                      <button style={REMOVE_BTN} title="Убрать" onClick={() => onRemoveFieldFromSet(idx, f.tableId, f.path)}>✕</button>
+                      <button style={REMOVE_BTN} title={t('actions.remove')} onClick={() => onRemoveFieldFromSet(idx, f.tableId, f.path)}>✕</button>
                     </div>
                   ))}
                 </div>
               ))}
               {grouping.groupSets.length === 0 && (
                 <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
-                  Нажмите «+», чтобы добавить группировку.
+                  {t('grouping.addHint')}
                 </div>
               )}
             </div>
@@ -188,8 +189,8 @@ export function GroupingTab(props: Props): React.ReactElement {
         {/* Суммируемое поле | Функция */}
         <div style={{ ...panelBox, flex: 1 }}>
           <div style={{ display: 'flex' }}>
-            <div style={{ ...SECTION_HEADER, flex: 1 }}>Суммируемое поле</div>
-            <div style={{ ...SECTION_HEADER, width: 180, flexShrink: 0 }}>Функция</div>
+            <div style={{ ...SECTION_HEADER, flex: 1 }}>{t('grouping.aggregateFields')}</div>
+            <div style={{ ...SECTION_HEADER, width: 180, flexShrink: 0 }}>{t('grouping.function')}</div>
           </div>
           <div
             style={dropZone}
@@ -225,7 +226,7 @@ export function GroupingTab(props: Props): React.ReactElement {
                   >
                     {funcs.map(fn => <option key={fn} value={fn}>{fn}</option>)}
                   </select>
-                  <button style={REMOVE_BTN} title="Убрать" onClick={() => onRemoveSummableField(a.tableId, a.path)}>✕</button>
+                  <button style={REMOVE_BTN} title={t('actions.remove')} onClick={() => onRemoveSummableField(a.tableId, a.path)}>✕</button>
                 </div>
               );
             })}

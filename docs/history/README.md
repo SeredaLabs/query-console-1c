@@ -1,14 +1,14 @@
-# История документации
+# Documentation history
 
-Этот каталог хранит материалы завершённых итераций. Они оставлены для трассировки
-решений, исследовательских выводов и Git-истории, но могут содержать устаревшие
-пути, команды, числа тестов и незакрытые checklist-пункты.
+This directory retains completed-iteration material for decision traceability and
+Git history. It can contain obsolete paths, commands, test counts, and unchecked
+items; it is not current guidance.
 
-- `PHASE_*.md` -- отчёты реализованных фаз.
-- `AUDIT-2026-09-01.md` -- аудит конкретного состояния репозитория на дату отчёта.
-- `superpowers/specs/` -- point-in-time спецификации.
-- `superpowers/plans/` -- планы реализации прошлых итераций.
+- `PHASE_*.md` — completed phase reports.
+- `AUDIT-2026-09-01.md` — a point-in-time repository audit.
+- `superpowers/specs/` and `superpowers/plans/` — historical specifications and plans.
+- `pre-consolidation/` — the former mixed-language documentation set.
 
-Для текущей работы используйте [индекс документации](../README.md), код и
-автоматизированные тесты. Известные активные проблемы ведутся только в
-[KNOWN_ISSUES.md](../KNOWN_ISSUES.md).
+For current work use the [development guide](../development/index.md), current
+code, and automated tests. Active limitations are maintained in
+[known issues](../development/known-issues.md).

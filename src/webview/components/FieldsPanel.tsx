@@ -5,6 +5,7 @@ import { IconButton } from './IconButton';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
 import { SECTION_HEADER, REMOVE_BTN } from '../sharedStyles';
+import { t } from '../i18n';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -85,19 +86,19 @@ export function FieldsPanel({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={SECTION_HEADER}>Поля</div>
+      <div style={SECTION_HEADER}>{t('common.fields')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 4, gap: 4 }}>
       <div style={{ display: 'flex', gap: 2 }}>
         <IconButton
           icon="close"
-          title="Убрать поле"
+          title={t('fields.remove')}
           tone="remove"
           disabled={focusedSelectedFieldIdx === null}
           onClick={() => focusedSelectedFieldIdx !== null && onRemoveField(focusedSelectedFieldIdx)}
         />
         <IconButton
           icon="add"
-          title="Добавить поле (произвольное выражение)"
+          title={t('fields.addExpression')}
           tone="add"
           disabled={!canAddExpression}
           onClick={onAddExpression}
@@ -129,7 +130,7 @@ export function FieldsPanel({
               data-field-idx={i}
               onClick={() => onFocusField(i)}
               onDoubleClick={() => onEditField(i)}
-              title="Двойной клик — править как произвольное выражение"
+              title={t('fields.editExpression')}
               className="qc-row"
               style={{
                 padding: '2px 6px',
@@ -179,7 +180,7 @@ export function FieldsPanel({
                 <span style={{ flex: 1 }}>{label}</span>
                 <button
                   style={REMOVE_BTN}
-                  title="Убрать табличную часть"
+                  title={t('fields.removeTabularSection')}
                   onClick={() => onRemoveTabSection(ts.tableId, ts.tsName)}
                 >
                   ✕

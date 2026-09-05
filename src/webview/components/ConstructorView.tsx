@@ -35,6 +35,7 @@ import { tryOpenBatch } from '../../core/query/validateBatch';
 import { buildResolverFromTables } from '../../core/metadata/buildModelResolver';
 import type { RefreshState } from '../App';
 import { BTN, BTN_SECONDARY, GLOBAL_FORM_CSS } from '../sharedStyles';
+import { localizeDiagnostic, t } from '../i18n';
 
 export interface ConstructorViewProps {
   state: QueryState;
@@ -101,7 +102,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
     // !== null) — иначе баннеру ошибки негде появиться.
     const { text, error } = computeBatchTextSafe(state, true);
     if (error) {
-      setQueryModalText('-- не удалось сформировать текст запроса');
+      setQueryModalText(`-- ${t('constructor.generateFailed')}`);
       setQueryModalError(error);
       return;
     }
@@ -115,7 +116,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
     // текст попадёт в originalText/CodeMirror — тогда сравнивать текст с самим собой
     // после прохождения через редактор всегда безопасно.
     const normalized = text.replace(/\r\n?/g, '\n');
-    setQueryModalText(normalized || '-- нет полей для генерации запроса');
+    setQueryModalText(normalized || `-- ${t('constructor.noFields')}`);
     setQueryModalError(null);
   }
 
@@ -142,7 +143,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
     // означало бы «Применить» молча стирает всю модель конструктора (проверено вручную:
     // очистить текст и нажать «Применить» — таблицы/поля пропадают без единого
     // предупреждения). Явно блокируем, а не полагаемся на `!r.ok`.
-    if (r.doc.members.length === 0) { setQueryModalError('Текст запроса пуст — нечего применять.'); return; }
+    if (r.doc.members.length === 0) { setQueryModalError(t('constructor.emptyQuery')); return; }
     dispatch({ type: 'LOAD_BATCH', doc: r.doc });
     setQueryModalError(null);
     setQueryModalText(null);
@@ -611,7 +612,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
       {activeTab !== 'Таблицы и поля' && activeTab !== 'Связи' && activeTab !== 'Группировка' && activeTab !== 'Условия' && activeTab !== 'Дополнительно' && activeTab !== 'Индексы' && activeTab !== 'Объединения/Псевдонимы' && activeTab !== 'Порядок' && activeTab !== 'Итоги' && activeTab !== 'Построитель' && activeTab !== 'Пакет запросов' && (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--vscode-descriptionForeground, #888)', fontSize: 13 }}>
-          Вкладка в разработке
+          {t('constructor.tabInDevelopment')}
         </div>
       )}
       </div>
@@ -621,15 +622,15 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
       {/* Bottom bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderTop: '1px solid var(--qc-border)' }}>
-        <button style={BTN_SECONDARY} onClick={handleShowQuery}>Запрос</button>
+        <button style={BTN_SECONDARY} onClick={handleShowQuery}>{t('common.query')}</button>
         {okError != null && (
           <span data-testid="ok-error" style={{ color: 'var(--vscode-errorForeground, #f44747)', fontSize: 12 }}>
             {okError}
           </span>
         )}
         <div style={{ flex: 1 }} />
-        <button style={{ ...BTN, opacity: okDisabled ? 0.5 : 1 }} disabled={okDisabled} onClick={onOk}>ОК</button>
-        <button style={BTN_SECONDARY} onClick={onCancel}>Отмена</button>
+        <button style={{ ...BTN, opacity: okDisabled ? 0.5 : 1 }} disabled={okDisabled} onClick={onOk}>{t('actions.ok')}</button>
+        <button style={BTN_SECONDARY} onClick={onCancel}>{t('actions.cancel')}</button>
       </div>
 
       {/* Virtual table params modal */}
@@ -746,10 +747,10 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 'bold', fontSize: 13 }}>Текст запроса</span>
+              <span style={{ fontWeight: 'bold', fontSize: 13 }}>{t('dialog.queryText.title')}</span>
               <IconButton
                 icon="close"
-                title="Закрыть"
+                title={t('actions.close')}
                 onClick={() => { setQueryModalText(null); setQueryModalError(null); }}
               />
             </div>
@@ -781,11 +782,11 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
             />
             {queryModalError != null && (
               <div style={{ color: 'var(--vscode-errorForeground, #f44747)', fontSize: 12, whiteSpace: 'pre-wrap' }}>
-                {queryModalError}
+                {localizeDiagnostic(queryModalError)}
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button style={BTN} onClick={handleApplyQueryEdit}>Применить</button>
+              <button style={BTN} onClick={handleApplyQueryEdit}>{t('actions.apply')}</button>
             </div>
           </div>
         </div>

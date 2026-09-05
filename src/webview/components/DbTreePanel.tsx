@@ -5,6 +5,7 @@ import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
 import { IconButton } from './IconButton';
 import { SECTION_HEADER } from '../sharedStyles';
+import { t, type MessageKey } from '../i18n';
 
 interface Props {
   tables: MetaTable[];
@@ -28,24 +29,24 @@ const GROUP_KINDS: TableKind[] = [
   'Последовательность', 'ЖурналДокументов', 'КритерийОтбора',
   'Константа', 'Перечисление',
 ];
-const GROUP_LABELS: Record<string, string> = {
-  'Справочник': 'Справочники',
-  'Документ': 'Документы',
-  'ПланОбмена': 'Планы обмена',
-  'ПланВидовХарактеристик': 'Планы видов характеристик',
-  'ПланСчетов': 'Планы счетов',
-  'ПланВидовРасчета': 'Планы видов расчета',
-  'БизнесПроцесс': 'Бизнес-процессы',
-  'Задача': 'Задачи',
-  'РегистрСведений': 'Регистры сведений',
-  'РегистрНакопления': 'Регистры накопления',
-  'РегистрБухгалтерии': 'Регистры бухгалтерии',
-  'РегистрРасчета': 'Регистры расчета',
-  'Последовательность': 'Последовательности',
-  'ЖурналДокументов': 'Журналы документов',
-  'КритерийОтбора': 'Критерии отбора',
-  'Константа': 'Константы',
-  'Перечисление': 'Перечисления',
+const GROUP_LABELS: Record<string, MessageKey> = {
+  'Справочник': 'tree.catalogs',
+  'Документ': 'tree.documents',
+  'ПланОбмена': 'tree.exchangePlans',
+  'ПланВидовХарактеристик': 'tree.characteristicPlans',
+  'ПланСчетов': 'tree.accountsPlans',
+  'ПланВидовРасчета': 'tree.calculationPlans',
+  'БизнесПроцесс': 'tree.businessProcesses',
+  'Задача': 'tree.tasks',
+  'РегистрСведений': 'tree.informationRegisters',
+  'РегистрНакопления': 'tree.accumulationRegisters',
+  'РегистрБухгалтерии': 'tree.accountingRegisters',
+  'РегистрРасчета': 'tree.calculationRegisters',
+  'Последовательность': 'tree.sequences',
+  'ЖурналДокументов': 'tree.documentJournals',
+  'КритерийОтбора': 'tree.filterCriteria',
+  'Константа': 'tree.constants',
+  'Перечисление': 'tree.enums',
 };
 
 const ACTIVE_MATCH_BG = 'var(--vscode-editor-findMatchBackground, rgba(234,92,0,0.5))';
@@ -313,7 +314,7 @@ function TabularSectionNode({ ts, fields, expandedRefs, collapsedRefs, onToggleC
       <div
         draggable
         className="qc-row"
-        title="Табличная часть"
+        title={t('tree.tabularSection')}
         onDragStart={handleDragStart}
         onClick={onToggle}
         style={{
@@ -493,7 +494,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={SECTION_HEADER}>База данных</div>
+      <div style={SECTION_HEADER}>{t('tree.database')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 4, gap: 4 }}>
       <div
         style={{
@@ -518,7 +519,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
             e.preventDefault();
             goToMatch(e.shiftKey ? -1 : 1);
           }}
-          placeholder="Поиск таблицы или поля..."
+          placeholder={t('tree.searchPlaceholder')}
           style={{
             flex: 1,
             minWidth: 0,
@@ -531,12 +532,14 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
         />
         {isSearching && (
           <span style={{ fontSize: 11, color: 'var(--vscode-descriptionForeground, #888)', flexShrink: 0, whiteSpace: 'nowrap', padding: '0 2px' }}>
-            {totalMatches > 0 ? `${clampedActiveIdx + 1} из ${totalMatches}` : 'нет результатов'}
+            {totalMatches > 0
+              ? t('tree.matchPosition', { current: clampedActiveIdx + 1, total: totalMatches })
+              : t('tree.noResults')}
           </span>
         )}
-        <IconButton icon="chevron-up" title="Предыдущий результат" disabled={totalMatches === 0} onClick={() => goToMatch(-1)} />
-        <IconButton icon="chevron-down" title="Следующий результат" disabled={totalMatches === 0} onClick={() => goToMatch(1)} />
-        {query && <IconButton icon="close" title="Очистить" onClick={() => setQuery('')} />}
+        <IconButton icon="chevron-up" title={t('tree.previousResult')} disabled={totalMatches === 0} onClick={() => goToMatch(-1)} />
+        <IconButton icon="chevron-down" title={t('tree.nextResult')} disabled={totalMatches === 0} onClick={() => goToMatch(1)} />
+        {query && <IconButton icon="close" title={t('actions.clear')} onClick={() => setQuery('')} />}
       </div>
       <div ref={treeRef} style={{ overflowY: 'auto', flex: 1, minHeight: 0, fontSize: 13 }}>
       {renderModel.map(group => {
@@ -551,7 +554,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
             >
               <Chevron expanded={isExpanded} />
               <MetaKindIcon kind={group.kind} />
-              <span>{GROUP_LABELS[group.kind]}</span>
+              <span>{t(GROUP_LABELS[group.kind])}</span>
             </div>
             {isExpanded && group.tables.map(rt => {
               const isTableExpanded = expandedTables.has(rt.table.fullName);
@@ -634,7 +637,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
       })}
 
       {isSearching && totalMatches === 0 && (
-        <div style={{ padding: '12px 8px', color: 'var(--vscode-descriptionForeground, #888)' }}>Совпадений не найдено</div>
+        <div style={{ padding: '12px 8px', color: 'var(--vscode-descriptionForeground, #888)' }}>{t('tree.noMatches')}</div>
       )}
 
       {/* 7.8.17: группа «Временные таблицы» — ВТ, созданные в предыдущих запросах пакета.
@@ -652,7 +655,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
             >
               <Chevron expanded={isExpanded} />
               <span className={`codicon codicon-folder${isExpanded ? '-opened' : ''}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
-              <span>Временные таблицы</span>
+              <span>{t('tree.tempTables')}</span>
             </div>
             {isExpanded && tempTables.map(table => {
               const isTableExpanded = expandedTables.has(table.fullName);

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import type { QueryAnalysisParameter, NavigateFn } from '../../core/query/queryAnalysisService';
+import { t } from '../i18n';
 
 export interface QueryParametersPanelProps {
   parameters: QueryAnalysisParameter[];
@@ -34,7 +35,7 @@ function ParameterItem({ p, onNavigate }: { p: QueryAnalysisParameter; onNavigat
         <span className="codicon codicon-symbol-parameter" style={ICON} />
         <span style={{ fontWeight: 'bold', fontSize: 12.5 }}>&{p.name}</span>
       </div>
-      <div style={{ ...LABEL, paddingLeft: 19 }}>Использований: {p.usageCount}</div>
+      <div style={{ ...LABEL, paddingLeft: 19 }}>{t('parameters.uses', { count: p.usageCount })}</div>
     </div>
   );
 }
@@ -57,7 +58,7 @@ function ParameterItem({ p, onNavigate }: { p: QueryAnalysisParameter; onNavigat
  */
 export function QueryParametersPanel({ parameters, onNavigate }: QueryParametersPanelProps): React.ReactElement {
   if (parameters.length === 0) {
-    return <div style={{ color: 'var(--vscode-descriptionForeground)' }}>Параметров нет.</div>;
+    return <div style={{ color: 'var(--vscode-descriptionForeground)' }}>{t('parameters.empty')}</div>;
   }
   return (
     <div>
@@ -68,7 +69,7 @@ export function QueryParametersPanel({ parameters, onNavigate }: QueryParameters
         marginBottom: 12,
         borderBottom: '1px solid var(--qc-border)',
       }}>
-        Параметры запроса
+        {t('dialog.queryText.parameters')}
       </div>
       {parameters.map(p => (
         <ParameterItem key={p.name} p={p} onNavigate={onNavigate} />

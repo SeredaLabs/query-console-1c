@@ -9,6 +9,7 @@ import { MetaKindIcon } from './MetaKindIcon';
 import { FieldTreeRow } from './FieldTreeRow';
 import { IconButton } from './IconButton';
 import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox } from '../sharedStyles';
+import { t } from '../i18n';
 
 const OPERATORS: ConditionOperator[] = ['=', '<>', '>', '>=', '<', '<=', 'В', 'МЕЖДУ', 'ПОДОБНО'];
 
@@ -92,7 +93,7 @@ export function ConditionsTab(props: Props): React.ReactElement {
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
       {/* Левый список: Поля */}
       <div style={{ ...panelBox, width: leftWidth, flexShrink: 0 }}>
-        <div style={SECTION_HEADER}>Поля</div>
+        <div style={SECTION_HEADER}>{t('common.fields')}</div>
         <div style={dropZone}>
           {selectedTables.map(sel => {
             const meta = metaTables.find(m => m.fullName === sel.fullName);
@@ -119,7 +120,7 @@ export function ConditionsTab(props: Props): React.ReactElement {
           })}
           {selectedTables.length === 0 && (
             <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
-              Нет таблиц. Добавьте таблицы на вкладке «Таблицы и поля».
+              {t('empty.noTablesAdd')}
             </div>
           )}
         </div>
@@ -130,12 +131,12 @@ export function ConditionsTab(props: Props): React.ReactElement {
       {/* Правая колонка: Условия */}
       <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
         {/* Тулбар */}
-        <div style={SECTION_HEADER}>Условия</div>
+        <div style={SECTION_HEADER}>{t('tabs.conditions')}</div>
         {/* Заголовок столбцов */}
         <div style={{ display: 'flex', ...SECTION_HEADER, padding: 0 }}>
-          <div style={{ width: 56, padding: '2px 6px', flexShrink: 0 }}>Номер</div>
-          <div style={{ width: 28, padding: '2px 6px', flexShrink: 0 }}>П.</div>
-          <div style={{ flex: 1, padding: '2px 6px' }}>Условие</div>
+          <div style={{ width: 56, padding: '2px 6px', flexShrink: 0 }}>{t('conditions.number')}</div>
+          <div style={{ width: 28, padding: '2px 6px', flexShrink: 0 }}>C.</div>
+          <div style={{ flex: 1, padding: '2px 6px' }}>{t('dialog.virtual.condition')}</div>
         </div>
         <div
           style={dropZone}
@@ -151,7 +152,7 @@ export function ConditionsTab(props: Props): React.ReactElement {
               <span style={{ width: 56, flexShrink: 0, textAlign: 'right', paddingRight: 8 }}>{i + 1}</span>
               <input
                 type="checkbox"
-                title="Произвольное условие"
+                title={t('conditions.custom')}
                 checked={c.custom}
                 onChange={e => onSetCustom(i, e.target.checked)}
                 style={{ width: 28, flexShrink: 0 }}
@@ -178,22 +179,22 @@ export function ConditionsTab(props: Props): React.ReactElement {
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
                   <span
-                    title={customText(c) || 'Произвольное условие…'}
+                    title={customText(c) || t('conditions.custom')}
                     style={{
                       flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       color: customText(c) ? 'inherit' : 'var(--vscode-descriptionForeground, #888)',
                     }}
                   >
-                    {customText(c) || 'Произвольное условие…'}
+                    {customText(c) || t('conditions.custom')}
                   </span>
                   <IconButton
                     icon="ellipsis"
-                    title="Открыть конструктор выражения"
+                    title={t('conditions.openExpression')}
                     onClick={() => onOpenExpressionBuilder(i, customText(c))}
                   />
                 </div>
               )}
-              <button style={REMOVE_BTN} title="Удалить условие" onClick={() => onRemoveCondition(i)}>✕</button>
+              <button style={REMOVE_BTN} title={t('conditions.delete')} onClick={() => onRemoveCondition(i)}>✕</button>
             </div>
           ))}
         </div>

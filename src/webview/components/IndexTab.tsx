@@ -5,6 +5,7 @@ import { ResizeHandle } from './ResizeHandle';
 import { IconButton } from './IconButton';
 import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
 import { SECTION_HEADER, panelBox, ROW } from '../sharedStyles';
+import { t } from '../i18n';
 
 interface Props {
   selectedFields: SelectedField[];
@@ -95,15 +96,15 @@ export function IndexTab(props: Props): React.ReactElement {
         {/* Панель 1: Индексы */}
         <div style={{ ...panelBox, width: leftWidth, flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
-            <IconButton icon="add" tone="add" title="Добавить индекс" onClick={onAddIndex} />
-            <IconButton icon="copy" title="Скопировать индекс" disabled={currentIdx < 0} onClick={() => currentIdx >= 0 && onCopyIndex(currentIdx)} />
-            <IconButton icon="close" tone="remove" title="Удалить индекс" disabled={currentIdx < 0} onClick={() => currentIdx >= 0 && onRemoveIndex(currentIdx)} />
-            <IconButton icon="arrow-up" title="Вверх" disabled={currentIdx <= 0} onClick={() => { if (currentIdx > 0) { onMoveIndex(currentIdx, 'up'); setCurrent(currentIdx - 1); } }} />
-            <IconButton icon="arrow-down" title="Вниз" disabled={currentIdx < 0 || currentIdx >= indexes.length - 1} onClick={() => { if (currentIdx >= 0 && currentIdx < indexes.length - 1) { onMoveIndex(currentIdx, 'down'); setCurrent(currentIdx + 1); } }} />
+            <IconButton icon="add" tone="add" title={t('indexes.add')} onClick={onAddIndex} />
+            <IconButton icon="copy" title={t('indexes.copy')} disabled={currentIdx < 0} onClick={() => currentIdx >= 0 && onCopyIndex(currentIdx)} />
+            <IconButton icon="close" tone="remove" title={t('indexes.delete')} disabled={currentIdx < 0} onClick={() => currentIdx >= 0 && onRemoveIndex(currentIdx)} />
+            <IconButton icon="arrow-up" title={t('actions.moveUp')} disabled={currentIdx <= 0} onClick={() => { if (currentIdx > 0) { onMoveIndex(currentIdx, 'up'); setCurrent(currentIdx - 1); } }} />
+            <IconButton icon="arrow-down" title={t('actions.moveDown')} disabled={currentIdx < 0 || currentIdx >= indexes.length - 1} onClick={() => { if (currentIdx >= 0 && currentIdx < indexes.length - 1) { onMoveIndex(currentIdx, 'down'); setCurrent(currentIdx + 1); } }} />
           </div>
           <div style={{ display: 'flex' }}>
-            <div style={{ ...SECTION_HEADER, flex: 1 }}>Имя</div>
-            <div style={{ ...SECTION_HEADER, width: 90, flexShrink: 0 }}>Уникальный</div>
+            <div style={{ ...SECTION_HEADER, flex: 1 }}>{t('common.name')}</div>
+            <div style={{ ...SECTION_HEADER, width: 90, flexShrink: 0 }}>{t('indexes.unique')}</div>
           </div>
           <div style={dropZone}>
             {indexes.map((idx, i) => (
@@ -112,7 +113,7 @@ export function IndexTab(props: Props): React.ReactElement {
                 onClick={() => setCurrent(i)}
                 style={{ ...ROW, cursor: 'pointer', justifyContent: 'space-between', background: i === currentIdx ? SELECTED_BG : 'transparent' }}
               >
-                <span style={{ flex: 1 }}>{`Индекс ${i + 1}`}</span>
+                <span style={{ flex: 1 }}>{t('indexes.number', { number: i + 1 })}</span>
                 <span style={{ width: 90, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
                   <input
                     type="checkbox"
@@ -124,7 +125,7 @@ export function IndexTab(props: Props): React.ReactElement {
               </div>
             ))}
             {!hasIndexes && (
-              <div style={emptyHint}>Нет индексов. Нажмите «+», чтобы добавить.</div>
+              <div style={emptyHint}>{t('indexes.empty')}</div>
             )}
           </div>
         </div>
@@ -133,7 +134,7 @@ export function IndexTab(props: Props): React.ReactElement {
 
         {/* Панель 2: Поля */}
         <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
-          <div style={SECTION_HEADER}>Поля</div>
+          <div style={SECTION_HEADER}>{t('common.fields')}</div>
           <div style={dropZone} data-field-source="index-source">
             {currentIndex && availableFields.map(f => {
               const k = keyOf(f.tableId, f.path);
@@ -151,10 +152,10 @@ export function IndexTab(props: Props): React.ReactElement {
               );
             })}
             {currentIndex && availableFields.length === 0 && (
-              <div style={emptyHint}>Все поля добавлены.</div>
+              <div style={emptyHint}>{t('indexes.allFieldsAdded')}</div>
             )}
             {!currentIndex && (
-              <div style={emptyHint}>Добавьте индекс.</div>
+              <div style={emptyHint}>{t('indexes.addHint')}</div>
             )}
           </div>
         </div>
@@ -164,28 +165,28 @@ export function IndexTab(props: Props): React.ReactElement {
           <IconButton
             icon="chevron-right"
             tone="add"
-            title="Добавить выбранное поле"
+            title={t('indexes.addSelected')}
             disabled={!currentIndex || !middle || !availableFields.some(f => f.tableId === middle.tableId && f.path === middle.path)}
             onClick={() => { if (currentIdx >= 0 && middle) onAddField(currentIdx, middle.tableId, middle.path); }}
           />
           <IconButton
             icon="arrow-right"
             tone="add"
-            title="Добавить все поля"
+            title={t('indexes.addAll')}
             disabled={!currentIndex || availableFields.length === 0}
             onClick={() => { if (currentIdx >= 0) onAddAllFields(currentIdx, availableFields); }}
           />
           <IconButton
             icon="chevron-left"
             tone="remove"
-            title="Убрать выбранное поле"
+            title={t('indexes.removeSelected')}
             disabled={!currentIndex || rightFieldIdx < 0}
             onClick={() => { if (currentIdx >= 0 && right) onRemoveField(currentIdx, right.tableId, right.path); }}
           />
           <IconButton
             icon="arrow-left"
             tone="remove"
-            title="Убрать все поля"
+            title={t('indexes.removeAll')}
             disabled={!currentIndex || currentIndex.fields.length === 0}
             onClick={() => { if (currentIdx >= 0) onClearFields(currentIdx); }}
           />
@@ -196,18 +197,18 @@ export function IndexTab(props: Props): React.ReactElement {
           <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
             <IconButton
               icon="arrow-up"
-              title="Вверх"
+              title={t('actions.moveUp')}
               disabled={!currentIndex || rightFieldIdx <= 0}
               onClick={() => { if (currentIdx >= 0 && right) onMoveField(currentIdx, right.tableId, right.path, 'up'); }}
             />
             <IconButton
               icon="arrow-down"
-              title="Вниз"
+              title={t('actions.moveDown')}
               disabled={!currentIndex || rightFieldIdx < 0 || (currentIndex !== null && rightFieldIdx >= currentIndex.fields.length - 1)}
               onClick={() => { if (currentIdx >= 0 && right) onMoveField(currentIdx, right.tableId, right.path, 'down'); }}
             />
           </div>
-          <div style={SECTION_HEADER}>Поле</div>
+          <div style={SECTION_HEADER}>{t('common.field')}</div>
           <div
             style={dropZone}
             onDragOver={allowDrop}
@@ -231,10 +232,10 @@ export function IndexTab(props: Props): React.ReactElement {
               );
             })}
             {currentIndex && currentIndex.fields.length === 0 && (
-              <div style={emptyHint}>Перетащите поля из списка «Поля».</div>
+              <div style={emptyHint}>{t('indexes.dragFields')}</div>
             )}
             {!currentIndex && (
-              <div style={emptyHint}>Добавьте индекс.</div>
+              <div style={emptyHint}>{t('indexes.addHint')}</div>
             )}
           </div>
         </div>

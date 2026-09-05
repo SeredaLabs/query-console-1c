@@ -7,6 +7,7 @@ import { findMetaField, isRefField } from './GroupingTab';
 import { ResizeHandle } from './ResizeHandle';
 import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
 import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox } from '../sharedStyles';
+import { t, type MessageKey } from '../i18n';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -40,10 +41,10 @@ const EXTRA_FUNC_LABEL: Partial<Record<AggregateFunction, string>> = {
   'Среднее': 'Среднее',
 };
 
-const KIND_OPTIONS: { value: TotalKind; label: string }[] = [
-  { value: 'elements', label: 'Элементы' },
-  { value: 'hierarchy', label: 'Элементы и иерархия' },
-  { value: 'onlyHierarchy', label: 'Только иерархия' },
+const KIND_OPTIONS: { value: TotalKind; label: MessageKey }[] = [
+  { value: 'elements', label: 'totals.elements' },
+  { value: 'hierarchy', label: 'totals.elementsHierarchy' },
+  { value: 'onlyHierarchy', label: 'totals.onlyHierarchy' },
 ];
 
 export function TotalsTab(props: Props): React.ReactElement {
@@ -80,7 +81,7 @@ export function TotalsTab(props: Props): React.ReactElement {
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
       {/* Левый список: Поля */}
       <div style={{ ...panelBox, width: leftWidth, flexShrink: 0 }}>
-        <div style={SECTION_HEADER}>Поля</div>
+        <div style={SECTION_HEADER}>{t('common.fields')}</div>
         <div style={dropZone} data-field-source="totals-source">
           {sourceFields.map((f, i) => (
             <div
@@ -96,7 +97,7 @@ export function TotalsTab(props: Props): React.ReactElement {
           ))}
           {sourceFields.length === 0 && (
             <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
-              Нет полей. Добавьте поля на вкладке «Таблицы и поля».
+              {t('empty.noFieldsAdd')}
             </div>
           )}
         </div>
@@ -109,9 +110,9 @@ export function TotalsTab(props: Props): React.ReactElement {
         {/* Группировочное поле | Тип итогов | Псевдоним */}
         <div style={{ ...panelBox, flex: 1 }}>
           <div style={{ display: 'flex' }}>
-            <div style={{ ...SECTION_HEADER, flex: 1 }}>Группировочное поле</div>
-            <div style={{ ...SECTION_HEADER, width: 180, flexShrink: 0 }}>Тип итогов</div>
-            <div style={{ ...SECTION_HEADER, width: 160, flexShrink: 0 }}>Псевдоним</div>
+            <div style={{ ...SECTION_HEADER, flex: 1 }}>{t('totals.groupFields')}</div>
+            <div style={{ ...SECTION_HEADER, width: 180, flexShrink: 0 }}>{t('totals.type')}</div>
+            <div style={{ ...SECTION_HEADER, width: 160, flexShrink: 0 }}>{t('common.alias')}</div>
           </div>
           <div
             style={dropZone}
@@ -136,19 +137,19 @@ export function TotalsTab(props: Props): React.ReactElement {
                       onChange={e => onSetGroupKind(g.tableId, g.path, e.target.value as TotalKind)}
                       style={{ ...INPUT, width: 170, flexShrink: 0 }}
                     >
-                      {KIND_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      {KIND_OPTIONS.map(o => <option key={o.value} value={o.value}>{t(o.label)}</option>)}
                     </select>
                   ) : (
-                    <span style={{ width: 170, flexShrink: 0, fontSize: 12, color: 'var(--vscode-descriptionForeground, #888)' }}>Элементы</span>
+                    <span style={{ width: 170, flexShrink: 0, fontSize: 12, color: 'var(--vscode-descriptionForeground, #888)' }}>{t('totals.elements')}</span>
                   )}
                   <input
                     type="text"
                     value={g.alias ?? ''}
-                    placeholder="Псевдоним"
+                    placeholder={t('common.alias')}
                     onChange={e => onSetGroupAlias(g.tableId, g.path, e.target.value)}
                     style={{ ...INPUT, width: 150, flexShrink: 0 }}
                   />
-                  <button style={REMOVE_BTN} title="Убрать" onClick={() => onRemoveGroupField(g.tableId, g.path)}>✕</button>
+                  <button style={REMOVE_BTN} title={t('actions.remove')} onClick={() => onRemoveGroupField(g.tableId, g.path)}>✕</button>
                 </div>
               );
             })}
@@ -159,15 +160,15 @@ export function TotalsTab(props: Props): React.ReactElement {
               checked={totals.grand}
               onChange={e => onSetGrand(e.target.checked)}
             />
-            Общие итоги
+            {t('totals.general')}
           </label>
         </div>
 
         {/* Итоговое поле | Выражение */}
         <div style={{ ...panelBox, flex: 1 }}>
           <div style={{ display: 'flex' }}>
-            <div style={{ ...SECTION_HEADER, flex: 1 }}>Итоговое поле</div>
-            <div style={{ ...SECTION_HEADER, width: 220, flexShrink: 0 }}>Выражение</div>
+            <div style={{ ...SECTION_HEADER, flex: 1 }}>{t('totals.totalFields')}</div>
+            <div style={{ ...SECTION_HEADER, width: 220, flexShrink: 0 }}>{t('common.expression')}</div>
           </div>
           <div
             style={dropZone}
@@ -204,7 +205,7 @@ export function TotalsTab(props: Props): React.ReactElement {
                     {f.expression}
                   </span>
                 )}
-                <button style={REMOVE_BTN} title="Убрать" onClick={() => onRemoveTotalField(idx)}>✕</button>
+                <button style={REMOVE_BTN} title={t('actions.remove')} onClick={() => onRemoveTotalField(idx)}>✕</button>
               </div>
             ))}
           </div>

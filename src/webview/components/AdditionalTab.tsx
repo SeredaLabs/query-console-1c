@@ -3,6 +3,7 @@ import type { SelectedTable, Selection, QueryType } from '../../core/query/query
 import type { RefreshState } from '../App';
 import { BTN, FIELDSET, LEGEND, CHECK_LABEL, RADIO_LABEL, INPUT, SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
 import { MetaKindIcon } from './MetaKindIcon';
+import { t, type MessageKey } from '../i18n';
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -33,11 +34,11 @@ const dropZone: React.CSSProperties = {
   minHeight: 80,
 };
 
-const QUERY_TYPES: { value: QueryType; label: string }[] = [
-  { value: 'select', label: 'Выборка данных' },
-  { value: 'createTemp', label: 'Создание временной таблицы' },
-  { value: 'appendTemp', label: 'Добавление во временную таблицу' },
-  { value: 'dropTemp', label: 'Уничтожение временной таблицы' },
+const QUERY_TYPES: { value: QueryType; label: MessageKey }[] = [
+  { value: 'select', label: 'additional.select' },
+  { value: 'createTemp', label: 'additional.createTemp' },
+  { value: 'appendTemp', label: 'additional.appendTemp' },
+  { value: 'dropTemp', label: 'additional.dropTemp' },
 ];
 
 function objectName(fullName: string): string {
@@ -82,7 +83,7 @@ export function AdditionalTab(props: Props): React.ReactElement {
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 8, padding: 8, overflow: 'auto' }}>
       {/* Выборка записей */}
       <fieldset style={FIELDSET}>
-        <legend style={LEGEND}>Выборка записей</legend>
+        <legend style={LEGEND}>{t('additional.records')}</legend>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <label style={CHECK_LABEL}>
             <input
@@ -90,7 +91,7 @@ export function AdditionalTab(props: Props): React.ReactElement {
               checked={topEnabled}
               onChange={e => onSetTop(e.target.checked ? (selection.top ?? 1) : undefined)}
             />
-            Первые
+            {t('additional.first')}
           </label>
           <input
             type="number"
@@ -110,7 +111,7 @@ export function AdditionalTab(props: Props): React.ReactElement {
             checked={selection.distinct ?? false}
             onChange={e => onSetDistinct(e.target.checked)}
           />
-          Без повторяющихся
+          {t('additional.distinct')}
         </label>
         <label style={CHECK_LABEL}>
           <input
@@ -118,13 +119,13 @@ export function AdditionalTab(props: Props): React.ReactElement {
             checked={selection.allowed ?? false}
             onChange={e => onSetAllowed(e.target.checked)}
           />
-          Разрешенные
+          {t('additional.allowed')}
         </label>
       </fieldset>
 
       {/* Тип запроса */}
       <fieldset style={FIELDSET}>
-        <legend style={LEGEND}>Тип запроса</legend>
+        <legend style={LEGEND}>{t('additional.queryType')}</legend>
         {QUERY_TYPES.map(qt => (
           <label key={qt.value} style={RADIO_LABEL}>
             <input
@@ -133,11 +134,11 @@ export function AdditionalTab(props: Props): React.ReactElement {
               checked={queryType === qt.value}
               onChange={() => onSetQueryType(qt.value)}
             />
-            {qt.label}
+            {t(qt.label)}
           </label>
         ))}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-          <span style={{ fontSize: 13, opacity: tempNameEnabled ? 1 : 0.5 }}>Имя временной таблицы:</span>
+          <span style={{ fontSize: 13, opacity: tempNameEnabled ? 1 : 0.5 }}>{t('additional.tempName')}:</span>
           <input
             type="text"
             disabled={!tempNameEnabled}
@@ -156,12 +157,12 @@ export function AdditionalTab(props: Props): React.ReactElement {
             checked={lockEnabled}
             onChange={e => onSetLockEnabled(e.target.checked)}
           />
-          Блокировать получаемые данные для последующего изменения
+          {t('additional.lockForUpdate')}
         </label>
         <div style={{ display: 'flex', gap: 8, opacity: lockEnabled ? 1 : 0.5, pointerEvents: lockEnabled ? 'auto' : 'none' }}>
           {/* Таблицы */}
           <div style={panelBox}>
-            <div style={SECTION_HEADER}>Таблицы</div>
+            <div style={SECTION_HEADER}>{t('common.tables')}</div>
             <div style={dropZone}>
               {availableTables.map(t => (
                 <div
@@ -176,7 +177,7 @@ export function AdditionalTab(props: Props): React.ReactElement {
               ))}
               {availableTables.length === 0 && (
                 <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
-                  Нет доступных таблиц.
+                  {t('empty.noAvailableTables')}
                 </div>
               )}
             </div>
@@ -193,7 +194,7 @@ export function AdditionalTab(props: Props): React.ReactElement {
               if (fullName) onAddLockTable(fullName);
             }}
           >
-            <div style={SECTION_HEADER}>Таблицы для изменения</div>
+            <div style={SECTION_HEADER}>{t('additional.updateTables')}</div>
             <div style={dropZone}>
               {lockForUpdate.map(fullName => (
                 <div key={fullName} style={{ ...ROW, gap: 4 }}>
@@ -203,7 +204,7 @@ export function AdditionalTab(props: Props): React.ReactElement {
                   </span>
                   <button
                     style={REMOVE_BTN}
-                    title="Убрать"
+                    title={t('actions.remove')}
                     onClick={() => onRemoveLockTable(fullName)}
                   >
                     ✕
@@ -212,7 +213,7 @@ export function AdditionalTab(props: Props): React.ReactElement {
               ))}
               {lockForUpdate.length === 0 && (
                 <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
-                  Перетащите таблицу сюда.
+                  {t('empty.dragTableHere')}
                 </div>
               )}
             </div>
@@ -223,14 +224,14 @@ export function AdditionalTab(props: Props): React.ReactElement {
       {/* Кэш метаданных — не показывается во вложенном конструкторе подзапроса. */}
       {showCacheBlock && (
         <fieldset style={FIELDSET}>
-          <legend style={LEGEND}>Кэш метаданных</legend>
+          <legend style={LEGEND}>{t('additional.metadataCache')}</legend>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button
               style={{ ...BTN, opacity: refreshState === 'loading' ? 0.6 : 1 }}
               onClick={onRefreshCache}
               disabled={refreshState === 'loading'}
             >
-              {refreshState === 'loading' ? 'Обновление...' : 'Обновить кэш'}
+              {refreshState === 'loading' ? t('refresh.loading') : t('actions.refreshCache')}
             </button>
             {typeof refreshState === 'object' && refreshState != null && (
               <span style={{ fontSize: 12, color: refreshState.ok ? 'var(--vscode-terminal-ansiGreen, #4caf50)' : 'var(--vscode-errorForeground, #f44747)' }}>
@@ -244,7 +245,7 @@ export function AdditionalTab(props: Props): React.ReactElement {
               checked={preserveComments ?? false}
               onChange={e => onSetPreserveComments?.(e.target.checked)}
             />
-            Сохранять комментарии
+            {t('constructor.preserveComments')}
           </label>
         </fieldset>
       )}
