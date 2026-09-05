@@ -24,7 +24,8 @@ case counts and representative transitions. Never update them blindly.
 
 `npm run package` runs the prepublish build and creates `query-console-1c.vsix`.
 Inspect the archive to confirm JavaScript bundles, localization bundles, manifest
-translations, icon, license, README, and screenshot are included.
+translations, icon, license, localized README files, the project banner, and the
+animated demo are included.
 
 ## Release workflow
 

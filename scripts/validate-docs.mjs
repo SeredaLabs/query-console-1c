@@ -50,6 +50,44 @@ for (const match of serializedManifest.matchAll(/%([^%]+)%/g)) {
   if (!(match[1] in manifest)) errors.push(`package.json: unresolved localization key ${match[1]}`);
 }
 
+const manifestByLocale = {
+  en: readJson('package.nls.json'),
+  uk: readJson('package.nls.uk.json'),
+  ru: readJson('package.nls.ru.json'),
+};
+
+for (const locale of locales) {
+  const settingsFile = `docs/${locale}/settings.md`;
+  const settingsText = fs.readFileSync(path.join(root, settingsFile), 'utf8');
+  const manifestSettings = Object.keys(packageJson.contributes?.configuration?.properties ?? {});
+  const documentedSettings = [...settingsText.matchAll(/`(queryConsole\.[A-Za-z0-9]+)`/g)]
+    .map(match => match[1]);
+
+  for (const setting of manifestSettings) {
+    if (!documentedSettings.includes(setting)) {
+      errors.push(`${settingsFile}: missing manifest setting ${setting}`);
+    }
+  }
+  for (const setting of new Set(documentedSettings)) {
+    if (!manifestSettings.includes(setting)) {
+      errors.push(`${settingsFile}: unknown setting ${setting}`);
+    }
+  }
+
+  const gettingStartedFile = `docs/${locale}/getting-started.md`;
+  const gettingStartedText = fs.readFileSync(path.join(root, gettingStartedFile), 'utf8');
+  for (const command of packageJson.contributes?.commands ?? []) {
+    const titleKey = command.title.match(/^%([^%]+)%$/)?.[1];
+    const categoryKey = command.category?.match(/^%([^%]+)%$/)?.[1];
+    const title = titleKey ? manifestByLocale[locale][titleKey] : command.title;
+    const category = categoryKey ? manifestByLocale[locale][categoryKey] : command.category;
+    const visibleTitle = category ? `${category}: ${title}` : title;
+    if (!gettingStartedText.includes(`**${visibleTitle}**`)) {
+      errors.push(`${gettingStartedFile}: missing manifest command title ${visibleTitle}`);
+    }
+  }
+}
+
 const localeFiles = Object.fromEntries(locales.map(locale => [
   locale,
   fs.readdirSync(path.join(root, 'docs', locale)).filter(file => file.endsWith('.md')).sort(),
