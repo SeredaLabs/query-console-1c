@@ -3,6 +3,7 @@ node_modules/
 out/
 test-results/
 playwright-report/
+.vscode-test/
 test/e2e/harness/main.js
 test/e2e/harness/codicon.css
 test/e2e/harness/codicon.ttf

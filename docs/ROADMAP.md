@@ -65,17 +65,36 @@ change". Внешняя грамматика остаётся задокумен
   явное предупреждение при обнаруженном устаревании -- пересборку не
   форсирует (обе попытки уже провалились выше по стеку), только убирает
   тихую деградацию. `newestRelevantMtime` экспортирована из
-  `loadMetadataSafe.ts` и покрыта тестом; сама ветка `panel.ts` -- вручную
-  (нет Extension Host теста, см. п.4 ниже). Единственный оставшийся случай
-  без проверки: `cfPath` не задан вовсе -- архитектурный предел (нет
-  источника XML для сравнения), не дефект.
+  `loadMetadataSafe.ts` и покрыта тестом; сама ветка `panel.ts` теперь тоже
+  покрыта Extension Host тестом (см. п.4).
 
 ### 4. Закрыть integration gap
 
-- Добавить Extension Host тесты для регистрации команд, message bridge, загрузки
-  metadata и вставки/замены BSL-литерала.
-- Оставить Playwright webview harness как UI-уровень, но не считать его проверкой
-  интеграции с VS Code.
+- ✅ Extension Host integration-тесты добавлены (`@vscode/test-cli` +
+  `@vscode/test-electron`, `test/vscode-integration/`, конфиг `.vscode-test.mjs`,
+  скрипт `npm run test:integration`) -- запускают НАСТОЯЩИЙ VS Code (Electron) с
+  нашим расширением и открывают `test/fixtures/vscode-workspace` как рабочую
+  область. Покрыто: регистрация всех трёх команд из `package.json` после
+  активации; `1c.queryConstructor` без активного редактора не падает;
+  `1c.queryConstructor` на реальном `.bsl` с литералом запроса открывает панель
+  (новая вкладка) И реально строит JSON-снимок metadata из настоящего XML
+  (`test/fixtures/cf`, холодная сборка на каждый прогон) -- сквозная проверка
+  всей цепочки `resolveCfPath → createPanel → loadMetadata →
+  loadMetadataSnapshotFirst → buildMetadataSnapshotFromXml → commitMetadataSnapshot`
+  через настоящий `vscode` API, а не мок; `insertResult` заменяет ТОЛЬКО диапазон
+  литерала в реальном `vscode.TextDocument`, включая проверку защиты от
+  устаревшей версии документа (`staleDocument`, см. `insertResult.ts`) -- нужен
+  настоящий `TextEditor.edit`/`Position`/`Range`, недоступный vitest-мокам.
+  CI: `.github/workflows/release.yml` (`xvfb-run -a npm run test:integration`
+  на `ubuntu-latest`).
+  Сознательно НЕ закрыто этим же изменением: содержимое самих сообщений
+  host↔webview (`ready`/`metadataTree`/`generate`/...) -- публичный `vscode` API
+  не даёт тестовому коду доступ к уже созданной командой `WebviewPanel` другого
+  вызова, а `OutputChannel` не имеет публичного API для чтения уже записанного
+  текста, поэтому payload проверяется только косвенно (появление вкладки +
+  реальный файл снимка на диске). Сам payload остаётся покрыт только
+  Playwright-харнессом (`test/e2e/webview.spec.ts`) с мок `vscode` API -- он
+  остаётся UI-уровнем, не проверкой интеграции с настоящим VS Code.
 
 ### 5. Прямой JSON-снимок метаданных (ТЗ §55 P1.2-P1.4, PR-08/09/10 -- сделано)
 
@@ -118,9 +137,10 @@ change". Внешняя грамматика остаётся задокумен
    ТЗ §61 явно запрещает произвольные временные пороги).
 2. **PR-14 (Strict Syntax Validation)** -- SPIKE сделан (см. п.2 выше,
    сравнение вариантов), реализация осознанно отложена пользователем.
-3. **Extension Host integration-тесты** (п.4) -- не начаты; `panel.ts` до сих
-   пор не имеет автоматизированного покрытия (все проверки этой сессии --
-   ручные smoke-тесты + существующие unit/e2e на нижних слоях).
+3. ✅ **Extension Host integration-тесты** (п.4) -- добавлены
+   (`test/vscode-integration/`, `npm run test:integration`, см. п.4 выше).
+   Не закрыто этим же изменением: содержимое сообщений host↔webview (см. п.4
+   выше, почему это ограничение самого `vscode` API, а не пропуск).
 4. **Worker-threads параллелизация XML-парсинга** (п.5, CONDITIONAL) --
    измерено (~1.9x дополнительно к уже достигнутому), не реализовано;
    требует отдельной точки сборки esbuild и обработки ошибок воркеров.

@@ -52,9 +52,10 @@
   актуальных. Пересборку эта ветка не форсирует (обе попытки уже провалились
   выше по стеку — повторный вызов провалился бы так же), только делает
   устаревание видимым. Автотест для самой freshness-функции: `newestRelevantMtime`
-  в `loadMetadataSafe.test.ts`; сама ветка `panel.ts` без Extension Host теста
-  (см. ниже) — покрыта только вручную. Единственный оставшийся случай без
-  freshness-проверки: `cfPath` вообще не задан (нет источника XML для
+  в `loadMetadataSafe.test.ts`; сама ветка `panel.ts` покрыта Extension Host
+  тестом (`test/vscode-integration/metadataPipeline.test.ts`, см. ниже).
+  Единственный оставшийся случай без freshness-проверки: `cfPath` вообще не
+  задан (нет источника XML для
   сравнения — это архитектурный предел, не дефект). Владелец:
   `src/extension/panel.ts`, `src/core/metadata/parser/loadMetadataSafe.ts`.
 - **Неполная поддержка metadata reference types.** `typeParser.ts` распознаёт
@@ -66,9 +67,16 @@
 - **План обмена `*.Изменения` даёт ложный semantic failure.** Подтаблица не
   представлена в YAML-cache, поэтому полный semantic прогон нельзя сделать жёстким
   CI-gate. Владельцы: metadata parser и `semanticValidator.ts`.
-- **Нет Extension Host integration test.** `npm run test:e2e` запускает только
-  статический webview harness; команды, host ↔ webview сообщения, metadata lifecycle
-  и вставка BSL через реальный VS Code API не покрыты.
+- **Extension Host integration test (исправлено, частично).** `npm run test:integration`
+  (`@vscode/test-cli`/`@vscode/test-electron`, `test/vscode-integration/`) теперь
+  запускает НАСТОЯЩИЙ VS Code с расширением: регистрация команд, реальная
+  сборка metadata из XML через реальный `vscode` API, реальная замена
+  BSL-литерала в `vscode.TextDocument` (включая staleDocument-защиту) — всё
+  покрыто. НЕ покрыто этим же изменением: содержимое сообщений host ↔ webview
+  (`ready`/`metadataTree`/...) — публичный `vscode` API не даёт тестовому коду
+  доступ к уже созданной команды `WebviewPanel`, поэтому пока остаётся только за
+  `npm run test:e2e` (Playwright, статический harness с мок `vscode` API,
+  UI-уровень, не проверка интеграции). Владелец: `test/vscode-integration/`.
 - **Независимая tree-sitter SDBL-проверка не работает в CI.** WASM-грамматика не
   коммитится и не собирается release workflow; локальный oracle не является CI-gate.
 

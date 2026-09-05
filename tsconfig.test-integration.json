@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "outDir": "out/test-integration",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "declaration": false,
+    "sourceMap": true,
+    "types": ["mocha", "node"]
+  },
+  "include": [
+    "test/vscode-integration/**/*",
+    "src/extension/**/*",
+    "src/core/**/*",
+    "src/shared/**/*"
+  ]
+}
