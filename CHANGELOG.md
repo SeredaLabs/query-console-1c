@@ -5,14 +5,10 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
-## 0.1.26 - 2026-09-05
+## 0.1.27 - 2026-09-05
 
 ### Changed
 
-- Redesigned the localized README headers with a responsive project banner,
-  compact Marketplace badges, and clearer language navigation.
-- Replaced the static constructor screenshot with an optimized animated demo
-  based on SFK metadata.
 - Visually consolidated the custom-expression ("Довільний вираз") dialog with
   the rest of the query constructor: shared panel/section-header styling,
   icon-and-hover field rows, and a code-editor surface matching the query text
@@ -25,6 +21,15 @@ All notable changes are recorded here. The project uses
   the Ukrainian and Russian troubleshooting pages, and moved the
   translation-tracking metadata into a hidden comment so it no longer renders
   as a visible table on GitHub.
+
+## 0.1.26 - 2026-09-05
+
+### Changed
+
+- Redesigned the localized README headers with a responsive project banner,
+  compact Marketplace badges, and clearer language navigation.
+- Replaced the static constructor screenshot with an optimized animated demo
+  based on SFK metadata.
 
 ## 0.1.25 - 2026-09-05
 
