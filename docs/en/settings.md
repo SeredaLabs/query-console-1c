@@ -1,13 +1,13 @@
 ---
-source_version: 2
+source_version: 3
 translation_status: canonical
 ---
 
-# Settings
+# ⚙️ Settings
 
 [English](../en/settings.md) · [Українська](../uk/settings.md) · [Русский](../ru/settings.md)
 
-## Available settings
+## 📋 Available settings
 
 | Setting | Default | Effect |
 |---|---:|---|
@@ -16,7 +16,7 @@ translation_status: canonical
 | `queryConsole.openInNewWindow` | `true` | Open the designer in a separate VS Code window |
 | `queryConsole.queryTextEditorV2` | `false` | Enable the experimental Query Text v2 editor |
 
-## Scope and paths
+## 🗺️ Scope and paths
 
 Settings use the active workspace configuration. `metadataPath` must be absolute;
 a relative `parserOutputPath` is resolved from the first workspace root.

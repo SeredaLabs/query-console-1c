@@ -1,13 +1,13 @@
 ---
-source_version: 2
+source_version: 3
 translation_status: current
 ---
 
-# Настройки
+# ⚙️ Настройки
 
 [English](../en/settings.md) · [Українська](../uk/settings.md) · [Русский](../ru/settings.md)
 
-## Доступные настройки
+## 📋 Доступные настройки
 
 | Настройка | По умолчанию | Действие |
 |---|---:|---|
@@ -16,7 +16,7 @@ translation_status: current
 | `queryConsole.openInNewWindow` | `true` | Открыть конструктор в отдельном окне VS Code |
 | `queryConsole.queryTextEditorV2` | `false` | Включить экспериментальный редактор v2 |
 
-## Область и пути
+## 🗺️ Область и пути
 
 Используются настройки активной рабочей области. `metadataPath` должен быть
 абсолютным; относительный `parserOutputPath` разрешается от корня первой рабочей области.

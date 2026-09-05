@@ -1,13 +1,13 @@
 ---
-source_version: 2
+source_version: 3
 translation_status: current
 ---
 
-# Налаштування
+# ⚙️ Налаштування
 
 [English](../en/settings.md) · [Українська](../uk/settings.md) · [Русский](../ru/settings.md)
 
-## Доступні налаштування
+## 📋 Доступні налаштування
 
 | Налаштування | Типово | Дія |
 |---|---:|---|
@@ -16,7 +16,7 @@ translation_status: current
 | `queryConsole.openInNewWindow` | `true` | Відкрити конструктор в окремому вікні VS Code |
 | `queryConsole.queryTextEditorV2` | `false` | Увімкнути експериментальний редактор v2 |
 
-## Область і шляхи
+## 🗺️ Область і шляхи
 
 Використовуються налаштування активної робочої області. `metadataPath` має бути
 абсолютним; відносний `parserOutputPath` розв’язується від кореня першої робочої області.

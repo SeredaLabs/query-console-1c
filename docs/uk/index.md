@@ -1,26 +1,26 @@
 ---
-source_version: 1
+source_version: 2
 translation_status: current
 ---
 
-# Посібник користувача
+# 📘 Посібник користувача
 
 [English](../en/index.md) · [Українська](../uk/index.md) · [Русский](../ru/index.md)
 
-1C: Query Constructor — візуальний редактор статичних запитів 1С SDBL у
+🧩 **1C: Query Constructor** — візуальний редактор статичних запитів 1С SDBL у
 BSL-файлах. Він генерує код, але не є консоллю, підключеною до бази 1С.
 
-## Зміст
+## 🧭 Зміст
 
-- [Початок роботи](getting-started.md)
-- [Робота з конструктором](query-designer.md)
-- [Редагування наявних запитів](editing-existing-queries.md)
-- [Метадані](metadata.md)
-- [Налаштування](settings.md)
-- [Обмеження](limitations.md)
-- [Усунення проблем](troubleshooting.md)
+- [🚀 Початок роботи](getting-started.md)
+- [🧩 Робота з конструктором](query-designer.md)
+- [✏️ Редагування наявних запитів](editing-existing-queries.md)
+- [🗂️ Метадані](metadata.md)
+- [⚙️ Налаштування](settings.md)
+- [⚠️ Обмеження](limitations.md)
+- [🧯 Усунення проблем](troubleshooting.md)
 
-## Мова
+## 🌍 Мова
 
 Команди, налаштування, сповіщення та WebView використовують мову VS Code для
 англійської, української й російської. Для інших мов використовується англійська.
