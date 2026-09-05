@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
-import { validateBatchSemantics, findUnsafeVirtualTables, findUnbalancedCustomExpressions } from '../../src/core/query/semanticValidator';
+import { validateBatchSemantics, findUnsafeVirtualTables, findMalformedCustomExpressions } from '../../src/core/query/semanticValidator';
 import type { MetaTable } from '../../src/core/metadata/types';
 
 // Инлайн-метаданные (мини-схема). Реальные объекты + виртуальные таблицы
@@ -292,7 +292,7 @@ describe('findUnsafeVirtualTables (PR-05, ТЗ §54 P0.5)', () => {
   });
 });
 
-describe('findUnbalancedCustomExpressions (PR-14 шаг 1, docs/development/known-issues.md)', () => {
+describe('findMalformedCustomExpressions (PR-14, docs/development/known-issues.md)', () => {
   it('РЕАЛЬНАЯ уязвимость: незакрытая скобка в ГДЕ молча поглощает УПОРЯДОЧИТЬ ПО как часть условия', () => {
     // Без закрывающей скобки после "&Б" — реальный typo пользователя.
     const text =
@@ -304,20 +304,20 @@ describe('findUnbalancedCustomExpressions (PR-14 шаг 1, docs/development/know
     const expr = doc.members[0].members[0].model.conditions?.[0]?.expression ?? '';
     expect(expr).toContain('УПОРЯДОЧИТЬ ПО');
 
-    const hits = findUnbalancedCustomExpressions(doc);
+    const hits = findMalformedCustomExpressions(doc);
     expect(hits).toEqual([{ kind: 'condition', text: expr }]);
   });
 
   it('незакрытая скобка БЕЗ хвоста — тоже находится (сам custom-текст не сбалансирован)', () => {
     const text = 'ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ (Т.Код = &А ИЛИ Т.Наименование = &Б';
-    const hits = findUnbalancedCustomExpressions(parseBatch(text));
+    const hits = findMalformedCustomExpressions(parseBatch(text));
     expect(hits).toHaveLength(1);
     expect(hits[0].kind).toBe('condition');
   });
 
   it('лишняя закрывающая скобка (глубина уходит в минус) — тоже находится', () => {
     const text = 'ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = &А ИЛИ (Т.Наименование = &Б))';
-    const hits = findUnbalancedCustomExpressions(parseBatch(text));
+    const hits = findMalformedCustomExpressions(parseBatch(text));
     expect(hits).toHaveLength(1);
   });
 
@@ -327,7 +327,7 @@ describe('findUnbalancedCustomExpressions (PR-14 шаг 1, docs/development/know
       'УПОРЯДОЧИТЬ ПО Т.Код';
     const doc = parseBatch(text);
     expect(doc.members[0].members[0].model.order).toBeDefined();
-    expect(findUnbalancedCustomExpressions(doc)).toEqual([]);
+    expect(findMalformedCustomExpressions(doc)).toEqual([]);
   });
 
   it('находит небезопасный custom внутри подзапроса-источника (рекурсия)', () => {
@@ -362,7 +362,7 @@ describe('findUnbalancedCustomExpressions (PR-14 шаг 1, docs/development/know
         }],
       }],
     };
-    const hits = findUnbalancedCustomExpressions(batch);
+    const hits = findMalformedCustomExpressions(batch);
     expect(hits).toEqual([{ kind: 'condition', text: '(В.Код = &А ИЛИ В.Наименование = &Б' }]);
   });
 
@@ -371,13 +371,70 @@ describe('findUnbalancedCustomExpressions (PR-14 шаг 1, docs/development/know
       'ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т\n' +
       'ЛЕВОЕ СОЕДИНЕНИЕ Справочник.БанковскиеСчета КАК Y\n' +
       'ПО (Т.Код = &А ИЛИ Y.Код = &Б';
-    const hits = findUnbalancedCustomExpressions(parseBatch(text));
+    const hits = findMalformedCustomExpressions(parseBatch(text));
     expect(hits.some(h => h.kind === 'joinCondition' || h.kind === 'join')).toBe(true);
   });
 
   it('не пересекается с findUnsafeVirtualTables — независимая проверка своего класса проблем', () => {
     // ВТ с потерянным 3-м аргументом сама по себе сбалансирована по скобкам.
     const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК Т';
-    expect(findUnbalancedCustomExpressions(parseBatch(text))).toEqual([]);
+    expect(findMalformedCustomExpressions(parseBatch(text))).toEqual([]);
+  });
+
+  // Собраны напрямую (не через parseBatch): проверяют то, что действительно
+  // отличает шаг 2 (структурный акцептор грамматики выражений,
+  // expressionSyntaxCheck.ts) от шага 1 (только баланс скобок) — эти случаи
+  // ВСЕ сбалансированы по скобкам, но синтаксически сломаны, и старый чекер
+  // их бы пропустил.
+  function batchWithCondition(expression: string): ReturnType<typeof parseBatch> {
+    return {
+      members: [{
+        members: [{
+          name: 'Запрос 1',
+          distinct: false,
+          model: {
+            tables: [{ id: 't0', fullName: 'Справочник.Валюты', alias: 'Т' }],
+            fields: [{ tableId: 't0', path: 'Код', alias: 'Код' }],
+            conditions: [{ custom: true, expression }],
+          },
+        }],
+      }],
+    };
+  }
+
+  it('двойной оператор (сбалансировано по скобкам, но не грамматика) — находится', () => {
+    expect(findMalformedCustomExpressions(batchWithCondition('Т.Код = = &А'))).toHaveLength(1);
+  });
+
+  it('висячий оператор в конце (сбалансировано, но не грамматика) — находится', () => {
+    expect(findMalformedCustomExpressions(batchWithCondition('Т.Код = &А ИЛИ'))).toHaveLength(1);
+  });
+
+  it('ВЫБОР без КОНЕЦ — находится', () => {
+    expect(findMalformedCustomExpressions(batchWithCondition('ВЫБОР КОГДА Т.Код = &А ТОГДА 1 ИНАЧЕ 2'))).toHaveLength(1);
+  });
+
+  it('ВЫРАЗИТЬ(...) без КАК — находится', () => {
+    expect(findMalformedCustomExpressions(batchWithCondition('ВЫРАЗИТЬ(Т.Код СТРОКА(10)) = &А'))).toHaveLength(1);
+  });
+
+  it('ЛЕГИТИМНЫЙ ВЫБОР…КОГДА…ТОГДА…ИНАЧЕ…КОНЕЦ — НЕ находится', () => {
+    expect(findMalformedCustomExpressions(batchWithCondition(
+      'ВЫБОР КОГДА Т.Код = &А ТОГДА 1 ИНАЧЕ 2 КОНЕЦ = &Б'
+    ))).toEqual([]);
+  });
+
+  it('ЛЕГИТИМНЫЙ ВЫРАЗИТЬ(… КАК СТРОКА(N)) — НЕ находится', () => {
+    expect(findMalformedCustomExpressions(batchWithCondition('ВЫРАЗИТЬ(Т.Код КАК СТРОКА(10)) = &А'))).toEqual([]);
+  });
+
+  it('ЛЕГИТИМНЫЙ МЕЖДУ — НЕ находится (регрессия: жадный acceptValue не должен съедать разделительное И)', () => {
+    expect(findMalformedCustomExpressions(batchWithCondition('Т.Дата МЕЖДУ &А И &Б'))).toEqual([]);
+    expect(findMalformedCustomExpressions(batchWithCondition('Т.Дата МЕЖДУ &А И &Б И Т.Код = &В'))).toEqual([]);
+  });
+
+  it('шаблонные маркеры подстановки (%1, #Марк#) — НЕ находится (не пытаемся судить)', () => {
+    expect(findMalformedCustomExpressions(batchWithCondition('Т.Код = %1'))).toEqual([]);
+    expect(findMalformedCustomExpressions(batchWithCondition('#Марк#'))).toEqual([]);
   });
 });

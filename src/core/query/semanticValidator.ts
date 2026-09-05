@@ -25,6 +25,7 @@ import type { QueryModel, SelectedTable, Condition } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import { tokenize } from './sdblLexer';
 import type { Token } from './sdblLexer';
+import { isStructurallyValidExpression } from './expressionSyntaxCheck';
 
 export interface SemanticError {
   message: string;
@@ -213,44 +214,9 @@ export function findUnsafeVirtualTables(doc: BatchDocument): string[] {
   return found;
 }
 
-/**
- * true, если `text` — сбалансированная по круглым `()` и фигурным `{}` скобкам
- * последовательность токенов лексера (счёт никогда не уходит в минус и
- * возвращается к нулю к концу). НЕ проверяет полную грамматику выражения —
- * это ловит один конкретный, самый опасный класс известной уязвимости
- * (docs/development/known-issues.md, PR-14): сборщики custom-сегментов в
- * `sdblParser.ts` (`collectConditionTokens`, `splitJoinConjuncts`, циклы тела
- * полей) отслеживают глубину скобок ТОЛЬКО чтобы найти границу сегмента
- * (стоп-слово верхнего уровня) — если скобка внутри сегмента не закрыта,
- * глубина никогда не возвращается к нулю, стоп-слова перестают распознаваться,
- * и сборщик молча поглощает весь оставшийся текст до EOF как один custom-узел.
- * Строки/литералы дат лексер уже токенизирует целиком (не как сырые скобки),
- * поэтому символ `(` внутри строки не даёт ложного срабатывания.
- */
-function hasBalancedDelimiters(text: string): boolean {
-  let tokens: Token[];
-  try {
-    tokens = tokenize(text);
-  } catch {
-    // Незакрытая строка/дата и т.п. внутри custom-текста — само по себе уже
-    // признак некорректности, а не повод считать его "сбалансированным".
-    return false;
-  }
-  let parenDepth = 0;
-  let braceDepth = 0;
-  for (const t of tokens) {
-    if (t.type !== 'punct') continue;
-    if (t.value === '(') parenDepth++;
-    else if (t.value === ')') { if (--parenDepth < 0) return false; }
-    else if (t.value === '{') braceDepth++;
-    else if (t.value === '}') { if (--braceDepth < 0) return false; }
-  }
-  return parenDepth === 0 && braceDepth === 0;
-}
-
-/** Один custom/сырой узел модели, чей сохранённый текст не сбалансирован по
- * скобкам — см. `hasBalancedDelimiters`. */
-export interface UnbalancedCustomHit {
+/** Один custom/сырой узел модели, чей сохранённый текст структурно некорректен
+ * — см. `isStructurallyValidExpression` (`expressionSyntaxCheck.ts`). */
+export interface MalformedCustomHit {
   kind: 'condition' | 'joinCondition' | 'join' | 'field' | 'totalGroupField';
   text: string;
 }
@@ -260,14 +226,16 @@ export interface UnbalancedCustomHit {
  * поля выборки, группировочные поля итогов — тот же набор, что и
  * `findRawFallbackHits` в tooling/corpus-verify/classification.ts, но здесь как
  * runtime Apply-gate, а не только для отчёта классификации корпуса), чей
- * сохранённый текст НЕ сбалансирован по скобкам (см. `hasBalancedDelimiters`).
+ * сохранённый текст структурно некорректен по правилам
+ * `isStructurallyValidExpression` (PR-14 шаг 2: не просто баланс скобок, а
+ * акцептор грамматики SDBL-выражений/условий — см. её файловый комментарий).
  * Обход — рекурсивно по вложенным подзапросам, тем же способом, что и
  * `findUnsafeVirtualTables` выше (ТЗ §54 P0.5, тот же Apply-blocking gate).
  */
-export function findUnbalancedCustomExpressions(doc: BatchDocument): UnbalancedCustomHit[] {
-  const hits: UnbalancedCustomHit[] = [];
-  const check = (text: string | undefined, kind: UnbalancedCustomHit['kind']): void => {
-    if (text !== undefined && !hasBalancedDelimiters(text)) hits.push({ kind, text });
+export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCustomHit[] {
+  const hits: MalformedCustomHit[] = [];
+  const check = (text: string | undefined, kind: MalformedCustomHit['kind']): void => {
+    if (text !== undefined && !isStructurallyValidExpression(text)) hits.push({ kind, text });
   };
   const walkConditions = (conditions: Condition[] | undefined): void => {
     for (const c of conditions ?? []) {

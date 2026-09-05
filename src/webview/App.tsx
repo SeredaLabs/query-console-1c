@@ -5,7 +5,7 @@ import { postToHost, onHostMessage } from './bridge';
 import { initialState, reducer, assembleBatch } from './state/queryStore';
 import { computeBatchTextSafe } from './computeBatchText';
 import { tryOpenBatch, validateBatchText } from '../core/query/validateBatch';
-import { findUnsafeVirtualTables, findUnbalancedCustomExpressions } from '../core/query/semanticValidator';
+import { findUnsafeVirtualTables, findMalformedCustomExpressions } from '../core/query/semanticValidator';
 import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
 import type { MetaTable } from '../core/metadata/types';
 import { BTN } from './sharedStyles';
@@ -115,18 +115,18 @@ export function App(): React.ReactElement {
       : null;
   }, [state, localeRevision]);
 
-  // PR-14 шаг 1 (docs/development/known-issues.md, ТЗ §54 P0.5 — тот же
+  // PR-14 (docs/development/known-issues.md, ТЗ §54 P0.5 — тот же
   // Apply-blocking gate, что и unsafeVtError): tolerant-парсер сохраняет
   // непонятный фрагмент как custom-текст БЕЗ проверки его собственной
-  // грамматической корректности — сборщик спана условия отслеживает глубину
-  // скобок только чтобы найти границу сегмента, и незакрытая скобка внутри
-  // молча поглощает весь остаток документа (найдено и подтверждено на реальном
-  // парсере: незакрытая `(` в ГДЕ поглощает УПОРЯДОЧИТЬ ПО как часть условия).
-  // Полная грамматика выражений — отдельная, гораздо большая задача; это лишь
-  // самый опасный конкретный случай (несбалансированные скобки).
-  const unbalancedCustomError = useMemo(() => {
-    const hits = findUnbalancedCustomExpressions(assembleBatch(state));
-    return hits.length > 0 ? t('constructor.unbalancedCustom') : null;
+  // грамматической корректности. `findMalformedCustomExpressions` прогоняет
+  // такой текст через структурный акцептор грамматики SDBL
+  // (`expressionSyntaxCheck.ts`) — не полная семантика, но заметно больше
+  // одной лишь проверки баланса скобок (шаг 1): ловит и двойные операторы,
+  // и незакрытые CASE/функции, оставаясь без ложных срабатываний на золотом
+  // корпусе и на двух независимых реальных production-конфигурациях.
+  const malformedCustomError = useMemo(() => {
+    const hits = findMalformedCustomExpressions(assembleBatch(state));
+    return hits.length > 0 ? t('constructor.malformedCustom') : null;
   }, [state, localeRevision]);
 
   return (
@@ -145,15 +145,15 @@ export function App(): React.ReactElement {
           // эта проверка на случай прямого вызова/будущей развязки условий, чтобы
           // «ОК» никогда не мог отправить insertText при известной ошибке генерации
           // ИЛИ известной потере данных виртуальной таблицы (ТЗ §27/§28).
-          if (generationError || unsafeVtError || unbalancedCustomError) return;
+          if (generationError || unsafeVtError || malformedCustomError) return;
           const v = validateBatchText(batchText, buildResolver());
           if (!v.ok) { setOkError(v.error); return; }
           setOkError(null);
           handleInsert(batchText);
         }}
         onCancel={handleCancel}
-        okDisabled={!batchText.trim() || generationError !== null || unsafeVtError !== null || unbalancedCustomError !== null}
-        okError={generationError ? t('constructor.generationError', { error: localizeDiagnostic(generationError) }) : (unsafeVtError ?? unbalancedCustomError ?? (okError && localizeDiagnostic(okError)))}
+        okDisabled={!batchText.trim() || generationError !== null || unsafeVtError !== null || malformedCustomError !== null}
+        okError={generationError ? t('constructor.generationError', { error: localizeDiagnostic(generationError) }) : (unsafeVtError ?? malformedCustomError ?? (okError && localizeDiagnostic(okError)))}
       />
 
       {/* Синтаксическая ошибка открытия из текста — поверх конструктора, с номером строки. */}
