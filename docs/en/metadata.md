@@ -1,5 +1,5 @@
 ---
-source_version: 1
+source_version: 2
 translation_status: canonical
 ---
 
@@ -20,9 +20,12 @@ YAML is the compatibility fallback.
 
 ## Build or refresh the cache
 
-Run **1C: Parse metadata to YAML** from the Command Palette, or select **Refresh cache**
-inside the designer. Refresh after every XML export change; freshness is not
-checked automatically.
+Run **1C: Rebuild metadata index** from the Command Palette, or select **Refresh cache**
+inside the designer — both rebuild the same way. The index is checked against
+the XML export's modification time and rebuilt automatically when it is stale;
+manual refresh is needed only to force a rebuild sooner, or when neither the
+Command Palette nor the designer noticed a change (for example, an export
+replaced through a sync tool that preserves file timestamps).
 
 The generated output is disposable and must not replace the original XML export.
 The importer stages a new generation before switching to it and avoids deleting

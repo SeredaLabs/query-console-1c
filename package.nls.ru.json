@@ -4,7 +4,7 @@
   "commands.category": "1C",
   "commands.queryConstructor.title": "Только текст запроса",
   "commands.queryConstructorWithResult.title": "С кодом обработки результата",
-  "commands.parseMetadata.title": "1C: Разобрать метаданные в YAML",
+  "commands.parseMetadata.title": "1С: Перестроить индекс метаданных",
   "menus.queryConstructor.label": "1C: Конструктор запросов",
   "configuration.title": "Query Console 1C",
   "configuration.metadataPath.description": "Абсолютный путь к XML-выгрузке конфигурации 1C. Оставьте пустым для автоматического поиска в рабочей области.",

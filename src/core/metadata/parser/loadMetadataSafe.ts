@@ -27,7 +27,7 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import { resolveManagedCfDir, isOwnedGeneration } from './generationStore';
+import { resolveManagedCfDir, isOwnedGeneration, type MetadataBuildIssue } from './generationStore';
 import { buildMetadataSnapshotFromXml, readMetadataSnapshot, snapshotFileMtimeMs } from './snapshotBuilder';
 import { HANDLERS } from './xmlScan';
 import { parseConfiguration } from './parseConfiguration';
@@ -100,6 +100,17 @@ export interface SafeMetadataLoadResult {
   /** The direct path's exception message — present ONLY when source ===
    * 'yaml-fallback', for diagnostics (why the fallback was needed). */
   fallbackReason?: string;
+  /** Recoverable per-object parse issues from the build that produced this
+   * model (ТЗ §8 — a bad file is reported, not silently dropped). Empty for
+   * a warm 'direct-snapshot-cached' hit — no build happened this call, so
+   * there is nothing new to report (whatever issues its original build had
+   * were already surfaced then). */
+  issues: MetadataBuildIssue[];
+  /** true if an existing, unrecognized `cf` directory at the target root
+   * meant this generation was committed alongside it (`cf-managed`) instead
+   * of replacing it — see `generationStore.ts`'s ownership guard. `false` for
+   * a warm 'direct-snapshot-cached' hit (no commit happened this call). */
+  redirected: boolean;
 }
 
 /**
@@ -114,7 +125,7 @@ export function loadMetadataWithFallback(
 ): SafeMetadataLoadResult {
   try {
     const built = buildMetadataSnapshotFromXml(cfPath, snapshotOutPath);
-    return { model: built.model, source: 'direct-snapshot' };
+    return { model: built.model, source: 'direct-snapshot', issues: built.issues, redirected: built.snapshot.redirected };
   } catch (e) {
     const fallbackReason = e instanceof Error ? e.message : String(e);
     // rebuildModelCache (not loadMetadataFromYaml directly) so the existing
@@ -125,7 +136,7 @@ export function loadMetadataWithFallback(
     // dir exists) is a fast cache hit, not a surprise second full rebuild.
     const yaml = parseConfiguration(cfPath, yamlOutPath);
     const model = rebuildModelCache(yaml.outCfDir);
-    return { model, source: 'yaml-fallback', fallbackReason };
+    return { model, source: 'yaml-fallback', fallbackReason, issues: yaml.issues, redirected: yaml.redirected };
   }
 }
 
@@ -145,7 +156,7 @@ export function loadMetadataSnapshotFirst(
   if (isOwnedGeneration(committedDir)) {
     try {
       if (snapshotFileMtimeMs(committedDir) >= newestRelevantMtime(cfPath)) {
-        return { model: readMetadataSnapshot(committedDir).model, source: 'direct-snapshot-cached' };
+        return { model: readMetadataSnapshot(committedDir).model, source: 'direct-snapshot-cached', issues: [], redirected: false };
       }
     } catch {
       // missing/corrupt snapshot file despite a valid ownership marker — fall

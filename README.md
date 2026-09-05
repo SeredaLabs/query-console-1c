@@ -50,7 +50,7 @@ Open a supported query at the cursor to continue editing it visually.
 
 Set `queryConsole.metadataPath` to the `cf` directory of a file-based XML export,
 or leave it empty to search the workspace for `Configuration.xml`. Run
-**1C: Parse metadata to YAML** after the export changes.
+**1C: Rebuild metadata index** after the export changes.
 
 ## ✅ Requirements
 

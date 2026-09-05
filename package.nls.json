@@ -4,7 +4,7 @@
   "commands.category": "1C",
   "commands.queryConstructor.title": "Query text only",
   "commands.queryConstructorWithResult.title": "With result-processing code",
-  "commands.parseMetadata.title": "1C: Parse metadata to YAML",
+  "commands.parseMetadata.title": "1C: Rebuild metadata index",
   "menus.queryConstructor.label": "1C: Query Designer",
   "configuration.title": "Query Console 1C",
   "configuration.metadataPath.description": "Absolute path to a 1C XML configuration export. Leave empty to auto-detect it in the workspace.",

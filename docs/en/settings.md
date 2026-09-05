@@ -1,5 +1,5 @@
 ---
-source_version: 1
+source_version: 2
 translation_status: canonical
 ---
 
@@ -21,5 +21,5 @@ translation_status: canonical
 Settings use the active workspace configuration. `metadataPath` must be absolute;
 a relative `parserOutputPath` is resolved from the first workspace root.
 
-Changing a path does not automatically rebuild metadata. Run **1C: Parse
-metadata to YAML** after changing either metadata setting.
+Changing a path does not automatically rebuild metadata. Run **1C: Rebuild
+metadata index** after changing either metadata setting.

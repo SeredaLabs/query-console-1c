@@ -86,7 +86,7 @@ export function activate(context: vscode.ExtensionContext): void {
     runQueryConstructorCommand(context, true)
   );
 
-  context.subscriptions.push(cmd, cmdWithResult, registerParseCommand(outputChannel), outputChannel);
+  context.subscriptions.push(cmd, cmdWithResult, registerParseCommand(context, outputChannel), outputChannel);
 }
 
 export function deactivate(): void {}

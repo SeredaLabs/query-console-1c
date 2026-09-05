@@ -1,5 +1,5 @@
 ---
-source_version: 1
+source_version: 2
 translation_status: canonical
 ---
 
@@ -20,7 +20,7 @@ translation_status: canonical
 |---|---|
 | **1C: Query text only** | Insert or edit a query string |
 | **1C: With result-processing code** | Create a new query with a BSL result-processing wrapper |
-| **1C: Parse metadata to YAML** | Rebuild the derived metadata files and cache |
+| **1C: Rebuild metadata index** | Rebuild the derived metadata files and cache |
 
 ## Create a query
 

@@ -1,5 +1,5 @@
 ---
-source_version: 1
+source_version: 2
 translation_status: canonical
 ---
 
@@ -10,7 +10,7 @@ translation_status: canonical
 ## The command is missing
 
 The editor context submenu appears only for `.bsl` resources. Use the Command
-Palette to find **1C: Parse metadata to YAML**. Confirm the extension is enabled for the
+Palette to find **1C: Rebuild metadata index**. Confirm the extension is enabled for the
 current workspace and that VS Code is 1.90 or later.
 
 ## The query is not detected
@@ -22,8 +22,8 @@ concatenation is not supported; create a new query or simplify a copy.
 ## Tables or fields are missing
 
 Check `queryConsole.metadataPath`, confirm `Configuration.xml` exists in the XML
-export, then run **1C: Parse metadata to YAML**. Inspect the reported output path. A stale
-cache is not refreshed automatically.
+export, then run **1C: Rebuild metadata index**. Inspect the reported output path. A stale
+cache is normally rebuilt automatically on the next open; run the command to force it sooner.
 
 ## Applying text fails
 

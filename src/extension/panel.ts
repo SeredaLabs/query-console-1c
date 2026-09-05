@@ -251,6 +251,10 @@ export function createPanel(
             source: r.source, duration: Date.now() - t, count: r.model.tables.length, fallback: fallbackNote,
           })
         );
+        if (r.issues.length > 0) {
+          channel.appendLine(vscode.l10n.t('[1C Query] Object parsing issues: {count}', { count: r.issues.length }));
+          for (const issue of r.issues) channel.appendLine(`[1C Query]   ${issue.stage} ${issue.file ?? ''}: ${issue.message}`);
+        }
         metadataModel = r.model;
         writeLastKnownGood(context.globalStorageUri.fsPath, cfPath, r.model);
         const reply: HostMsg = { type: 'refreshResult', ok: true, message: vscode.l10n.t('Metadata cache updated.') };
