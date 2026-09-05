@@ -1,10 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { parseCf } from '../core/metadata/cfParser';
-import { buildCachePath, writeCache } from '../core/metadata/cacheBuilder';
-import { isCacheValid, readCache } from '../core/metadata/cacheLoader';
 import { loadMetadataCached } from '../core/metadata/modelCache';
+import { writeLastKnownGood, readLastKnownGood } from '../core/metadata/lastKnownGoodCache';
 import { resolveManagedCfDir } from '../core/metadata/parser/generationStore';
 import { loadMetadataSnapshotFirst, loadMetadataWithFallback, newestRelevantMtime } from '../core/metadata/parser/loadMetadataSafe';
 import { createMetadataRepository } from '../core/metadata/metadataRepository';
@@ -66,6 +64,13 @@ async function loadMetadata(
   // код до PR-10. Перехватываем здесь и даём шанс уже прочитанному тёплому
   // YAML-кэшу (если он есть) или легаси XML-парсеру ниже — то же поведение,
   // что было всегда, на случай, когда откажут ОБА пути метаданных сразу.
+  // Last-known-good (см. lastKnownGoodCache.ts): context.globalStorageUri
+  // гарантированно доступен на запись независимо от состояния workspace-
+  // каталога outPath — заменяет прежний legacy-фолбэк parseCf (только
+  // Catalogs/Documents, только CatalogRef/DocumentRef, см. git history)
+  // настоящей последней успешной ПОЛНОЙ моделью.
+  const lkgDir = context.globalStorageUri.fsPath;
+
   if (cfPath) {
     const snapshotOutPath = path.join(outPath, 'snapshot');
     const t = Date.now();
@@ -79,10 +84,11 @@ async function loadMetadata(
           source: r.source, duration: Date.now() - t, count: r.model.tables.length, fallback: fallbackNote,
         })
       );
+      writeLastKnownGood(lkgDir, cfPath, r.model);
       return r.model;
     } catch (e) {
       channel.appendLine(vscode.l10n.t(
-        '[1C Query] Direct path and YAML fallback failed: {error}; trying committed YAML or legacy XML.',
+        '[1C Query] Direct path and YAML fallback failed: {error}; trying committed YAML or last known good metadata.',
         { error: String(e) }
       ));
     }
@@ -111,39 +117,32 @@ async function loadMetadata(
         { yamlPath: cfYamlDir, xmlPath: cfPath }
       ));
     }
+    writeLastKnownGood(lkgDir, cfPath, model);
     return model;
   }
 
-  // Fallback: XML parsing + cache
-  if (!cfPath) return { version: 1, tables: [] };
-  const cachePath = buildCachePath(context.globalStorageUri.fsPath, cfPath);
-  if (isCacheValid(cachePath, cfPath)) {
-    const cached = readCache(cachePath);
-    if (cached && cached.tables.length > 0) {
-      channel.appendLine(vscode.l10n.t('[1C Query] Loaded from cache: {count} tables', { count: cached.tables.length }));
-      return cached;
+  // Последний рубеж: и direct-путь, и его YAML-откат уже оба упали (см. catch
+  // выше), либо ещё ни разу не строилась YAML-генерация в этой рабочей
+  // области. Раньше здесь работал legacy `parseCf` — узкий парсер (только
+  // Catalogs/Documents, только CatalogRef/DocumentRef, никаких регистров и
+  // прочих видов метаданных) со своим кэшем в том же globalStorageUri (см.
+  // git history). Last-known-good — та же гарантированно доступная на запись
+  // директория, но хранит НАСТОЯЩУЮ последнюю успешную ПОЛНУЮ модель, а не
+  // урезанную заново построенную. Если last-known-good тоже нет (самое первое
+  // открытие сразу упало) — честная пустая модель предпочтительнее тихой
+  // деградации до Catalogs+Documents.
+  if (cfPath) {
+    const lkg = readLastKnownGood(lkgDir, cfPath);
+    if (lkg) {
+      channel.appendLine(vscode.l10n.t(
+        '[1C Query] WARNING: metadata could not be rebuilt; using last known good snapshot from {date} ({count} tables).',
+        { date: new Date(lkg.builtAtMs).toISOString(), count: lkg.model.tables.length }
+      ));
+      return lkg.model;
     }
+    channel.appendLine(vscode.l10n.t('[1C Query] Metadata could not be built and no last known good snapshot exists.'));
   }
-  channel.appendLine(vscode.l10n.t('[1C Query] Parsing metadata from XML: {path}', { path: cfPath }));
-  for (const sub of ['Catalogs', 'Documents']) {
-    const dir = path.join(cfPath, sub);
-    if (fs.existsSync(dir)) {
-      const files = (fs.readdirSync(dir) as string[]).filter(f => f.endsWith('.xml'));
-      channel.appendLine(vscode.l10n.t('[1C Query] {directory}/: {count} XML files', { directory: sub, count: files.length }));
-      if (files.length > 0) {
-        const firstPath = path.join(dir, files[0]);
-        const firstXml: string = fs.readFileSync(firstPath, 'utf8');
-        channel.appendLine(vscode.l10n.t('[1C Query] First file: {file}', { file: files[0] }));
-        channel.appendLine(vscode.l10n.t('[1C Query] First 300 characters: {text}', { text: firstXml.slice(0, 300).replace(/\n/g, '↵') }));
-      }
-    } else {
-      channel.appendLine(vscode.l10n.t('[1C Query] {directory}/: directory not found', { directory: sub }));
-    }
-  }
-  const model = parseCf(cfPath);
-  channel.appendLine(vscode.l10n.t('[1C Query] Parsed {count} tables', { count: model.tables.length }));
-  writeCache(cachePath, model);
-  return model;
+  return { version: 1, tables: [] };
 }
 
 export function createPanel(
@@ -253,6 +252,7 @@ export function createPanel(
           })
         );
         metadataModel = r.model;
+        writeLastKnownGood(context.globalStorageUri.fsPath, cfPath, r.model);
         const reply: HostMsg = { type: 'refreshResult', ok: true, message: vscode.l10n.t('Metadata cache updated.') };
         panel.webview.postMessage(reply);
       } catch (e) {

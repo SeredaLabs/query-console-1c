@@ -9,7 +9,6 @@
   generic fallback for `РегистрРасчета.*.ДанныеГрафика`,
   `РегистрРасчета.*.ФактическийПериодДействия`, and
   `Последовательность.*.Границы`; marked models are blocked from apply.
-- Metadata cache freshness is not automatically checked against the XML export.
 - Auto-discovery is bounded and may require an explicit metadata path.
 
 These are documented user boundaries, not permission to weaken tests. Add a

@@ -89,8 +89,8 @@ export function scanConfigurationObjects(cfPath: string): { objects: ParsedObjec
         const xml = fs.readFileSync(path.join(dir, file), 'utf8');
         const doc = parseXml(xml);
         // parseXml/firstElementChild/h.parse деградируют до null на плохом XML,
-        // а не бросают (см. test/unit/cfParser.test.ts) — без явного сообщения
-        // ниже такой файл молча пропадал бы из диагностики (ТЗ §8).
+        // а не бросают — без явного сообщения ниже такой файл молча пропадал
+        // бы из диагностики (ТЗ §8).
         const objectEl = doc ? firstElementChild(doc.documentElement) : null;
         obj = objectEl ? h.parse(objectEl) : null;
         if (!obj) parseFailure = doc ? 'не найден распознаваемый объект в XML' : 'не удалось разобрать XML';
