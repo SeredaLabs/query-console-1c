@@ -1,7 +1,7 @@
----
+<!--
 source_version: 3
 translation_status: current
----
+-->
 
 # 🧯 Усунення проблем
 

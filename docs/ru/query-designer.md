@@ -1,7 +1,7 @@
----
+<!--
 source_version: 2
 translation_status: current
----
+-->
 
 # 🧩 Работа с конструктором запросов
 

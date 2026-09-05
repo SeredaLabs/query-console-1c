@@ -99,7 +99,11 @@ for (const locale of locales.slice(1)) {
 }
 
 function frontMatter(text) {
-  const match = text.match(/^---\n([\s\S]*?)\n---\n/);
+  // An HTML comment, not a --- YAML block: GitHub renders a leading --- block
+  // as a visible table on the page, which is meaningless clutter for readers
+  // of a translated user guide. An HTML comment is silently stripped by every
+  // Markdown renderer but still readable by this script.
+  const match = text.match(/^<!--\n([\s\S]*?)\n-->\n/);
   if (!match) return null;
   return Object.fromEntries(match[1].split('\n').map(line => {
     const separator = line.indexOf(':');
