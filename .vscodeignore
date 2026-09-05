@@ -11,8 +11,13 @@ tmp/**
 docs/**
 node_modules/**
 out/webview/**/*.map
+out/cli/**
+out/test-integration/**
+out/corpus-verify/**
+bench/**
 .env
 .env.*
+.vscode-test.mjs
 tsconfig*.json
 vitest.config.ts
 playwright.config.ts
