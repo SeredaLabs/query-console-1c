@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
-import { validateBatchSemantics, findUnsafeVirtualTables } from '../../src/core/query/semanticValidator';
+import { validateBatchSemantics, findUnsafeVirtualTables, findUnbalancedCustomExpressions } from '../../src/core/query/semanticValidator';
 import type { MetaTable } from '../../src/core/metadata/types';
 
 // Инлайн-метаданные (мини-схема). Реальные объекты + виртуальные таблицы
@@ -289,5 +289,95 @@ describe('findUnsafeVirtualTables (PR-05, ТЗ §54 P0.5)', () => {
   it('НЕ пересекается с validateBatchSemantics — открытие текста с такой ВТ не блокируется', () => {
     const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК Т';
     expect(errs(text, undefined)).toEqual([]);
+  });
+});
+
+describe('findUnbalancedCustomExpressions (PR-14 шаг 1, docs/development/known-issues.md)', () => {
+  it('РЕАЛЬНАЯ уязвимость: незакрытая скобка в ГДЕ молча поглощает УПОРЯДОЧИТЬ ПО как часть условия', () => {
+    // Без закрывающей скобки после "&Б" — реальный typo пользователя.
+    const text =
+      'ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ (Т.Код = &А ИЛИ Т.Наименование = &Б\n' +
+      'УПОРЯДОЧИТЬ ПО Т.Код';
+    const doc = parseBatch(text);
+    // Подтверждаем сам механизм уязвимости: order пропал, "поглощён" в condition.expression.
+    expect(doc.members[0].members[0].model.order).toBeUndefined();
+    const expr = doc.members[0].members[0].model.conditions?.[0]?.expression ?? '';
+    expect(expr).toContain('УПОРЯДОЧИТЬ ПО');
+
+    const hits = findUnbalancedCustomExpressions(doc);
+    expect(hits).toEqual([{ kind: 'condition', text: expr }]);
+  });
+
+  it('незакрытая скобка БЕЗ хвоста — тоже находится (сам custom-текст не сбалансирован)', () => {
+    const text = 'ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ (Т.Код = &А ИЛИ Т.Наименование = &Б';
+    const hits = findUnbalancedCustomExpressions(parseBatch(text));
+    expect(hits).toHaveLength(1);
+    expect(hits[0].kind).toBe('condition');
+  });
+
+  it('лишняя закрывающая скобка (глубина уходит в минус) — тоже находится', () => {
+    const text = 'ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = &А ИЛИ (Т.Наименование = &Б))';
+    const hits = findUnbalancedCustomExpressions(parseBatch(text));
+    expect(hits).toHaveLength(1);
+  });
+
+  it('ЛЕГИТИМНЫЙ сбалансированный ИЛИ-блок — НЕ находится (не ложное срабатывание)', () => {
+    const text =
+      'ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ (Т.Код = &А ИЛИ Т.Наименование = &Б)\n' +
+      'УПОРЯДОЧИТЬ ПО Т.Код';
+    const doc = parseBatch(text);
+    expect(doc.members[0].members[0].model.order).toBeDefined();
+    expect(findUnbalancedCustomExpressions(doc)).toEqual([]);
+  });
+
+  it('находит небезопасный custom внутри подзапроса-источника (рекурсия)', () => {
+    // Собран напрямую (не через parseBatch): незакрытая скобка внутри условия
+    // ВЛОЖЕННОГО подзапроса-источника на практике поглотила бы и закрывающую
+    // скобку самого подзапроса-источника — parseBatch в этом случае бросает
+    // "незакрытый подзапрос в источнике" раньше, чем модель вообще построилась
+    // (отдельная, более громкая деградация — не то, что здесь проверяется).
+    // Рекурсия walkDocument/walkModel сама по себе — тот же код, что и у уже
+    // протестированного findUnsafeVirtualTables, поэтому здесь достаточно
+    // проверить её механику на явно собранной модели.
+    const innerDoc: import('../../src/core/query/unionModel').QueryDocument = {
+      members: [{
+        name: 'Запрос 1',
+        distinct: false,
+        model: {
+          tables: [{ id: 'v0', fullName: 'Справочник.Валюты', alias: 'В' }],
+          fields: [{ tableId: 'v0', path: 'Код', alias: 'Код' }],
+          conditions: [{ custom: true, expression: '(В.Код = &А ИЛИ В.Наименование = &Б' }],
+        },
+      }],
+    };
+    const batch: import('../../src/core/query/batchModel').BatchDocument = {
+      members: [{
+        members: [{
+          name: 'Запрос 1',
+          distinct: false,
+          model: {
+            tables: [{ id: 't0', fullName: '', alias: 'Т', subquery: innerDoc }],
+            fields: [{ tableId: 't0', path: 'П', alias: 'П' }],
+          },
+        }],
+      }],
+    };
+    const hits = findUnbalancedCustomExpressions(batch);
+    expect(hits).toEqual([{ kind: 'condition', text: '(В.Код = &А ИЛИ В.Наименование = &Б' }]);
+  });
+
+  it('находит небезопасный custom в произвольном условии соединения (joinCondition)', () => {
+    const text =
+      'ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т\n' +
+      'ЛЕВОЕ СОЕДИНЕНИЕ Справочник.БанковскиеСчета КАК Y\n' +
+      'ПО (Т.Код = &А ИЛИ Y.Код = &Б';
+    const hits = findUnbalancedCustomExpressions(parseBatch(text));
+    expect(hits.some(h => h.kind === 'joinCondition' || h.kind === 'join')).toBe(true);
+  });
+
+  it('не пересекается с findUnsafeVirtualTables — независимая проверка своего класса проблем', () => {
+    // ВТ с потерянным 3-м аргументом сама по себе сбалансирована по скобкам.
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК Т';
+    expect(findUnbalancedCustomExpressions(parseBatch(text))).toEqual([]);
   });
 });

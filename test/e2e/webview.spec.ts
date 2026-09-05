@@ -597,6 +597,26 @@ test.describe('Query Constructor Webview', () => {
     expect(msgs.some((m: any) => m.type === 'insertText')).toBe(false);
   });
 
+  test('PR-14 шаг 1: Apply блокирован для custom-условия с незакрытой скобкой', async ({ page }) => {
+    await page.goto(BASE);
+    // Незакрытая `(` после "ГДЕ" — реальный typo. Подтверждено на реальном
+    // parseBatch (semanticValidator.test.ts): custom.expression молча
+    // поглощает УПОРЯДОЧИТЬ ПО как часть условия, order пропадает из модели.
+    const TEXT =
+      'ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ (Т.Код = &А ИЛИ Т.Наименование = &Б\n' +
+      'УПОРЯДОЧИТЬ ПО Т.Код';
+    await loadModelText(page, TEXT);
+
+    const err = page.locator('[data-testid="ok-error"]');
+    await expect(err).toBeVisible();
+    await expect(page.locator('button:has-text("ОК")')).toBeDisabled();
+
+    await page.evaluate(() => { (window as any).__webviewMessages = []; });
+    await page.locator('button:has-text("ОК")').click({ force: true });
+    const msgs = await page.evaluate(() => (window as any).__webviewMessages);
+    expect(msgs.some((m: any) => m.type === 'insertText')).toBe(false);
+  });
+
   test('Связи: селект таблицы имеет title с полным псевдонимом (anti-clip)', async ({ page }) => {
     await page.goto(BASE);
     // Inject a second table into the metadata so we can add two distinct tables

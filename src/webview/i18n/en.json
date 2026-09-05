@@ -200,6 +200,7 @@
   "constructor.noFields": "No fields are available for query generation",
   "constructor.generationError": "Query generation failed: {error}",
   "constructor.unsafeVirtual": "Virtual table \"{name}\" contains parameters (the third and subsequent arguments) that Query Designer cannot preserve without data loss. Applying is blocked.",
+  "constructor.unbalancedCustom": "A custom condition or expression has unbalanced parentheses and may be syntactically broken. Applying is blocked to avoid writing an invalid query.",
   "constructor.preserveComments": "Preserve comments",
   "constructor.subquery": "Nested query",
   "constructor.tabInDevelopment": "This tab is under development",

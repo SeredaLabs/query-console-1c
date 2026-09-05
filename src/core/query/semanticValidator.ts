@@ -214,6 +214,97 @@ export function findUnsafeVirtualTables(doc: BatchDocument): string[] {
 }
 
 /**
+ * true, если `text` — сбалансированная по круглым `()` и фигурным `{}` скобкам
+ * последовательность токенов лексера (счёт никогда не уходит в минус и
+ * возвращается к нулю к концу). НЕ проверяет полную грамматику выражения —
+ * это ловит один конкретный, самый опасный класс известной уязвимости
+ * (docs/development/known-issues.md, PR-14): сборщики custom-сегментов в
+ * `sdblParser.ts` (`collectConditionTokens`, `splitJoinConjuncts`, циклы тела
+ * полей) отслеживают глубину скобок ТОЛЬКО чтобы найти границу сегмента
+ * (стоп-слово верхнего уровня) — если скобка внутри сегмента не закрыта,
+ * глубина никогда не возвращается к нулю, стоп-слова перестают распознаваться,
+ * и сборщик молча поглощает весь оставшийся текст до EOF как один custom-узел.
+ * Строки/литералы дат лексер уже токенизирует целиком (не как сырые скобки),
+ * поэтому символ `(` внутри строки не даёт ложного срабатывания.
+ */
+function hasBalancedDelimiters(text: string): boolean {
+  let tokens: Token[];
+  try {
+    tokens = tokenize(text);
+  } catch {
+    // Незакрытая строка/дата и т.п. внутри custom-текста — само по себе уже
+    // признак некорректности, а не повод считать его "сбалансированным".
+    return false;
+  }
+  let parenDepth = 0;
+  let braceDepth = 0;
+  for (const t of tokens) {
+    if (t.type !== 'punct') continue;
+    if (t.value === '(') parenDepth++;
+    else if (t.value === ')') { if (--parenDepth < 0) return false; }
+    else if (t.value === '{') braceDepth++;
+    else if (t.value === '}') { if (--braceDepth < 0) return false; }
+  }
+  return parenDepth === 0 && braceDepth === 0;
+}
+
+/** Один custom/сырой узел модели, чей сохранённый текст не сбалансирован по
+ * скобкам — см. `hasBalancedDelimiters`. */
+export interface UnbalancedCustomHit {
+  kind: 'condition' | 'joinCondition' | 'join' | 'field' | 'totalGroupField';
+  text: string;
+}
+
+/**
+ * Находит custom/сырые узлы модели (условия, условия соединений, соединения,
+ * поля выборки, группировочные поля итогов — тот же набор, что и
+ * `findRawFallbackHits` в tooling/corpus-verify/classification.ts, но здесь как
+ * runtime Apply-gate, а не только для отчёта классификации корпуса), чей
+ * сохранённый текст НЕ сбалансирован по скобкам (см. `hasBalancedDelimiters`).
+ * Обход — рекурсивно по вложенным подзапросам, тем же способом, что и
+ * `findUnsafeVirtualTables` выше (ТЗ §54 P0.5, тот же Apply-blocking gate).
+ */
+export function findUnbalancedCustomExpressions(doc: BatchDocument): UnbalancedCustomHit[] {
+  const hits: UnbalancedCustomHit[] = [];
+  const check = (text: string | undefined, kind: UnbalancedCustomHit['kind']): void => {
+    if (text !== undefined && !hasBalancedDelimiters(text)) hits.push({ kind, text });
+  };
+  const walkConditions = (conditions: Condition[] | undefined): void => {
+    for (const c of conditions ?? []) {
+      if (c.custom) {
+        check(c.expression, 'condition');
+        check(c.leftExpr, 'condition');
+      }
+      if (c.subquery) walkDocument(c.subquery);
+    }
+  };
+  const walkModel = (model: QueryModel): void => {
+    for (const t of model.tables) {
+      if (t.subquery) walkDocument(t.subquery);
+    }
+    for (const j of model.joins ?? []) {
+      if (j.custom) check(j.expression, 'join');
+      for (const c of j.conditions ?? []) {
+        if (c.custom) check(c.expression, 'joinCondition');
+      }
+    }
+    for (const f of model.fields) {
+      if (f.expression !== undefined) check(f.expression, 'field');
+    }
+    for (const f of model.totals?.groupFields ?? []) {
+      if (f.expression !== undefined) check(f.expression, 'totalGroupField');
+    }
+    walkConditions(model.conditions);
+    walkConditions(model.having);
+  };
+  function walkDocument(qdoc: QueryDocument): void {
+    for (const member of qdoc.members) walkModel(member.model);
+  }
+  for (const member of doc.members) walkDocument(member);
+  return hits;
+}
+
+/**
  * Позиция первого сегмента полного имени в исходном тексте (best-effort): ищем
  * непрерывную последовательность токенов `сегмент . сегмент [ . сегмент ]`,
  * совпадающую с сегментами `fullName` регистронезависимо. Возвращаем строку/столбец
