@@ -6,6 +6,9 @@
  * (див. metadataPipeline.test.ts), тепер через окрему точку входу.
  */
 import * as assert from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { QueryDocumentLinkProvider, OPEN_FROM_RANGE_COMMAND } from '../../src/extension/queryDocumentLinkProvider';
 import { waitUntil } from './testUtil';
@@ -63,5 +66,37 @@ describe('Extension Host: DocumentLink на тексті запиту (Ctrl/Cmd+
       10000
     );
     assert.ok(gotNewTab, 'очікувалась нова вкладка — панель конструктора не була створена');
+  });
+});
+
+/**
+ * На відміну від тестів вище (які викликають `QueryDocumentLinkProvider` напряму),
+ * ці два йдуть через `vscode.executeLinkProvider` — вбудовану команду, яка реально
+ * проганяє документ через селектор-роутинг VS Code так само, як інтерактивний
+ * ховер/правий клік. Перевіряють дві реальні файлові ситуації, які прямий виклик
+ * класу не покриває: файл усередині відкритої робочої області і файл без неї.
+ */
+describe('Extension Host: DocumentLink через справжній маршрутизатор VS Code (vscode.executeLinkProvider)', () => {
+  it('знаходить лінк на sample.bsl (файл усередині відкритої робочої області)', async () => {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    assert.ok(workspaceFolder, 'тестова робоча область не відкрита (див. .vscode-test.mjs)');
+    const bslUri = vscode.Uri.joinPath(workspaceFolder!.uri, 'sample.bsl');
+    const doc = await vscode.workspace.openTextDocument(bslUri);
+    await vscode.window.showTextDocument(doc);
+
+    const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>('vscode.executeLinkProvider', doc.uri);
+    assert.ok(links && links.length > 0, `vscode.executeLinkProvider не повернув жодного лінка для ${bslUri.fsPath}`);
+  });
+
+  it('знаходить лінк на .bsl-файлі БЕЗ відкритої робочої області (loose file)', async () => {
+    const looseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'loose-bsl-'));
+    const loosePath = path.join(looseDir, 'loose.bsl');
+    fs.writeFileSync(loosePath, 'Запрос.Текст = "ВЫБРАТЬ 1 КАК Число";\n', 'utf8');
+
+    const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(loosePath));
+    await vscode.window.showTextDocument(doc);
+
+    const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>('vscode.executeLinkProvider', doc.uri);
+    assert.ok(links && links.length > 0, 'лінк мав знайтись і для файлу поза відкритою робочою областю');
   });
 });
