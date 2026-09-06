@@ -1,6 +1,6 @@
 # Фаза 6. Обратный разбор текста запроса
 
-← [Дорожная карта](../ROADMAP.md)
+← [Дорожная карта](pre-consolidation/ROADMAP.md)
 
 ✅ Готово. Оба корпуса рендерятся побайтно как конструктор 1С: базовая конфигурация
 1976/1976 (`corpusRegression.test.ts`, в составе `npm run test:unit`) и вторая (большая)
@@ -464,7 +464,7 @@ parse-exception 0)** — весь корпус (1976 запросов) ренд�
 Корпус, выгруженный из ДРУГОЙ (большой) конфигурации: 24776 запросов оракула,
 из них 1657 расхождений (1546 mismatch + 111 parse-exception) на старте. Цель —
 0 расхождений без регресса закоммиченного gate (1976/1976, `npm run test:unit`).
-Разбор `tmp/corpus-errors` (см. [corpus-testing.md](../corpus-testing.md)) по классам,
+Разбор `tmp/corpus-errors` (см. [corpus-testing.md](pre-consolidation/corpus-testing.md)) по классам,
 правки от самых популярных. Замеры — быстрым прогоном всего golden против
 конструктора (fixed/broken относительно стартового baseline).
 

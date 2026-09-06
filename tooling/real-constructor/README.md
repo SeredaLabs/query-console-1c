@@ -21,7 +21,7 @@
 Обе команды пишут лог в `tmp/real-constructor.log`, а скриншоты -- в
 `tmp/phase7.3-real-constructor/`. Им нужен соответствующий корпус в
 `tmp/query1c`; как его подготовить, описано в
-[docs/corpus-testing.md](../../docs/corpus-testing.md).
+[docs/development/corpus-testing.md](../../docs/development/corpus-testing.md).
 
 Если запуск останавливается из-за занятой лицензии, используйте процедуру RAS
 ниже. Она относится только к окружению с доступом к администрированию кластера.

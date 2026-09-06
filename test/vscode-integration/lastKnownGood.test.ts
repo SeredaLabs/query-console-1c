@@ -1,6 +1,6 @@
 /**
  * Extension Host integration: last-known-good заменяет прежний legacy-фолбэк
- * `cfParser.ts` (см. git history, docs/ROADMAP.md). Реально ломает ОБА
+ * `cfParser.ts` (см. git history, docs/development/roadmap.md). Реально ломает ОБА
  * современных пути разом — direct-снимок И его собственный YAML-откат — тем
  * же способом, что описан в исходном анализе: `outPath` (общий родитель
  * `snapshot/` и YAML-генерации, см. panel.ts) заменяется на обычный ФАЙЛ, так

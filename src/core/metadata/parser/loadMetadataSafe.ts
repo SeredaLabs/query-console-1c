@@ -61,7 +61,7 @@ const RELEVANT_SUBDIRS = [...HANDLERS.map(h => h.subdir), 'CommonAttributes'];
  * freshness basis for `loadMetadataSnapshotFirst`.
  *
  * Deliberately NOT recursive and NOT scanning the whole `cfPath` tree — found
- * by measuring against a real configuration (docs/PERFORMANCE_BASELINE.md),
+ * by measuring against a real configuration (docs/development/performance.md),
  * two compounding reasons: (1) `cfPath` commonly also contains CommonForms/
  * CommonPictures/DataProcessors/Reports/etc — thousands of files our parser
  * never touches (one real config: 20132 files under `cfPath` total, vs 1422
@@ -144,7 +144,7 @@ export function loadMetadataWithFallback(
  * Warm-checked entry point: reuses an already-committed snapshot when it is
  * still fresh relative to `cfPath`'s XML; otherwise rebuilds via
  * {@link loadMetadataWithFallback}. This is what makes repeat opens after the
- * first successful direct build fast (~10-45ms per docs/PERFORMANCE_BASELINE.md)
+ * first successful direct build fast (~10-45ms per docs/development/performance.md)
  * instead of re-parsing the full XML tree every time.
  */
 export function loadMetadataSnapshotFirst(

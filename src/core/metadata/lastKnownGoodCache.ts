@@ -49,7 +49,7 @@ function lastKnownGoodPath(storageDir: string, cfPath: string): string {
  * (например, отключён сетевой диск), прямой путь может "успешно" вернуть
  * пустую модель, вообще не бросая исключения (`scanConfigurationObjects`
  * просто пропускает отсутствующие подкаталоги) — это отдельный, не связанный
- * с last-known-good пробел (см. docs/KNOWN_ISSUES.md), но здесь он не должен
+ * с last-known-good пробел (см. docs/development/known-issues.md), но здесь он не должен
  * стирать уже накопленный last-known-good.
  */
 export function writeLastKnownGood(storageDir: string, cfPath: string, model: MetadataModel): void {

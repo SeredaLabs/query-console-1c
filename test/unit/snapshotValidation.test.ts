@@ -4,14 +4,14 @@
  * Валидация нового JSON-снимка (PR-08, snapshotBuilder.ts) на РЕПРЕЗЕНТАТИВНОЙ
  * реальной конфигурации — БиблиотекаСтандартныхПодсистем (БСП), 558 объектов /
  * 713 таблиц, та же фикстура, что и `corpusRegression.test.ts`/
- * `bench/metadataPerf.ts`/`docs/PERFORMANCE_BASELINE.md`. `snapshotBuilder.test.ts`
+ * `bench/metadataPerf.ts`/`docs/development/performance.md`. `snapshotBuilder.test.ts`
  * уже проверяет корректность на МАЛЕНЬКОЙ синтетической фикстуре (2 объекта) —
  * здесь та же проверка боевого масштаба, где реально могли бы всплыть
  * структуры, которых нет в маленькой фикстуре (виртуальные таблицы, табличные
  * части, множественные виды метаданных).
  *
  * В репозитории нет исходного XML для БСП (только уже распарсенный YAML —
- * см. docs/corpus-testing.md), поэтому здесь снимок строится НЕ через
+ * см. docs/development/corpus-testing.md), поэтому здесь снимок строится НЕ через
  * `buildMetadataSnapshotFromXml` (тот теперь идёт direct-путём прямо от XML,
  * см. snapshotBuilder.ts) — из XML для этой фикстуры собрать нечего. Вместо
  * этого `commitMetadataSnapshot` вызывается напрямую над моделью от
@@ -55,7 +55,7 @@ describe('Snapshot validation — представительная реальн�
     const persisted = readMetadataSnapshot(result.targetDir);
 
     expect(persisted.model).toEqual(viaOldPath);
-    // Тот же масштаб, что задокументирован в docs/PERFORMANCE_BASELINE.md.
+    // Тот же масштаб, что задокументирован в docs/development/performance.md.
     expect(persisted.model.tables.length).toBe(713);
   });
 

@@ -60,7 +60,7 @@ function main(): void {
   section('1. Metadata cold build (XML → YAML, parseConfiguration)');
   console.log(
     'НЕТ представительных данных: в репозитории нет реальной XML-выгрузки конфигурации ' +
-    '(CONFIG_DIR=src/cf по умолчанию не существует на чистом checkout — см. docs/corpus-testing.md). ' +
+    '(CONFIG_DIR=src/cf по умолчанию не существует на чистом checkout — см. docs/development/corpus-testing.md). ' +
     `Единственная XML-фикстура — ${SMALL_CF_XML} (2 объекта), измерение на ней было бы ложной репрезентативностью. ` +
     'Требует внешнего/ручного замера на реальной выгрузке — не измерено здесь.'
   );
@@ -145,7 +145,7 @@ function main(): void {
     fs.rmSync(snapshotRoot, { recursive: true, force: true });
   }
 
-  console.log('\n(Итоговые числа этого прогона — в docs/PERFORMANCE_BASELINE.md; см. дату вверху отчёта.)');
+  console.log('\n(Итоговые числа этого прогона — в docs/development/performance.md; см. дату вверху отчёта.)');
 }
 
 main();

@@ -81,7 +81,7 @@ describe('VT round-trip — SEMANTIC LOSS (подтверждённые, изв�
     const threeArgs = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК Т';
     const threeArgsDoc = parseBatch(threeArgs);
     const out = generateBatch(threeArgsDoc);
-    expect(out, 'известная, ещё не исправленная потеря 3-го параметра — см. docs/KNOWN_ISSUES.md').not.toContain('&В');
+    expect(out, 'известная, ещё не исправленная потеря 3-го параметра — см. docs/development/known-issues.md').not.toContain('&В');
     // PR-05 (ТЗ §54 P0.5): потерянный аргумент помечен для Apply-blocking.
     expect(firstTable(threeArgsDoc).virtual?.unsafeExtraArgs).toBe(true);
     expect(findUnsafeVirtualTables(threeArgsDoc)).toEqual(['РегистрРасчета.Начисления.ДанныеГрафика']);

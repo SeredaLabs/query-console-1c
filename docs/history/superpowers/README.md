@@ -6,10 +6,9 @@
 
 Не используйте их как инструкцию для текущей работы. Операционными источниками являются:
 
-- [DEVELOPMENT.md](../../DEVELOPMENT.md) -- сборка, тесты, релиз и структура;
-- [CORE_LIMITATIONS.md](../../CORE_LIMITATIONS.md) -- границы безопасной работы ядра;
-- [KNOWN_ISSUES.md](../../KNOWN_ISSUES.md) -- неисправленные дефекты;
-- [ROADMAP.md](../../ROADMAP.md) -- актуальные приоритеты.
+- [development/index.md](../../development/index.md) -- сборка, тесты, релиз и структура;
+- [development/known-issues.md](../../development/known-issues.md) -- границы безопасной работы ядра и неисправленные дефекты;
+- [development/roadmap.md](../../development/roadmap.md) -- актуальные приоритеты.
 
 Если исторический документ ссылается на файл или npm-скрипт, проверьте их наличие
 в текущем репозитории перед использованием.
