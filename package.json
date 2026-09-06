@@ -19,7 +19,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:queryConsole1c.openFromRange"
+  ],
   "main": "./out/extension/extension.js",
   "l10n": "./l10n",
   "contributes": {

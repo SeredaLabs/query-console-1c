@@ -4,7 +4,8 @@ import * as fs from 'fs';
 import { createPanel } from './panel';
 import { resolveCfPath } from './resolveCfPath';
 import { registerParseCommand } from './parseCommand';
-import { planQueryConstructor } from './queryConstructorPlan';
+import { planQueryConstructor, type OpenPlan } from './queryConstructorPlan';
+import { QueryDocumentLinkProvider, OPEN_FROM_RANGE_COMMAND } from './queryDocumentLinkProvider';
 
 let outputChannel: vscode.OutputChannel;
 
@@ -19,6 +20,33 @@ function resolveCfPathWithLogging(): string {
   const cfPath = resolveCfPath();
   outputChannel.appendLine(vscode.l10n.t('[1C Query] Resolved cfPath: "{path}"', { path: cfPath }));
   return cfPath;
+}
+
+/**
+ * Открывает панель конструктора для уже найденного литерала запроса (`plan.kind
+ * === 'open'`). Общая точка для команды палитры (курсор редактора) и Ctrl/Cmd+Click
+ * по DocumentLink (курсор туда переставляется программно перед вызовом) — обе точки
+ * входа должны создавать панель абсолютно одинаково, без двух копий одного вызова.
+ */
+function openConstructorForPlan(
+  context: vscode.ExtensionContext,
+  cfPath: string,
+  editor: vscode.TextEditor,
+  plan: Extract<OpenPlan, { kind: 'open' }>
+): void {
+  createPanel(
+    context,
+    cfPath,
+    outputChannel,
+    {
+      document: editor.document,
+      selection: editor.selection,
+      queryRange: plan.queryRange,
+      documentVersion: editor.document.version,
+      wrapAsBslString: true,
+    },
+    plan.queryText
+  );
 }
 
 /**
@@ -43,19 +71,7 @@ async function runQueryConstructorCommand(context: vscode.ExtensionContext, resu
   const cfPath = resolveCfPathWithLogging();
 
   if (plan.kind === 'open') {
-    createPanel(
-      context,
-      cfPath,
-      outputChannel,
-      {
-        document: doc,
-        selection: editor.selection,
-        queryRange: plan.queryRange,
-        documentVersion: doc.version,
-        wrapAsBslString: true,
-      },
-      plan.queryText
-    );
+    openConstructorForPlan(context, cfPath, editor, plan);
     return;
   }
 
@@ -76,6 +92,27 @@ async function runQueryConstructorCommand(context: vscode.ExtensionContext, resu
   });
 }
 
+/**
+ * Обработчик команды за DocumentLink (Ctrl/Cmd+Click по тексту запроса) —
+ * `queryDocumentLinkProvider.ts` создаёт ссылку только там, где `findAllQueryLiterals`
+ * уже нашёл литерал запроса, поэтому `plan.kind` здесь всегда должен быть `'open'`;
+ * ветка `'prompt'` — защитный no-op на случай гонки (документ изменился между
+ * built-of-links и кликом), а не диалог «создать новый запрос?» — здесь он неуместен.
+ */
+async function openConstructorFromRange(
+  context: vscode.ExtensionContext,
+  arg: { uri: string; offset: number }
+): Promise<void> {
+  const uri = vscode.Uri.parse(arg.uri);
+  const doc = await vscode.workspace.openTextDocument(uri);
+  const editor = await vscode.window.showTextDocument(doc);
+  const plan = planQueryConstructor(doc.getText(), arg.offset);
+  if (plan.kind !== 'open') return;
+
+  const cfPath = resolveCfPathWithLogging();
+  openConstructorForPlan(context, cfPath, editor, plan);
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   outputChannel = vscode.window.createOutputChannel('1C Query Constructor');
 
@@ -85,8 +122,22 @@ export function activate(context: vscode.ExtensionContext): void {
   const cmdWithResult = vscode.commands.registerCommand('1c.queryConstructorWithResult', () =>
     runQueryConstructorCommand(context, true)
   );
+  const cmdOpenFromRange = vscode.commands.registerCommand(OPEN_FROM_RANGE_COMMAND, (arg: { uri: string; offset: number }) =>
+    openConstructorFromRange(context, arg)
+  );
+  const linkProvider = vscode.languages.registerDocumentLinkProvider(
+    { pattern: '**/*.bsl' },
+    new QueryDocumentLinkProvider()
+  );
 
-  context.subscriptions.push(cmd, cmdWithResult, registerParseCommand(context, outputChannel), outputChannel);
+  context.subscriptions.push(
+    cmd,
+    cmdWithResult,
+    cmdOpenFromRange,
+    linkProvider,
+    registerParseCommand(context, outputChannel),
+    outputChannel
+  );
 }
 
 export function deactivate(): void {}
