@@ -1,11 +1,16 @@
 /**
- * Semantic-core hardening, hover-шаг: юнит-тести для чистого модуля
- * `hoverFieldInfo.ts` — `findChainAt` (пошук ланцюжка ідентифікаторів навколо
- * позиції курсора в сирому тексті) та `describeChain` (розбір реконструйованого
- * тексту запиту + резолюція ланцюжка через спільне ядро `resolveFieldPath`).
+ * Semantic-core hardening, hover- та completion-кроки: юнит-тести для чистого
+ * модуля `hoverFieldInfo.ts` — `findChainAt` (пошук ланцюжка ідентифікаторів
+ * навколо позиції курсора в сирому тексті), `describeChain` (розбір
+ * реконструйованого тексту запиту + резолюція ланцюжка через спільне ядро
+ * `resolveFieldPath`), `findChainForCompletion` (ланцюжок ПЕРЕД курсором для
+ * автодоповнення) та `resolveCompletionTarget` (резолюція того ланцюжка до
+ * таблиці метаданих, чиї поля треба запропонувати).
  */
 import { describe, it, expect } from 'vitest';
-import { findChainAt, describeChain } from '../../src/extension/hoverFieldInfo';
+import {
+  findChainAt, describeChain, findChainForCompletion, resolveCompletionTarget,
+} from '../../src/extension/hoverFieldInfo';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
 import type { MetaTable } from '../../src/core/metadata/types';
 
@@ -155,5 +160,79 @@ describe('describeChain', () => {
   it('невалідний текст запиту — пустий результат, а не виняток', () => {
     const r = describeChain('ЦЕ НЕ ЗАПИТ ((((', resolver, ['Т']);
     expect(r).toEqual({});
+  });
+});
+
+describe('findChainForCompletion', () => {
+  it('курсор одразу після крапки, попереду один сегмент', () => {
+    const text = 'Т.';
+    expect(findChainForCompletion(text, text.length)).toEqual(['Т']);
+  });
+
+  it('курсор посеред частково набраного сегмента ("Т.Контр|агент") — префікс без нього', () => {
+    const text = 'Т.Контрагент';
+    expect(findChainForCompletion(text, text.indexOf('Контр') + 'Контр'.length)).toEqual(['Т']);
+  });
+
+  it('ланцюжок із кількох крапок ("Т.Контрагент.")', () => {
+    const text = 'Т.Контрагент.';
+    expect(findChainForCompletion(text, text.length)).toEqual(['Т', 'Контрагент']);
+  });
+
+  it('null, якщо перед курсором немає крапки взагалі', () => {
+    expect(findChainForCompletion('Товары', 6)).toBeNull();
+  });
+
+  it('null, якщо крапка є, але перед нею немає ідентифікатора (наприклад, на початку тексту)', () => {
+    expect(findChainForCompletion('.Поле', 5)).toBeNull();
+  });
+
+  it('null для offset за межами рядка', () => {
+    expect(findChainForCompletion('Т.', -1)).toBeNull();
+    expect(findChainForCompletion('Т.', 10)).toBeNull();
+  });
+});
+
+describe('resolveCompletionTarget', () => {
+  const QUERY = 'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Товары КАК Т';
+
+  it('односегментний префікс — таблиця самого псевдоніма', () => {
+    const target = resolveCompletionTarget(QUERY, resolver, ['Т']);
+    expect(target?.meta.fullName).toBe('Справочник.Товары');
+  });
+
+  it('резолвить крізь посилальне поле до таблиці цілі', () => {
+    const target = resolveCompletionTarget(QUERY, resolver, ['Т', 'Контрагент']);
+    expect(target?.meta.fullName).toBe('Справочник.Контрагенты');
+  });
+
+  it('регістронезалежно', () => {
+    const target = resolveCompletionTarget(QUERY, resolver, ['т', 'контрагент']);
+    expect(target?.meta.fullName).toBe('Справочник.Контрагенты');
+  });
+
+  it('undefined для невідомого псевдоніма (unknown != invalid, не помилка)', () => {
+    expect(resolveCompletionTarget(QUERY, resolver, ['НетТакогоПсевдонима'])).toBeUndefined();
+  });
+
+  it('undefined, якщо префікс проходить через СКАЛЯРНЕ поле (нема куди йти далі)', () => {
+    expect(resolveCompletionTarget(QUERY, resolver, ['Т', 'Наименование'])).toBeUndefined();
+  });
+
+  it('undefined, якщо префікс містить невідомий сегмент', () => {
+    expect(resolveCompletionTarget(QUERY, resolver, ['Т', 'НетТакогоПоля'])).toBeUndefined();
+  });
+
+  it('undefined для порожнього префіксу', () => {
+    expect(resolveCompletionTarget(QUERY, resolver, [])).toBeUndefined();
+  });
+
+  it('undefined, якщо метаданих таблиці немає в резолвері', () => {
+    const text = 'ВЫБРАТЬ Т.Код ИЗ Справочник.НетВМетаданных КАК Т';
+    expect(resolveCompletionTarget(text, resolver, ['Т'])).toBeUndefined();
+  });
+
+  it('undefined для невалідного тексту запиту, а не виняток', () => {
+    expect(resolveCompletionTarget('ЦЕ НЕ ЗАПИТ ((((', resolver, ['Т'])).toBeUndefined();
   });
 });

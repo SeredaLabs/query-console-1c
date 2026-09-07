@@ -1,12 +1,14 @@
 /**
- * Чистый помощник для hover по полю запроса (`Alias.Field[.Field…]`) в исходнике
- * `.bsl` — semantic-core hardening, hover-шаг. Находит цепочку идентификаторов вокруг
- * позиции курсора (по СЫРОМУ тексту литерала запроса, тем же смещениям, что уже
- * даёт `queryAtCursor.ts`) и, если её голова — известный псевдоним источника,
- * описывает конкретный наведённый сегмент через `resolveFieldPath`.
+ * Чистый помощник для семантики поля запроса (`Alias.Field[.Field…]`) в исходнике
+ * `.bsl` — общее ядро для hover (`queryHoverProvider.ts`) И автодополнения
+ * (`queryCompletionProvider.ts`). Находит цепочку идентификаторов вокруг позиции
+ * курсора (по СЫРОМУ тексту литерала запроса, тем же смещениям, что уже даёт
+ * `queryAtCursor.ts`) и, если её голова — известный псевдоним источника, описывает
+ * конкретный сегмент через `resolveFieldPath`.
  *
  * Модуль ДОЛЖЕН оставаться чистым (без `import vscode`) — как и `queryAtCursor.ts`;
- * связка с `vscode.HoverProvider` — отдельный файл `queryHoverProvider.ts`.
+ * связка с `vscode.HoverProvider`/`vscode.CompletionItemProvider` — отдельные
+ * файлы (`queryHoverProvider.ts`, `queryCompletionProvider.ts`).
  *
  * ИЗВЕСТНОЕ УПРОЩЕНИЕ (документировано, не скрыто): псевдоним ищется по ВСЕМ
  * таблицам пакета сразу (все участники объединения, все подзапросы), первое
@@ -24,6 +26,7 @@ import type { QueryDocument } from '../core/query/unionModel';
 import type { QueryModel, SelectedTable } from '../core/query/queryModel';
 import { defaultTableAlias } from '../core/query/queryModel';
 import type { MetadataResolver } from '../core/query/metadataResolver';
+import type { MetaTable } from '../core/metadata/types';
 import { resolveFieldPath, type FieldPathResolution } from '../core/query/fieldPathResolver';
 
 export interface FieldChainSegment {
@@ -100,6 +103,41 @@ export function findChainAt(text: string, offset: number): { segments: FieldChai
   return { segments, hoveredIndex };
 }
 
+/**
+ * Знаходить ланцюжок ПЕРЕД курсором для автодоповнення полів: сегменти, вже
+ * набрані ДО крапки, що передує сегменту, який зараз вводиться (сам цей частково
+ * набраний сегмент НЕ входить у результат — VS Code сам фільтрує запропоновані
+ * варіанти за тим, що вже введено, як для будь-якого звичайного автодоповнення).
+ *
+ * `null`, якщо курсор не стоїть одразу після крапки, перед якою йде відомий
+ * ланцюжок ідентифікаторів (наприклад, курсор на початку файлу чи після
+ * пробілу/оператора без попередньої крапки) — тоді доповнювати нічого.
+ */
+export function findChainForCompletion(text: string, offset: number): string[] | null {
+  if (offset < 0 || offset > text.length) return null;
+
+  // Пропускаємо назад символи вже набраного (можливо порожнього) сегмента —
+  // саме він буде відфільтрований VS Code, у результат не входить.
+  let cur = offset;
+  while (cur > 0 && isWordChar(text[cur - 1])) cur--;
+  if (cur === 0 || text[cur - 1] !== '.') return null;
+  cur--; // "з'їдаємо" крапку перед сегментом, що вводиться
+
+  const segments: string[] = [];
+  for (;;) {
+    if (cur === 0 || !isWordChar(text[cur - 1])) break;
+    const segEnd = cur;
+    let segStart = segEnd;
+    while (segStart > 0 && isWordChar(text[segStart - 1])) segStart--;
+    segments.unshift(text.slice(segStart, segEnd));
+    cur = segStart;
+    if (cur === 0 || text[cur - 1] !== '.') break;
+    cur--;
+  }
+
+  return segments.length > 0 ? segments : null;
+}
+
 function collectAllTables(doc: BatchDocument): SelectedTable[] {
   const out: SelectedTable[] = [];
   const walkModel = (model: QueryModel): void => {
@@ -113,6 +151,34 @@ function collectAllTables(doc: BatchDocument): SelectedTable[] {
   };
   for (const member of doc.members) walkDocument(member);
   return out;
+}
+
+/**
+ * Розбирає `queryText` і знаходить таблицю, на яку посилається псевдонім `alias`
+ * (голова ланцюжка) — спільна частина для `describeChain` і
+ * `resolveCompletionTarget`. `meta: undefined` у результаті означає "псевдонім
+ * реально резолвиться до таблиці за іменем, але метаданих для неї немає" —
+ * ВІДРІЗНЯЄТЬСЯ від "псевдонім взагалі не знайдено" (`undefined` результат
+ * цілком) — виклики, яким ця різниця не потрібна (наприклад, автодоповнення),
+ * просто трактують обидва випадки як "нічого запропонувати".
+ */
+function findAliasTable(
+  queryText: string,
+  resolver: MetadataResolver,
+  alias: string
+): { table: SelectedTable; meta: MetaTable | undefined } | undefined {
+  let doc: BatchDocument;
+  try {
+    doc = parseBatch(queryText, resolver);
+  } catch {
+    return undefined;
+  }
+
+  const head = alias.toUpperCase();
+  const table = collectAllTables(doc).find(t => defaultTableAlias(t).toUpperCase() === head);
+  if (!table || table.subquery || !table.fullName || table.fullName.startsWith('&')) return undefined;
+
+  return { table, meta: resolver.tableByFullName(table.fullName) };
 }
 
 export interface ChainDescription {
@@ -136,20 +202,45 @@ export function describeChain(
   chain: string[]
 ): ChainDescription {
   if (chain.length === 0) return {};
-  let doc: BatchDocument;
-  try {
-    doc = parseBatch(queryText, resolver);
-  } catch {
-    return {};
-  }
+  const found = findAliasTable(queryText, resolver, chain[0]);
+  if (!found) return {};
 
-  const head = chain[0].toUpperCase();
-  const table = collectAllTables(doc).find(t => defaultTableAlias(t).toUpperCase() === head);
-  if (!table || table.subquery || !table.fullName || table.fullName.startsWith('&')) return {};
-
-  const meta = resolver.tableByFullName(table.fullName);
+  const { table, meta } = found;
   if (!meta) return { tableFullName: table.fullName };
 
   if (chain.length === 1) return { tableFullName: meta.fullName };
   return { tableFullName: meta.fullName, resolution: resolveFieldPath(meta, chain.slice(1), resolver) };
+}
+
+export interface CompletionTarget {
+  /** Таблиця метаданих, чиї `.fields` треба запропонувати як варіанти
+   * автодоповнення. */
+  meta: MetaTable;
+}
+
+/**
+ * Розбирає `queryText` і резолвить `prefixChain` (`prefixChain[0]` — псевдонім
+ * джерела, решта — вже НАБРАНИЙ шлях по полях-посиланнях ДО сегмента, що зараз
+ * вводиться, — див. `findChainForCompletion`) до таблиці метаданих, чиї поля
+ * треба запропонувати. `undefined` — fail-open (unknown != invalid): псевдонім
+ * не знайдено, метаданих немає, або шлях не резолвиться до кінця (частину
+ * ланцюжка не вдалося пройти) — пропонувати ВГАДАНІ варіанти тут гірше, ніж не
+ * запропонувати нічого.
+ */
+export function resolveCompletionTarget(
+  queryText: string,
+  resolver: MetadataResolver,
+  prefixChain: string[]
+): CompletionTarget | undefined {
+  if (prefixChain.length === 0) return undefined;
+  const found = findAliasTable(queryText, resolver, prefixChain[0]);
+  if (!found || !found.meta) return undefined;
+
+  if (prefixChain.length === 1) return { meta: found.meta };
+
+  const resolution = resolveFieldPath(found.meta, prefixChain.slice(1), resolver);
+  if (resolution.unresolvedTail.length > 0) return undefined;
+  const last = resolution.resolved[resolution.resolved.length - 1];
+  if (!last || last.kind !== 'reference' || !last.refTarget) return undefined;
+  return { meta: last.refTarget };
 }

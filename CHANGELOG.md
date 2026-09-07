@@ -5,6 +5,14 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.30 - 2026-09-08
+
+### Added
+
+- Typing `.` after a table alias inside a query-text literal in a `.bsl` file
+  now triggers field-name autocomplete — including through reference fields
+  (`Alias.RefField.` offers the referenced catalog/document's own fields).
+
 ## 0.1.29 - 2026-09-08
 
 ### Added

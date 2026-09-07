@@ -7,6 +7,7 @@ import { registerParseCommand } from './parseCommand';
 import { planQueryConstructor, type OpenPlan } from './queryConstructorPlan';
 import { OPEN_FROM_RANGE_COMMAND } from './openFromRangeCommand';
 import { QueryHoverProvider } from './queryHoverProvider';
+import { QueryCompletionProvider } from './queryCompletionProvider';
 
 let outputChannel: vscode.OutputChannel;
 
@@ -131,12 +132,18 @@ export function activate(context: vscode.ExtensionContext): void {
     { pattern: '**/*.bsl' },
     new QueryHoverProvider(context, outputChannel, resolveCfPath)
   );
+  const completionProvider = vscode.languages.registerCompletionItemProvider(
+    { pattern: '**/*.bsl' },
+    new QueryCompletionProvider(context, outputChannel, resolveCfPath),
+    '.'
+  );
 
   context.subscriptions.push(
     cmd,
     cmdWithResult,
     cmdOpenFromRange,
     hoverProvider,
+    completionProvider,
     registerParseCommand(context, outputChannel),
     outputChannel
   );
