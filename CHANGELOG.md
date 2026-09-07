@@ -5,6 +5,29 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.28 - 2026-09-07
+
+### Added
+
+- Ctrl/Cmd+Click on a query-text literal in a `.bsl` file now opens the query
+  constructor directly at that location, without going through the command
+  palette or context menu.
+
+### Changed
+
+- Removed pure-redirect legacy documentation pages that only pointed
+  elsewhere, and repointed everything that referenced them at the real
+  current location instead.
+
+### Internal
+
+- Consolidated three independent, hand-duplicated implementations of
+  field-path resolution (used for field-name casing correction, the report
+  builder's `.*` suffix decision, and redundant `СГРУППИРОВАТЬ ПО`
+  dereference removal) into one shared module. No change in generated query
+  output — verified against the full 1976-query regression corpus before and
+  after.
+
 ## 0.1.27 - 2026-09-05
 
 ### Changed
