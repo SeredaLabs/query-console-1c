@@ -75,6 +75,17 @@ export function firstRef(field: MetaField): { kind: string; name: string } | und
   return undefined;
 }
 
+/** Does this table itself look "reference-shaped" (has a `Ссылка` field that is
+ * itself a reference)? This is a TABLE-level question, not a segment-walk question —
+ * it answers `resolveFieldPath(meta, [], resolver)`'s otherwise-undefined case: a
+ * bare alias/select-field with zero further path segments (`Alias.*` in a report
+ * builder block, no dot after the alias). Exported so callers that already have a
+ * `MetaTable` in hand for other reasons don't need to re-derive this themselves. */
+export function hasReference(meta: MetaTable): boolean {
+  const ssylka = findField(meta, 'Ссылка');
+  return ssylka !== undefined && firstRef(ssylka) !== undefined;
+}
+
 /**
  * Walks `segs` from `meta` through reference fields, resolving each segment against
  * metadata. Stops at the first segment that can't be matched (no such field, or the
@@ -96,12 +107,22 @@ export function firstRef(field: MetaField): { kind: string; name: string } | und
  *   fallbacks" step (virtual-table slice, tabular-section-as-table) that some but not
  *   all consumers apply before calling this is intentionally NOT folded in yet; see
  *   the Architecture Report for why.
+ *
+ * `segs.length === 0` (a bare alias/select-field with no further path — `Alias.*`
+ * with nothing after the dot, reachable via the report-builder grammar) is handled
+ * via `hasReference(meta)`, matching `resolveBuilderStar.ts`'s original special case
+ * for this input — found during the pre-migration audit; NOT covered by the
+ * project's golden corpus, so this was previously untested even indirectly.
  */
 export function resolveFieldPath(
   meta: MetaTable,
   segs: string[],
   resolver: MetadataResolver
 ): FieldPathResolution {
+  if (segs.length === 0) {
+    return { resolved: [], unresolvedTail: [], kind: hasReference(meta) ? 'reference' : 'scalar' };
+  }
+
   const resolved: ResolvedSegment[] = [];
   let cur: MetaTable | undefined = meta;
 

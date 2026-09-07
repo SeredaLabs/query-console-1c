@@ -134,6 +134,29 @@ describe('resolveFieldPath — direct scenarios', () => {
     const r2 = resolveFieldPath(REGISTR, ['Количество'], resolver);
     expect(r2.resolved[0].field.kind).toBe('resource');
   });
+
+  // Pre-migration audit finding: resolveBuilderStar.ts's original walk() special-cases
+  // segs.length===0 (a bare alias/select-field with NO further path — `Alias.*` with
+  // nothing after the dot, reachable via the report-builder grammar,
+  // sdblParser.ts:4362-4368) — hasReference(meta) decides reference-vs-scalar. This
+  // was NOT covered by the golden corpus or the original parity tests below; a naive
+  // migration would have silently always returned 'unknown' here (keeping `.*` when
+  // the original would sometimes correctly drop it), which sdblGenerator.ts prints
+  // verbatim — a real, corpus-breaking bug had it shipped this way.
+  it('empty segs on a table WITH a reference-typed Ссылка field classifies as reference', () => {
+    const withSsylka: typeof TOVARY = {
+      ...TOVARY,
+      fields: [...TOVARY.fields, { name: 'Ссылка', kind: 'standard', types: [{ ref: { kind: 'Справочник', name: 'Товары' } }] }],
+    };
+    const r = resolveFieldPath(withSsylka, [], resolver);
+    expect(r.kind).toBe('reference');
+    expect(r.resolved).toEqual([]);
+  });
+
+  it('empty segs on a table WITHOUT a reference-typed Ссылка field classifies as scalar', () => {
+    const r = resolveFieldPath(REGISTR, [], resolver); // no 'Ссылка' field at all
+    expect(r.kind).toBe('scalar');
+  });
 });
 
 describe('findField / firstRef — extracted primitives match prior inline behavior', () => {
@@ -220,5 +243,16 @@ describe('parity: resolveFieldPath.kind vs. the production resolveBuilderStar() 
 
     const r = resolveFieldPath(TOVARY, ['СинтетическоеПоле'], resolver);
     expect(r.kind).toBe('unknown');
+  });
+
+  it('BARE alias (no field segment at all — "Товары.*") drops the suffix when the table has no Ссылка reference field', () => {
+    // This is the exact scenario the pre-migration audit found uncovered: `ref` here
+    // is just the alias itself, so classify() calls walk(meta, []) — segs.length===0.
+    const model = builderModelWith('Товары');
+    resolveBuilderStar(model, resolver);
+    expect(model.builder!.fields[0].child).toBe(false); // TOVARY has no 'Ссылка' field → scalar → dropped
+
+    const r = resolveFieldPath(TOVARY, [], resolver);
+    expect(r.kind).toBe('scalar');
   });
 });
