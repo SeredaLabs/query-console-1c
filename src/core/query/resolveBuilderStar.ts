@@ -1,6 +1,7 @@
 import type { QueryModel, SelectedField, SelectedTable } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
-import type { MetaTable, MetaField } from '../metadata/types';
+import type { MetaTable } from '../metadata/types';
+import { resolveFieldPath } from './fieldPathResolver';
 
 /**
  * Суффикс `.*` («использовать дочерние») в блоках построителя `{ВЫБРАТЬ}`/`{ГДЕ}`/
@@ -115,30 +116,19 @@ class ResolveCtx {
     return ctx.fromSelectField(out, segs.slice(1));
   }
 
-  /** Идёт по сегментам от таблицы через ссылочные поля до финального типа. */
+  /**
+   * Идёт по сегментам от таблицы через ссылочные поля до финального типа.
+   *
+   * Делегирует в `resolveFieldPath` (semantic-core hardening) — раньше здесь была
+   * ещё одна независимая копия findField/firstRef/walk-цикла (плюс hasReference
+   * для пустого `segs`), идентичная `canonicalizeFieldCasing.ts`/
+   * `dropRedundantGroupDerefs.ts`. `resolveFieldPath` уже воспроизводит и
+   * синтетический `types: []` → `'unknown'` разбор, и пустой-`segs` случай
+   * (голый `Alias.*` без сегмента поля) — оба подтверждены parity-тестами в
+   * `fieldPathResolver.test.ts` против ЭТОГО метода до миграции.
+   */
   private walk(meta: MetaTable, segs: string[]): 'reference' | 'scalar' | 'unknown' {
-    if (segs.length === 0) return hasReference(meta) ? 'reference' : 'scalar';
-    let cur: MetaTable | undefined = meta;
-    for (let i = 0; i < segs.length; i++) {
-      if (!cur) return 'unknown';
-      const field = findField(cur, segs[i]);
-      if (!field) return 'unknown';
-      const ref = firstRef(field);
-      // 6.16.66: синтетические колонки ВТ (`registerTempTables`) не несут типов
-      // (`types: []`) — нессылочность НЕ доказана, `.*` консервативно сохраняем.
-      // Реальный нессылочный реквизит (`Код`) имеет непустой `types` без `ref`.
-      if (i === segs.length - 1) {
-        if (ref !== undefined) return 'reference';
-        return field.types.length === 0 ? 'unknown' : 'scalar';
-      }
-      // Промежуточный сегмент без ссылки: реальное нессылочное поле (есть типы) —
-      // навигация невозможна (`scalar`); синтетическая колонка ВТ с НЕИЗВЕСТНЫМ
-      // составом (`types: []`) — нессылочность не доказана (`Вт.Ссылка.Категория.*`:
-      // `Ссылка` ВТ на деле ссылочная) → `unknown`, `.*` сохраняем.
-      if (!ref) return field.types.length === 0 ? 'unknown' : 'scalar';
-      cur = this.resolver.tableByFullName(`${ref.kind}.${ref.name}`);
-    }
-    return 'unknown';
+    return resolveFieldPath(meta, segs, this.resolver).kind;
   }
 
   /** Метаданные таблицы по fullName с учётом среза виртуальной таблицы регистра. */
@@ -149,19 +139,4 @@ class ResolveCtx {
     const m = fullName.match(/^(Регистр\p{L}+\.[^.]+)\.\p{L}+$/u);
     return m ? this.resolver.tableByFullName(m[1]) : undefined;
   }
-}
-
-function findField(meta: MetaTable, name: string): MetaField | undefined {
-  const up = name.toUpperCase();
-  return meta.fields.find(f => f.name.toUpperCase() === up);
-}
-
-function firstRef(field: MetaField): { kind: string; name: string } | undefined {
-  for (const t of field.types) if (t.ref) return t.ref;
-  return undefined;
-}
-
-function hasReference(meta: MetaTable): boolean {
-  const ssylka = findField(meta, 'Ссылка');
-  return ssylka !== undefined && firstRef(ssylka) !== undefined;
 }
