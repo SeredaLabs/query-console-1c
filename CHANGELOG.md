@@ -5,6 +5,19 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.29 - 2026-09-08
+
+### Added
+
+- Hovering over a field path (`Alias.Field.Field...`) inside a query-text
+  literal in a `.bsl` file now shows what the alias resolves to, what a
+  reference field points to, or that a field genuinely doesn't exist —
+  directly in the editor, without opening the query designer.
+- The query text editor now reports a field that genuinely does not exist on
+  its source table or catalog (`Поле "..." не найдено в "..."`), catching a
+  class of mistakes that previously only surfaced once the query actually ran
+  in 1C.
+
 ## 0.1.28 - 2026-09-07
 
 ### Added
