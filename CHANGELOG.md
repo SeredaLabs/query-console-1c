@@ -17,9 +17,6 @@ All notable changes are recorded here. The project uses
   its source table or catalog (`Поле "..." не найдено в "..."`), catching a
   class of mistakes that previously only surfaced once the query actually ran
   in 1C.
-- Each query-text literal in a `.bsl` file now shows an "Open in Query
-  Designer" CodeLens above it — a single click, no modifier key needed,
-  alongside the existing Ctrl/Cmd+Click.
 
 ### Fixed
 

@@ -34,6 +34,5 @@
   "Source: `{table}`": "Source: `{table}`",
   "Reference to: `{table}`": "Reference to: `{table}`",
   "Reference (target metadata unavailable)": "Reference (target metadata unavailable)",
-  "Field \"{field}\" not found in \"{table}\"": "Field \"{field}\" not found in \"{table}\"",
-  "Open in Query Designer": "Open in Query Designer"
+  "Field \"{field}\" not found in \"{table}\"": "Field \"{field}\" not found in \"{table}\""
 }
