@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { findQueryAt, type QueryHit } from './queryAtCursor';
 import { findChainAt, describeChain, type ChainDescription } from './hoverFieldInfo';
 import { getMetadataResolver } from './metadataResolverCache';
-import { OPEN_FROM_RANGE_COMMAND } from './queryDocumentLinkProvider';
+import { OPEN_FROM_RANGE_COMMAND } from './openFromRangeCommand';
 
 /**
  * Hover по цепочке `Псевдоним.Поле[.Поле…]` в литерале запроса `.bsl` — семантическое
@@ -22,10 +22,11 @@ import { OPEN_FROM_RANGE_COMMAND } from './queryDocumentLinkProvider';
  * Наведення БУДЬ-ДЕ в межах літерала запиту (не лише на резолвний ланцюжок поля)
  * завжди показує ХОЧ ЯКИЙСЬ hover: коли конкретне поле не резолвиться (курсор на
  * ключовому слові `ВЫБРАТЬ`, комі, `|`, чи fail-open випадок) — фолбек-підказка
- * `genericHint` пояснює, що запит можна відкрити в конструкторі, і містить
- * клікабельне посилання-команду прямо в тексті hover (працює звичайним кліком,
- * без Ctrl/Cmd) — так само веде на `OPEN_FROM_RANGE_COMMAND`, як і
- * Ctrl/Cmd+Click по `QueryDocumentLinkProvider`.
+ * `genericHint` дає клікабельне command-посилання прямо в тексті hover (звичайний
+ * клік, без модифікаторів) на `OPEN_FROM_RANGE_COMMAND`. Це ЄДИНА точка входу —
+ * навмисно без DocumentLink/Ctrl+Click: підкреслення DocumentLink неможливо
+ * приховати (VS Code завжди малює його поверх діапазону), а hover дає рівноцінний
+ * клік без жодної постійної візуальної позначки на тексті запиту.
  */
 export class QueryHoverProvider implements vscode.HoverProvider {
   constructor(
@@ -63,21 +64,16 @@ export class QueryHoverProvider implements vscode.HoverProvider {
 
 /**
  * Фолбек-hover: показується на будь-якій позиції всередині літерала запиту, де
- * `buildHoverMessage` не дав конкретної відповіді про поле (courtsor на ключовому
- * слові, комі, `|`, невідомому псевдонімі, тощо). Пояснює саму можливість
- * відкрити конструктор і дає клікабельне посилання-команду прямо в тексті —
- * `isTrusted` потрібен, інакше VS Code відмовляється виконувати `command:`-лінки
- * з markdown, згенерованого розширенням.
+ * `buildHoverMessage` не дав конкретної відповіді про поле (курсор на ключовому
+ * слові, комі, `|`, невідомому псевдонімі, тощо) — одне клікабельне посилання,
+ * без зайвого пояснювального тексту. `isTrusted` потрібен, інакше VS Code
+ * відмовляється виконувати `command:`-лінки з markdown, згенерованого розширенням.
  */
 function genericHint(document: vscode.TextDocument, hit: QueryHit): vscode.Hover {
   const args = encodeURIComponent(JSON.stringify({ uri: document.uri.toString(), offset: hit.start }));
   const commandUri = `command:${OPEN_FROM_RANGE_COMMAND}?${args}`;
-  const md = new vscode.MarkdownString(
-    vscode.l10n.t('This query can be edited in the Query Designer.') +
-      '\n\n' +
-      `[${vscode.l10n.t('Open in Query Designer')}](${commandUri}) ` +
-      vscode.l10n.t('(or Ctrl/Cmd+Click the query text)')
-  );
+  const md = new vscode.MarkdownString(`[$(edit) ${vscode.l10n.t('Open in Query Designer')}](${commandUri})`);
+  md.supportThemeIcons = true;
   md.isTrusted = true;
   return new vscode.Hover(md);
 }

@@ -17,15 +17,12 @@ All notable changes are recorded here. The project uses
   its source table or catalog (`Поле "..." не найдено в "..."`), catching a
   class of mistakes that previously only surfaced once the query actually ran
   in 1C.
-- Hovering anywhere inside a query-text literal — not just on a resolvable
-  field — now shows a hint that the query can be opened in the Query
-  Designer, with a clickable link that opens it directly from the hover.
 
-### Fixed
+### Changed
 
-- Ctrl/Cmd+Click's underline no longer spans the entire (often multi-line)
-  query text — it's now limited to the literal's first line, so it no longer
-  looks like every line of the query got underlined.
+- Replaced Ctrl/Cmd+Click on a query-text literal with a hover tooltip: hover
+  over the query text and click the "Open in Query Designer" link right in
+  the tooltip. No more underline on the query text.
 
 ## 0.1.28 - 2026-09-07
 

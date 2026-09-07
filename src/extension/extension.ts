@@ -5,7 +5,7 @@ import { createPanel } from './panel';
 import { resolveCfPath } from './resolveCfPath';
 import { registerParseCommand } from './parseCommand';
 import { planQueryConstructor, type OpenPlan } from './queryConstructorPlan';
-import { QueryDocumentLinkProvider, OPEN_FROM_RANGE_COMMAND } from './queryDocumentLinkProvider';
+import { OPEN_FROM_RANGE_COMMAND } from './openFromRangeCommand';
 import { QueryHoverProvider } from './queryHoverProvider';
 
 let outputChannel: vscode.OutputChannel;
@@ -25,9 +25,10 @@ function resolveCfPathWithLogging(): string {
 
 /**
  * Открывает панель конструктора для уже найденного литерала запроса (`plan.kind
- * === 'open'`). Общая точка для команды палитры (курсор редактора) и Ctrl/Cmd+Click
- * по DocumentLink (курсор туда переставляется программно перед вызовом) — обе точки
- * входа должны создавать панель абсолютно одинаково, без двух копий одного вызова.
+ * === 'open'`). Общая точка для команды палитры (курсор редактора) и клика по
+ * command-ссылке в hover (курсор туда переставляется программно перед вызовом) —
+ * обе точки входа должны создавать панель абсолютно одинаково, без двух копий
+ * одного вызова.
  */
 function openConstructorForPlan(
   context: vscode.ExtensionContext,
@@ -94,11 +95,11 @@ async function runQueryConstructorCommand(context: vscode.ExtensionContext, resu
 }
 
 /**
- * Обработчик команды за DocumentLink (Ctrl/Cmd+Click по тексту запроса) —
- * `queryDocumentLinkProvider.ts` создаёт ссылку только там, где `findAllQueryLiterals`
- * уже нашёл литерал запроса, поэтому `plan.kind` здесь всегда должен быть `'open'`;
- * ветка `'prompt'` — защитный no-op на случай гонки (документ изменился между
- * built-of-links и кликом), а не диалог «создать новый запрос?» — здесь он неуместен.
+ * Обработчик command-ссылки из hover (`queryHoverProvider.ts`'s `genericHint`) —
+ * офсет всегда указывает на уже найденный `findQueryAt`-хит, поэтому `plan.kind`
+ * здесь всегда должен быть `'open'`; ветка `'prompt'` — защитный no-op на случай
+ * гонки (документ изменился между построением hover и кликом), а не диалог
+ * «создать новый запрос?» — здесь он неуместен.
  */
 async function openConstructorFromRange(
   context: vscode.ExtensionContext,
@@ -126,10 +127,6 @@ export function activate(context: vscode.ExtensionContext): void {
   const cmdOpenFromRange = vscode.commands.registerCommand(OPEN_FROM_RANGE_COMMAND, (arg: { uri: string; offset: number }) =>
     openConstructorFromRange(context, arg)
   );
-  const linkProvider = vscode.languages.registerDocumentLinkProvider(
-    { pattern: '**/*.bsl' },
-    new QueryDocumentLinkProvider()
-  );
   const hoverProvider = vscode.languages.registerHoverProvider(
     { pattern: '**/*.bsl' },
     new QueryHoverProvider(context, outputChannel, resolveCfPath)
@@ -139,7 +136,6 @@ export function activate(context: vscode.ExtensionContext): void {
     cmd,
     cmdWithResult,
     cmdOpenFromRange,
-    linkProvider,
     hoverProvider,
     registerParseCommand(context, outputChannel),
     outputChannel
