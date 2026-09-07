@@ -87,7 +87,10 @@ describe('validateBatchText (7.8.10)', () => {
 
 describe('tryOpenBatch / validateBatchText с резолвером (8.4)', () => {
   const ВАЛЮТЫ: MetaTable = {
-    kind: 'Справочник', name: 'Валюты', fullName: 'Справочник.Валюты', fields: [],
+    kind: 'Справочник', name: 'Валюты', fullName: 'Справочник.Валюты',
+    // Ссылка — реально существующее системное поле любого справочника; нужно для
+    // checkFieldPaths (semantic-core hardening), которая теперь проверяет и это.
+    fields: [{ name: 'Ссылка', kind: 'standard', types: [{ ref: { kind: 'Справочник', name: 'Валюты' } }] }],
   };
   const resolver = buildResolverFromTables([ВАЛЮТЫ]);
   const good = 'ВЫБРАТЬ Т.Ссылка КАК С ИЗ Справочник.Валюты КАК Т';

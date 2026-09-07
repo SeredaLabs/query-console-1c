@@ -15,8 +15,14 @@
  *   колонок между ветвями ОБЪЕДИНЕНИЯ (`checkUnionColumnCount`, добавлено фазой 1
  *   дорожной карты валидатора — см. docs/development/query-model.md, §5).
  *
- * Поля/реквизиты/навигация через точку НЕ проверяются (§2.2) — это остаётся
- * отдельной, значительно более крупной задачей (см. docs/development/query-model.md).
+ * Простые квалифицированные поля выборки (`Алиас.Реквизит[.Реквизит…]`) ПРОВЕРЯЮТСЯ
+ * на существование по метаданным (`checkFieldPaths`, semantic-core hardening) — но
+ * ТОЛЬКО когда источник резолвится в РЕАЛЬНУЮ (не временную) таблицу метаданных:
+ * состав колонок временных таблиц — эвристический вывод (`sdblParser.ts`'s
+ * `registerTempTables`/`inferUndefinedTempTables`), заведомо может быть неполон, и
+ * ложное «поле не найдено» там было бы хуже отсутствия проверки. Произвольные
+ * выражения, поля без явного псевдонима-квалификации и подзапросы-источники не
+ * проверяются вовсе.
  */
 import type { BatchDocument } from './batchModel';
 import type { QueryDocument, UnionMember } from './unionModel';
@@ -26,6 +32,7 @@ import type { MetadataResolver } from './metadataResolver';
 import { tokenize } from './sdblLexer';
 import type { Token } from './sdblLexer';
 import { isStructurallyValidExpression } from './expressionSyntaxCheck';
+import { resolveFieldPath } from './fieldPathResolver';
 
 export interface SemanticError {
   message: string;
@@ -41,6 +48,20 @@ export interface SemanticError {
  * ЖурналДокументов/ТабличнаяЧасть/ВременнаяТаблица) — их проверка дала бы ложные
  * срабатывания (ТЧ покрыта `canonicalFullName`).
  */
+/**
+ * Псевдо-поля платформы 1С — доступны в SDBL на ЛЮБОМ подходящем поле/таблице
+ * (напр. `Товар.Представление`, `ЖурналДокументов.Взаимодействия.Тип`,
+ * `Документ.Заказ.Проведен`), но НЕ являются пользовательскими реквизитами из XML
+ * метаданных — загрузчик (`yamlLoader.ts`) их не материализует в `MetaField[]`,
+ * потому что это не то, что описывает конфигуратор. Найдено эмпирически: полный
+ * прогон checkFieldPaths по золотому корпусу (1976 реальных запросов,
+ * semanticValidatorCorpus.test.ts) дал ложные срабатывания РОВНО на этих трёх
+ * именах — на многих РАЗНЫХ реальных справочниках/документах/журналах, что
+ * подтверждает системную (платформенную), а не случайную природу пробела.
+ * Дополнять этот список ТОЛЬКО по такой же корпусной проверке, а не по догадке.
+ */
+const PSEUDO_FIELDS = new Set<string>(['ПРЕДСТАВЛЕНИЕ', 'ТИП', 'ПРОВЕДЕН']);
+
 export const TYPE_PREFIXES = new Set<string>([
   'СПРАВОЧНИК',
   'ДОКУМЕНТ',
@@ -123,6 +144,49 @@ export function validateBatchSemantics(
     });
   };
 
+  /**
+   * `Алиас.Реквизит[.Реквизит…]` источника выборки не найден по метаданным
+   * (semantic-core hardening). Использует `resolveFieldPath` — то же ядро, что уже
+   * проверено ПОЛНЫМ корпусом 1976 запросов через `canonicalizeFieldCasing`/
+   * `resolveBuilderStar`/`dropRedundantGroupDerefs` (см. test/unit/corpusRegression
+   * .test.ts) — но здесь используется по-другому: не молча меняет модель, а решает,
+   * стоит ли сообщить об ошибке. Сообщаем ТОЛЬКО когда `stoppedReason ===
+   * 'fieldNotFound'` — мы реально нашли `MetaTable` и искали в её `fields`;
+   * `'targetUnresolved'` (пробел метаданных — ссылка резолвится, но целевая таблица
+   * не в кэше) НИКОГДА не считается ошибкой (unknown != invalid).
+   */
+  const checkFieldPaths = (model: QueryModel): void => {
+    if (!resolver) return;
+    const r = resolver;
+    const idToTable = new Map<string, SelectedTable>();
+    for (const t of model.tables) idToTable.set(t.id, t);
+
+    for (const f of model.fields) {
+      if (f.expression !== undefined) continue;
+      if (!f.qualified) continue; // голову-таблицу определяем только у квалифицированного поля
+      const src = idToTable.get(f.tableId);
+      if (!src || src.subquery || !src.fullName || src.fullName.startsWith('&')) continue;
+      const meta = r.tableByFullName(src.fullName);
+      // Временные таблицы: состав колонок — эвристический вывод, может быть
+      // неполон — не проверяем (см. файловый комментарий выше).
+      if (!meta || meta.kind === 'ВременнаяТаблица') continue;
+
+      const segs = f.path.split('.');
+      const resolution = resolveFieldPath(meta, segs, r);
+      if (resolution.stoppedReason !== 'fieldNotFound') continue;
+
+      const badSegment = resolution.unresolvedTail[0];
+      if (PSEUDO_FIELDS.has(badSegment.toUpperCase())) continue;
+
+      const ownerMeta = resolution.resolved.length > 0
+        ? (resolution.resolved[resolution.resolved.length - 1].refTarget ?? meta)
+        : meta;
+      errors.push({
+        message: `Поле "${badSegment}" не найдено в "${ownerMeta.fullName}"`,
+      });
+    }
+  };
+
   const checkDuplicateAliases = (model: QueryModel): void => {
     const seen = new Map<string, number>();
     const reported = new Set<string>();
@@ -170,6 +234,7 @@ export function validateBatchSemantics(
       else checkTable(t);
     }
     checkDuplicateAliases(model);
+    checkFieldPaths(model);
     walkConditions(model.conditions);
     walkConditions(model.having);
   };

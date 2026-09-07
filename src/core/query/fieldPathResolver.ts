@@ -58,6 +58,17 @@ export interface FieldPathResolution {
    * what `resolveBuilderStar.ts`'s `walk()` already returns for the union of both
    * cases — see parity tests. */
   kind: FieldKindClassification;
+  /**
+   * WHY resolution stopped before consuming every segment — `undefined` when
+   * `unresolvedTail` is empty (nothing to explain). This distinction matters for any
+   * consumer that wants to report a diagnostic (e.g. "field not found"): only
+   * `'fieldNotFound'` is safe to surface as an error — it means we HAD a real,
+   * resolved `MetaTable` and searched its actual field list. `'targetUnresolved'`
+   * means an earlier segment's reference target isn't in the metadata cache at all
+   * (a metadata-completeness gap, not proof the field is invalid) — per the
+   * project's "unknown != invalid" rule, this must never be reported as an error.
+   */
+  stoppedReason?: 'fieldNotFound' | 'targetUnresolved';
 }
 
 /** Case-insensitive field lookup by name — the single most duplicated primitive in
@@ -127,9 +138,13 @@ export function resolveFieldPath(
   let cur: MetaTable | undefined = meta;
 
   for (let i = 0; i < segs.length; i++) {
-    if (!cur) return { resolved, unresolvedTail: segs.slice(i), kind: 'unknown' };
+    if (!cur) {
+      return { resolved, unresolvedTail: segs.slice(i), kind: 'unknown', stoppedReason: 'targetUnresolved' };
+    }
     const field = findField(cur, segs[i]);
-    if (!field) return { resolved, unresolvedTail: segs.slice(i), kind: 'unknown' };
+    if (!field) {
+      return { resolved, unresolvedTail: segs.slice(i), kind: 'unknown', stoppedReason: 'fieldNotFound' };
+    }
 
     const ref = firstRef(field);
     const isLast = i === segs.length - 1;
