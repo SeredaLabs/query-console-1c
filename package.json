@@ -25,6 +25,13 @@
   "main": "./out/extension/extension.js",
   "l10n": "./l10n",
   "contributes": {
+    "configurationDefaults": {
+      "[bsl]": {
+        "editor.quickSuggestions": {
+          "strings": true
+        }
+      }
+    },
     "commands": [
       {
         "command": "1c.queryConstructor",
