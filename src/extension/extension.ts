@@ -6,6 +6,7 @@ import { resolveCfPath } from './resolveCfPath';
 import { registerParseCommand } from './parseCommand';
 import { planQueryConstructor, type OpenPlan } from './queryConstructorPlan';
 import { QueryDocumentLinkProvider, OPEN_FROM_RANGE_COMMAND } from './queryDocumentLinkProvider';
+import { QueryHoverProvider } from './queryHoverProvider';
 
 let outputChannel: vscode.OutputChannel;
 
@@ -129,12 +130,17 @@ export function activate(context: vscode.ExtensionContext): void {
     { pattern: '**/*.bsl' },
     new QueryDocumentLinkProvider()
   );
+  const hoverProvider = vscode.languages.registerHoverProvider(
+    { pattern: '**/*.bsl' },
+    new QueryHoverProvider(context, outputChannel, resolveCfPath)
+  );
 
   context.subscriptions.push(
     cmd,
     cmdWithResult,
     cmdOpenFromRange,
     linkProvider,
+    hoverProvider,
     registerParseCommand(context, outputChannel),
     outputChannel
   );

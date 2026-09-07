@@ -29,5 +29,10 @@
   "[1C Query] Metadata index rebuilt via {source} in {duration} ms ({count} tables){fallback}": "[1C Query] Metadata index rebuilt via {source} in {duration} ms ({count} tables){fallback}",
   "Metadata index rebuilt: {count} tables. Output: {path}": "Metadata index rebuilt: {count} tables. Output: {path}",
   "[1C Query] Rebuilding metadata index failed: {error}": "[1C Query] Rebuilding metadata index failed: {error}",
-  "Rebuilding the metadata index failed: {error}": "Rebuilding the metadata index failed: {error}"
+  "Rebuilding the metadata index failed: {error}": "Rebuilding the metadata index failed: {error}",
+  "[1C Query] Hover: metadata unavailable: {error}": "[1C Query] Hover: metadata unavailable: {error}",
+  "Source: `{table}`": "Source: `{table}`",
+  "Reference to: `{table}`": "Reference to: `{table}`",
+  "Reference (target metadata unavailable)": "Reference (target metadata unavailable)",
+  "Field \"{field}\" not found in \"{table}\"": "Field \"{field}\" not found in \"{table}\""
 }

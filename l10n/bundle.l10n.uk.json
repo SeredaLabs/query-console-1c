@@ -29,5 +29,10 @@
   "[1C Query] Metadata index rebuilt via {source} in {duration} ms ({count} tables){fallback}": "[1C Query] Індекс метаданих перебудовано через {source} за {duration} мс ({count} таблиць){fallback}",
   "Metadata index rebuilt: {count} tables. Output: {path}": "Індекс метаданих перебудовано: {count} таблиць. Результат: {path}",
   "[1C Query] Rebuilding metadata index failed: {error}": "[1C Query] Не вдалося перебудувати індекс метаданих: {error}",
-  "Rebuilding the metadata index failed: {error}": "Не вдалося перебудувати індекс метаданих: {error}"
+  "Rebuilding the metadata index failed: {error}": "Не вдалося перебудувати індекс метаданих: {error}",
+  "[1C Query] Hover: metadata unavailable: {error}": "[1C Query] Hover: метадані недоступні: {error}",
+  "Source: `{table}`": "Джерело: `{table}`",
+  "Reference to: `{table}`": "Посилання на: `{table}`",
+  "Reference (target metadata unavailable)": "Посилання (метадані цілі недоступні)",
+  "Field \"{field}\" not found in \"{table}\"": "Поле «{field}» не знайдено в «{table}»"
 }

@@ -1,0 +1,94 @@
+import * as vscode from 'vscode';
+import { findQueryAt } from './queryAtCursor';
+import { findChainAt, describeChain, type ChainDescription } from './hoverFieldInfo';
+import { getMetadataResolver } from './metadataResolverCache';
+
+/**
+ * Hover по цепочке `Псевдоним.Поле[.Поле…]` в литерале запроса `.bsl` — семантическое
+ * развитие поверх того же `resolveFieldPath`-ядра, что уже используют
+ * `checkFieldPaths` (semanticValidator.ts) и три мигрированных прохода парсера.
+ *
+ * ИЗВЕСТНОЕ УПРОЩЕНИЕ (документировано, не скрыто): псевдоним ищется по ВСЕМ
+ * таблицам пакета сразу, без построения полноценного дерева областей видимости —
+ * см. doc-комментарий `hoverFieldInfo.ts`. На практике это верно почти всегда.
+ *
+ * Fail-open (unknown != invalid): любая неопределённость — неизвестный псевдоним,
+ * нерезолвящаяся таблица, `targetUnresolved` (не хватает метаданных, чтобы
+ * продолжить путь) — просто НЕ показывает hover, а не показывает ошибочную
+ * подсказку. Единственное исключение — `fieldNotFound`: как и в checkFieldPaths,
+ * это единственный случай, когда мы УВЕРЕНЫ, что поля не существует.
+ */
+export class QueryHoverProvider implements vscode.HoverProvider {
+  constructor(
+    private readonly context: vscode.ExtensionContext,
+    private readonly channel: vscode.OutputChannel,
+    private readonly resolveCfPath: () => string
+  ) {}
+
+  async provideHover(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Hover | undefined> {
+    const source = document.getText();
+    const offset = document.offsetAt(position);
+
+    const hit = findQueryAt(source, offset);
+    if (!hit) return undefined;
+
+    const chain = findChainAt(source, offset);
+    if (!chain) return undefined;
+
+    let resolver;
+    try {
+      resolver = await getMetadataResolver(this.resolveCfPath(), this.context, this.channel);
+    } catch (e) {
+      this.channel.appendLine(vscode.l10n.t('[1C Query] Hover: metadata unavailable: {error}', { error: String(e) }));
+      return undefined;
+    }
+
+    const description = describeChain(hit.text, resolver, chain.segments.map((s) => s.text));
+    const message = buildHoverMessage(chain.hoveredIndex, chain.segments.map((s) => s.text), description);
+    if (!message) return undefined;
+
+    const hovered = chain.segments[chain.hoveredIndex];
+    const range = new vscode.Range(document.positionAt(hovered.start), document.positionAt(hovered.end));
+    return new vscode.Hover(message, range);
+  }
+}
+
+function buildHoverMessage(
+  hoveredIndex: number,
+  segmentTexts: string[],
+  description: ChainDescription
+): vscode.MarkdownString | undefined {
+  if (hoveredIndex === 0) {
+    if (!description.tableFullName) return undefined;
+    return new vscode.MarkdownString(vscode.l10n.t('Source: `{table}`', { table: description.tableFullName }));
+  }
+
+  if (!description.resolution) return undefined;
+  const { resolution } = description;
+  const segIdx = hoveredIndex - 1;
+
+  if (segIdx < resolution.resolved.length) {
+    const seg = resolution.resolved[segIdx];
+    const lines = [`**${seg.field.name}**`];
+    if (seg.kind === 'reference') {
+      lines.push(
+        seg.refTarget
+          ? vscode.l10n.t('Reference to: `{table}`', { table: seg.refTarget.fullName })
+          : vscode.l10n.t('Reference (target metadata unavailable)')
+      );
+    }
+    return new vscode.MarkdownString(lines.join('\n\n'));
+  }
+
+  // Наведённый сегмент лежит в unresolvedTail — сообщаем "не найдено" ТОЛЬКО когда
+  // это доказано (fieldNotFound); targetUnresolved — метаданных не хватает, чтобы
+  // судить, а не ошибка (unknown != invalid) — молчим, как и в checkFieldPaths.
+  if (resolution.stoppedReason !== 'fieldNotFound') return undefined;
+  const owner = resolution.resolved.length > 0
+    ? resolution.resolved[resolution.resolved.length - 1].refTarget?.fullName
+    : description.tableFullName;
+  if (!owner) return undefined;
+  return new vscode.MarkdownString(
+    vscode.l10n.t('Field "{field}" not found in "{table}"', { field: segmentTexts[hoveredIndex], table: owner })
+  );
+}
