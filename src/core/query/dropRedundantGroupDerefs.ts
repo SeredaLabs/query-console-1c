@@ -1,9 +1,10 @@
 import type { QueryModel, FieldRef, SelectedTable } from './queryModel';
 import { defaultTableAlias } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
-import type { MetaTable, MetaField } from '../metadata/types';
+import type { MetaTable } from '../metadata/types';
 import { tokenize } from './sdblLexer';
 import { META_FUNCTION_WORDS } from './sdblKeywordSets';
+import { resolveFieldPath } from './fieldPathResolver';
 
 const AGG_RE = /(?:^|[^\p{L}])(СУММА|КОЛИЧЕСТВО|МАКСИМУМ|МИНИМУМ|СРЕДНЕЕ|SUM|COUNT|MAX|MIN|AVG)\s*\(/iu;
 
@@ -358,22 +359,30 @@ function prefixResolvesToReference(
 ): boolean {
   if (!table || table.subquery) return false;
   if (!table.fullName || table.fullName.startsWith('&')) return false;
-  let cur = metaFor(table.fullName, resolver);
+  const cur = metaFor(table.fullName, resolver);
   if (!cur) return false;
   const segs = path.split('.');
-  for (let i = 0; i < segs.length; i++) {
-    if (!cur) return false;
-    const field = findField(cur, segs[i]);
-    if (!field) return false;
-    // Головной сегмент-измерение/ресурс регистра: навигацию через него оракул
-    // сохраняет — дроп не делаем (только реквизит/стандартное ссылочное поле).
-    if (i === 0 && (field.kind === 'dimension' || field.kind === 'resource')) return false;
-    const ref = firstRef(field);
-    if (i === segs.length - 1) return ref !== undefined;
-    if (!ref) return false; // нессылочный промежуточный сегмент — навигация невозможна
-    cur = resolver.tableByFullName(ref.kind + '.' + ref.name);
-  }
-  return false;
+  if (segs.length === 0) return false;
+
+  // Делегируем сам проход по цепочке в resolveFieldPath (semantic-core hardening) —
+  // раньше здесь была третья независимая копия findField/firstRef/walk-цикла,
+  // идентичная canonicalizeFieldCasing.ts/resolveBuilderStar.ts (обе уже
+  // мигрированы). metaFor (fullName → MetaTable с фолбеком на табличную часть/срез
+  // регистра, выше) остаётся своим — resolveFieldPath берёт уже готовый MetaTable.
+  const resolution = resolveFieldPath(cur, segs, resolver);
+
+  // Головной сегмент-измерение/ресурс регистра: навигацию через него оракул
+  // сохраняет — дроп не делаем (только реквизит/стандартное ссылочное поле). Это
+  // единственное поведение этого правила, которого resolveFieldPath намеренно НЕ
+  // знает (см. его doc comment) — проверяем сами поверх структурированного
+  // результата, а не внутри общего прохода.
+  const head = resolution.resolved[0]?.field.kind;
+  if (head === 'dimension' || head === 'resource') return false;
+
+  // Путь резолвился целиком (ничего не осталось в "сыром" хвосте) И последний
+  // сегмент — ссылка: ровно то же условие, что раньше проверял `ref !== undefined`
+  // на последней итерации цикла.
+  return resolution.unresolvedTail.length === 0 && resolution.kind === 'reference';
 }
 
 function metaFor(fullName: string, resolver: MetadataResolver): MetaTable | undefined {
@@ -390,16 +399,6 @@ function metaFor(fullName: string, resolver: MetadataResolver): MetaTable | unde
   // Срез виртуальной таблицы регистра → базовый регистр.
   const m = fullName.match(/^(Регистр\p{L}+\.[^.]+)\.\p{L}+$/u);
   return m ? resolver.tableByFullName(m[1]) : undefined;
-}
-
-function findField(meta: MetaTable, name: string): MetaField | undefined {
-  const up = name.toUpperCase();
-  return meta.fields.find(f => f.name.toUpperCase() === up);
-}
-
-function firstRef(field: MetaField): { kind: string; name: string } | undefined {
-  for (const t of field.types) if (t.ref) return t.ref;
-  return undefined;
 }
 
 // ── FD-минимизация GROUP BY (CASE-вид-движения): фаза 6.19, Взаимозачет ──
