@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
-import { findQueryAt } from './queryAtCursor';
+import { findQueryAt, type QueryHit } from './queryAtCursor';
 import { findChainAt, describeChain, type ChainDescription } from './hoverFieldInfo';
 import { getMetadataResolver } from './metadataResolverCache';
+import { OPEN_FROM_RANGE_COMMAND } from './queryDocumentLinkProvider';
 
 /**
  * Hover по цепочке `Псевдоним.Поле[.Поле…]` в литерале запроса `.bsl` — семантическое
@@ -17,6 +18,14 @@ import { getMetadataResolver } from './metadataResolverCache';
  * продолжить путь) — просто НЕ показывает hover, а не показывает ошибочную
  * подсказку. Единственное исключение — `fieldNotFound`: как и в checkFieldPaths,
  * это единственный случай, когда мы УВЕРЕНЫ, что поля не существует.
+ *
+ * Наведення БУДЬ-ДЕ в межах літерала запиту (не лише на резолвний ланцюжок поля)
+ * завжди показує ХОЧ ЯКИЙСЬ hover: коли конкретне поле не резолвиться (курсор на
+ * ключовому слові `ВЫБРАТЬ`, комі, `|`, чи fail-open випадок) — фолбек-підказка
+ * `genericHint` пояснює, що запит можна відкрити в конструкторі, і містить
+ * клікабельне посилання-команду прямо в тексті hover (працює звичайним кліком,
+ * без Ctrl/Cmd) — так само веде на `OPEN_FROM_RANGE_COMMAND`, як і
+ * Ctrl/Cmd+Click по `QueryDocumentLinkProvider`.
  */
 export class QueryHoverProvider implements vscode.HoverProvider {
   constructor(
@@ -33,24 +42,44 @@ export class QueryHoverProvider implements vscode.HoverProvider {
     if (!hit) return undefined;
 
     const chain = findChainAt(source, offset);
-    if (!chain) return undefined;
-
-    let resolver;
-    try {
-      resolver = await getMetadataResolver(this.resolveCfPath(), this.context, this.channel);
-    } catch (e) {
-      this.channel.appendLine(vscode.l10n.t('[1C Query] Hover: metadata unavailable: {error}', { error: String(e) }));
-      return undefined;
+    if (chain) {
+      try {
+        const resolver = await getMetadataResolver(this.resolveCfPath(), this.context, this.channel);
+        const description = describeChain(hit.text, resolver, chain.segments.map((s) => s.text));
+        const message = buildHoverMessage(chain.hoveredIndex, chain.segments.map((s) => s.text), description);
+        if (message) {
+          const hovered = chain.segments[chain.hoveredIndex];
+          const range = new vscode.Range(document.positionAt(hovered.start), document.positionAt(hovered.end));
+          return new vscode.Hover(message, range);
+        }
+      } catch (e) {
+        this.channel.appendLine(vscode.l10n.t('[1C Query] Hover: metadata unavailable: {error}', { error: String(e) }));
+      }
     }
 
-    const description = describeChain(hit.text, resolver, chain.segments.map((s) => s.text));
-    const message = buildHoverMessage(chain.hoveredIndex, chain.segments.map((s) => s.text), description);
-    if (!message) return undefined;
-
-    const hovered = chain.segments[chain.hoveredIndex];
-    const range = new vscode.Range(document.positionAt(hovered.start), document.positionAt(hovered.end));
-    return new vscode.Hover(message, range);
+    return genericHint(document, hit);
   }
+}
+
+/**
+ * Фолбек-hover: показується на будь-якій позиції всередині літерала запиту, де
+ * `buildHoverMessage` не дав конкретної відповіді про поле (courtsor на ключовому
+ * слові, комі, `|`, невідомому псевдонімі, тощо). Пояснює саму можливість
+ * відкрити конструктор і дає клікабельне посилання-команду прямо в тексті —
+ * `isTrusted` потрібен, інакше VS Code відмовляється виконувати `command:`-лінки
+ * з markdown, згенерованого розширенням.
+ */
+function genericHint(document: vscode.TextDocument, hit: QueryHit): vscode.Hover {
+  const args = encodeURIComponent(JSON.stringify({ uri: document.uri.toString(), offset: hit.start }));
+  const commandUri = `command:${OPEN_FROM_RANGE_COMMAND}?${args}`;
+  const md = new vscode.MarkdownString(
+    vscode.l10n.t('This query can be edited in the Query Designer.') +
+      '\n\n' +
+      `[${vscode.l10n.t('Open in Query Designer')}](${commandUri}) ` +
+      vscode.l10n.t('(or Ctrl/Cmd+Click the query text)')
+  );
+  md.isTrusted = true;
+  return new vscode.Hover(md);
 }
 
 function buildHoverMessage(

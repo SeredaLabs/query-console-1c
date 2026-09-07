@@ -34,5 +34,8 @@
   "Source: `{table}`": "Источник: `{table}`",
   "Reference to: `{table}`": "Ссылка на: `{table}`",
   "Reference (target metadata unavailable)": "Ссылка (метаданные цели недоступны)",
-  "Field \"{field}\" not found in \"{table}\"": "Поле «{field}» не найдено в «{table}»"
+  "Field \"{field}\" not found in \"{table}\"": "Поле «{field}» не найдено в «{table}»",
+  "This query can be edited in the Query Designer.": "Этот запрос можно отредактировать в конструкторе запроса.",
+  "Open in Query Designer": "Открыть в конструкторе запроса",
+  "(or Ctrl/Cmd+Click the query text)": "(или Ctrl/Cmd+Click по тексту запроса)"
 }

@@ -90,6 +90,20 @@ describe('Extension Host: hover на цепочці поля запиту', () =
     const hover = await makeProvider().provideHover(doc, doc.positionAt(offset));
     assert.strictEqual(hover, undefined);
   });
+
+  it('provideHover показує загальну підказку з клікабельним посиланням на ключовому слові всередині запиту (де конкретне поле не резолвиться)', async function () {
+    this.timeout(20000);
+
+    const doc = await vscode.workspace.openTextDocument({ language: 'plaintext', content: QUERY_LITERAL });
+    const offset = doc.getText().indexOf('ВЫБРАТЬ') + 2; // курсор всередині ключового слова, не на псевдонімі/полі
+
+    const hover = await makeProvider().provideHover(doc, doc.positionAt(offset));
+    assert.ok(hover, 'очікувався фолбек-hover навіть без резолвного ланцюжка поля');
+    const md = hover!.contents[0] as vscode.MarkdownString;
+    assert.ok(md.value.includes('Query Designer'), `hover мав пояснювати можливість відкрити конструктор, отримано: ${md.value}`);
+    assert.ok(md.value.includes('command:queryConsole1c.openFromRange'), 'hover мав містити клікабельне command-посилання');
+    assert.strictEqual(md.isTrusted, true, 'markdown з command-посиланням має бути isTrusted, інакше VS Code його не виконає');
+  });
 });
 
 /**
