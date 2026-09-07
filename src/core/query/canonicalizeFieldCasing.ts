@@ -1,6 +1,7 @@
 import type { QueryModel, SelectedField, SelectedTable, Condition, Join } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
-import type { MetaTable, MetaField } from '../metadata/types';
+import type { MetaTable } from '../metadata/types';
+import { resolveFieldPath } from './fieldPathResolver';
 
 /**
  * Канонизация РЕГИСТРА сегментов пути поля выборки по метаданным (фаза 6.16.66).
@@ -197,35 +198,22 @@ function canonField(
  * Возвращает сегменты с канонизированным регистром, идя от `meta` по ссылочной
  * цепочке. Останавливается (возвращает уже накопленное) на первом нерезолвимом
  * сегменте — оставшиеся берёт как есть. `undefined`, если ничего не изменилось.
+ *
+ * Делегирует проход по цепочке в `resolveFieldPath` (semantic-core hardening) —
+ * раньше здесь была третья независимая копия findField/firstRef/walk-цикла,
+ * идентичная (с точностью до раскладки return-значения) `resolveBuilderStar.ts` и
+ * `dropRedundantGroupDerefs.ts`. Эквивалентность старому/новому выводу проверена
+ * построчно и через `test/unit/fieldPathResolver.test.ts` (parity-тесты) —
+ * `resolveFieldPath`'s `resolved[].field.name` даёт ровно те канонические имена,
+ * что раньше собирались вручную, `unresolvedTail` — ровно тот «сырой хвост».
  */
 function canonicalizeSegments(
   meta: MetaTable,
   segs: string[],
   resolver: MetadataResolver,
 ): string[] | undefined {
-  const out: string[] = [];
-  let cur: MetaTable | undefined = meta;
-  let changed = false;
-  for (let i = 0; i < segs.length; i++) {
-    if (!cur) { out.push(...segs.slice(i)); break; }
-    const field = findField(cur, segs[i]);
-    if (!field) { out.push(...segs.slice(i)); break; }
-    if (field.name !== segs[i]) changed = true;
-    out.push(field.name);
-    if (i === segs.length - 1) break;
-    const ref = firstRef(field);
-    if (!ref) { out.push(...segs.slice(i + 1)); break; }
-    cur = resolver.tableByFullName(`${ref.kind}.${ref.name}`);
-  }
-  return changed ? out : undefined;
-}
-
-function findField(meta: MetaTable, name: string): MetaField | undefined {
-  const up = name.toUpperCase();
-  return meta.fields.find(f => f.name.toUpperCase() === up);
-}
-
-function firstRef(field: MetaField): { kind: string; name: string } | undefined {
-  for (const t of field.types) if (t.ref) return t.ref;
-  return undefined;
+  const { resolved, unresolvedTail } = resolveFieldPath(meta, segs, resolver);
+  const changed = resolved.some((s, i) => s.field.name !== segs[i]);
+  if (!changed) return undefined;
+  return [...resolved.map(s => s.field.name), ...unresolvedTail];
 }
