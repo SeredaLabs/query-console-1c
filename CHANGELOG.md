@@ -17,6 +17,15 @@ All notable changes are recorded here. The project uses
   its source table or catalog (`Поле "..." не найдено в "..."`), catching a
   class of mistakes that previously only surfaced once the query actually ran
   in 1C.
+- Each query-text literal in a `.bsl` file now shows an "Open in Query
+  Designer" CodeLens above it — a single click, no modifier key needed,
+  alongside the existing Ctrl/Cmd+Click.
+
+### Fixed
+
+- Ctrl/Cmd+Click's underline no longer spans the entire (often multi-line)
+  query text — it's now limited to the literal's first line, so it no longer
+  looks like every line of the query got underlined.
 
 ## 0.1.28 - 2026-09-07
 

@@ -26,9 +26,13 @@ describe('Extension Host: DocumentLink на тексті запиту (Ctrl/Cmd+
     const [link] = links;
     const text = doc.getText();
     const expectedStart = text.indexOf('"');
-    const expectedEnd = text.indexOf('";') + 1;
+    // Візуальний діапазон лінка навмисно обрізаний до ПЕРШОГО рядка літерала (не до
+    // всього багаторядкового [start, end) — інакше VS Code підкреслює кожен рядок
+    // тексту запиту суцільною "стіною"). Команда й далі відкриває конструктор з
+    // повного офсету (`hit.start`), тільки видиме підкреслення коротше.
+    const expectedEnd = text.indexOf('\n', expectedStart);
     assert.strictEqual(doc.offsetAt(link.range.start), expectedStart, 'початок діапазону — відкриваюча лапка');
-    assert.strictEqual(doc.offsetAt(link.range.end), expectedEnd, 'кінець діапазону — за закриваючою лапкою');
+    assert.strictEqual(doc.offsetAt(link.range.end), expectedEnd, 'кінець діапазону — кінець першого рядка літерала');
     assert.ok(link.tooltip?.length, 'tooltip має пояснювати, що Ctrl/Cmd+Click відкриває конструктор');
 
     const target = link.target!;
@@ -37,6 +41,23 @@ describe('Extension Host: DocumentLink на тексті запиту (Ctrl/Cmd+
     const args = JSON.parse(decodeURIComponent(target.query)) as { uri: string; offset: number };
     assert.strictEqual(args.uri, doc.uri.toString());
     assert.strictEqual(args.offset, expectedStart);
+  });
+
+  it('provideDocumentLinks для однорядкового літерала охоплює його цілком (кінець рядка = кінець хіта)', async () => {
+    const doc = await vscode.workspace.openTextDocument({
+      language: 'plaintext',
+      content: 'Запрос.Текст = "ВЫБРАТЬ 1 КАК Число";\n',
+    });
+
+    const links = new QueryDocumentLinkProvider().provideDocumentLinks(doc);
+    assert.strictEqual(links.length, 1);
+
+    const [link] = links;
+    const text = doc.getText();
+    const expectedStart = text.indexOf('"');
+    const expectedEnd = text.indexOf('";') + 1;
+    assert.strictEqual(doc.offsetAt(link.range.start), expectedStart);
+    assert.strictEqual(doc.offsetAt(link.range.end), expectedEnd, 'для однорядкового хіта кінець рядка збігається з кінцем хіта');
   });
 
   it('provideDocumentLinks НЕ створює лінк для звичайного (не-запитового) рядкового літерала', async () => {

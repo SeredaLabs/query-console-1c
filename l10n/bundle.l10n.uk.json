@@ -34,5 +34,6 @@
   "Source: `{table}`": "Джерело: `{table}`",
   "Reference to: `{table}`": "Посилання на: `{table}`",
   "Reference (target metadata unavailable)": "Посилання (метадані цілі недоступні)",
-  "Field \"{field}\" not found in \"{table}\"": "Поле «{field}» не знайдено в «{table}»"
+  "Field \"{field}\" not found in \"{table}\"": "Поле «{field}» не знайдено в «{table}»",
+  "Open in Query Designer": "Відкрити в конструкторі запиту"
 }
