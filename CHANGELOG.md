@@ -5,6 +5,23 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.32 - 2026-09-08
+
+### Fixed
+
+- A metadata rebuild that came back with zero tables (e.g. a temporarily
+  empty or misconfigured export path) was still committed as the new
+  current snapshot, even though 0.1.31 already stopped it from overwriting
+  the last known good copy — so the next open would warm-cache that same
+  empty result indefinitely instead of ever retrying. It's no longer
+  committed at all in that case.
+- If applying the generated query text to the document threw (rather than
+  just returning `false`), it wasn't caught — 0.1.31 only handled the
+  `false` case. Both now fall back to the clipboard the same way.
+- If a metadata generation commit failed AND its own rollback also failed,
+  the leftover copy of the previous generation could still be swept away by
+  a later cleanup pass. It's now left alone until a real target exists again.
+
 ## 0.1.31 - 2026-09-08
 
 ### Fixed
