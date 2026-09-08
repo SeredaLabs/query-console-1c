@@ -12,6 +12,7 @@ import {
   findChainAt, describeChain, findChainForCompletion, resolveCompletionTarget,
 } from '../../src/extension/hoverFieldInfo';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
+import { parseBatch } from '../../src/core/query/sdblParser';
 import type { MetaTable } from '../../src/core/metadata/types';
 
 describe('findChainAt', () => {
@@ -234,5 +235,64 @@ describe('resolveCompletionTarget', () => {
 
   it('undefined для невалідного тексту запиту, а не виняток', () => {
     expect(resolveCompletionTarget('ЦЕ НЕ ЗАПИТ ((((', resolver, ['Т'])).toBeUndefined();
+  });
+});
+
+describe('відновлення після зламаного SELECT-списку (реальний репро: пропущена кома)', () => {
+  // Точний випадок з реальної сесії: нове поле на новому рядку, кома до
+  // попереднього ("Артикул") ще не додана — parseBatch кидає виняток на
+  // ВСЬОМУ тексті, хоча ИЗ-блок (де насправді псевдонім) синтаксично цілий.
+  const table: MetaTable = {
+    kind: 'Справочник', name: 'Номенклатура', fullName: 'Справочник.Номенклатура',
+    fields: [
+      { name: 'Ссылка', kind: 'standard', types: [] },
+      { name: 'Наименование', kind: 'standard', types: [] },
+      { name: 'Код', kind: 'standard', types: [] },
+      { name: 'Артикул', kind: 'standard', types: [] },
+    ],
+  };
+  const nomenklaturaResolver = buildResolverFromTables([table]);
+  const BROKEN_TEXT =
+    'ВЫБРАТЬ\n' +
+    '\tНоменклатура.Ссылка КАК Ссылка,\n' +
+    '\tНоменклатура.Наименование КАК Наименование,\n' +
+    '\tНоменклатура.Код КАК Код,\n' +
+    '\tНоменклатура.Артикул КАК Артикул\n' +
+    '\tНоменклатура.\n' + // <- немає коми перед цим рядком
+    'ИЗ\n' +
+    '\tСправочник.Номенклатура КАК Номенклатура';
+
+  it('переконуємось, що звичайний розбір ДІЙСНО падає на цьому тексті (передумова тесту)', () => {
+    expect(() => parseBatch(BROKEN_TEXT)).toThrow();
+  });
+
+  it('describeChain усе одно резолвить псевдонім через ИЗ, попри зламаний SELECT', () => {
+    const desc = describeChain(BROKEN_TEXT, nomenklaturaResolver, ['Номенклатура']);
+    expect(desc.tableFullName).toBe('Справочник.Номенклатура');
+  });
+
+  it('resolveCompletionTarget усе одно повертає поля таблиці, попри зламаний SELECT', () => {
+    const target = resolveCompletionTarget(BROKEN_TEXT, nomenklaturaResolver, ['Номенклатура']);
+    expect(target?.meta.fullName).toBe('Справочник.Номенклатура');
+    expect(target?.meta.fields.map(f => f.name)).toEqual(['Ссылка', 'Наименование', 'Код', 'Артикул']);
+  });
+
+  it('undefined (не виняток), якщо запит зламаний настільки, що відновлення теж не рятує (немає ИЗ узагалі)', () => {
+    const text = 'ВЫБРАТЬ Номенклатура.Ссылка, Номенклатура.';
+    expect(describeChain(text, nomenklaturaResolver, ['Номенклатура'])).toEqual({});
+    expect(resolveCompletionTarget(text, nomenklaturaResolver, ['Номенклатура'])).toBeUndefined();
+  });
+
+  it('відновлення застосовується до КОЖНОЇ гілки ОБЪЕДИНЕНИЯ на верхньому рівні', () => {
+    const text =
+      'ВЫБРАТЬ Номенклатура.Ссылка КАК Ссылка ИЗ Справочник.Номенклатура КАК Номенклатура\n' +
+      'ОБЪЕДИНИТЬ ВСЕ\n' +
+      'ВЫБРАТЬ\n' +
+      '\tНоменклатура.Ссылка КАК Ссылка\n' + // <- немає коми перед наступним рядком
+      '\tНоменклатура.\n' + // <- та сама помилка, у ДРУГІЙ гілці
+      'ИЗ Справочник.Номенклатура КАК Номенклатура';
+    expect(() => parseBatch(text)).toThrow();
+    const target = resolveCompletionTarget(text, nomenklaturaResolver, ['Номенклатура']);
+    expect(target?.meta.fullName).toBe('Справочник.Номенклатура');
   });
 });
