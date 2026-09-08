@@ -4,6 +4,8 @@ import { writeLastKnownGood } from '../core/metadata/lastKnownGoodCache';
 import { loadMetadataWithFallback } from '../core/metadata/parser/loadMetadataSafe';
 import { createMetadataRepository } from '../core/metadata/metadataRepository';
 import { resolveOutPath, loadMetadata } from './metadataLoader';
+import { setMetadataResolver } from './metadataResolverCache';
+import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
 import { generate } from '../core/query/sdblGenerator';
 import { insertResult } from './insertResult';
 import type { SavedEditorState } from './insertResult';
@@ -145,6 +147,19 @@ export function createPanel(
         }
         metadataModel = r.model;
         writeLastKnownGood(context.globalStorageUri.fsPath, cfPath, r.model);
+        setMetadataResolver(cfPath, buildResolverFromTables(r.model.tables));
+
+        // Post-release audit P1 №3: раньше вебвью узнавало про «Обновить кэш»
+        // ТОЛЬКО через `refreshResult` (ok/message для тоста) — дерево метаданих,
+        // валідація тексту (`buildResolver()` в App.tsx) і DbTree лишалися на
+        // СТАРІЙ моделі до перезавантаження вікна. Пересилаємо свіжий
+        // `metadataTree` так само, як при `ready` — `SET_METADATA` у webview
+        // оновлює лише спільний `metadataCatalogRef`, не чіпаючи вже вибрані
+        // таблиці/поля користувача (безпечно навіть посеред редагування).
+        const repository = createMetadataRepository(metadataModel.tables);
+        const treeReply: HostMsg = { type: 'metadataTree', tables: [...repository.getTables()] };
+        panel.webview.postMessage(treeReply);
+
         const reply: HostMsg = { type: 'refreshResult', ok: true, message: vscode.l10n.t('Metadata cache updated.') };
         panel.webview.postMessage(reply);
       } catch (e) {

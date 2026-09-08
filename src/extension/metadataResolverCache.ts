@@ -9,14 +9,14 @@ import type { MetadataResolver } from '../core/query/metadataResolver';
  * App.tsx/ConstructorView.tsx — а не здесь). Hover-провайдеру (queryHoverProvider.ts)
  * резолвер нужен ДО открытия любой панели, поэтому строится независимо.
  *
- * ИЗВЕСТНОЕ УПРОЩЕНИЕ (документировано): кэш обновляется только когда меняется
- * САМ путь `cfPath` (настройка queryConsole.metadataPath / автоопределение) —
- * не отслеживает изменения файлов метаданных на диске между запросами hover,
- * и не подхватывает «Обновить кэш» из уже открытой панели конструктора. Полный
- * пересчёт `newestMtime` по всей выгрузке метаданных на КАЖДЫЙ hover был бы
- * заметной задержкой на реальных конфигурациях с тысячами файлов — а hover это
- * лишь advisory-подсказка (unknown != invalid), не более того;
- * пользователь всегда может перезапустить редактор для полного обновления.
+ * ИЗВЕСТНОЕ УПРОЩЕНИЕ (документировано): кэш НЕ отслеживает изменения файлов
+ * метаданных на диске между запросами hover сам по себе (полный пересчёт
+ * `newestMtime` по всей выгрузке на КАЖДЫЙ hover был бы заметной задержкой на
+ * реальных конфигурациях с тысячами файлов — а hover это лишь advisory-подсказка,
+ * unknown != invalid, не более того). Но «Обновить кэш» из уже открытой панели
+ * конструктора (post-release audit P1 №3) ТЕПЕРЬ подхватывается явно —
+ * `createPanel` вызывает `setMetadataResolver` сразу после успешного rebuild
+ * (см. panel.ts), передавая уже готовую модель без повторного парсинга.
  */
 let cached: { cfPath: string; resolverPromise: Promise<MetadataResolver> } | undefined;
 
@@ -32,4 +32,15 @@ export function getMetadataResolver(
   );
   cached = { cfPath, resolverPromise };
   return resolverPromise;
+}
+
+/**
+ * Явно засеивает кэш уже готовым резолвером — вызывается после успешного
+ * «Обновить кэш» в уже открытой панели конструктора (см. panel.ts), чтобы
+ * следующий hover/completion сразу видел свежие метаданные, без повторного
+ * парсинга (модель уже построена панелью) и без ожидания следующего изменения
+ * `cfPath`.
+ */
+export function setMetadataResolver(cfPath: string, resolver: MetadataResolver): void {
+  cached = { cfPath, resolverPromise: Promise.resolve(resolver) };
 }

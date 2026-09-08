@@ -136,6 +136,44 @@ test.describe('Query Constructor Webview', () => {
     await expect(page.locator('[data-field-path="Наименование"]')).toBeVisible();
   });
 
+  // Post-release audit P1 №3: «Обновить кэш» в уже відкритій панелі тепер шле
+  // свіжий `metadataTree` (panel.ts), а не лише тост `refreshResult`. Тут
+  // симулюємо той самий другий `metadataTree`, який тепер реально надсилає хост
+  // після refresh — перевіряємо, що (а) нова таблиця стає видимою в дереві БД, і
+  // (б) уже додана користувачем таблиця НЕ зникає з панелі «Таблицы» (SET_METADATA
+  // у webview зачіпає лише спільний каталог метаданих, не модель запиту).
+  test('«Обновить кэш»: другий metadataTree додає нову таблицю в дерево і НЕ скидає вже вибрану таблицю', async ({ page }) => {
+    await page.goto(BASE);
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await expect(page.locator('[data-table-alias="Валюты"]')).toBeVisible();
+
+    // Симулюємо refresh: та сама Валюты + абсолютно нова таблиця, якої не було
+    // в початковому metadataTree харнесу.
+    await page.evaluate(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: {
+          type: 'metadataTree',
+          tables: [
+            {
+              kind: 'Справочник', name: 'Валюты', fullName: 'Справочник.Валюты',
+              fields: [{ name: 'Ссылка', kind: 'standard', types: [] }],
+            },
+            {
+              kind: 'Справочник', name: 'Организации', fullName: 'Справочник.Организации',
+              fields: [{ name: 'Ссылка', kind: 'standard', types: [] }],
+            },
+          ],
+        },
+      }));
+    });
+
+    // (а) нова таблиця реально з'явилась у дереві БД після "refresh".
+    await expect(page.locator('[data-table-fullname="Справочник.Организации"]')).toBeVisible();
+    // (б) вже додана таблиця лишилась у панелі «Таблицы» — refresh не скинув модель.
+    await expect(page.locator('[data-table-alias="Валюты"]')).toBeVisible();
+  });
+
   test('adds table to Tables panel via > button', async ({ page }) => {
     await page.goto(BASE);
     // Expand group and click table to focus it
