@@ -5,6 +5,31 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.31 - 2026-09-08
+
+### Fixed
+
+- The extension only activated when one of its 3 commands was run first —
+  opening a `.bsl` file and just hovering or typing (without ever using the
+  command palette) got no hover or autocomplete at all. It now activates on
+  its own.
+- "Refresh Cache" in an already-open Query Designer only showed a toast — the
+  DB tree, field validation, and hover/autocomplete kept using the model
+  from before the refresh until the window was reloaded. It now updates
+  immediately.
+- If applying the generated query text to the document failed for reasons
+  outside the already-handled "source file changed" case, the text was
+  silently lost — not inserted, not copied to clipboard, no message. It now
+  falls back to the clipboard with a clear message either way. Also fixed a
+  related case where that same clipboard fallback dropped the `"…"` string
+  wrapping around the query text.
+- A metadata rebuild that failed partway through could leave the previous,
+  working metadata generation missing on disk instead of restored.
+- A metadata export path that isn't a real 1C configuration (e.g. temporarily
+  empty or misconfigured) could silently overwrite the last known good
+  metadata with an empty one, affecting every subsequent open until a real
+  rebuild succeeded.
+
 ## 0.1.30 - 2026-09-08
 
 ### Added
