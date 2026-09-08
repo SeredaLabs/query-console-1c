@@ -196,6 +196,20 @@ describe('cleanupStaleSiblings', () => {
     const remaining = fs.readdirSync(outPath).sort();
     expect(remaining).toEqual(['cf', 'cf-managed', 'unrelated-dir']);
   });
+
+  it('post-release RE-audit P1 №5 (двойной сбой): НЕ удаляет .previous-*, у которого target отсутствует', () => {
+    const outPath = freshOutPath();
+    // Симулируем состояние ПОСЛЕ двойного сбоя commitGeneration: и второй
+    // rename, и его собственный rollback оба упали — "cf" отсутствует
+    // вообще, а .previous-* — единственная уцелевшая копия.
+    fs.mkdirSync(path.join(outPath, 'cf.previous-9999'), { recursive: true });
+    fs.writeFileSync(path.join(outPath, 'cf.previous-9999', 'configuration.yaml'), 'last-surviving-copy');
+
+    cleanupStaleSiblings(outPath);
+
+    expect(fs.existsSync(path.join(outPath, 'cf.previous-9999'))).toBe(true);
+    expect(fs.readFileSync(path.join(outPath, 'cf.previous-9999', 'configuration.yaml'), 'utf8')).toBe('last-surviving-copy');
+  });
 });
 
 describe('stagingDirFor', () => {

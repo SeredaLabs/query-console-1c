@@ -106,4 +106,20 @@ describe('buildMetadataSnapshotFromXml — direct-путь (без YAML) на р
     // не должно закоммититься вообще.
     expect(fs.existsSync(snapshotOutPath)).toBe(false);
   });
+
+  it('post-release RE-audit P1 №6: бросает и НЕ коммитит, если Configuration.xml есть, но результат — 0 таблиц', () => {
+    const root = freshTmpDir();
+    const cfPath = path.join(root, 'cf-configuration-only');
+    fs.mkdirSync(cfPath, { recursive: true });
+    fs.writeFileSync(path.join(cfPath, 'Configuration.xml'), '<x/>'); // валидный маркер, но нет ни Catalogs, ни Documents
+    const snapshotOutPath = path.join(root, 'snapshot-out');
+
+    expect(() => buildMetadataSnapshotFromXml(cfPath, snapshotOutPath)).toThrow(/0 таблиц/);
+    // Раньше 0-табличный результат ВСЁ РАВНО коммитился как новое "текущее"
+    // состояние — следующий вызов loadMetadataSnapshotFirst тепло вернул бы
+    // именно его навсегда, даже не пытаясь пересобрать. Теперь ничего не
+    // коммитится вообще — вызывающий код (loadMetadataWithFallback) уходит в
+    // YAML-фолбек, как и при любой другой ошибке прямого пути.
+    expect(fs.existsSync(snapshotOutPath)).toBe(false);
+  });
 });

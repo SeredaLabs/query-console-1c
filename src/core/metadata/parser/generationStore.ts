@@ -85,7 +85,16 @@ export function stagingDirFor(outPath: string): string {
 /** Подчищает staging/discard-каталоги, оставшиеся от прежних прерванных сборок.
  * Это безопасно удалить рекурсивно: имя однозначно порождено НАМИ (см.
  * `stagingDirFor`/discard-именование в `commitGeneration`), не пользовательский
- * unowned каталог — §7 запрещает удалять чужое, а не наши временные артефакты. */
+ * unowned каталог — §7 запрещает удалять чужое, а не наши временные артефакты.
+ *
+ * Post-release RE-audit (P1 №5, двойной сбой): `commitGeneration` теперь
+ * пытается откатить `.previous-*` обратно в `target`, если второй rename
+ * падает — но если ТОТ откат тоже не удался (например, ФС стала недоступна на
+ * запись в обоих направлениях), `target` остаётся ОТСУТСТВУЮЩИМ, а
+ * `.previous-*` — единственной уцелевшей копией. Такой `.previous-*` НЕ
+ * удаляем — только те, у которых `target` уже существует (значит, коммит
+ * когда-то успешно прошёл, и это просто обычный хвост, безопасный для очистки).
+ */
 export function cleanupStaleSiblings(outPath: string): void {
   const base = path.join(outPath, 'cf');
   const parent = path.dirname(base);
@@ -93,7 +102,11 @@ export function cleanupStaleSiblings(outPath: string): void {
   const baseName = path.basename(base);
   for (const entry of fs.readdirSync(parent)) {
     if (entry === baseName || entry === baseName + MANAGED_SUFFIX) continue;
-    if (entry.startsWith(`${baseName}.building-`) || entry.startsWith(`${baseName}.previous-`)) {
+    if (entry.startsWith(`${baseName}.building-`)) {
+      fs.rmSync(path.join(parent, entry), { recursive: true, force: true });
+      continue;
+    }
+    if (entry.startsWith(`${baseName}.previous-`) && fs.existsSync(path.join(parent, baseName))) {
       fs.rmSync(path.join(parent, entry), { recursive: true, force: true });
     }
   }

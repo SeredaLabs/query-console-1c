@@ -69,7 +69,16 @@ export async function insertResult(text: string, saved?: SavedEditorState): Prom
     // the generated query text with no fallback and no notification at all. Fall
     // through to the exact same clipboard fallback used when no editor is
     // available at all, rather than returning here on a false positive of success.
-    const applied = await targetEditor.edit(b => b.replace(range, payload));
+    // It can also REJECT outright (post-release RE-audit) — e.g. the editor was
+    // disposed between our lookup and this call — treated identically, not left
+    // as an unhandled rejection that would leave the panel stuck with no
+    // feedback at all.
+    let applied: boolean;
+    try {
+      applied = await targetEditor.edit(b => b.replace(range, payload));
+    } catch {
+      applied = false;
+    }
     if (applied) {
       await vscode.window.showTextDocument(targetEditor.document, targetEditor.viewColumn);
       return;

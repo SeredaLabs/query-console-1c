@@ -106,6 +106,18 @@ export interface SnapshotBuildResult {
  * подхватывается существующим `try/catch` в `loadMetadataWithFallback`
  * (loadMetadataSafe.ts) и уходит в проверенный YAML-фолбек, как и любая другая
  * ошибка прямого пути.
+ *
+ * Второй, отдельный guard (post-release RE-audit): наличия Configuration.xml
+ * недостаточно САМО ПО СЕБЕ — если результат всё равно оказался 0 таблиц
+ * (например, Catalogs/Documents исчезли, а Configuration.xml уцелел), раньше
+ * это ВСЁ РАВНО коммитилось как новый "текущий" снимок. `metadataLoader.ts`
+ * уже не даёт такому результату затереть last-known-good, но САМ снимок
+ * становился новым закоммиченным состоянием — и следующий же вызов
+ * `loadMetadataSnapshotFirst` находил его "свежим" (mtime не изменился) и
+ * тепло возвращал этот пустой снимок из кэша НАВСЕГДА, даже не пытаясь
+ * пересобрать и не заглядывая в last-known-good вообще. Отказываемся
+ * коммитить 0-табличный результат вовсе — бросок здесь так же уходит в
+ * YAML-фолбек, как и любая другая ошибка прямого пути.
  */
 export function buildMetadataSnapshotFromXml(cfPath: string, snapshotOutPath: string): SnapshotBuildResult {
   if (!fs.existsSync(path.join(cfPath, 'Configuration.xml'))) {
@@ -114,6 +126,9 @@ export function buildMetadataSnapshotFromXml(cfPath: string, snapshotOutPath: st
   const { objects, issues } = scanConfigurationObjects(cfPath);
   const commonAttributes = scanCommonAttributes(cfPath, issues);
   const model = buildMetadataModel(objects, commonAttributes);
+  if (model.tables.length === 0) {
+    throw new Error(`"${cfPath}": пересобранные метаданные содержат 0 таблиц — отказываемся коммитить как новое текущее состояние.`);
+  }
   const snapshot = commitMetadataSnapshot(model, snapshotOutPath);
   return { snapshot, model, issues };
 }

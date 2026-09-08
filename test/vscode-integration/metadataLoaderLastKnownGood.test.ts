@@ -25,6 +25,7 @@ describe('Extension Host: rebuild с 0 таблиц не затирает last-k
     const outPath = path.join(root, 'out');
     const lkgDir = path.join(root, 'global-storage');
     fs.mkdirSync(lkgDir, { recursive: true });
+    const snapshotFile = path.join(outPath, 'snapshot', 'cf', 'metadata-snapshot.json');
 
     const fakeContext = { globalStorageUri: vscode.Uri.file(lkgDir) } as unknown as vscode.ExtensionContext;
     // loadMetadata только вызывает channel.appendLine — лёгкая заглушка вместо
@@ -55,6 +56,19 @@ describe('Extension Host: rebuild с 0 таблиц не затирает last-k
         lkgAfterSecond && lkgAfterSecond.model.tables.length > 0,
         'last-known-good НЕ должен быть затёрт пустым результатом'
       );
+
+      // Post-release RE-audit: раньше 0-табличный результат ВСЁ РАВНО
+      // коммитился как новый "текущий" снимок — следующий вызов тепло вернул
+      // бы именно ЕГО навсегда (`direct-snapshot-cached`), даже не заглядывая
+      // в last-known-good. Теперь ничего не должно было закоммититься вообще.
+      assert.strictEqual(fs.existsSync(snapshotFile), false, 'пустой результат не должен был закоммититься как новый "текущий" снимок');
+
+      // Восстанавливаем реальные данные — третий вызов должен СНОВА увидеть
+      // таблицы, а не "залипнуть" на пустом результате навсегда.
+      fs.cpSync(path.join(FIXTURE_CF, 'Catalogs'), path.join(cfPath, 'Catalogs'), { recursive: true });
+      fs.cpSync(path.join(FIXTURE_CF, 'Documents'), path.join(cfPath, 'Documents'), { recursive: true });
+      const third = await loadMetadata(cfPath, outPath, fakeContext, channel);
+      assert.ok(third.tables.length > 0, 'после восстановления реальных данных третий вызов должен снова увидеть таблицы');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
