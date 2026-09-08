@@ -136,6 +136,29 @@ describe('commitGeneration — target существует, но НЕ наш (le
   });
 });
 
+describe('commitGeneration — post-release audit P1 №5: второй rename падает', () => {
+  it('откатывает discard обратно в target и пробрасывает исходную ошибку, не оставляя target отсутствующим', () => {
+    const outPath = freshOutPath();
+    commitGeneration(makeStagingWithContent(outPath), outPath); // первая, валидная генерация
+    const cf = path.join(outPath, 'cf');
+    fs.writeFileSync(path.join(cf, 'marker.yaml'), 'original-generation-content');
+
+    // stagingDir, который никогда не создавался — второй renameSync внутри
+    // commitGeneration гарантированно бросит ENOENT, симулируя реальный сбой
+    // (staging исчез/ФС недоступна) БЕЗ моканья fs.
+    const bogusStaging = path.join(outPath, 'cf.building-does-not-exist');
+    expect(() => commitGeneration(bogusStaging, outPath)).toThrow();
+
+    // target восстановлен — НЕ отсутствует, с ОРИГИНАЛЬНЫМ содержимым.
+    expect(fs.existsSync(cf)).toBe(true);
+    expect(isOwnedGeneration(cf)).toBe(true);
+    expect(fs.readFileSync(path.join(cf, 'marker.yaml'), 'utf8')).toBe('original-generation-content');
+    // Никакого осиротевшего .previous-* не осталось — откат переименовал его обратно.
+    const previousSiblings = fs.readdirSync(outPath).filter(e => e.startsWith('cf.previous-'));
+    expect(previousSiblings).toEqual([]);
+  });
+});
+
 describe('resolveManagedCfDir', () => {
   it('возвращает base "cf", если managed не существует и владения нет', () => {
     const outPath = freshOutPath();

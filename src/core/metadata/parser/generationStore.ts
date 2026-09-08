@@ -140,9 +140,29 @@ export function commitGeneration(stagingDir: string, outPath: string): CommitRes
     // не перезаписываем то, в чём не уверены.
     throw new Error(`Каталог "${target}" существует, но не распознан как управляемый — commit отменён.`);
   }
+  // Post-release audit P1 №5: между этими двумя rename было узкое окно, для
+  // которого не было отката — если ВТОРОЙ rename падал (staging исчез, ФС
+  // недоступна на запись, и т.п.), функция просто пробрасывала исключение,
+  // оставляя `target` ОТСУТСТВУЮЩИМ (старая генерация уже лежит под именем
+  // discard, но НЕ на своём месте) — а последующий `cleanupStaleSiblings` мог
+  // вообще удалить этот осиротевший `.previous-*`, забрав единственную
+  // уцелевшую копию. Теперь при падении второго rename явно пытаемся откатить
+  // discard обратно на `target`, прежде чем пробросить исходную ошибку.
   const discard = `${target}.previous-${Date.now()}`;
   fs.renameSync(target, discard);
-  fs.renameSync(stagingDir, target);
+  try {
+    fs.renameSync(stagingDir, target);
+  } catch (e) {
+    try {
+      fs.renameSync(discard, target);
+    } catch {
+      // Откат тоже не удался (например, ФС стала недоступна на запись) — не
+      // глушим это молча, но и не подменяем исходную ошибку: она куда полезнее
+      // для диагностики. `discard` остаётся на диске нетронутым — лучше
+      // возможно осиротевшая копия, чем гарантированно удалённая.
+    }
+    throw e instanceof Error ? e : new Error(String(e));
+  }
   fs.rmSync(discard, { recursive: true, force: true });
   return { targetDir: target, redirected };
 }
