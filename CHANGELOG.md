@@ -5,6 +5,18 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.33 - 2026-09-08
+
+### Fixed
+
+- Hover and autocomplete went silent for the *whole* query the moment any
+  part of it had a syntax issue — most commonly while actively typing (a new
+  field added on its own line before its preceding comma), since resolving
+  even a single alias required the entire query to parse successfully. They
+  now recover by temporarily treating the field list as a placeholder for
+  that one lookup, since only the `ИЗ` clause is actually needed to answer
+  "what does this alias refer to".
+
 ## 0.1.32 - 2026-09-08
 
 ### Fixed
