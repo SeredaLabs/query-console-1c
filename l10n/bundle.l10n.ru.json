@@ -26,6 +26,7 @@
   "[1C Query] Direct path and YAML fallback failed: {error}; trying committed YAML or last known good metadata.": "[1C Query] Прямой путь и резервный YAML не сработали: {error}; пробуем сохранённый YAML или последний известный рабочий снимок метаданных.",
   "[1C Query] WARNING: metadata could not be rebuilt; using last known good snapshot from {date} ({count} tables).": "[1C Query] ВНИМАНИЕ: не удалось перестроить метаданные; используется последний известный рабочий снимок от {date} ({count} таблиц).",
   "[1C Query] Metadata could not be built and no last known good snapshot exists.": "[1C Query] Не удалось построить метаданные, а последний известный рабочий снимок отсутствует.",
+  "[1C Query] WARNING: rebuilt metadata has 0 tables; not overwriting the last known good snapshot.": "[1C Query] ВНИМАНИЕ: перестроенные метаданные содержат 0 таблиц; последний известный рабочий снимок не перезаписан.",
   "[1C Query] Rebuilding metadata index: {source} → {output}": "[1C Query] Перестроение индекса метаданных: {source} → {output}",
   "[1C Query] Metadata index rebuilt via {source} in {duration} ms ({count} tables){fallback}": "[1C Query] Индекс метаданных перестроен через {source} за {duration} мс ({count} таблиц){fallback}",
   "Metadata index rebuilt: {count} tables. Output: {path}": "Индекс метаданных перестроен: {count} таблиц. Результат: {path}",

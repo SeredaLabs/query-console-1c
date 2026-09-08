@@ -14,6 +14,20 @@ import type { MetadataModel } from '../core/metadata/types';
  * (direct XML→JSON → его собственный YAML-откат → уже закоммиченная YAML-генерация
  * → last-known-good → честная пустая модель).
  */
+/**
+ * Post-release audit P1 №6: успешный rebuild с НУЛЕМ таблиц почти всегда значит
+ * "cfPath указывает не туда" (пустой/повреждённый каталог), а не "у пользователя
+ * реально пустая конфигурация" — но раньше он всё равно затирал last-known-good,
+ * то есть один случайный сбой (временно недоступный/опустевший каталог экспорта)
+ * мог убить единственный сохранённый рабочий снимок для ВСЕХ следующих открытий.
+ * Не влияет на то, что возвращается ИЗ ЭТОГО вызова (тот же результат по-прежнему
+ * отдаётся вызывающему — unknown != invalid), только на то, что переживает как
+ * "последний хороший" вариант для будущих сбоев.
+ */
+export function isTrustworthyForLastKnownGood(model: MetadataModel): boolean {
+  return model.tables.length > 0;
+}
+
 export function resolveOutPath(context: vscode.ExtensionContext): string {
   const config = vscode.workspace.getConfiguration('queryConsole');
   const outSetting = config.get<string>('parserOutputPath') || 'tmp/parser_data';
@@ -63,7 +77,13 @@ export async function loadMetadata(
           source: r.source, duration: Date.now() - t, count: r.model.tables.length, fallback: fallbackNote,
         })
       );
-      writeLastKnownGood(lkgDir, cfPath, r.model);
+      if (isTrustworthyForLastKnownGood(r.model)) {
+        writeLastKnownGood(lkgDir, cfPath, r.model);
+      } else {
+        channel.appendLine(vscode.l10n.t(
+          '[1C Query] WARNING: rebuilt metadata has 0 tables; not overwriting the last known good snapshot.'
+        ));
+      }
       return r.model;
     } catch (e) {
       channel.appendLine(vscode.l10n.t(
@@ -96,7 +116,13 @@ export async function loadMetadata(
         { yamlPath: cfYamlDir, xmlPath: cfPath }
       ));
     }
-    writeLastKnownGood(lkgDir, cfPath, model);
+    if (isTrustworthyForLastKnownGood(model)) {
+      writeLastKnownGood(lkgDir, cfPath, model);
+    } else {
+      channel.appendLine(vscode.l10n.t(
+        '[1C Query] WARNING: rebuilt metadata has 0 tables; not overwriting the last known good snapshot.'
+      ));
+    }
     return model;
   }
 

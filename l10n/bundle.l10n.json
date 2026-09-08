@@ -26,6 +26,7 @@
   "[1C Query] Direct path and YAML fallback failed: {error}; trying committed YAML or last known good metadata.": "[1C Query] Direct path and YAML fallback failed: {error}; trying committed YAML or last known good metadata.",
   "[1C Query] WARNING: metadata could not be rebuilt; using last known good snapshot from {date} ({count} tables).": "[1C Query] WARNING: metadata could not be rebuilt; using last known good snapshot from {date} ({count} tables).",
   "[1C Query] Metadata could not be built and no last known good snapshot exists.": "[1C Query] Metadata could not be built and no last known good snapshot exists.",
+  "[1C Query] WARNING: rebuilt metadata has 0 tables; not overwriting the last known good snapshot.": "[1C Query] WARNING: rebuilt metadata has 0 tables; not overwriting the last known good snapshot.",
   "[1C Query] Rebuilding metadata index: {source} → {output}": "[1C Query] Rebuilding metadata index: {source} → {output}",
   "[1C Query] Metadata index rebuilt via {source} in {duration} ms ({count} tables){fallback}": "[1C Query] Metadata index rebuilt via {source} in {duration} ms ({count} tables){fallback}",
   "Metadata index rebuilt: {count} tables. Output: {path}": "Metadata index rebuilt: {count} tables. Output: {path}",

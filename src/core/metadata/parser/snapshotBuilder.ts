@@ -96,8 +96,21 @@ export interface SnapshotBuildResult {
  * путём) обработчики `xmlScan.ts` → (общая с production YAML-путём) конверсия
  * `buildMetadataModel` → committed JSON snapshot. НЕ строит и не читает YAML —
  * см. комментарий модуля.
+ *
+ * Post-release audit P1 №6: `scanConfigurationObjects` не бросает и не сообщает
+ * ни одной issue, если `cfPath` вообще не является выгрузкой конфигурации
+ * (каждый `fs.existsSync(subdir)` внутри просто `continue`) — пустой/неверный
+ * каталог раньше молча коммитился как "успешный" снимок из 0 таблиц. Требуем
+ * `Configuration.xml` — тот же маркер, что уже использует `findConfigurationXmlDir`
+ * (resolveCfPath.ts) для автообнаружения — ДО начала сканирования; бросок здесь
+ * подхватывается существующим `try/catch` в `loadMetadataWithFallback`
+ * (loadMetadataSafe.ts) и уходит в проверенный YAML-фолбек, как и любая другая
+ * ошибка прямого пути.
  */
 export function buildMetadataSnapshotFromXml(cfPath: string, snapshotOutPath: string): SnapshotBuildResult {
+  if (!fs.existsSync(path.join(cfPath, 'Configuration.xml'))) {
+    throw new Error(`"${cfPath}" не похож на выгрузку конфигурации 1С — отсутствует Configuration.xml.`);
+  }
   const { objects, issues } = scanConfigurationObjects(cfPath);
   const commonAttributes = scanCommonAttributes(cfPath, issues);
   const model = buildMetadataModel(objects, commonAttributes);

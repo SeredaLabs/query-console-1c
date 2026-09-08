@@ -3,7 +3,7 @@ import * as path from 'path';
 import { writeLastKnownGood } from '../core/metadata/lastKnownGoodCache';
 import { loadMetadataWithFallback } from '../core/metadata/parser/loadMetadataSafe';
 import { createMetadataRepository } from '../core/metadata/metadataRepository';
-import { resolveOutPath, loadMetadata } from './metadataLoader';
+import { resolveOutPath, loadMetadata, isTrustworthyForLastKnownGood } from './metadataLoader';
 import { setMetadataResolver } from './metadataResolverCache';
 import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
 import { generate } from '../core/query/sdblGenerator';
@@ -146,7 +146,18 @@ export function createPanel(
           for (const issue of r.issues) channel.appendLine(`[1C Query]   ${issue.stage} ${issue.file ?? ''}: ${issue.message}`);
         }
         metadataModel = r.model;
-        writeLastKnownGood(context.globalStorageUri.fsPath, cfPath, r.model);
+        // Post-release audit P1 №6: не даём случайному пустому rebuild (например,
+        // временно недоступный/опустевший каталог экспорта) затереть последний
+        // РЕАЛЬНО рабочий last-known-good — сам результат ЭТОГО refresh
+        // по-прежнему честно показывается пользователю ниже (unknown != invalid),
+        // затирается только то, что переживает как страховка на будущие сбои.
+        if (isTrustworthyForLastKnownGood(r.model)) {
+          writeLastKnownGood(context.globalStorageUri.fsPath, cfPath, r.model);
+        } else {
+          channel.appendLine(vscode.l10n.t(
+            '[1C Query] WARNING: rebuilt metadata has 0 tables; not overwriting the last known good snapshot.'
+          ));
+        }
         setMetadataResolver(cfPath, buildResolverFromTables(r.model.tables));
 
         // Post-release audit P1 №3: раньше вебвью узнавало про «Обновить кэш»

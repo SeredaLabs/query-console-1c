@@ -94,4 +94,16 @@ describe('buildMetadataSnapshotFromXml — direct-путь (без YAML) на р
     const viaYaml = loadMetadataFromYaml(yamlSummary.outCfDir);
     expect(persisted.model).toEqual(viaYaml);
   });
+
+  it('post-release audit P1 №6: бросает, если у cfPath нет Configuration.xml (пустой/неверный каталог)', () => {
+    const root = freshTmpDir();
+    const cfPath = path.join(root, 'empty-not-a-cf-export');
+    fs.mkdirSync(cfPath, { recursive: true }); // существует, но НЕ реальная выгрузка
+    const snapshotOutPath = path.join(root, 'snapshot-out');
+
+    expect(() => buildMetadataSnapshotFromXml(cfPath, snapshotOutPath)).toThrow(/Configuration\.xml/);
+    // Раньше это тихо коммитило "успешный" снимок из 0 таблиц — теперь ничего
+    // не должно закоммититься вообще.
+    expect(fs.existsSync(snapshotOutPath)).toBe(false);
+  });
 });
