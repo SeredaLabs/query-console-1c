@@ -20,7 +20,8 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:queryConsole1c.openFromRange"
+    "onCommand:queryConsole1c.openFromRange",
+    "onStartupFinished"
   ],
   "main": "./out/extension/extension.js",
   "l10n": "./l10n",
