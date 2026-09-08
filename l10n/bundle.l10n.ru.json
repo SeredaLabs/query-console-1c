@@ -11,6 +11,7 @@
   "Metadata parsing failed: {error}": "Не удалось разобрать метаданные: {error}",
   "The source file changed while Query Designer was open. The query text was copied to the clipboard; insert it manually.": "Исходный файл изменился, пока Конструктор запросов был открыт. Текст запроса скопирован в буфер обмена; вставьте его вручную.",
   "The query text was copied to the clipboard.": "Текст запроса скопирован в буфер обмена.",
+  "Could not apply the change to the document automatically. The query text was copied to the clipboard; insert it manually.": "Не удалось автоматически применить изменение к документу. Текст запроса скопирован в буфер обмена; вставьте его вручную.",
   " (direct path failed: {reason})": " (прямой путь не сработал: {reason})",
   "[1C Query] Metadata built via {source} in {duration} ms ({count} tables){fallback}": "[1C Query] Метаданные построены через {source} за {duration} мс ({count} таблиц){fallback}",
   "[1C Query] WARNING: YAML at {yamlPath} is older than XML at {xmlPath}; rebuilding failed, so displayed metadata may be stale.": "[1C Query] ВНИМАНИЕ: YAML в {yamlPath} старше XML в {xmlPath}; пересборка не удалась, поэтому показанные метаданные могут быть устаревшими.",

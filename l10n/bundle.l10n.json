@@ -11,6 +11,7 @@
   "Metadata parsing failed: {error}": "Metadata parsing failed: {error}",
   "The source file changed while Query Designer was open. The query text was copied to the clipboard; insert it manually.": "The source file changed while Query Designer was open. The query text was copied to the clipboard; insert it manually.",
   "The query text was copied to the clipboard.": "The query text was copied to the clipboard.",
+  "Could not apply the change to the document automatically. The query text was copied to the clipboard; insert it manually.": "Could not apply the change to the document automatically. The query text was copied to the clipboard; insert it manually.",
   " (direct path failed: {reason})": " (direct path failed: {reason})",
   "[1C Query] Metadata built via {source} in {duration} ms ({count} tables){fallback}": "[1C Query] Metadata built via {source} in {duration} ms ({count} tables){fallback}",
   "[1C Query] WARNING: YAML at {yamlPath} is older than XML at {xmlPath}; rebuilding failed, so displayed metadata may be stale.": "[1C Query] WARNING: YAML at {yamlPath} is older than XML at {xmlPath}; rebuilding failed, so displayed metadata may be stale.",

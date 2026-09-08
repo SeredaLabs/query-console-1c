@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { formatAsBslString } from '../core/query/sdblGenerator';
 import { buildResultProcessingCode } from '../core/query/resultProcessingTemplate';
+import { selectClipboardFallbackReason } from './clipboardFallback';
 
 export interface SavedEditorState {
   document: vscode.TextDocument;
@@ -62,15 +63,31 @@ export async function insertResult(text: string, saved?: SavedEditorState): Prom
       : saved?.wrapAsBslString
         ? formatAsBslString(text)
         : text;
-    await targetEditor.edit(b => b.replace(range, payload));
-    await vscode.window.showTextDocument(targetEditor.document, targetEditor.viewColumn);
-  } else {
-    const payload = saved?.resultProcessing ? buildResultProcessingCode(text) : text;
-    await vscode.env.clipboard.writeText(payload);
-    vscode.window.showInformationMessage(
-      staleDocument
-        ? vscode.l10n.t('The source file changed while Query Designer was open. The query text was copied to the clipboard; insert it manually.')
-        : vscode.l10n.t('The query text was copied to the clipboard.')
-    );
+    // `TextEditor.edit()` can still return `false` even after our own staleness
+    // check above (VS Code detects its own concurrent-edit conflict internally) —
+    // post-release audit P1 №4: this was previously ignored, silently discarding
+    // the generated query text with no fallback and no notification at all. Fall
+    // through to the exact same clipboard fallback used when no editor is
+    // available at all, rather than returning here on a false positive of success.
+    const applied = await targetEditor.edit(b => b.replace(range, payload));
+    if (applied) {
+      await vscode.window.showTextDocument(targetEditor.document, targetEditor.viewColumn);
+      return;
+    }
   }
+
+  const payload = saved?.resultProcessing
+    ? buildResultProcessingCode(text)
+    : saved?.wrapAsBslString
+      ? formatAsBslString(text)
+      : text;
+  await vscode.env.clipboard.writeText(payload);
+  const reason = selectClipboardFallbackReason(staleDocument, !!targetEditor);
+  vscode.window.showInformationMessage(
+    reason === 'staleDocument'
+      ? vscode.l10n.t('The source file changed while Query Designer was open. The query text was copied to the clipboard; insert it manually.')
+      : reason === 'editFailed'
+        ? vscode.l10n.t('Could not apply the change to the document automatically. The query text was copied to the clipboard; insert it manually.')
+        : vscode.l10n.t('The query text was copied to the clipboard.')
+  );
 }
