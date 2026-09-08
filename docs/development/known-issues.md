@@ -25,6 +25,13 @@
   `РегистрРасчета.*.ФактическийПериодДействия`, and
   `Последовательность.*.Границы`; marked models are blocked from apply.
 - Auto-discovery is bounded and may require an explicit metadata path.
+- Hover and autocomplete resolve a table alias across the entire query batch
+  (every `ОБЪЕДИНЕНИЕ` branch and subquery at once), not just the scope under
+  the cursor -- a repeated alias for a different source elsewhere in the same
+  batch can show the wrong field/table info. Advisory only: never affects the
+  generated query text or Apply. Fixing this needs position-aware,
+  scope-tracking resolution (`hoverFieldInfo.ts`), a separate undertaking from
+  the current flat, first-match lookup.
 
 These are documented user boundaries, not permission to weaken tests. Add a
 regression test when fixing one and update all three limitations pages.

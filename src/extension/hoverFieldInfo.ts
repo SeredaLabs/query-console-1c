@@ -18,7 +18,9 @@
  * всего пакета, поэтому это даёт верный результат в подавляющем большинстве
  * случаев; в редком случае двух подзапросов с ОДНИМ и тем же псевдонимом hover
  * может показать не тот источник — не более того (advisory-информация, не влияет
- * на Apply/round-trip).
+ * на Apply/round-trip). Публично задокументировано как known limitation в
+ * docs/en(ru,uk)/limitations.md и docs/development/known-issues.md — обновляй
+ * оба места, если это когда-нибудь будет исправлено или переформулировано.
  */
 import { parseBatch } from '../core/query/sdblParser';
 import type { BatchDocument, } from '../core/query/batchModel';

@@ -1,5 +1,5 @@
 <!--
-source_version: 2
+source_version: 3
 translation_status: canonical
 -->
 
@@ -19,6 +19,15 @@ Cursor detection supports static BSL strings beginning with `ВЫБРАТЬ` or
 `УНИЧТОЖИТЬ`. The tolerant parser and validator are not a complete 1C compiler.
 Successful parsing does not prove that every custom expression, field,
 dot-navigation chain, or platform-specific construct is valid.
+
+## 🔀 Hover and autocomplete ignore query scope
+
+Hovering over a field or triggering autocomplete resolves the table alias
+across the *entire* query batch — every `ОБЪЕДИНЕНИЕ` branch and subquery at
+once, not just the one under the cursor. If the same alias name is reused for
+a different source in another branch or subquery, the shown field/table info
+can be wrong. This is advisory only: it never affects the generated query
+text or what Apply inserts.
 
 ## ⛔ Round-trip exclusions
 
