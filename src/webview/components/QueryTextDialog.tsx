@@ -108,17 +108,17 @@ function toCmDiagnostics(text: string, diagnostics: QueryDiagnostic[]): Diagnost
 }
 
 /**
- * Раскладка v2 окна «Текст запроса» (см.
- * docs/history/superpowers/specs/2026-09-02-query-text-dialog-v2-design.md):
- * тулбар / редактор + сворачиваемая панель «Структура» / статусная строка.
+ * Layout: тулбар / редактор + сворачиваемая панель «Структура» / статусная строка.
  *
- * Стадия 4: кнопка «Проверить» и фоновая проверка с дебаунсом ведут на ОДИН и тот же
- * `QueryAnalysisService.analyze()` (design-док риск п.0.5) — кнопка просто форсирует
- * немедленный вызов вместо ожидания дебаунса. `checked` хранит текст И результат ВМЕСТЕ —
- * `checkPending` это просто `checked.text !== text`, без отдельного флага и race-condition
- * между «что показывает статус» и «для какого текста».
+ * «Проверить» и фоновая проверка с дебаунсом ведут на ОДИН и тот же
+ * `QueryAnalysisService.analyze()` (см. её docstring в
+ * src/core/query/queryAnalysisService.ts — там обоснование, почему analyze() обязана
+ * идти через tryOpenBatch, а не отдельный парсер) — кнопка просто форсирует
+ * немедленный вызов вместо ожидания дебаунса. `checked` хранит текст И результат
+ * ВМЕСТЕ — `checkPending` это просто `checked.text !== text`, без отдельного флага и
+ * race-condition между «что показывает статус» и «для какого текста».
  *
- * `onApply`/`onClose` — ТЕ ЖЕ обработчики, что использовала старая модалка.
+ * `onApply`/`onClose` — ТЕ ЖЕ обработчики, что использовала старая модалка (до v2).
  */
 export function QueryTextDialog({ text, error, resolver, onChange, onApply, onClose }: QueryTextDialogProps): React.ReactElement {
   // Единый слот правой панели — «Структура» и «Параметры» переключают его содержимое

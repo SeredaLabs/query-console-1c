@@ -38,3 +38,15 @@ together and cover both directions. Keep VS Code and browser dependencies out of
 
 `src/extension/panel.ts` owns asynchronous metadata loading and the message
 bridge; changes there require Extension Host coverage as well as WebView tests.
+
+## Known internal coupling
+
+Two real circular-import pairs inside `src/core/query` are made load-order-safe
+via hook injection rather than restructured away: `sdblGenerator.ts` ↔
+`exprFormatter.ts` (`setInlineSubqueryReflow`) and `sdblParser.ts` →
+`qualifyBareFields.ts` → `sdblGenerator.ts` → `sdblParser.ts`
+(`setSubqueryParser`). This is a known refactor hazard, not an emergency — a
+future decomposition of `src/core/query` should account for it deliberately
+rather than assume the current file boundaries are the natural module seams.
+
+Related decisions: see [`decisions/`](decisions/README.md).

@@ -43,7 +43,3 @@
 
 These are documented user boundaries, not permission to weaken tests. Add a
 regression test when fixing one and update all three limitations pages.
-
-The former mixed-language issue inventory is preserved at
-[`docs/history/pre-consolidation/KNOWN_ISSUES.md`](../history/pre-consolidation/KNOWN_ISSUES.md)
-for traceability; closed items there are not active issues.

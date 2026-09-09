@@ -1,8 +1,6 @@
 # Development guide
 
-This is the canonical developer documentation. Historical plans and superseded
-documents are retained under [`docs/history`](../history/README.md), but they may
-describe older behavior.
+This is the canonical developer documentation.
 
 ## Start here
 
@@ -20,6 +18,7 @@ describe older behavior.
 - [Corpus testing](corpus-testing.md)
 - [Known issues](known-issues.md)
 - [Roadmap](roadmap.md)
+- [Architecture decisions](decisions/README.md)
 
 English is canonical for developer documentation. User documentation is mirrored
 in English, Ukrainian, and Russian.

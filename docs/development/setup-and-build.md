@@ -28,6 +28,12 @@ npm run setup -- --e2e
 | `npm run test:integration` | Run real VS Code Extension Host tests |
 | `npm run docs:check` | Validate localized docs and links |
 | `npm run package` | Build the release VSIX |
+| `npm run parse -- --cf <dir> --out <dir>` | Generate a metadata YAML tree from an XML export (defaults: `src/cf`, `tmp/parser_data`) |
 
 Generated output under `out`, metadata caches under `tmp`, and `.vsix` files are
 not source files.
+
+`build:webview` and `pretest:e2e` use a plain `cp` shell command, which does
+not exist on a stock Windows shell — contributors on Windows should use WSL,
+Git Bash, or an equivalent POSIX shell for those two scripts until this is
+made cross-platform.
