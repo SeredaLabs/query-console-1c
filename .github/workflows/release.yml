@@ -27,7 +27,14 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm run test:unit
-      - run: npx playwright install --with-deps chromium
+      - name: Install Chromium (retries: dl.google.com apt index is occasionally stale/mismatched)
+        run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && exit 0
+            echo "Attempt $attempt failed, retrying in 20s..."
+            sleep 20
+          done
+          exit 1
       - run: npm run test:e2e
       - name: Extension Host integration tests
         run: xvfb-run -a npm run test:integration
