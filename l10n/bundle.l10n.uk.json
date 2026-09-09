@@ -38,5 +38,6 @@
   "Reference (target metadata unavailable)": "Посилання (метадані цілі недоступні)",
   "Field \"{field}\" not found in \"{table}\"": "Поле «{field}» не знайдено в «{table}»",
   "Open in Query Designer": "Відкрити в конструкторі запитів",
-  "[1C Query] Completion: metadata unavailable: {error}": "[1C Query] Автодоповнення: метадані недоступні: {error}"
+  "[1C Query] Completion: metadata unavailable: {error}": "[1C Query] Автодоповнення: метадані недоступні: {error}",
+  "Query Designer cannot parse this query: {error}": "Конструктор запитів не може розібрати цей запит: {error}"
 }

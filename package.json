@@ -96,6 +96,11 @@
           "type": "boolean",
           "default": false,
           "description": "%configuration.queryTextEditorV2.description%"
+        },
+        "queryConsole.queryDiagnosticsEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "%configuration.queryDiagnosticsEnabled.description%"
         }
       }
     }

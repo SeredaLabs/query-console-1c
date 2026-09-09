@@ -38,5 +38,6 @@
   "Reference (target metadata unavailable)": "Ссылка (метаданные цели недоступны)",
   "Field \"{field}\" not found in \"{table}\"": "Поле «{field}» не найдено в «{table}»",
   "Open in Query Designer": "Открыть в конструкторе запросов",
-  "[1C Query] Completion: metadata unavailable: {error}": "[1C Query] Автодополнение: метаданные недоступны: {error}"
+  "[1C Query] Completion: metadata unavailable: {error}": "[1C Query] Автодополнение: метаданные недоступны: {error}",
+  "Query Designer cannot parse this query: {error}": "Конструктор запросов не может разобрать этот запрос: {error}"
 }

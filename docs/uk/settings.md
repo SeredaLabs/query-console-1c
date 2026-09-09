@@ -1,5 +1,5 @@
 <!--
-source_version: 3
+source_version: 4
 translation_status: current
 -->
 
@@ -15,6 +15,7 @@ translation_status: current
 | `queryConsole.parserOutputPath` | `tmp/parser_data` | Каталог похідних метаданих і кешу |
 | `queryConsole.openInNewWindow` | `true` | Відкрити конструктор в окремому вікні VS Code |
 | `queryConsole.queryTextEditorV2` | `false` | Увімкнути експериментальний редактор v2 |
+| `queryConsole.queryDiagnosticsEnabled` | `true` | Попереджати про літерал запиту, який не розбирає конструктор |
 
 ## 🗺️ Область і шляхи
 

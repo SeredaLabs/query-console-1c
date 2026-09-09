@@ -5,6 +5,15 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+### Added
+
+- A query-text literal in a `.bsl` file that Query Designer cannot parse now
+  gets a warning right on the `ВЫБРАТЬ`/`УНИЧТОЖИТЬ` keyword, instead of only
+  failing silently once the query is actually opened. New setting
+  `queryConsole.queryDiagnosticsEnabled` (on by default) turns it off if it
+  produces false positives — most commonly a query assembled by concatenating
+  strings, where an individual fragment is not meant to parse on its own.
+
 ## 0.1.33 - 2026-09-08
 
 ### Fixed

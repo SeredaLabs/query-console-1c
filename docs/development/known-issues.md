@@ -25,6 +25,14 @@
   `РегистрРасчета.*.ФактическийПериодДействия`, and
   `Последовательность.*.Границы`; marked models are blocked from apply.
 - Auto-discovery is bounded and may require an explicit metadata path.
+- Query-parse diagnostics (`queryConsole.queryDiagnosticsEnabled`) scan one
+  string literal at a time and can flag a query assembled by string
+  concatenation, where an individual fragment is not meant to parse on its
+  own -- there is no full BSL AST to distinguish that from a genuinely broken
+  query. Mitigated by `Warning` severity, non-committal wording, and the
+  setting to disable it entirely; not something a corpus/production sweep can
+  fully rule out the way `findMalformedCustomExpressions` above was, since it
+  depends on how a given codebase happens to build query text at runtime.
 - Hover and autocomplete resolve a table alias across the entire query batch
   (every `ОБЪЕДИНЕНИЕ` branch and subquery at once), not just the scope under
   the cursor -- a repeated alias for a different source elsewhere in the same

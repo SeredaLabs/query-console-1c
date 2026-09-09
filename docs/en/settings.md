@@ -1,5 +1,5 @@
 <!--
-source_version: 3
+source_version: 4
 translation_status: canonical
 -->
 
@@ -15,6 +15,7 @@ translation_status: canonical
 | `queryConsole.parserOutputPath` | `tmp/parser_data` | Directory for derived metadata files and cache |
 | `queryConsole.openInNewWindow` | `true` | Open the designer in a separate VS Code window |
 | `queryConsole.queryTextEditorV2` | `false` | Enable the experimental Query Text v2 editor |
+| `queryConsole.queryDiagnosticsEnabled` | `true` | Warn on a query-text literal Query Designer cannot parse |
 
 ## 🗺️ Scope and paths
 

@@ -130,6 +130,73 @@ export function findAllQueryLiterals(source: string): QueryHit[] {
 }
 
 /**
+ * Находит диапазон ключевого слова запроса (`ВЫБРАТЬ`/`УНИЧТОЖИТЬ`) в СЫРОМ
+ * документе для уже найденного `hit` — в отличие от `hit.text` (де-пайпленного, со
+ * схлопнутыми `""`), здесь смещения считаются напрямую по `source`, поэтому годятся
+ * для `document.positionAt` без пересчёта.
+ *
+ * Сначала находим индекс ключевого слова В `hit.text` — тем же критерием
+ * (`stripLeadingTrivia`/`startsWithQueryKeyword`), которым уже отобран этот hit,
+ * так что совпадение гарантировано. Затем переводим этот индекс в (номер строки,
+ * колонка) — ключевое слово не может пересекать перевод строки — и находим сырое
+ * смещение начала ЭТОЙ ЖЕ строки в исходном документе: `unpipe` не добавляет и не
+ * убирает переводы строк (только обрезает `[ \t]*\|`-префикс на строках-
+ * продолжениях), поэтому номера строк в `hit.text` и в сыром `source` совпадают.
+ * Единственное намеренное упрощение — экранированная `""` до самого ключевого
+ * слова на той же строке сдвинула бы колонку (в `hit.text` она уже схлопнута в
+ * одну кавычку); на практике запрос не начинается с кавычки внутри строки, так что
+ * это не встречается. Если по любой причине разбор не сошёлся — `undefined`
+ * (fail-open: диагностика для этого литерала просто не строится, вместо неверного
+ * диапазона).
+ */
+export function findQueryKeywordRange(source: string, hit: QueryHit): { start: number; end: number } | undefined {
+  let rest = hit.text;
+  let consumed = 0;
+  for (;;) {
+    const before = rest;
+    const leading = rest.match(/^[\s﻿]+/);
+    if (leading) {
+      rest = rest.slice(leading[0].length);
+      consumed += leading[0].length;
+    }
+    if (rest.startsWith('//')) {
+      const nl = rest.indexOf('\n');
+      const cut = nl === -1 ? rest.length : nl + 1;
+      rest = rest.slice(cut);
+      consumed += cut;
+    }
+    if (rest === before) break;
+  }
+  const upper = rest.toUpperCase();
+  const kw = QUERY_KEYWORDS.find((k) => {
+    if (!upper.startsWith(k)) return false;
+    const next = rest.charAt(k.length);
+    return next === '' || !/[\p{L}\p{N}_]/u.test(next);
+  });
+  if (!kw) return undefined;
+
+  const beforeKeyword = hit.text.slice(0, consumed);
+  const lineNumber = (beforeKeyword.match(/\n/g) ?? []).length;
+  const col = consumed - (beforeKeyword.lastIndexOf('\n') + 1);
+
+  const bodyStart = hit.start + 1; // пропускаем открывающую кавычку
+  const limit = hit.end > hit.start && source[hit.end - 1] === '"' ? hit.end - 1 : hit.end;
+  let rawLineStart = bodyStart;
+  for (let n = 0; n < lineNumber; n++) {
+    const nl = source.indexOf('\n', rawLineStart);
+    if (nl === -1 || nl >= limit) return undefined;
+    rawLineStart = nl + 1;
+  }
+  if (lineNumber > 0) {
+    const prefix = source.slice(rawLineStart, limit).match(/^[ \t]*\|/);
+    if (prefix) rawLineStart += prefix[0].length;
+  }
+
+  const start = rawLineStart + col;
+  return { start, end: start + kw.length };
+}
+
+/**
  * Находит среди `findAllQueryLiterals(source)` литерал, в чьих границах кавычек
  * (включительно) лежит `offset`. Если такого литерала нет — `null`.
  */

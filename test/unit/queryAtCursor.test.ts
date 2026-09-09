@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findQueryAt } from '../../src/extension/queryAtCursor';
+import { findQueryAt, findQueryKeywordRange } from '../../src/extension/queryAtCursor';
 
 describe('findQueryAt', () => {
   it('returns the hit when offset is inside a query literal (text de-piped, start/end at quotes)', () => {
@@ -78,5 +78,53 @@ describe('findQueryAt', () => {
     const hit = findQueryAt(source, offset);
     expect(hit).not.toBeNull();
     expect(hit!.text).toBe('УНИЧТОЖИТЬ ВТ');
+  });
+});
+
+describe('findQueryKeywordRange', () => {
+  it('finds the keyword right after the opening quote', () => {
+    const source = 'Х = "ВЫБРАТЬ Т.Поле ИЗ Справочник.Т КАК Т";';
+    const hit = findQueryAt(source, source.indexOf('ВЫБРАТЬ'))!;
+    const range = findQueryKeywordRange(source, hit);
+    expect(range).toEqual({ start: source.indexOf('ВЫБРАТЬ'), end: source.indexOf('ВЫБРАТЬ') + 'ВЫБРАТЬ'.length });
+  });
+
+  it('finds УНИЧТОЖИТЬ', () => {
+    const source = 'Х = "УНИЧТОЖИТЬ ВТ";';
+    const hit = findQueryAt(source, source.indexOf('УНИЧТОЖИТЬ'))!;
+    const range = findQueryKeywordRange(source, hit);
+    expect(range).toEqual({
+      start: source.indexOf('УНИЧТОЖИТЬ'),
+      end: source.indexOf('УНИЧТОЖИТЬ') + 'УНИЧТОЖИТЬ'.length,
+    });
+  });
+
+  it('skips leading whitespace/pipe continuation on the first line', () => {
+    const source = 'Х = "  \tВЫБРАТЬ Т.Поле ИЗ Справочник.Т КАК Т";';
+    const hit = findQueryAt(source, source.indexOf('ВЫБРАТЬ'))!;
+    const range = findQueryKeywordRange(source, hit);
+    expect(range).toEqual({ start: source.indexOf('ВЫБРАТЬ'), end: source.indexOf('ВЫБРАТЬ') + 'ВЫБРАТЬ'.length });
+  });
+
+  it('skips a leading comment line before the keyword (фаза 8.1)', () => {
+    const source = [
+      'Запрос.Текст = " // ШЛЯПА !',
+      '|ВЫБРАТЬ // ШЛЯПА !',
+      '|\tВалюты.Ссылка КАК Ссылка // ШЛЯПА !',
+      '|ИЗ // ШЛЯПА !',
+      '|\tСправочник.Валюты КАК Валюты";',
+    ].join('\n');
+    const hit = findQueryAt(source, source.indexOf('ВЫБРАТЬ'))!;
+    const range = findQueryKeywordRange(source, hit);
+    const kwStart = source.indexOf('ВЫБРАТЬ');
+    expect(range).toEqual({ start: kwStart, end: kwStart + 'ВЫБРАТЬ'.length });
+  });
+
+  it('still finds the keyword when the literal is unclosed (no trailing quote)', () => {
+    const source = 'Х = "ВЫБРАТЬ Т.Поле ИЗ Справочник.Т КАК Т';
+    const hit = findQueryAt(source, source.indexOf('ВЫБРАТЬ'))!;
+    expect(hit.end).toBe(source.length); // подтверждаем сам «баг», из-за которого не берём hit.end как диапазон
+    const range = findQueryKeywordRange(source, hit);
+    expect(range).toEqual({ start: source.indexOf('ВЫБРАТЬ'), end: source.indexOf('ВЫБРАТЬ') + 'ВЫБРАТЬ'.length });
   });
 });

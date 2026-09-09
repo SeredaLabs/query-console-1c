@@ -8,6 +8,7 @@ import { planQueryConstructor, type OpenPlan } from './queryConstructorPlan';
 import { OPEN_FROM_RANGE_COMMAND } from './openFromRangeCommand';
 import { QueryHoverProvider } from './queryHoverProvider';
 import { QueryCompletionProvider } from './queryCompletionProvider';
+import { registerQueryDiagnostics } from './queryDiagnosticsController';
 
 let outputChannel: vscode.OutputChannel;
 
@@ -145,6 +146,7 @@ export function activate(context: vscode.ExtensionContext): void {
     hoverProvider,
     completionProvider,
     registerParseCommand(context, outputChannel),
+    registerQueryDiagnostics(),
     outputChannel
   );
 }
