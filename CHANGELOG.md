@@ -5,6 +5,16 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.37 - 2026-09-09
+
+### Internal
+
+- `README.md`/`README.uk.md`/`README.ru.md` now carry the same translation
+  front matter as `docs/{locale}` and are checked by `scripts/validate-docs.mjs`
+  for matching `source_version` and heading structure — a gap found during a
+  repository-structure review: the localized docs already had this drift
+  protection, the root READMEs didn't.
+
 ## 0.1.36 - 2026-09-09
 
 ### Internal
