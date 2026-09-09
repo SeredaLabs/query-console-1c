@@ -32,8 +32,3 @@ npm run setup -- --e2e
 
 Generated output under `out`, metadata caches under `tmp`, and `.vsix` files are
 not source files.
-
-`build:webview` and `pretest:e2e` use a plain `cp` shell command, which does
-not exist on a stock Windows shell — contributors on Windows should use WSL,
-Git Bash, or an equivalent POSIX shell for those two scripts until this is
-made cross-platform.
