@@ -5,6 +5,15 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.38 - 2026-09-09
+
+### Internal
+
+- `build:webview` and `pretest:e2e` no longer shell out to the Unix `cp`
+  command, which doesn't exist on a stock Windows shell — a small
+  cross-platform `scripts/copy-files.mjs` replaces it, so `npm run build`
+  and `npm run test:e2e` no longer require WSL/Git Bash on Windows.
+
 ## 0.1.37 - 2026-09-09
 
 ### Internal
