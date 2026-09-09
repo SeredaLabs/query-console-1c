@@ -212,7 +212,13 @@ function headingSlugsFor(absolutePath) {
 // containing file's absolute path (for relative resolution and same-file
 // anchors); `rawTarget` is exactly what appeared in `(...)`/`href=".."`/`src=".."`.
 // ---------------------------------------------------------------------------
-function checkLinkTarget(sourceFile, absoluteContainingFile, rawTarget, kind) {
+// `graphOutbound`, when given, receives every resolved same-repo `.md` target
+// this call finds — the SAME resolution used for existence/anchor checking,
+// not a second independent scan. This is what previously went wrong: the
+// orphan graph was built by a separate regex pass that only covered inline
+// `[text](target)` links, so a page reachable ONLY via a reference-style or
+// HTML link would be wrongly flagged orphaned. One resolution feeds both.
+function checkLinkTarget(sourceFile, absoluteContainingFile, rawTarget, kind, graphOutbound) {
   let target = rawTarget.trim().replace(/^<|>$/g, '');
   if (!target || /^(?:https?:|mailto:)/.test(target)) return;
 
@@ -224,6 +230,9 @@ function checkLinkTarget(sourceFile, absoluteContainingFile, rawTarget, kind) {
   if (decodedPath && !existsCaseSensitive(resolvedFile)) {
     errors.push(`${sourceFile}: broken ${kind} ${rawTarget}`);
     return;
+  }
+  if (graphOutbound && decodedPath && resolvedFile.endsWith('.md')) {
+    graphOutbound.add(path.relative(root, resolvedFile));
   }
   if (anchor === undefined) return;
   if (!resolvedFile.endsWith('.md')) return; // anchors only meaningful for our own Markdown targets
@@ -237,11 +246,14 @@ const docLinkGraph = new Map(); // repo-relative markdown file -> Set of repo-re
 for (const file of markdownFiles) {
   const absolute = path.join(root, file);
   const text = fs.readFileSync(absolute, 'utf8');
-  const outbound = new Set();
+  // Only docs/**/*.md and the root README participate in orphan-reachability
+  // (tooling/**/*.md and other root *.md files are not part of that graph).
+  const trackGraph = file.startsWith(`docs${path.sep}`) || file === 'README.md';
+  const outbound = trackGraph ? new Set() : undefined;
 
   // Markdown inline links/images: [text](target) / ![alt](target)
   for (const match of text.matchAll(/!?\[[^\]]*\]\(([^)]+)\)/g)) {
-    checkLinkTarget(file, absolute, match[1], 'link');
+    checkLinkTarget(file, absolute, match[1], 'link', outbound);
   }
 
   // Reference-style links: [text][id] / [id][] defined via `[id]: target`.
@@ -252,32 +264,18 @@ for (const file of markdownFiles) {
   for (const match of text.matchAll(/!?\[([^\]]*)\]\[([^\]]*)\]/g)) {
     const id = (match[2] || match[1]).toLowerCase();
     const target = definitions.get(id);
-    if (target) checkLinkTarget(file, absolute, target, 'reference-style link');
+    if (target) checkLinkTarget(file, absolute, target, 'reference-style link', outbound);
   }
 
   // HTML anchors/images: <a href="...">, <img src="...">.
   for (const match of text.matchAll(/<a\s[^>]*\bhref=["']([^"']+)["']/gi)) {
-    checkLinkTarget(file, absolute, match[1], 'HTML href');
+    checkLinkTarget(file, absolute, match[1], 'HTML href', outbound);
   }
   for (const match of text.matchAll(/<img\s[^>]*\bsrc=["']([^"']+)["']/gi)) {
-    checkLinkTarget(file, absolute, match[1], 'HTML src');
+    checkLinkTarget(file, absolute, match[1], 'HTML src', outbound);
   }
 
-  // Build the doc-to-doc graph for orphan-page detection (docs/**/*.md only;
-  // resolve every link target above that points at another repo Markdown file).
-  if (file.startsWith(`docs${path.sep}`) || file === 'README.md') {
-    for (const match of text.matchAll(/!?\[[^\]]*\]\(([^)]+)\)/g)) {
-      const raw = match[1].trim().replace(/^<|>$/g, '');
-      if (/^(?:https?:|mailto:)/.test(raw)) continue;
-      const decodedPath = decodeURIComponent(raw.split('#')[0].split('?')[0]);
-      if (!decodedPath) continue;
-      const resolved = path.resolve(path.dirname(absolute), decodedPath);
-      if (resolved.endsWith('.md') && existsCaseSensitive(resolved)) {
-        outbound.add(path.relative(root, resolved));
-      }
-    }
-  }
-  docLinkGraph.set(file, outbound);
+  if (trackGraph) docLinkGraph.set(file, outbound);
 }
 
 // ---------------------------------------------------------------------------
