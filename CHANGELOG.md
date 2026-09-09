@@ -5,6 +5,23 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.35 - 2026-09-09
+
+### Internal
+
+- Removed the `docs/history` and `docs/tasks` archives (~104 files of
+  superseded implementation plans, specs, and a closed audit) after a
+  forensic review extracted everything still accurate: four architecture
+  decision records, the SDBL section-emission order, the comment-preservation
+  design, the corpus classification gate, and a couple of small documentation
+  gaps. None of this ships in the packaged extension either way, but it no
+  longer clutters the default branch. Recoverable at the `pre-docs-history-cleanup`
+  git tag if needed.
+- `scripts/validate-docs.mjs` now also checks in-page anchors (via a real
+  GitHub-compatible slugger), case-sensitive paths, HTML links/images,
+  reference-style Markdown links, orphaned documentation pages, and stale
+  references to the removed archives above.
+
 ## 0.1.34 - 2026-09-09
 
 ### Added
