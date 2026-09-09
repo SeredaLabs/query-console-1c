@@ -5,6 +5,19 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.36 - 2026-09-09
+
+### Internal
+
+- Fixed `scripts/validate-docs.mjs`'s orphan-page check: it built the
+  reachability graph from a separate pass that only followed plain inline
+  Markdown links, so a page reachable only via a reference-style or HTML
+  link was wrongly reported as orphaned. Existence/anchor checking and
+  graph construction now resolve every link exactly once.
+- CI's Chromium install now retries a few times before failing the build —
+  the previous release's run hit a real, external `dl.google.com` apt-index
+  inconsistency unrelated to any code change here.
+
 ## 0.1.35 - 2026-09-09
 
 ### Internal
