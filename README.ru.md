@@ -1,3 +1,8 @@
+<!--
+source_version: 1
+translation_status: current
+-->
+
 <p align="center">
   <img src="assets/images/readme-hero.png" alt="1C: Конструктор запросов — визуальное проектирование запросов SDBL с учётом метаданных в VS Code">
 </p>

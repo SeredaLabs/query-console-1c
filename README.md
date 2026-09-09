@@ -1,3 +1,8 @@
+<!--
+source_version: 1
+translation_status: canonical
+-->
+
 <p align="center">
   <img src="assets/images/readme-hero.png" alt="1C: Query Constructor — visual metadata-aware SDBL query design in VS Code">
 </p>

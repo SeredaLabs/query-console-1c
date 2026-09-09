@@ -137,6 +137,32 @@ for (const file of localeFiles.en) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Root README parity — same front-matter/heading-parity discipline as
+// docs/{locale}, applied to the three root landing pages. These don't share a
+// filename per locale (README.md / README.uk.md / README.ru.md), so they get
+// their own small block reusing the same frontMatter()/headingLevels() helpers
+// rather than the docs/{locale} loop above, which iterates by filename.
+// ---------------------------------------------------------------------------
+const rootReadmeFiles = { en: 'README.md', uk: 'README.uk.md', ru: 'README.ru.md' };
+const rootReadmeTexts = Object.fromEntries(
+  locales.map(locale => [locale, fs.readFileSync(path.join(root, rootReadmeFiles[locale]), 'utf8')])
+);
+const rootReadmeMeta = Object.fromEntries(locales.map(locale => [locale, frontMatter(rootReadmeTexts[locale])]));
+for (const locale of locales) {
+  if (!rootReadmeMeta[locale]?.source_version || !rootReadmeMeta[locale]?.translation_status) {
+    errors.push(`${rootReadmeFiles[locale]}: missing translation front matter`);
+  }
+}
+for (const locale of locales.slice(1)) {
+  if (rootReadmeMeta[locale]?.source_version !== rootReadmeMeta.en?.source_version) {
+    errors.push(`${rootReadmeFiles[locale]}: stale source_version`);
+  }
+  if (JSON.stringify(headingLevels(rootReadmeTexts[locale])) !== JSON.stringify(headingLevels(rootReadmeTexts.en))) {
+    errors.push(`${rootReadmeFiles[locale]}: heading levels do not match English`);
+  }
+}
+
 function listMarkdown(relativeDirectory) {
   const absoluteDirectory = path.join(root, relativeDirectory);
   return fs.readdirSync(absoluteDirectory, { withFileTypes: true }).flatMap(entry => {
