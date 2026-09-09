@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import GithubSlugger from 'github-slugger';
 
 const root = process.cwd();
 const locales = ['en', 'uk', 'ru'];
@@ -151,16 +152,211 @@ const markdownFiles = [...new Set([
   ...listMarkdown('tooling'),
 ])].sort();
 
+// ---------------------------------------------------------------------------
+// Case-sensitive existence check. `fs.existsSync` resolves case-insensitively
+// on the macOS/Windows filesystems most contributors develop on, but CI runs
+// on Ubuntu (case-sensitive) — a path whose case doesn't exactly match the
+// real file works locally and breaks in CI. Walk each path segment against
+// the real directory listing instead of trusting the OS's own resolution.
+// ---------------------------------------------------------------------------
+const readdirCache = new Map();
+function readdirCached(directory) {
+  let entries = readdirCache.get(directory);
+  if (!entries) {
+    entries = fs.existsSync(directory) ? fs.readdirSync(directory) : [];
+    readdirCache.set(directory, entries);
+  }
+  return entries;
+}
+
+function existsCaseSensitive(absolutePath) {
+  const relative = path.relative(root, absolutePath);
+  if (relative.startsWith('..')) return fs.existsSync(absolutePath); // outside repo — best effort
+  const segments = relative.split(path.sep).filter(Boolean);
+  let current = root;
+  for (const segment of segments) {
+    if (!readdirCached(current).includes(segment)) return false;
+    current = path.join(current, segment);
+  }
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// GitHub-compatible heading anchors. A real slugger (not a hand-rolled
+// approximation) matters here: GitHub's own rules for stripping punctuation,
+// preserving non-ASCII letters, and suffixing repeated headings on the same
+// page (`#settings`, `#settings-1`, `#settings-2`, …) are exactly what a
+// simplified slugifier gets subtly wrong, which would make the validator
+// itself produce false positives on legitimate anchors.
+// ---------------------------------------------------------------------------
+const headingSlugsCache = new Map();
+function headingSlugsFor(absolutePath) {
+  let slugs = headingSlugsCache.get(absolutePath);
+  if (slugs) return slugs;
+  slugs = new Set();
+  if (existsCaseSensitive(absolutePath) && fs.statSync(absolutePath).isFile()) {
+    const text = fs.readFileSync(absolutePath, 'utf8');
+    const slugger = new GithubSlugger();
+    for (const line of text.split('\n')) {
+      const match = line.match(/^#{1,6} +(.+?)\s*#*\s*$/);
+      if (match) slugs.add(slugger.slug(match[1]));
+    }
+  }
+  headingSlugsCache.set(absolutePath, slugs);
+  return slugs;
+}
+
+// ---------------------------------------------------------------------------
+// Shared link/asset-target resolution, used by both Markdown and HTML checks.
+// `sourceFile` is repo-relative (for error messages); `targetFile` is the
+// containing file's absolute path (for relative resolution and same-file
+// anchors); `rawTarget` is exactly what appeared in `(...)`/`href=".."`/`src=".."`.
+// ---------------------------------------------------------------------------
+function checkLinkTarget(sourceFile, absoluteContainingFile, rawTarget, kind) {
+  let target = rawTarget.trim().replace(/^<|>$/g, '');
+  if (!target || /^(?:https?:|mailto:)/.test(target)) return;
+
+  const [pathPart, anchorPart] = target.split('#');
+  const anchor = anchorPart !== undefined ? decodeURIComponent(anchorPart) : undefined;
+  const decodedPath = decodeURIComponent(pathPart.split('?')[0]);
+
+  const resolvedFile = decodedPath ? path.resolve(path.dirname(absoluteContainingFile), decodedPath) : absoluteContainingFile;
+  if (decodedPath && !existsCaseSensitive(resolvedFile)) {
+    errors.push(`${sourceFile}: broken ${kind} ${rawTarget}`);
+    return;
+  }
+  if (anchor === undefined) return;
+  if (!resolvedFile.endsWith('.md')) return; // anchors only meaningful for our own Markdown targets
+  if (!headingSlugsFor(resolvedFile).has(anchor)) {
+    errors.push(`${sourceFile}: broken anchor ${rawTarget} (no heading slugs to "${anchor}" in ${path.relative(root, resolvedFile)})`);
+  }
+}
+
+const docLinkGraph = new Map(); // repo-relative markdown file -> Set of repo-relative markdown files it links to
+
 for (const file of markdownFiles) {
   const absolute = path.join(root, file);
   const text = fs.readFileSync(absolute, 'utf8');
+  const outbound = new Set();
+
+  // Markdown inline links/images: [text](target) / ![alt](target)
   for (const match of text.matchAll(/!?\[[^\]]*\]\(([^)]+)\)/g)) {
-    let target = match[1].trim().replace(/^<|>$/g, '');
-    if (/^(?:https?:|mailto:|#)/.test(target)) continue;
-    target = decodeURIComponent(target.split('#')[0].split('?')[0]);
-    if (!target) continue;
-    const resolved = path.resolve(path.dirname(absolute), target);
-    if (!fs.existsSync(resolved)) errors.push(`${file}: broken link ${match[1]}`);
+    checkLinkTarget(file, absolute, match[1], 'link');
+  }
+
+  // Reference-style links: [text][id] / [id][] defined via `[id]: target`.
+  const definitions = new Map();
+  for (const match of text.matchAll(/^\s*\[([^\]]+)\]:\s*(\S+)/gm)) {
+    definitions.set(match[1].toLowerCase(), match[2]);
+  }
+  for (const match of text.matchAll(/!?\[([^\]]*)\]\[([^\]]*)\]/g)) {
+    const id = (match[2] || match[1]).toLowerCase();
+    const target = definitions.get(id);
+    if (target) checkLinkTarget(file, absolute, target, 'reference-style link');
+  }
+
+  // HTML anchors/images: <a href="...">, <img src="...">.
+  for (const match of text.matchAll(/<a\s[^>]*\bhref=["']([^"']+)["']/gi)) {
+    checkLinkTarget(file, absolute, match[1], 'HTML href');
+  }
+  for (const match of text.matchAll(/<img\s[^>]*\bsrc=["']([^"']+)["']/gi)) {
+    checkLinkTarget(file, absolute, match[1], 'HTML src');
+  }
+
+  // Build the doc-to-doc graph for orphan-page detection (docs/**/*.md only;
+  // resolve every link target above that points at another repo Markdown file).
+  if (file.startsWith(`docs${path.sep}`) || file === 'README.md') {
+    for (const match of text.matchAll(/!?\[[^\]]*\]\(([^)]+)\)/g)) {
+      const raw = match[1].trim().replace(/^<|>$/g, '');
+      if (/^(?:https?:|mailto:)/.test(raw)) continue;
+      const decodedPath = decodeURIComponent(raw.split('#')[0].split('?')[0]);
+      if (!decodedPath) continue;
+      const resolved = path.resolve(path.dirname(absolute), decodedPath);
+      if (resolved.endsWith('.md') && existsCaseSensitive(resolved)) {
+        outbound.add(path.relative(root, resolved));
+      }
+    }
+  }
+  docLinkGraph.set(file, outbound);
+}
+
+// ---------------------------------------------------------------------------
+// Orphan-page detection: every current `docs/**/*.md` page must be reachable
+// via a TRANSITIVE traversal from at least one entry point (not merely linked
+// directly from one) — entry point → linked page → linked page → … A page
+// absent from that full reachable set is orphaned.
+// ---------------------------------------------------------------------------
+const entryPoints = [
+  'README.md',
+  path.join('docs', 'README.md'),
+  ...locales.map(locale => path.join('docs', locale, 'index.md')),
+  path.join('docs', 'development', 'index.md'),
+  path.join('docs', 'development', 'decisions', 'README.md'),
+].filter(entry => docLinkGraph.has(entry));
+
+const reachable = new Set();
+const queue = [...entryPoints];
+while (queue.length) {
+  const current = queue.pop();
+  if (reachable.has(current)) continue;
+  reachable.add(current);
+  for (const next of docLinkGraph.get(current) ?? []) queue.push(next);
+}
+
+const docPages = markdownFiles.filter(file => file.startsWith(`docs${path.sep}`));
+for (const page of docPages) {
+  if (!reachable.has(page)) errors.push(`${page}: orphaned — not reachable from any documentation entry point`);
+}
+
+// ---------------------------------------------------------------------------
+// Stale historical-path references. Deliberately conditional: `docs/history`
+// and `docs/tasks` are allowed to be mentioned WHILE they still exist (e.g.
+// `.vscodeignore`'s exclusion globs) — this only fires once those directories
+// are actually gone, so it becomes a real regression guard exactly at the
+// point cleanup removes them, without needing a separate flag day. Scanned
+// repository-wide (not just docs/**) because the two known real dependencies
+// on historical docs were TypeScript code comments, not Markdown.
+// ---------------------------------------------------------------------------
+const historyPaths = ['docs/history', 'docs/tasks'];
+const stillExist = historyPaths.filter(p => fs.existsSync(path.join(root, p)));
+if (stillExist.length < historyPaths.length) {
+  const removed = historyPaths.filter(p => !stillExist.includes(p));
+  const scanDirs = ['src', 'test', 'tooling', 'scripts', '.github', '.vscode'];
+  const skipDirNames = new Set(['node_modules', '.git', 'out', 'dist', 'coverage', 'playwright-report', 'test-results', '.vscode-test']);
+  const binaryExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.ico', '.woff', '.woff2', '.ttf', '.map', '.vsix', '.svg']);
+
+  function walkTextFiles(directory) {
+    if (!fs.existsSync(directory)) return [];
+    return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+      if (skipDirNames.has(entry.name)) return [];
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) return walkTextFiles(absolute);
+      if (binaryExtensions.has(path.extname(entry.name))) return [];
+      return [absolute];
+    });
+  }
+
+  // CHANGELOG.md is an immutable historical record — a past release entry
+  // legitimately describing a since-removed path (e.g. "consolidated docs
+  // under docs/history/...") is not a stale reference, it's what actually
+  // happened at that release. Rewriting past entries to avoid this check
+  // would falsify release history, so it's exempted rather than scanned.
+  const rootConfigFiles = fs.readdirSync(root, { withFileTypes: true })
+    .filter(entry => entry.isFile() && !binaryExtensions.has(path.extname(entry.name)) && entry.name !== 'CHANGELOG.md')
+    .map(entry => path.join(root, entry.name));
+
+  // This validator's own source necessarily names these paths (to define and
+  // explain the check itself) — that's not a stale reference, exclude it.
+  const selfPath = path.join(root, 'scripts', 'validate-docs.mjs');
+  const filesToScan = [...scanDirs.flatMap(dir => walkTextFiles(path.join(root, dir))), ...rootConfigFiles]
+    .filter(file => file !== selfPath);
+  for (const absolute of filesToScan) {
+    const text = fs.readFileSync(absolute, 'utf8');
+    for (const removedPath of removed) {
+      if (text.includes(removedPath)) {
+        errors.push(`${path.relative(root, absolute)}: stale reference to removed ${removedPath}`);
+      }
+    }
   }
 }
 
@@ -170,4 +366,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`Documentation validation passed: ${localeFiles.en.length} pages × ${locales.length} locales; ${markdownFiles.length} Markdown files checked.`);
+console.log(`Documentation validation passed: ${localeFiles.en.length} pages × ${locales.length} locales; ${markdownFiles.length} Markdown files checked; ${docPages.length} doc pages reachable; anchors/case/HTML/reference-links/stale-history checked.`);
