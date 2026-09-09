@@ -27,7 +27,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm run test:unit
-      - name: Install Chromium (retries: dl.google.com apt index is occasionally stale/mismatched)
+      - name: "Install Chromium (retries a flaky dl.google.com apt index)"
         run: |
           for attempt in 1 2 3; do
             npx playwright install --with-deps chromium && exit 0
