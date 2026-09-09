@@ -5,6 +5,8 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.34 - 2026-09-09
+
 ### Added
 
 - A query-text literal in a `.bsl` file that Query Designer cannot parse now
