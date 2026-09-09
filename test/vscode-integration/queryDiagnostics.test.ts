@@ -14,6 +14,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { registerQueryDiagnostics } from '../../src/extension/queryDiagnosticsController';
 import { waitUntil } from './testUtil';
 
 const DIAGNOSTIC_SOURCE = 'queryConsole1c';
@@ -90,6 +91,46 @@ describe('Extension Host: діагностика запитів, які не р�
       assert.strictEqual(ourDiagnostics(doc.uri).length, 0, 'з вимкненим налаштуванням діагностик бути не повинно');
     } finally {
       await config.update('queryDiagnosticsEnabled', undefined, vscode.ConfigurationTarget.Global);
+    }
+  });
+
+  it('dispose() під час очікуваного дебаунсу гасить таймер — жодного винятку, жодної публікації після', async function () {
+    this.timeout(20000);
+    // Окремий, ІЗОЛЬОВАНИЙ controller зі своїм source — щоб не плутати його
+    // діагностики з тими, що вже публікує реальний controller з activate() на
+    // цьому ж документі (vscode.languages.getDiagnostics повертає об'єднання
+    // усіх колекцій для uri, тож спільний source зробив би перевірку хиткою).
+    // Знайдений при зовнішньому ревʼю сценарій: edit ставить 400ms-таймер, потім
+    // controller одразу диспозиться (як при деактивації розширення) — таймер не
+    // повинен пережити dispose() і звернутись до вже закритого collection.
+    const testSource = 'queryConsole1c-test-dispose';
+    const controller = registerQueryDiagnostics(testSource);
+    const isolatedDiagnostics = (uri: vscode.Uri) =>
+      vscode.languages.getDiagnostics(uri).filter((d) => d.source === testSource);
+    try {
+      const broken = 'Запрос.Текст = "ВЫБРАТЬ ИЗ Справочник.Тест КАК Т";\n';
+      const doc = await openLooseBsl(broken);
+      // «Відкриття» вже планує перевірку з delayMs=0 — чекаємо, щоб вона встигла
+      // опублікувати діагностику від ЦЬОГО controller'а, перш ніж перевіряти саме
+      // сценарій «редагування під час очікування».
+      await waitUntil(() => isolatedDiagnostics(doc.uri).length > 0, 5000);
+
+      const editor = await vscode.window.showTextDocument(doc);
+      await editor.edit((builder) => {
+        builder.insert(doc.positionAt(doc.getText().length), '\n');
+      }); // ставить новий 400ms-таймер
+
+      controller.dispose(); // одразу, задовго до спрацювання таймера
+
+      await new Promise((r) => setTimeout(r, 700)); // переживаємо вікно дебаунсу
+
+      assert.strictEqual(
+        isolatedDiagnostics(doc.uri).length,
+        0,
+        'після dispose() діагностик від ЦЬОГО controller\'а бути не повинно (collection.dispose() їх прибирає, а таймер не мав нічого опублікувати)'
+      );
+    } finally {
+      controller.dispose();
     }
   });
 });
