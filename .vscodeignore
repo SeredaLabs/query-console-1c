@@ -15,8 +15,6 @@ docs/en/**
 docs/uk/**
 docs/ru/**
 docs/development/**
-docs/history/**
-docs/tasks/**
 docs/*.md
 docs/*.yml
 scripts/**
