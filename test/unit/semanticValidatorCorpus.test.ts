@@ -52,4 +52,31 @@ describe('checkFieldPaths: нуль хибних спрацювань на ре�
       .join('\n');
     expect(falsePositives, `Хибних спрацювань: ${falsePositives.length}\n${preview}`).toEqual([]);
   });
+
+  it('жоден реальний запит не дає "Таблица не найдена" (issue #3: .Изменения — 4/1976, 0.2%)', () => {
+    // Історична знахідка (PHASE_9, ~v0.1.22): повний прогін по золотому корпусу
+    // давав 4 хибних спрацювання на «<Тип>.<Объект>.Изменения» — службовій
+    // підтаблиці реєстрації плану обміну, яка не матеріалізується завантажником
+    // метаданих НІ ДЛЯ ОДНОГО виду. Відтворено буквально (ті самі 4 файли, той
+    // самий текст помилки) перед фіксом у semanticValidator.ts; цей тест фіксує
+    // нульовий стан назавжди.
+    const falsePositives: Array<{ file: string; messages: string[] }> = [];
+    for (const g of golden) {
+      if (!g.valid) continue;
+      let errors;
+      try {
+        errors = validateBatchSemantics(parseBatch(g.input, resolver), resolver, g.input);
+      } catch {
+        continue;
+      }
+      const tableErrors = errors.filter(e => e.message.includes('Таблица не найдена'));
+      if (tableErrors.length > 0) {
+        falsePositives.push({ file: g.file, messages: tableErrors.map(e => e.message) });
+      }
+    }
+    const preview = falsePositives.slice(0, 20)
+      .map(f => `  ${f.file}:\n    ${f.messages.join('\n    ')}`)
+      .join('\n');
+    expect(falsePositives, `Хибних спрацювань: ${falsePositives.length}\n${preview}`).toEqual([]);
+  });
 });

@@ -5,6 +5,19 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.39 - 2026-09-09
+
+### Fixed
+
+- Local semantic validation (table-existence check) reported a false
+  "table not found" for the `.Изменения` subtable (exchange-plan change
+  registration), which every participating catalog/register can carry
+  regardless of its kind, but which the metadata loader never materializes
+  for any of them — the same class of gap already handled for
+  `РегистрРасчета`/`БизнесПроцесс`/`Задача`. Reproduced at exactly the
+  historically-reported 4/1976 (0.2%) rate on the golden corpus before the
+  fix, 0 after.
+
 ## 0.1.38 - 2026-09-09
 
 ### Internal
