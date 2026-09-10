@@ -5,6 +5,23 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.40 - 2026-09-10
+
+### Internal
+
+- Laid the groundwork for a future semantic-analysis layer (`src/core/semantic`):
+  a snapshot lifecycle with staleness and completeness tracking (`'complete'` /
+  `'recovered'` / `'unavailable'`), a write-only source-location side-channel in
+  the parser (`src/core/query/sourceMap.ts`) that maps query-model nodes back to
+  their raw-text ranges, and a tolerant snapshot builder that recovers from an
+  unparseable query instead of failing outright. Reuses the existing SELECT-list
+  repair heuristic hover already relies on (moved to
+  `src/core/query/selectListRepair.ts`, previously private to
+  `hoverFieldInfo.ts`) rather than duplicating it. No parser/generator behavior
+  changes — proven byte-for-byte identical across the full 1976-query golden
+  corpus with and without the new instrumentation attached. Nothing user-facing
+  yet; this is infrastructure for upcoming alias/scope-resolution work.
+
 ## 0.1.39 - 2026-09-09
 
 ### Fixed
