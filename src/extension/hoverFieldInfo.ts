@@ -10,15 +10,23 @@
  * связка с `vscode.HoverProvider`/`vscode.CompletionItemProvider` — отдельные
  * файлы (`queryHoverProvider.ts`, `queryCompletionProvider.ts`).
  *
- * ИЗВЕСТНОЕ УПРОЩЕНИЕ (документировано, не скрыто): псевдоним ищется по ВСЕМ
- * таблицам пакета сразу (все участники объединения, все подзапросы), первое
- * совпадение побеждает — без построения полноценного дерева областей видимости
- * (полный Scope, который специально НЕ строился в рамках этого шага — см.
- * Architecture Report). На практике псевдонимы почти всегда уникальны в пределах
- * всего пакета, поэтому это даёт верный результат в подавляющем большинстве
- * случаев; в редком случае двух подзапросов с ОДНИМ и тем же псевдонимом hover
- * может показать не тот источник — не более того (advisory-информация, не влияет
- * на Apply/round-trip). Публично задокументировано как known limitation в
+ * Phase 3d (semantic-core roadmap, memory: project-semantic-core-roadmap):
+ * `describeChain` (hover) resolves the chain's HEAD alias via `resolveAliasAt`
+ * (position-aware — respects real JOIN-condition scoping and nearest-ancestor
+ * subquery correlation, live-verified against real 1C) instead of the OLD flat,
+ * whole-batch, first-match lookup. Per this roadmap's shadow-mode sweep (see
+ * `shadowMode.ts`) and an explicit product decision: a non-`'resolved'` outcome
+ * (`'unknown'`/`'ambiguous'`) shows NO hover for that alias — deliberately NOT
+ * falling back to the old flat lookup, since doing so risked resurrecting
+ * confidently-WRONG answers in exactly the cases (e.g. a right-nested JOIN's
+ * own inner condition) this roadmap exists to fix. `resolveCompletionTarget`
+ * (autocomplete, Phase 3e) still uses the OLD flat `findAliasTable` — NOT
+ * migrated yet, tracked as separate follow-up work, not an oversight.
+ *
+ * ИЗВЕСТНОЕ УПРОЩЕНИЕ, всё ещё актуальное для `resolveCompletionTarget` (для
+ * `describeChain` см. выше): псевдоним ищется по ВСЕМ таблицам пакета сразу (все
+ * участники объединения, все подзапросы), первое совпадение побеждает — без учёта
+ * позиции курсора. Публично задокументировано как known limitation в
  * docs/en(ru,uk)/limitations.md и docs/development/known-issues.md — обновляй
  * оба места, если это когда-нибудь будет исправлено или переформулировано.
  */
@@ -26,6 +34,9 @@ import type { MetadataResolver } from '../core/query/metadataResolver';
 import type { MetaTable } from '../core/metadata/types';
 import { resolveFieldPath, type FieldPathResolution } from '../core/query/fieldPathResolver';
 import { findAliasTable } from '../core/query/findAliasTable';
+import { buildSemanticSnapshotFromText } from '../core/semantic/buildSemanticSnapshot';
+import { resolveAliasAt } from '../core/semantic/resolveAliasAt';
+import { resolveSymbolTable } from '../core/semantic/collectSymbols';
 
 export interface FieldChainSegment {
   /** Текст сегмента как написано в исходнике. */
@@ -147,25 +158,64 @@ export interface ChainDescription {
   resolution?: FieldPathResolution;
 }
 
+function describeViaTable(
+  table: { fullName: string },
+  meta: MetaTable | undefined,
+  chain: string[],
+  resolver: MetadataResolver,
+): ChainDescription {
+  if (!meta) return { tableFullName: table.fullName };
+  if (chain.length === 1) return { tableFullName: meta.fullName };
+  return { tableFullName: meta.fullName, resolution: resolveFieldPath(meta, chain.slice(1), resolver) };
+}
+
 /**
  * Разбирает `queryText` (уже реконструированный из BSL-литерала, БЕЗ `|`-префиксов
  * — см. `queryAtCursor.ts`'s `unpipe`) и описывает `chain` (текстовые сегменты,
  * `chain[0]` — предполагаемый псевдоним источника).
+ *
+ * `headPosition` — смещение головы `chain[0]` В КООРДИНАТАХ `queryText` (не
+ * сырого документа — см. `queryAtCursor.ts`'s `rawOffsetToQueryTextOffset` для
+ * перевода).
+ *
+ * Phase 3d: коли `queryText` дає `completeness === 'complete'` снепшот (звичайний,
+ * повністю розбираний запит) І `headPosition` відомий — голову резолвить
+ * позиційно-усвідомлений `resolveAliasAt`; будь-який результат, крім `'resolved'`
+ * (`'unknown'`/`'ambiguous'`), означає ПОРОЖНІЙ результат — свідоме продуктове
+ * рішення НЕ підстраховуватись старим плоским пошуком у цьому випадку, бо це
+ * ризикувало б повернути підтверджено НЕПРАВИЛЬНУ відповідь саме в тих випадках
+ * (право-вкладений JOIN тощо), заради яких цей резолвер і будувався.
+ *
+ * Інакше (снепшот `'recovered'`/`'unavailable'`, або `headPosition` невідомий) —
+ * `resolveAliasAt` тут принципово безпорадний: у "recovered" моделі ЗОВСІМ немає
+ * `sourceMapEvents` (репарація зсуває офсети — див. `SemanticSnapshot.
+ * sourceMapEvents`'ів власний doc), а курсор при зламаному SELECT-списку якраз і
+ * стоїть УСЕРЕДИНІ того, що repair замінив плейсхолдером. Тому тут — той самий
+ * старий плоский `findAliasTable` (позиційно-сліпий), що й завжди захищав від
+ * реального продакшн-регресу v0.1.33 (пропущена кома ламала весь SELECT).
  */
 export function describeChain(
   queryText: string,
   resolver: MetadataResolver,
-  chain: string[]
+  chain: string[],
+  headPosition: number | undefined,
 ): ChainDescription {
   if (chain.length === 0) return {};
+
+  const snapshot = buildSemanticSnapshotFromText(1, queryText, resolver);
+  if (snapshot.completeness === 'complete' && headPosition !== undefined) {
+    const resolution = resolveAliasAt(snapshot, headPosition, chain[0]);
+    if (resolution.kind !== 'resolved') return {};
+    const table = resolveSymbolTable(snapshot.model, resolution.value.ref.path);
+    // Те саме, що й стара findAliasTable: підзапит (fullName === '') і
+    // параметр-джерело (`&Имя`) — не справжня таблиця метаданих, unknown.
+    if (!table || !table.fullName || table.fullName.startsWith('&')) return {};
+    return describeViaTable(table, resolver.tableByFullName(table.fullName), chain, resolver);
+  }
+
   const found = findAliasTable(queryText, resolver, chain[0]);
   if (!found) return {};
-
-  const { table, meta } = found;
-  if (!meta) return { tableFullName: table.fullName };
-
-  if (chain.length === 1) return { tableFullName: meta.fullName };
-  return { tableFullName: meta.fullName, resolution: resolveFieldPath(meta, chain.slice(1), resolver) };
+  return describeViaTable(found.table, found.meta, chain, resolver);
 }
 
 export interface CompletionTarget {

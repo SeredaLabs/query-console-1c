@@ -203,3 +203,77 @@ export function findQueryKeywordRange(source: string, hit: QueryHit): { start: n
 export function findQueryAt(source: string, offset: number): QueryHit | null {
   return findAllQueryLiterals(source).find((hit) => offset >= hit.start && offset < hit.end) ?? null;
 }
+
+/**
+ * Переводить сирий символьний офсет документа (у межах тіла `hit`, тобто
+ * `[hit.start, hit.end)`) у офсет ВЖЕ ВІДНОВЛЕНОГО `hit.text` — координатну
+ * систему, в якій працюють `SemanticSnapshot.sourceMapEvents`/`resolveAliasAt`
+ * (Phase 3d: hover-міграція семантичного ядра, memory:
+ * project-semantic-core-roadmap). Потрібно, бо `hit.text` — це НЕ підрядок
+ * `source`: `""` згорнуто в один символ, а на рядках-продовженнях відкинуто
+ * префікс `[ \t]*\|` (див. `unpipe`) — обидві трансформації зсувають індекси.
+ *
+ * Відтворює ТОЧНО ту саму трансформацію, що й `findAllQueryLiterals`/`unpipe`,
+ * але паралельно веде масив "звідки прийшов цей символ `hit.text`", і шукає
+ * в ньому бінарним пошуком (масив завжди строго зростає — жодна з двох
+ * трансформацій не переставляє символи, лише схлопує чи пропускає їх).
+ *
+ * `undefined`, якщо `rawOffset` вказує РІВНО на символ, який був поглинутий
+ * трансформацією (друга лапка пари `""`, чи сам відкинутий префікс `[ \t]*\|`)
+ * — для символу справжнього ідентифікатора (`[\p{L}\p{N}_]`) це НІКОЛИ не
+ * трапляється: обидві трансформації чіпають лише лапки й пробіли/`|` на
+ * початку рядка, ніколи символи самого ідентифікатора.
+ */
+export function rawOffsetToQueryTextOffset(source: string, hit: QueryHit, rawOffset: number): number | undefined {
+  if (rawOffset < hit.start || rawOffset >= hit.end) return undefined;
+
+  // Стадія 1 — те саме, що будує `raw` у `findAllQueryLiterals`: `""` → один `"`.
+  const bodyLimit = hit.end > hit.start && source[hit.end - 1] === '"' ? hit.end - 1 : hit.end;
+  let raw = '';
+  const rawSourceOffsets: number[] = [];
+  for (let i = hit.start + 1; i < bodyLimit; i++) {
+    if (source[i] === '"' && source[i + 1] === '"') {
+      raw += '"';
+      rawSourceOffsets.push(i);
+      i++; // друга лапка пари — поглинута, не отримує власного запису
+      continue;
+    }
+    raw += source[i];
+    rawSourceOffsets.push(i);
+  }
+
+  // Стадія 2 — те саме, що робить `unpipe`: на кожному рядку, КРІМ першого,
+  // відкидаємо провідний `[ \t]*\|`, якщо він є.
+  let text = '';
+  const textSourceOffsets: number[] = [];
+  let i = 0;
+  let firstLine = true;
+  while (i < raw.length) {
+    if (!firstLine) {
+      let j = i;
+      while (j < raw.length && (raw[j] === ' ' || raw[j] === '\t')) j++;
+      if (raw[j] === '|') i = j + 1;
+    }
+    while (i < raw.length && raw[i] !== '\n') {
+      text += raw[i];
+      textSourceOffsets.push(rawSourceOffsets[i]);
+      i++;
+    }
+    if (i < raw.length) {
+      text += '\n';
+      textSourceOffsets.push(rawSourceOffsets[i]);
+      i++;
+      firstLine = false;
+    }
+  }
+
+  let lo = 0;
+  let hi = textSourceOffsets.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (textSourceOffsets[mid] === rawOffset) return mid;
+    if (textSourceOffsets[mid] < rawOffset) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  return undefined;
+}

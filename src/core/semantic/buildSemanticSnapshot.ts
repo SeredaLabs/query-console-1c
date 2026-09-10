@@ -19,6 +19,19 @@
  * the position mapping at the single-`parseDocument` level (the original
  * Phase 1b oracle suite) doesn't help THIS function's actual entry point,
  * `parseBatch`, which parses a whole (potentially multi-statement) batch.
+ *
+ * Phase 3d (hover migration): this is also where `index.symbolsById` gets
+ * materialized — `collectSourceAliasSymbols` runs ONCE here (for `'complete'`
+ * and `'recovered'` models; source/alias structure is trustworthy in both,
+ * see the `'recovered'` case above) instead of every `resolveAliasAt` call
+ * re-walking the whole `BatchDocument` from scratch. `createSemanticSnapshot`
+ * itself stays a plain, symbol-free skeleton constructor (`semanticSnapshot.ts`
+ * is Phase 1a's foundational module and has no reason to depend on Phase 3a's
+ * `collectSymbols.ts`); this function is the one real production entry point
+ * (see `resolveAliasAt.ts`/hover), so populating the index here is enough —
+ * `scopesById`/`referencesBySymbolId` stay empty until an actual consumer
+ * needs them materialized too (per this roadmap's own established discipline:
+ * don't build structure ahead of a real, concrete need).
  */
 import { parseBatch } from '../query/sdblParser';
 import type { MetadataResolver } from '../query/metadataResolver';
@@ -26,8 +39,18 @@ import { repairSelectListsForRecovery } from '../query/selectListRepair';
 import type { BatchDocument } from '../query/batchModel';
 import { RecordingBatchSourceMapSink } from '../query/sourceMap';
 import { createSemanticSnapshot, type SemanticSnapshot } from './semanticSnapshot';
+import { collectSourceAliasSymbols } from './collectSymbols';
 
 const EMPTY_BATCH: BatchDocument = { members: [] };
+
+function withSymbolIndex(snapshot: SemanticSnapshot): SemanticSnapshot {
+  const symbols = collectSourceAliasSymbols(snapshot.model);
+  if (symbols.length === 0) return snapshot;
+  return {
+    ...snapshot,
+    index: { ...snapshot.index, symbolsById: new Map(symbols.map((s) => [s.id, s])) },
+  };
+}
 
 /**
  * Builds a `SemanticSnapshot` from raw source text, trying increasingly lossy
@@ -57,7 +80,7 @@ export function buildSemanticSnapshotFromText(
   try {
     const sink = new RecordingBatchSourceMapSink();
     const model = parseBatch(sourceText, resolver, { batchSourceMap: sink });
-    return createSemanticSnapshot(documentVersion, sourceText, model, 'complete', sink.events);
+    return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, model, 'complete', sink.events));
   } catch {
     // falls through to the recovery attempt below
   }
@@ -65,7 +88,7 @@ export function buildSemanticSnapshotFromText(
   const repairedText = repairSelectListsForRecovery(sourceText);
   if (repairedText !== undefined) {
     try {
-      return createSemanticSnapshot(documentVersion, sourceText, parseBatch(repairedText, resolver), 'recovered');
+      return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, parseBatch(repairedText, resolver), 'recovered'));
     } catch {
       // repair itself wasn't enough — fall through to 'unavailable'
     }

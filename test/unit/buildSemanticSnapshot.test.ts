@@ -52,6 +52,27 @@ describe('buildSemanticSnapshotFromText', () => {
     expect(a.sourceHash).toBe(b.sourceHash);
   });
 
+  it("Phase 3d: 'complete' snapshot has index.symbolsById materialized (one Symbol per source alias) — no longer empty", () => {
+    const snapshot = buildSemanticSnapshotFromText(
+      1,
+      'ВЫБРАТЬ Т1.Код ИЗ Справочник.А КАК Т1 ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Б КАК Т2 ПО Т1.Код = Т2.Код',
+    );
+    expect(snapshot.index.symbolsById.size).toBe(2);
+    expect(Array.from(snapshot.index.symbolsById.values()).map((s) => s.alias)).toEqual(['Т1', 'Т2']);
+  });
+
+  it("Phase 3d: 'recovered' snapshot also gets symbolsById materialized (source/alias structure survives repair)", () => {
+    const broken = 'ВЫБРАТЬ Т.Поле1 Т.Поле2 ИЗ Справочник.Валюты КАК Т';
+    const snapshot = buildSemanticSnapshotFromText(1, broken);
+    expect(snapshot.completeness).toBe('recovered');
+    expect(Array.from(snapshot.index.symbolsById.values()).map((s) => s.alias)).toEqual(['Т']);
+  });
+
+  it("'unavailable' snapshot has an empty index (empty model, nothing to collect)", () => {
+    const snapshot = buildSemanticSnapshotFromText(1, 'ЭТО ВООБЩЕ НЕ ЗАПРОС {{{');
+    expect(snapshot.index.symbolsById.size).toBe(0);
+  });
+
   it('never throws across a small mix of valid/broken/garbage inputs', () => {
     const inputs = [
       'ВЫБРАТЬ 1',

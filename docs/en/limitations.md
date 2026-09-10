@@ -20,14 +20,15 @@ Cursor detection supports static BSL strings beginning with `ВЫБРАТЬ` or
 Successful parsing does not prove that every custom expression, field,
 dot-navigation chain, or platform-specific construct is valid.
 
-## 🔀 Hover and autocomplete ignore query scope
+## 🔀 Autocomplete ignores query scope
 
-Hovering over a field or triggering autocomplete resolves the table alias
-across the *entire* query batch — every `ОБЪЕДИНЕНИЕ` branch and subquery at
-once, not just the one under the cursor. If the same alias name is reused for
-a different source in another branch or subquery, the shown field/table info
-can be wrong. This is advisory only: it never affects the generated query
-text or what Apply inserts.
+Triggering autocomplete resolves the table alias across the *entire* query
+batch — every `ОБЪЕДИНЕНИЕ` branch and subquery at once, not just the one
+under the cursor. If the same alias name is reused for a different source in
+another branch or subquery, the suggested fields can be for the wrong table.
+This is advisory only: it never affects the generated query text or what
+Apply inserts. (Hovering over a field no longer has this limitation — hover
+resolves the alias using the actual JOIN/subquery scope at the cursor.)
 
 ## ⛔ Round-trip exclusions
 

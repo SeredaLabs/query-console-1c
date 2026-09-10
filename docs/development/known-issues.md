@@ -33,13 +33,17 @@
   setting to disable it entirely; not something a corpus/production sweep can
   fully rule out the way `findMalformedCustomExpressions` above was, since it
   depends on how a given codebase happens to build query text at runtime.
-- Hover and autocomplete resolve a table alias across the entire query batch
-  (every `ОБЪЕДИНЕНИЕ` branch and subquery at once), not just the scope under
-  the cursor -- a repeated alias for a different source elsewhere in the same
-  batch can show the wrong field/table info. Advisory only: never affects the
-  generated query text or Apply. Fixing this needs position-aware,
-  scope-tracking resolution (`hoverFieldInfo.ts`), a separate undertaking from
-  the current flat, first-match lookup.
+- Autocomplete (`resolveCompletionTarget`, `hoverFieldInfo.ts`) still resolves
+  a table alias across the entire query batch (every `ОБЪЕДИНЕНИЕ` branch and
+  subquery at once), not just the scope under the cursor -- a repeated alias
+  for a different source elsewhere in the same batch can suggest fields for
+  the wrong table. Advisory only: never affects the generated query text or
+  Apply. Hover (`describeChain`) no longer has this limitation as of the
+  semantic-core roadmap's Phase 3d (memory: project-semantic-core-roadmap) --
+  it resolves the head alias via `resolveAliasAt`, a position-aware resolver
+  that respects real JOIN-condition scoping and nearest-ancestor subquery
+  correlation (live-verified against real 1C). Migrating autocomplete the same
+  way is tracked as Phase 3e, not started yet.
 
 These are documented user boundaries, not permission to weaken tests. Add a
 regression test when fixing one and update all three limitations pages.

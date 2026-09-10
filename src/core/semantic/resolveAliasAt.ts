@@ -16,15 +16,15 @@
  *    outer-alias access from inside a subquery — nearest enclosing level
  *    wins, with fallback to farther levels only when nearer ones have no
  *    match at all.
- *  - `collectSourceAliasSymbols` (Phase 3a) for the actual symbol table.
+ *  - `snapshot.index.symbolsById` (Phase 3a's symbol table, materialized
+ *    once in `buildSemanticSnapshotFromText` as of Phase 3d — no longer
+ *    re-collected on every call here).
  *
- * Deliberately NOT wired into hover/completion yet (Phase 3d/3e), and
- * deliberately NOT run in continuous shadow-mode against `hoverFieldInfo.ts`'s
- * existing flat lookup yet (Refinement 4/5 call for this before any cutover —
- * tracked as follow-up work, not silently skipped: see this phase's memory
- * entry). This module only proves the resolver itself is correct in
- * isolation, via direct unit tests mirroring the Phase 2a live-verified
- * fixtures.
+ * Shadow-mode comparison against `findAliasTable`'s old flat lookup
+ * (Refinement 4/5's explicit gate) shipped and ran clean over the full golden
+ * corpus before this resolver was wired into hover (Phase 3d,
+ * `queryHoverProvider.ts`/`hoverFieldInfo.ts`) — see `shadowMode.ts` and this
+ * phase's memory entry for the classified disagreement report.
  */
 import type { BatchDocument } from '../query/batchModel';
 import type { QueryDocument } from '../query/unionModel';
@@ -35,7 +35,6 @@ import type { Symbol, ModelPath, SemanticSnapshot } from './semanticSnapshot';
 import type { Resolution } from './resolution';
 import { resolveNearestAncestorMatch } from './correlation';
 import { computeJoinVisibility } from './joinVisibility';
-import { collectSourceAliasSymbols } from './collectSymbols';
 
 interface ScopeLevel {
   model: QueryModel;
@@ -141,7 +140,9 @@ export function resolveAliasAt(snapshot: SemanticSnapshot, position: number, ali
   const chain = findScopeChain(snapshot.model, snapshot.sourceMapEvents, position);
   if (chain.length === 0) return { kind: 'unknown' };
 
-  const allSymbols = collectSourceAliasSymbols(snapshot.model);
+  // Materialized once in `buildSemanticSnapshotFromText` (Phase 3d) instead of
+  // re-walking the whole `BatchDocument` on every call.
+  const allSymbols = Array.from(snapshot.index.symbolsById.values());
   const upperAlias = alias.toUpperCase();
 
   const ancestorLevels: Symbol[][] = chain.map((level) => {

@@ -97,17 +97,30 @@ const TOVARY: MetaTable = {
 
 const resolver = buildResolverFromTables([TOVARY, KONTRAGENTY]);
 
+/**
+ * Phase 3d: `describeChain`'s head-alias resolution is position-aware
+ * (`resolveAliasAt`), but none of these fixtures have JOINs/subqueries — a
+ * SINGLE scope covers the whole query, so any in-range position (here: right
+ * at `ИЗ`, always present and always inside the query's own recorded
+ * `unionMember` range) resolves identically to every other. `headPosition`
+ * only needs to pick the right SCOPE; the alias NAME itself is `chain[0]`,
+ * passed separately — the two don't need to coincide textually.
+ */
+function headPos(text: string): number {
+  return text.indexOf('ИЗ');
+}
+
 describe('describeChain', () => {
   it('описывает голову цепочки (просто псевдоним источника)', () => {
     const text = 'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Товары КАК Т';
-    const r = describeChain(text, resolver, ['Т']);
+    const r = describeChain(text, resolver, ['Т'], headPos(text));
     expect(r.tableFullName).toBe('Справочник.Товары');
     expect(r.resolution).toBeUndefined();
   });
 
   it('резолвит простой скалярный сегмент', () => {
     const text = 'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Товары КАК Т';
-    const r = describeChain(text, resolver, ['Т', 'Наименование']);
+    const r = describeChain(text, resolver, ['Т', 'Наименование'], headPos(text));
     expect(r.tableFullName).toBe('Справочник.Товары');
     expect(r.resolution!.kind).toBe('scalar');
     expect(r.resolution!.resolved[0].field.name).toBe('Наименование');
@@ -115,51 +128,65 @@ describe('describeChain', () => {
 
   it('резолвит цепочку через ссылочное поле', () => {
     const text = 'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Товары КАК Т';
-    const r = describeChain(text, resolver, ['Т', 'Контрагент', 'Наименование']);
+    const r = describeChain(text, resolver, ['Т', 'Контрагент', 'Наименование'], headPos(text));
     expect(r.resolution!.kind).toBe('scalar');
     expect(r.resolution!.resolved.map(s => s.field.name)).toEqual(['Контрагент', 'Наименование']);
   });
 
   it('регистронезависимо находит псевдоним', () => {
     const text = 'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Товары КАК Т';
-    const r = describeChain(text, resolver, ['т', 'наименование']);
+    const r = describeChain(text, resolver, ['т', 'наименование'], headPos(text));
     expect(r.tableFullName).toBe('Справочник.Товары');
     expect(r.resolution!.kind).toBe('scalar');
   });
 
   it('источник использует псевдоним по умолчанию, когда КАК не указан', () => {
     const text = 'ВЫБРАТЬ Товары.Наименование ИЗ Справочник.Товары';
-    const r = describeChain(text, resolver, ['Товары']);
+    const r = describeChain(text, resolver, ['Товары'], headPos(text));
     expect(r.tableFullName).toBe('Справочник.Товары');
   });
 
   it('неизвестный псевдоним — пустой результат (unknown != invalid, не ошибка)', () => {
     const text = 'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Товары КАК Т';
-    const r = describeChain(text, resolver, ['НетТакогоПсевдонима']);
+    const r = describeChain(text, resolver, ['НетТакогоПсевдонима'], headPos(text));
     expect(r.tableFullName).toBeUndefined();
     expect(r.resolution).toBeUndefined();
   });
 
   it('параметр-источник (&Имя) — пустой результат, а не сбой', () => {
     const text = 'ВЫБРАТЬ Т.Наименование ИЗ &ВнешнийИсточник КАК Т';
-    const r = describeChain(text, resolver, ['Т', 'ЧтоУгодно']);
+    const r = describeChain(text, resolver, ['Т', 'ЧтоУгодно'], headPos(text));
     expect(r.tableFullName).toBeUndefined();
   });
 
   it('таблица без метаданных в резолвере — сообщает fullName, но без resolution', () => {
     const text = 'ВЫБРАТЬ Т.Наименование ИЗ Справочник.НетВМетаданных КАК Т';
-    const r = describeChain(text, resolver, ['Т', 'ЧтоУгодно']);
+    const r = describeChain(text, resolver, ['Т', 'ЧтоУгодно'], headPos(text));
     expect(r.tableFullName).toBe('Справочник.НетВМетаданных');
     expect(r.resolution).toBeUndefined();
   });
 
   it('пустой ланцюжок сегментов — пустий результат', () => {
     const text = 'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Товары КАК Т';
-    expect(describeChain(text, resolver, [])).toEqual({});
+    expect(describeChain(text, resolver, [], headPos(text))).toEqual({});
   });
 
   it('невалідний текст запиту — пустий результат, а не виняток', () => {
-    const r = describeChain('ЦЕ НЕ ЗАПИТ ((((', resolver, ['Т']);
+    const r = describeChain('ЦЕ НЕ ЗАПИТ ((((', resolver, ['Т'], 0);
+    expect(r).toEqual({});
+  });
+
+  it("'unknown' від resolveAliasAt НЕ падає назад на старий плоский пошук (продуктове рішення: unknown != invalid, але і не привід ризикувати перевіреною неправильною відповіддю)", () => {
+    // Право-вкладений JOIN: Т1 НЕ видимий з внутрішньої умови ПО Т2-Т3 (Phase 2a,
+    // live-verified) — стара findAliasTable про це не знає (позиційно-сліпа) і
+    // впевнено "знайшла" б Т1; новий шлях коректно нічого не показує.
+    const text =
+      'ВЫБРАТЬ Т1.Наименование ИЗ Справочник.Товары КАК Т1 ' +
+      'ЛЕВОЕ СОЕДИНЕНИЕ (ВЫБРАТЬ 1 КАК Знач) КАК Т2 ' +
+      'ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Товары КАК Т3 ПО Т1.Наименование = Т3.Наименование ' +
+      'ПО Т1.Наименование = Т2.Знач';
+    const posInInnerCond = text.indexOf('Т1.Наименование = Т3.Наименование');
+    const r = describeChain(text, resolver, ['Т1', 'Наименование'], posInInnerCond);
     expect(r).toEqual({});
   });
 });
@@ -267,7 +294,7 @@ describe('відновлення після зламаного SELECT-списк
   });
 
   it('describeChain усе одно резолвить псевдонім через ИЗ, попри зламаний SELECT', () => {
-    const desc = describeChain(BROKEN_TEXT, nomenklaturaResolver, ['Номенклатура']);
+    const desc = describeChain(BROKEN_TEXT, nomenklaturaResolver, ['Номенклатура'], 0);
     expect(desc.tableFullName).toBe('Справочник.Номенклатура');
   });
 
@@ -279,7 +306,7 @@ describe('відновлення після зламаного SELECT-списк
 
   it('undefined (не виняток), якщо запит зламаний настільки, що відновлення теж не рятує (немає ИЗ узагалі)', () => {
     const text = 'ВЫБРАТЬ Номенклатура.Ссылка, Номенклатура.';
-    expect(describeChain(text, nomenklaturaResolver, ['Номенклатура'])).toEqual({});
+    expect(describeChain(text, nomenklaturaResolver, ['Номенклатура'], 0)).toEqual({});
     expect(resolveCompletionTarget(text, nomenklaturaResolver, ['Номенклатура'])).toBeUndefined();
   });
 

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { findQueryAt, type QueryHit } from './queryAtCursor';
+import { findQueryAt, rawOffsetToQueryTextOffset, type QueryHit } from './queryAtCursor';
 import { findChainAt, describeChain, type ChainDescription } from './hoverFieldInfo';
 import { getMetadataResolver } from './metadataResolverCache';
 import { OPEN_FROM_RANGE_COMMAND } from './openFromRangeCommand';
@@ -9,10 +9,11 @@ import { OPEN_FROM_RANGE_COMMAND } from './openFromRangeCommand';
  * развитие поверх того же `resolveFieldPath`-ядра, что уже используют
  * `checkFieldPaths` (semanticValidator.ts) и три мигрированных прохода парсера.
  *
- * ИЗВЕСТНОЕ УПРОЩЕНИЕ (документировано, не скрыто): псевдоним ищется по ВСЕМ
- * таблицам пакета сразу, без построения полноценного дерева областей видимости —
- * см. doc-комментарий `hoverFieldInfo.ts`. На практике это верно почти всегда.
+ * Phase 3d (semantic-core roadmap): псевдонім голови ланцюжка резолвиться
+ * позиційно-усвідомленим `resolveAliasAt` (реальна видимість JOIN/підзапиту,
+ * live-verified проти справжнього 1С) — див. doc-коментар `hoverFieldInfo.ts`.
  *
+
  * Fail-open (unknown != invalid): любая неопределённость — неизвестный псевдоним,
  * нерезолвящаяся таблица, `targetUnresolved` (не хватает метаданных, чтобы
  * продолжить путь) — просто НЕ показывает hover, а не показывает ошибочную
@@ -46,7 +47,8 @@ export class QueryHoverProvider implements vscode.HoverProvider {
     if (chain) {
       try {
         const resolver = await getMetadataResolver(this.resolveCfPath(), this.context, this.channel);
-        const description = describeChain(hit.text, resolver, chain.segments.map((s) => s.text));
+        const headPosition = rawOffsetToQueryTextOffset(source, hit, chain.segments[0].start);
+        const description = describeChain(hit.text, resolver, chain.segments.map((s) => s.text), headPosition);
         const message = buildHoverMessage(chain.hoveredIndex, chain.segments.map((s) => s.text), description);
         if (message) {
           const hovered = chain.segments[chain.hoveredIndex];
