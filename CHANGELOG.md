@@ -5,6 +5,19 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.42 - 2026-09-10
+
+### Internal
+
+- Closed a gap in the semantic-analysis groundwork's source mapping: a
+  subquery source (`ИЗ (ВЫБРАТЬ ...) КАК Т`) now recursively records its own
+  internal ranges, translated into the outer query's coordinates — previously
+  only the subquery's outer span was recorded, with nothing for what's inside
+  the parentheses. Nesting (including subqueries inside subqueries) is
+  recovered via range containment, not a schema change. No parser/generator
+  behavior changes — proven byte-for-byte identical across the full
+  1976-query golden corpus. Nothing user-facing yet.
+
 ## 0.1.41 - 2026-09-10
 
 ### Internal
