@@ -58,6 +58,7 @@ import type { QueryDocument, UnionMember } from './unionModel';
 import type { BatchDocument } from './batchModel';
 import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable, MetaField } from '../metadata/types';
+import type { SourceMapSink } from './sourceMap';
 import { expandStarFields } from './expandStarFields';
 import { expandTabSectionFields } from './expandTabSectionFields';
 import { wrapTabSectionAggregates } from './wrapTabSectionAggregates';
@@ -136,7 +137,19 @@ class Cursor {
   private idx = 0;
   constructor(
     private readonly tokens: Token[],
-    readonly source: string
+    readonly source: string,
+    /**
+     * Phase 1b (semantic-core roadmap, memory: project-semantic-core-roadmap):
+     * optional write-only source-location sink. `undefined` in every existing
+     * call site except `parseDocumentInner`'s main cursor, so parser behavior
+     * is unchanged unless a caller opts in via `ParseOptions.sourceMap`.
+     * Deliberately NOT threaded into the two `synthesizeImplicitFrom`/
+     * `synthesizeTempTableFrom` rewrite paths (they build a new `Cursor` over a
+     * SYNTHESIZED text, not the original) — recording ranges against synthesized
+     * text would silently point outside the real document, so those paths just
+     * fail open (no source-map events at all) rather than record wrong ones.
+     */
+    readonly sourceMap?: SourceMapSink
   ) {}
 
   peek(offset = 0): Token {
@@ -1831,6 +1844,19 @@ function parseFrom(cur: Cursor): FromResult {
 
 /** Один источник таблицы: `<fullName> [(<params>)] КАК <alias>`. */
 function parseTableSource(cur: Cursor, index: number): SelectedTable {
+  // Phase 1b (semantic-core roadmap): исходная позиция источника — для записи
+  // диапазона в sourceMap (write-only, см. ./sourceMap.ts). startTok берётся ДО
+  // разбора; recordTableRange вызывается ПОСЛЕ того, как источник уже построен,
+  // используя последний поглощённый токен (cur.peek(-1)) как конец диапазона.
+  const startTok = cur.peek();
+  const recordTableRange = (): void => {
+    const endTok = cur.peek(-1);
+    cur.sourceMap?.record({
+      kind: 'table',
+      index,
+      range: { start: startTok.pos, end: endTok.pos + endTok.text.length },
+    });
+  };
   // Подзапрос в источнике `ИЗ (<подзапрос>) КАК Т` — полноценный узел модели
   // (фаза 6.11). Поглощаем сбалансированную скобку, рекурсивно разбираем
   // содержимое через parseDocument (поддержка ОБЪЕДИНИТЬ), затем обязательный
@@ -1869,6 +1895,7 @@ function parseTableSource(cur: Cursor, index: number): SelectedTable {
       throw cur.error('ожидался псевдоним подзапроса после КАК', aliasTok);
     }
     cur.next();
+    recordTableRange();
     return { id: 't' + index, fullName: '', alias: aliasTok.text, subquery };
   }
   const fullName = parseDottedName(cur);
@@ -1905,6 +1932,7 @@ function parseTableSource(cur: Cursor, index: number): SelectedTable {
   };
   if (aliasSynthesized) table.aliasSynthesized = true;
   if (virtual) table.virtual = virtual;
+  recordTableRange();
   return table;
 }
 
@@ -4479,6 +4507,13 @@ function splitUnionMembers(tokens: Token[], source: string): RawUnionMember[] {
  */
 export interface ParseOptions {
   preserveComments?: boolean;
+  /**
+   * Phase 1b (semantic-core roadmap) — optional write-only source-location sink
+   * (see `./sourceMap.ts`). `undefined` by default → zero behavior change; every
+   * recorded range is relative to THIS call's own `text`, not any enclosing
+   * batch (see `SourceMapEvent`'s doc).
+   */
+  sourceMap?: SourceMapSink;
 }
 
 /**
@@ -4560,7 +4595,7 @@ export function parseDocument(
   const prevSourceResolver = sourceResolver;
   sourceResolver = resolver;
   try {
-    const doc = parseDocumentInner(text, resolver);
+    const doc = parseDocumentInner(text, resolver, opts?.sourceMap);
     // 8.1: связывание комментариев для одиночного запроса И для ОБЪЕДИНЕНИЯ
     // (по участникам); никогда не роняем разбор из-за извлечения комментариев.
     if (opts?.preserveComments) {
@@ -4572,7 +4607,11 @@ export function parseDocument(
   }
 }
 
-function parseDocumentInner(text: string, resolver?: MetadataResolver): QueryDocument {
+function parseDocumentInner(
+  text: string,
+  resolver?: MetadataResolver,
+  sourceMap?: SourceMapSink,
+): QueryDocument {
   const tokens = tokenize(text);
   const raw = splitUnionMembers(tokens, text);
 
@@ -4581,7 +4620,7 @@ function parseDocumentInner(text: string, resolver?: MetadataResolver): QueryDoc
   let firstCtx: SectionResolveContext | undefined;
   const models = raw.map((r, i) => {
     const ctxOut: { ctx?: SectionResolveContext } = {};
-    const memberCur = new Cursor(r.tokens, text);
+    const memberCur = new Cursor(r.tokens, text, sourceMap);
     const model = parseSingleQuery(memberCur, i > 0 ? firstCtx : undefined, ctxOut);
     // ЭКСПЕРИМЕНТ (риск-оценка по запросу пользователя, не подтверждённый фикс):
     // `ИЗ` необязателен (строка 636), поэтому `parseFieldList`/`parseSingleQuery`
@@ -4595,6 +4634,11 @@ function parseDocumentInner(text: string, resolver?: MetadataResolver): QueryDoc
     if (memberCur.peek().type !== 'eof') {
       throw memberCur.error('после конца запроса остались нераспознанные данные', memberCur.peek());
     }
+    // Phase 1b (semantic-core roadmap): диапазон участника ОБЪЕДИНЕНИЯ целиком —
+    // записывается через memberCur (ДО любой внутренней пересборки Cursor'а внутри
+    // parseSingleQuery, см. Cursor.sourceMap doc) по границам исходного среза `r`.
+    const eofTok = r.tokens[r.tokens.length - 1];
+    memberCur.sourceMap?.record({ kind: 'unionMember', index: i, range: { start: r.tokens[0].pos, end: eofTok.pos } });
     if (i === 0) firstCtx = ctxOut.ctx;
     // Канонизация регистра ИМЕНИ источника метаданных (фаза 6.16.49): конструктор
     // 1С печатает `Тип.ОбъектИмя[.ТЧ]` в каноническом написании метаданных, тогда
@@ -4980,6 +5024,15 @@ export function parseBatch(
   // `parseDocument` каждого следующего оператора — там `expandStarFields` разворачивает
   // звезду по синтетической таблице ВТ ровно так же, как по реальной (MCP-проба:
   // `* ИЗ ВТ` → `ВТ.Колонка КАК Колонка`).
+  // Phase 1b (semantic-core roadmap): `opts.sourceMap` is intentionally NOT
+  // threaded into these per-chunk `parseDocument` calls. Each chunk restarts its
+  // own `unionMember`/`table` index numbering at 0 and its own ranges are
+  // relative to that chunk's OWN text (`c`, not the batch's `text`) — a single
+  // shared sink fed from multiple chunks would silently collide (chunk 0's
+  // table 0 and chunk 1's table 0 both recorded as `{kind:'table', index:0}`
+  // with unrelated ranges). Batch-level stitching (chunk start offsets, a
+  // qualifying statement index) is real, not-yet-designed work — out of scope
+  // for this phase, which only proves the mapping at the single-document level.
   const tempTables = new Map<string, MetaTable>();
   const members = chunks.map((c) => {
     const doc = parseDocument(c, augmentResolverWithTempTables(resolver, tempTables));
