@@ -5,6 +5,21 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.41 - 2026-09-10
+
+### Internal
+
+- Extended the semantic-analysis groundwork from 0.1.40 with batch-aware source
+  mapping: `parseBatch` can now report absolute, statement-tagged source ranges
+  for its whole (potentially multi-statement) output, not just a single
+  statement, and the tolerant snapshot builder (`buildSemanticSnapshotFromText`)
+  now actually wires this into `SemanticSnapshot` for cleanly-parsed queries.
+  Ranges are deliberately withheld for a repaired/unavailable parse, since a
+  repair heuristic can shift character offsets away from the real document. No
+  parser/generator behavior changes — proven byte-for-byte identical across the
+  full 1976-query golden corpus with and without the new instrumentation
+  attached. Nothing user-facing yet.
+
 ## 0.1.40 - 2026-09-10
 
 ### Internal
