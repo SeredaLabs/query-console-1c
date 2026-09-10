@@ -2368,3 +2368,52 @@ describe('скан владельцев полей: подзапросы (ВЫБ
     expect(generate(parseQuery(once))).toBe(once);
   });
 });
+
+// ─────────────── регрессия: parseDocument/parseBatch + синтез неявного ИЗ ───────────────
+
+describe('синтез неявного ИЗ (6.16.17/6.16.77) через parseDocument/parseBatch', () => {
+  // Оба помощника синтеза (synthesizeImplicitFrom/synthesizeTempTableFrom)
+  // при срабатывании подменяют курсор новым объектом над переписанным текстом
+  // (parseSingleQuery переприсваивает локальную переменную `cur`). До фикса
+  // parseDocumentInner проверял «не осталось ли нераспознанных данных» по
+  // ИСХОДНОМУ курсору члена объединения, чья позиция в этом случае никогда не
+  // продвигалась — проверка ложно бросала ошибку на первом же токене
+  // («ВЫБРАТЬ») для ЛЮБОГО запроса, где синтез реально сработал. parseQuery
+  // этот путь не затрагивает (нет такой проверки), поэтому баг был невидим
+  // без прямого теста через parseDocument/parseBatch.
+
+  it('synthesizeImplicitFrom: поле полным путём без ИЗ парсится через parseBatch', () => {
+    const batch = parseBatch('ВЫБРАТЬ Справочник.Валюты.Код КАК Код');
+    const model = batch.members[0].members[0].model;
+    expect(model.tables).toEqual([{ id: 't0', fullName: 'Справочник.Валюты', alias: 'Валюты' }]);
+    expect(model.fields).toEqual([{ tableId: 't0', path: 'Код', qualified: true, alias: 'Код' }]);
+  });
+
+  it('synthesizeImplicitFrom: то же через parseDocument напрямую', () => {
+    const doc = parseDocument('ВЫБРАТЬ Справочник.Валюты.Код КАК Код');
+    const model = doc.members[0].model;
+    expect(model.tables).toEqual([{ id: 't0', fullName: 'Справочник.Валюты', alias: 'Валюты' }]);
+  });
+
+  it('synthesizeTempTableFrom: выборка из ВТ без ИЗ парсится через parseBatch', () => {
+    // Резолвер, знающий одну временную таблицу «ВТ» (имитирует видимость ВТ,
+    // созданной более ранним ПОМЕСТИТЬ в реальном пакете — synthesizeTempTableFrom
+    // резолвит имя через resolver.tableByFullName).
+    const tempResolver = {
+      tableByFullName: (full: string) =>
+        full === 'ВТ' ? { kind: 'РегистрСведений' as const, name: 'ВТ', fullName: 'ВТ', fields: [] } : undefined,
+    };
+    const batch = parseBatch('ВЫБРАТЬ ВТ.Код КАК Код', tempResolver);
+    const model = batch.members[0].members[0].model;
+    expect(model.tables).toEqual([{ id: 't0', fullName: 'ВТ', alias: 'ВТ' }]);
+    expect(model.fields).toEqual([{ tableId: 't0', path: 'Код', qualified: true, alias: 'Код' }]);
+  });
+
+  it('synthesizeTempTableFrom: без резолвера, знающего ВТ, синтез не срабатывает (голое поле-выражение)', () => {
+    // Контрольный случай: без резолвера `ВТ.Код` не резолвится в источник —
+    // остаётся выражением, разбор не бросает (документирует границу синтеза).
+    const batch = parseBatch('ВЫБРАТЬ ВТ.Код КАК Код');
+    const model = batch.members[0].members[0].model;
+    expect(model.tables).toEqual([]);
+  });
+});
