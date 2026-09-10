@@ -1887,13 +1887,38 @@ function parseTableSource(cur: Cursor, index: number): SelectedTable {
     // условие могло потеряться/сместиться (фаза 6.16.70).
     subquerySourceDepth++;
     let subquery: QueryDocument;
+    // Phase 1b (semantic-core roadmap): пробрасываем sourceMap и в подзапрос —
+    // ранее эта рекурсия НЕ передавала его вовсе, так что unionMember/table
+    // внутри подзапроса-источника не записывались вообще (закрытая по запросу
+    // пользователя дыра, ранее задокументированная и протестированная как
+    // известное ограничение в sourceMapOracle.test.ts). Промежуточный sink
+    // собирает диапазоны ОТНОСИТЕЛЬНО `innerText`; каждый транслируется в
+    // координаты `cur.source` сдвигом на `open.pos + 1` (начало среза) перед
+    // записью в ВНЕШНИЙ sink — та же техника смещения offset'ов, что и
+    // batch-level stitching в `parseBatch`. Форма события (`SourceMapEvent`,
+    // плоские `kind`/`index`) не меняется: вложенность восстанавливается через
+    // containment диапазонов (`findContaining`/`findNearest` уже сортируют
+    // "изнутри наружу"), не через явный parent-указатель.
+    const innerSink = cur.sourceMap ? new RecordingSourceMapSink() : undefined;
     try {
-      subquery = withSubqueryRecursionGuard(() => parseDocument(innerText, sourceResolver));
+      subquery = withSubqueryRecursionGuard(() =>
+        parseDocument(innerText, sourceResolver, innerSink ? { sourceMap: innerSink } : undefined)
+      );
     } catch (e) {
       if (e instanceof SubqueryRecursionLimitError) throw cur.error(e.message, open);
       throw e;
     } finally {
       subquerySourceDepth--;
+    }
+    if (innerSink) {
+      const offset = open.pos + 1;
+      for (const e of innerSink.events) {
+        cur.sourceMap?.record({
+          kind: e.kind,
+          index: e.index,
+          range: { start: e.range.start + offset, end: e.range.end + offset },
+        });
+      }
     }
     if (!cur.matchKeyword('КАК')) {
       throw cur.error('ожидалось КАК <псевдоним> после подзапроса в источнике ИЗ', cur.peek());

@@ -113,15 +113,66 @@ describe('source-map oracle: right-nested multi-JOIN ("правовложенн�
 });
 
 describe('source-map oracle: subquery source', () => {
+  // Дыра, ранее задокументированная здесь ("records the outer table but NOT
+  // the inner subquery's own sources"), закрыта: subquery-source-рекурсия
+  // теперь тоже пробрасывает sourceMap, смещая offset'ы вложенного
+  // `parseDocument`-вызова (`innerText`, свой собственный `parseDocument`) в
+  // координаты внешнего текста.
   const text = 'ВЫБРАТЬ Т.Поле ИЗ (ВЫБРАТЬ Б.Поле ИЗ Справочник.Б КАК Б) КАК Т';
   const events = recordEvents(text);
 
-  it('records the outer table (subquery source) but NOT the inner subquery\'s own sources (separate parseDocument call)', () => {
+  it('records BOTH the outer table (subquery source) and the inner subquery\'s own table', () => {
     const tables = events.filter((e) => e.kind === 'table');
-    expect(tables).toHaveLength(1);
-    expect(text.slice(tables[0].range.start, tables[0].range.end)).toBe(
-      '(ВЫБРАТЬ Б.Поле ИЗ Справочник.Б КАК Б) КАК Т',
-    );
+    expect(tables).toHaveLength(2);
+  });
+
+  it('the outer event covers the whole `(...) КАК Т` span', () => {
+    const outer = events.filter((e) => e.kind === 'table').find((e) => text.slice(e.range.start, e.range.end).startsWith('('))!;
+    expect(text.slice(outer.range.start, outer.range.end)).toBe('(ВЫБРАТЬ Б.Поле ИЗ Справочник.Б КАК Б) КАК Т');
+  });
+
+  it('the inner event, translated to OUTER coordinates, slices back to the inner source clause', () => {
+    const inner = events.filter((e) => e.kind === 'table').find((e) => text.slice(e.range.start, e.range.end) === 'Справочник.Б КАК Б');
+    expect(inner).toBeDefined();
+  });
+
+  it('the inner subquery also gets its own unionMember event, nested within the outer one', () => {
+    const members = events.filter((e) => e.kind === 'unionMember').sort((a, b) => a.range.start - b.range.start);
+    expect(members.length).toBeGreaterThanOrEqual(2); // outer query's member + inner subquery's member
+    // Inner (subquery) member's range must be fully contained within the outer one.
+    const [outerMember, innerMember] = members;
+    expect(innerMember.range.start).toBeGreaterThanOrEqual(outerMember.range.start);
+    expect(innerMember.range.end).toBeLessThanOrEqual(outerMember.range.end);
+  });
+
+  it('findContaining resolves a position inside the inner subquery to the inner table first (innermost-first)', () => {
+    const posInsideInner = text.indexOf('Справочник.Б') + 1;
+    const containing = findContaining(events, posInsideInner);
+    expect(containing.length).toBeGreaterThan(0);
+    expect(text.slice(containing[0].range.start, containing[0].range.end)).toBe('Справочник.Б КАК Б');
+  });
+});
+
+describe('source-map oracle: DOUBLY-nested subquery (subquery inside a subquery)', () => {
+  const text = 'ВЫБРАТЬ Т.Поле ИЗ (ВЫБРАТЬ В.Поле ИЗ (ВЫБРАТЬ Б.Поле ИЗ Справочник.Б КАК Б) КАК В) КАК Т';
+  const events = recordEvents(text);
+
+  it('records all three table sources at the correct nesting depth', () => {
+    const tables = events.filter((e) => e.kind === 'table');
+    expect(tables).toHaveLength(3);
+    const innermost = tables.find((e) => text.slice(e.range.start, e.range.end) === 'Справочник.Б КАК Б');
+    expect(innermost).toBeDefined();
+  });
+
+  it('a position inside the innermost table resolves through findContaining as the smallest range', () => {
+    const pos = text.indexOf('Справочник.Б') + 1;
+    const containing = findContaining(events, pos);
+    expect(text.slice(containing[0].range.start, containing[0].range.end)).toBe('Справочник.Б КАК Б');
+    // Every ancestor level must also contain this position (nesting, not disjoint).
+    for (let i = 1; i < containing.length; i++) {
+      expect(containing[i].range.start).toBeLessThanOrEqual(containing[i - 1].range.start);
+      expect(containing[i].range.end).toBeGreaterThanOrEqual(containing[i - 1].range.end);
+    }
   });
 });
 
