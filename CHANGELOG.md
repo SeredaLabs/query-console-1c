@@ -5,6 +5,31 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.44 - 2026-09-11
+
+### Changed
+
+- Hover over a field now resolves the source alias using the query's real
+  JOIN/subquery scope at the cursor (live-verified against real 1C), instead
+  of matching the alias name anywhere in the whole query batch. A right-nested
+  `JOIN`'s own condition, for example, no longer shows information from a
+  table that isn't actually visible there. Autocomplete still uses the old,
+  scope-blind lookup for now.
+
+## 0.1.43 - 2026-09-11
+
+### Internal
+
+- Extended the semantic-analysis groundwork with JOIN/correlation visibility
+  algorithms (`computeJoinVisibility`, nearest-ancestor subquery correlation),
+  temp-table visibility, source/alias symbols, and `resolveAliasAt(position)` —
+  the first position-aware alias resolver, live-verified against 5 real-1C
+  JOIN/correlation visibility rules. Added a shadow-mode comparison harness
+  that classifies every disagreement between the new resolver and the existing
+  flat lookup (not just a raw rate), run across the full 1976-query golden
+  corpus as a diagnostic report. Not yet wired into hover/completion — nothing
+  user-facing yet.
+
 ## 0.1.42 - 2026-09-10
 
 ### Internal
