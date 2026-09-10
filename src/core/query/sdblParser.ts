@@ -605,7 +605,7 @@ const SECTION_AFTER_FIELDS: ReadonlySet<string> = new Set([
 function parseSingleQuery(
   cur: Cursor,
   inheritedSectionCtx?: SectionResolveContext,
-  ctxOut?: { ctx?: SectionResolveContext }
+  ctxOut?: { ctx?: SectionResolveContext; cur?: Cursor }
 ): QueryModel {
   // Синтез источника `ИЗ` из полных путей полей `Тип.Объект.поле` при отсутствии
   // секции `ИЗ` (фаза 6.16.17): возвращает переписанный курсор либо исходный.
@@ -613,6 +613,13 @@ function parseSingleQuery(
   // Синтез источника `ИЗ <ВТ> КАК <ВТ>` при отсутствии секции `ИЗ` и едином
   // префиксе-ВТ у всех полей (фаза 6.16.77).
   cur = synthesizeTempTableFrom(cur);
+  // Синтез мог заменить курсор новым объектом поверх переписанного текста
+  // (см. оба помощника выше) — сообщаем вызывающему ФАКТИЧЕСКИЙ курсор, по
+  // которому шёл разбор, чтобы проверка «не осталось ли нераспознанных
+  // данных» (parseDocumentInner) смотрела на правильный объект, а не на
+  // исходный курсор до подмены (иначе его позиция навсегда останется в
+  // начале и проверка ложно сработает на первом же токене).
+  if (ctxOut) ctxOut.cur = cur;
 
   // УНИЧТОЖИТЬ <name> — самостоятельный запрос (без ВЫБРАТЬ).
   if (cur.isKeyword('УНИЧТОЖИТЬ')) {
@@ -4580,7 +4587,7 @@ function parseDocumentInner(text: string, resolver?: MetadataResolver): QueryDoc
   // после последнего участника, но конструктор 1С резолвит их по участнику 0.
   let firstCtx: SectionResolveContext | undefined;
   const models = raw.map((r, i) => {
-    const ctxOut: { ctx?: SectionResolveContext } = {};
+    const ctxOut: { ctx?: SectionResolveContext; cur?: Cursor } = {};
     const memberCur = new Cursor(r.tokens, text);
     const model = parseSingleQuery(memberCur, i > 0 ? firstCtx : undefined, ctxOut);
     // ЭКСПЕРИМЕНТ (риск-оценка по запросу пользователя, не подтверждённый фикс):
@@ -4592,8 +4599,14 @@ function parseDocumentInner(text: string, resolver?: MetadataResolver): QueryDoc
     // `ИЗ` после него, если он там был. Проверяем здесь, наверху ОДНОГО участника
     // объединения — если курсор не дошёл до конца, это точно баг ввода, а не
     // валидный синтаксис (иначе `parseSingleQuery` сам бы дочитал куда нужно).
-    if (memberCur.peek().type !== 'eof') {
-      throw memberCur.error('после конца запроса остались нераспознанные данные', memberCur.peek());
+    // Используем `ctxOut.cur`, а не `memberCur`: синтез неявного `ИЗ`
+    // (synthesizeImplicitFrom/synthesizeTempTableFrom) при срабатывании заменяет
+    // курсор новым объектом над переписанным текстом и весь разбор идёт по НЕМУ —
+    // позиция исходного `memberCur` в этом случае никогда не продвигается, и
+    // проверка по нему ложно решила бы, что в начале запроса остался мусор.
+    const finalCur = ctxOut.cur ?? memberCur;
+    if (finalCur.peek().type !== 'eof') {
+      throw finalCur.error('после конца запроса остались нераспознанные данные', finalCur.peek());
     }
     if (i === 0) firstCtx = ctxOut.ctx;
     // Канонизация регистра ИМЕНИ источника метаданных (фаза 6.16.49): конструктор
