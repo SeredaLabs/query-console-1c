@@ -12,11 +12,19 @@
  * Reuses the SAME recovery heuristic hover/completion already rely on
  * (`repairSelectListsForRecovery`, moved to `../query/selectListRepair` in this
  * phase precisely so it isn't duplicated) rather than inventing a parallel one.
+ *
+ * A `'complete'` snapshot also collects `sourceMapEvents` (batch-wide, absolute
+ * table/union-member ranges) via `parseBatch`'s `batchSourceMap` option —
+ * closing a gap an external review of Phase 1a-1c correctly flagged: proving
+ * the position mapping at the single-`parseDocument` level (the original
+ * Phase 1b oracle suite) doesn't help THIS function's actual entry point,
+ * `parseBatch`, which parses a whole (potentially multi-statement) batch.
  */
 import { parseBatch } from '../query/sdblParser';
 import type { MetadataResolver } from '../query/metadataResolver';
 import { repairSelectListsForRecovery } from '../query/selectListRepair';
 import type { BatchDocument } from '../query/batchModel';
+import { RecordingBatchSourceMapSink } from '../query/sourceMap';
 import { createSemanticSnapshot, type SemanticSnapshot } from './semanticSnapshot';
 
 const EMPTY_BATCH: BatchDocument = { members: [] };
@@ -47,7 +55,9 @@ export function buildSemanticSnapshotFromText(
   resolver?: MetadataResolver,
 ): SemanticSnapshot {
   try {
-    return createSemanticSnapshot(documentVersion, sourceText, parseBatch(sourceText, resolver), 'complete');
+    const sink = new RecordingBatchSourceMapSink();
+    const model = parseBatch(sourceText, resolver, { batchSourceMap: sink });
+    return createSemanticSnapshot(documentVersion, sourceText, model, 'complete', sink.events);
   } catch {
     // falls through to the recovery attempt below
   }

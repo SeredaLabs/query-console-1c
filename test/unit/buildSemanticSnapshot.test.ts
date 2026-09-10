@@ -14,20 +14,34 @@ describe('buildSemanticSnapshotFromText', () => {
     expect(snapshot.model.members[0].members[0].model.tables[0].alias).toBe('Т');
   });
 
-  it("a query with a broken top-level SELECT list (missing comma) yields completeness 'recovered', with sources/aliases still intact", () => {
+  it("a 'complete' snapshot carries real, absolute sourceMapEvents that slice back to the source", () => {
+    const text = 'ВЫБРАТЬ Т.Поле ИЗ Справочник.Валюты КАК Т';
+    const snapshot = buildSemanticSnapshotFromText(1, text);
+    expect(snapshot.sourceMapEvents.length).toBeGreaterThan(0);
+    const table = snapshot.sourceMapEvents.find((e) => e.kind === 'table')!;
+    expect(table).toBeDefined();
+    expect(table.statementIndex).toBe(0);
+    expect(text.slice(table.range.start, table.range.end)).toBe('Справочник.Валюты КАК Т');
+  });
+
+  it("a query with a broken top-level SELECT list (missing comma) yields completeness 'recovered', with sources/aliases still intact but NO sourceMapEvents", () => {
     const broken = 'ВЫБРАТЬ Т.Поле1 Т.Поле2 ИЗ Справочник.Валюты КАК Т ГДЕ Т.Поле1 = 1'; // missing comma
     const snapshot = buildSemanticSnapshotFromText(1, broken);
     expect(snapshot.completeness).toBe('recovered');
     // Source/alias structure survives repair even though the field list doesn't.
     expect(snapshot.model.members[0].members[0].model.tables[0].alias).toBe('Т');
+    // Repair reflows character offsets, so a 'recovered' snapshot must never
+    // claim ranges against the ORIGINAL text — see sourceMapEvents' own doc.
+    expect(snapshot.sourceMapEvents).toEqual([]);
   });
 
-  it("a query that cannot be parsed even after repair yields completeness 'unavailable' with an empty model, never a throw", () => {
+  it("a query that cannot be parsed even after repair yields completeness 'unavailable' with an empty model and no sourceMapEvents, never a throw", () => {
     const hopeless = 'ЭТО ВООБЩЕ НЕ ЗАПРОС {{{';
     expect(() => buildSemanticSnapshotFromText(1, hopeless)).not.toThrow();
     const snapshot = buildSemanticSnapshotFromText(1, hopeless);
     expect(snapshot.completeness).toBe('unavailable');
     expect(snapshot.model.members).toEqual([]);
+    expect(snapshot.sourceMapEvents).toEqual([]);
   });
 
   it('sourceHash reflects the ORIGINAL text passed in, not any internally-repaired variant', () => {

@@ -58,6 +58,42 @@ export class RecordingSourceMapSink implements SourceMapSink {
   }
 }
 
+/**
+ * Batch-level counterpart of `SourceMapEvent`: `parseBatch` stitches the
+ * chunk-relative events each `parseDocument` call produces into these — `range`
+ * is absolute within the ORIGINAL text passed to `parseBatch` (not the chunk),
+ * and `statementIndex` identifies which `BatchDocument.members[i]` (which `;`
+ * -separated statement) the event belongs to, resolving the ambiguity a single
+ * `SourceMapSink` shared across chunks would have (see `parseBatch`'s own doc
+ * comment on `ParseOptions.batchSourceMap`).
+ *
+ * ONLY produced for a `'complete'` parse (see
+ * `buildSemanticSnapshotFromText` in `src/core/semantic`) — a repaired/
+ * recovered parse runs against TEXT WITH DIFFERENT CHARACTER OFFSETS than the
+ * user's real document (the repair heuristic replaces a variable-length SELECT
+ * list with a fixed `' 1 '` placeholder, shifting everything after it), so
+ * ranges recorded against repaired text would silently misreport positions in
+ * the real source — worse than having none.
+ */
+export interface AbsoluteSourceMapEvent {
+  statementIndex: number;
+  kind: SourceMapNodeKind;
+  index: number;
+  range: TextRange;
+}
+
+export interface BatchSourceMapSink {
+  record(event: Readonly<AbsoluteSourceMapEvent>): void;
+}
+
+/** Simple concrete sink: collects every batch-level event, in recording order. */
+export class RecordingBatchSourceMapSink implements BatchSourceMapSink {
+  readonly events: AbsoluteSourceMapEvent[] = [];
+  record(event: Readonly<AbsoluteSourceMapEvent>): void {
+    this.events.push(event);
+  }
+}
+
 export function rangeContains(range: TextRange, pos: number): boolean {
   return pos >= range.start && pos < range.end;
 }
@@ -70,8 +106,10 @@ function rangeLength(range: TextRange): number {
  * All recorded events whose range contains `pos` (half-open), innermost
  * (smallest range) first — ranges nest (a table's range sits inside its union
  * member's range), so callers wanting the MOST SPECIFIC match should take `[0]`.
+ * Works for either `SourceMapEvent[]` or `AbsoluteSourceMapEvent[]` — both carry
+ * a `range`, which is all this needs.
  */
-export function findContaining(events: readonly SourceMapEvent[], pos: number): SourceMapEvent[] {
+export function findContaining<T extends { range: TextRange }>(events: readonly T[], pos: number): T[] {
   return events
     .filter((e) => rangeContains(e.range, pos))
     .sort((a, b) => rangeLength(a.range) - rangeLength(b.range));
@@ -84,11 +122,11 @@ export function findContaining(events: readonly SourceMapEvent[], pos: number): 
  * whitespace just past the last field still resolves to that field. Ties
  * (equal distance) resolve to whichever event comes first in `events`.
  */
-export function findNearest(events: readonly SourceMapEvent[], pos: number): SourceMapEvent | undefined {
+export function findNearest<T extends { range: TextRange }>(events: readonly T[], pos: number): T | undefined {
   const containing = findContaining(events, pos);
   if (containing.length > 0) return containing[0];
   if (events.length === 0) return undefined;
-  let best: SourceMapEvent | undefined;
+  let best: T | undefined;
   let bestDist = Infinity;
   for (const e of events) {
     const dist = pos < e.range.start ? e.range.start - pos : pos - e.range.end;

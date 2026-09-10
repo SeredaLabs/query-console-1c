@@ -58,7 +58,8 @@ import type { QueryDocument, UnionMember } from './unionModel';
 import type { BatchDocument } from './batchModel';
 import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable, MetaField } from '../metadata/types';
-import type { SourceMapSink } from './sourceMap';
+import type { SourceMapSink, BatchSourceMapSink, AbsoluteSourceMapEvent } from './sourceMap';
+import { RecordingSourceMapSink } from './sourceMap';
 import { expandStarFields } from './expandStarFields';
 import { expandTabSectionFields } from './expandTabSectionFields';
 import { wrapTabSectionAggregates } from './wrapTabSectionAggregates';
@@ -4521,6 +4522,20 @@ export interface ParseOptions {
    * batch (see `SourceMapEvent`'s doc).
    */
   sourceMap?: SourceMapSink;
+  /**
+   * Phase 1b (semantic-core roadmap) — `parseBatch`-only counterpart of
+   * `sourceMap`: a write-only sink for BATCH-wide, absolute-offset ranges
+   * (`AbsoluteSourceMapEvent`, tagged with `statementIndex`). `parseBatch`
+   * builds one per-chunk `sourceMap` internally, translates its chunk-relative
+   * events to absolute offsets (via `getBatchStatementSpans`) and statement
+   * index, and forwards them here — a separate field from `sourceMap` because
+   * the two carry different event shapes (chunk-relative vs. batch-absolute)
+   * and `parseDocument` itself has no use for `statementIndex`. `undefined` by
+   * default → zero behavior change. Only populated for statements produced by
+   * a `'complete'` parse; see `AbsoluteSourceMapEvent`'s doc for why a
+   * repaired/recovered parse can't safely produce these.
+   */
+  batchSourceMap?: BatchSourceMapSink;
 }
 
 /**
@@ -5028,6 +5043,16 @@ export function parseBatch(
   // следующего запроса) конструктор отбрасывает — канон заканчивается последним
   // запросом без хвостового разделителя.
   const chunks = splitBatchText(normalized).filter((c) => c.trim() !== '');
+  // Phase 1b (semantic-core roadmap): absolute `[start, end)` span of each chunk
+  // within `text` — `getBatchStatementSpans` uses the exact same splitting logic
+  // (same regex, same string-literal-range guard) and already filters empty
+  // fragments identically, so `spans[i]` corresponds to `chunks[i]` 1:1 (proven
+  // across the whole golden corpus by `test/unit/batchSourceMapZeroImpact.test.ts`).
+  // `spansAligned` below is a defensive fallback, not expected to ever be false.
+  // Only computed/used to stitch `opts.batchSourceMap` events into absolute
+  // offsets below; costs nothing when that option is unset.
+  const spans = opts?.batchSourceMap ? getBatchStatementSpans(text) : undefined;
+  const spansAligned = spans !== undefined && spans.length === chunks.length;
 
   // Межоператорная резолвинг временных таблиц (фаза 6.17): временная таблица,
   // созданная ранним `ПОМЕСТИТЬ <ВТ>`, должна быть видна последующим операторам,
@@ -5037,19 +5062,37 @@ export function parseBatch(
   // `parseDocument` каждого следующего оператора — там `expandStarFields` разворачивает
   // звезду по синтетической таблице ВТ ровно так же, как по реальной (MCP-проба:
   // `* ИЗ ВТ` → `ВТ.Колонка КАК Колонка`).
-  // Phase 1b (semantic-core roadmap): `opts.sourceMap` is intentionally NOT
-  // threaded into these per-chunk `parseDocument` calls. Each chunk restarts its
-  // own `unionMember`/`table` index numbering at 0 and its own ranges are
-  // relative to that chunk's OWN text (`c`, not the batch's `text`) — a single
-  // shared sink fed from multiple chunks would silently collide (chunk 0's
-  // table 0 and chunk 1's table 0 both recorded as `{kind:'table', index:0}`
-  // with unrelated ranges). Batch-level stitching (chunk start offsets, a
-  // qualifying statement index) is real, not-yet-designed work — out of scope
-  // for this phase, which only proves the mapping at the single-document level.
+  //
+  // `opts.sourceMap` (the parseDocument-level, chunk-relative sink) is
+  // intentionally NEVER threaded into these per-chunk calls — see its own doc.
+  // `opts.batchSourceMap` (absolute, statement-tagged) IS threaded, via a fresh
+  // per-chunk `RecordingSourceMapSink` whose chunk-relative events get
+  // translated (`+ spans[i].start`, tagged `statementIndex: i`) into
+  // `pass1Events` below, forwarded to the caller ONLY if this pass's `members`
+  // end up being the actual returned result (see the undefined-temp-table
+  // re-parse below — whichever pass produces the FINAL model is the one whose
+  // events get forwarded, so a caller never sees ranges for a discarded parse).
   const tempTables = new Map<string, MetaTable>();
-  const members = chunks.map((c) => {
-    const doc = parseDocument(c, augmentResolverWithTempTables(resolver, tempTables));
+  const pass1Events: AbsoluteSourceMapEvent[] = [];
+  const members = chunks.map((c, i) => {
+    const chunkSink = spansAligned ? new RecordingSourceMapSink() : undefined;
+    const doc = parseDocument(
+      c,
+      augmentResolverWithTempTables(resolver, tempTables),
+      chunkSink ? { sourceMap: chunkSink } : undefined,
+    );
     registerTempTables(doc, tempTables);
+    if (chunkSink) {
+      const offset = spans![i].start;
+      for (const e of chunkSink.events) {
+        pass1Events.push({
+          statementIndex: i,
+          kind: e.kind,
+          index: e.index,
+          range: { start: e.range.start + offset, end: e.range.end + offset },
+        });
+      }
+    }
     return doc;
   });
 
@@ -5064,10 +5107,12 @@ export function parseBatch(
   const inf = inferUndefinedTempTables(chunks, members, resolver);
   if (inf.tables.size === 0) {
     if (opts?.preserveComments) attachBatchComments(chunks, members);
+    if (opts?.batchSourceMap) for (const e of pass1Events) opts.batchSourceMap.record(e);
     return { members };
   }
 
   const tempTables2 = new Map<string, MetaTable>();
+  const pass2Events: AbsoluteSourceMapEvent[] = [];
   const members2 = chunks.map((c, i) => {
     // Выведенная ВТ доступна оператору ТОЛЬКО если на неё была ссылка в ПРЕДЫДУЩЕМ
     // операторе пакета (сверено по оракулу: звезда в первом операторе, где ВТ ещё ни
@@ -5078,14 +5123,28 @@ export function parseBatch(
       const first = inf.firstRefChunk.get(up);
       if (first !== undefined && first < i) visible.set(up, t);
     }
+    const chunkSink = spansAligned ? new RecordingSourceMapSink() : undefined;
     const doc = parseDocument(
       c,
       augmentResolverWithTempTables(resolver, tempTables2, visible.size ? visible : undefined),
+      chunkSink ? { sourceMap: chunkSink } : undefined,
     );
     registerTempTables(doc, tempTables2);
+    if (chunkSink) {
+      const offset = spans![i].start;
+      for (const e of chunkSink.events) {
+        pass2Events.push({
+          statementIndex: i,
+          kind: e.kind,
+          index: e.index,
+          range: { start: e.range.start + offset, end: e.range.end + offset },
+        });
+      }
+    }
     return doc;
   });
   if (opts?.preserveComments) attachBatchComments(chunks, members2);
+  if (opts?.batchSourceMap) for (const e of pass2Events) opts.batchSourceMap.record(e);
   return { members: members2 };
 }
 

@@ -15,6 +15,7 @@
  * `undefined` — it looks plausible but is wrong).
  */
 import type { BatchDocument } from '../query/batchModel';
+import type { AbsoluteSourceMapEvent } from '../query/sourceMap';
 
 /**
  * Identifies a semantic node WITHIN one snapshot only. Deliberately not stable
@@ -102,6 +103,16 @@ export interface SemanticSnapshot {
   sourceHash: string;
   model: BatchDocument;
   completeness: SemanticCompleteness;
+  /**
+   * Batch-wide, absolute-offset ranges for `model`'s tables/union members (see
+   * `AbsoluteSourceMapEvent`), collected via `parseBatch`'s `batchSourceMap`
+   * option. ALWAYS empty (`[]`) for `completeness !== 'complete'` — a repaired
+   * or unavailable parse either ran against reflowed text (repair changes
+   * character offsets) or produced no real model at all, so no range in either
+   * case can be trusted to point at the user's actual source
+   * (`buildSemanticSnapshotFromText` enforces this).
+   */
+  sourceMapEvents: readonly AbsoluteSourceMapEvent[];
   index: SemanticIndex;
 }
 
@@ -128,18 +139,22 @@ function hashSource(text: string): string {
  * `completeness` defaults to `'complete'` for callers that already know their
  * `model` came from a clean parse; `buildSemanticSnapshotFromText` (Phase 1c)
  * is the tolerant entry point that determines it for you when parsing might fail.
+ * `sourceMapEvents` defaults to `[]`; only pass a non-empty array alongside
+ * `completeness: 'complete'` (see `sourceMapEvents`'s own doc for why).
  */
 export function createSemanticSnapshot(
   documentVersion: number,
   sourceText: string,
   model: BatchDocument,
   completeness: SemanticCompleteness = 'complete',
+  sourceMapEvents: readonly AbsoluteSourceMapEvent[] = [],
 ): SemanticSnapshot {
   return {
     documentVersion,
     sourceHash: hashSource(sourceText),
     model,
     completeness,
+    sourceMapEvents,
     index: createEmptySemanticIndex(),
   };
 }

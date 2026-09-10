@@ -39,6 +39,15 @@ describe('createSemanticSnapshot', () => {
     expect(createSemanticSnapshot(1, 'ВЫБРАТЬ 1', emptyBatch, 'recovered').completeness).toBe('recovered');
     expect(createSemanticSnapshot(1, 'ВЫБРАТЬ 1', emptyBatch, 'unavailable').completeness).toBe('unavailable');
   });
+
+  it('defaults sourceMapEvents to an empty array', () => {
+    expect(createSemanticSnapshot(1, 'ВЫБРАТЬ 1', emptyBatch).sourceMapEvents).toEqual([]);
+  });
+
+  it('carries an explicit sourceMapEvents array through unchanged', () => {
+    const events = [{ statementIndex: 0, kind: 'table' as const, index: 0, range: { start: 0, end: 1 } }];
+    expect(createSemanticSnapshot(1, 'ВЫБРАТЬ 1', emptyBatch, 'complete', events).sourceMapEvents).toBe(events);
+  });
 });
 
 describe('createEmptySemanticIndex', () => {
