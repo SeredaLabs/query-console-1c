@@ -243,3 +243,43 @@ describe('findContaining/findNearest: range-boundary semantics', () => {
     expect(containing[containing.length - 1].kind).toBe('unionMember');
   });
 });
+
+describe('source-map oracle: joinCondition ranges (Phase 3b)', () => {
+  const text =
+    'ВЫБРАТЬ Т1.Код ИЗ Справочник.А КАК Т1 ' +
+    'ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Б КАК Т2 ПО Т1.Код = Т2.Код ' +
+    'ЛЕВОЕ СОЕДИНЕНИЕ Справочник.В КАК Т3 ПО Т1.Код = Т3.Код';
+  const events = recordEvents(text);
+  const conditions = events.filter((e) => e.kind === 'joinCondition').sort((a, b) => a.index - b.index);
+
+  it('records one joinCondition event per join, indexed to match model.joins order', () => {
+    expect(conditions).toHaveLength(2);
+    expect(conditions.map((c) => c.index)).toEqual([0, 1]);
+  });
+
+  it("each range covers exactly the condition text AFTER ПО, excluding ПО itself", () => {
+    expect(text.slice(conditions[0].range.start, conditions[0].range.end)).toBe('Т1.Код = Т2.Код');
+    expect(text.slice(conditions[1].range.start, conditions[1].range.end)).toBe('Т1.Код = Т3.Код');
+  });
+
+  it('a joinCondition range is nested within its unionMember range, and does not overlap a sibling table range', () => {
+    const unionMember = events.find((e) => e.kind === 'unionMember')!;
+    for (const c of conditions) {
+      expect(c.range.start).toBeGreaterThanOrEqual(unionMember.range.start);
+      expect(c.range.end).toBeLessThanOrEqual(unionMember.range.end);
+    }
+    const tables = events.filter((e) => e.kind === 'table');
+    for (const c of conditions) {
+      for (const t of tables) {
+        expect(c.range.start < t.range.end && t.range.start < c.range.end).toBe(false);
+      }
+    }
+  });
+
+  it('findContaining resolves a position inside a specific condition to that joinCondition event first', () => {
+    const posInSecondCond = text.indexOf('Т3.Код');
+    const containing = findContaining(events, posInSecondCond);
+    expect(containing[0].kind).toBe('joinCondition');
+    expect(containing[0].index).toBe(1);
+  });
+});

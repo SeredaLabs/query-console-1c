@@ -22,15 +22,10 @@
  * docs/en(ru,uk)/limitations.md и docs/development/known-issues.md — обновляй
  * оба места, если это когда-нибудь будет исправлено или переформулировано.
  */
-import { parseBatch } from '../core/query/sdblParser';
-import type { BatchDocument, } from '../core/query/batchModel';
-import type { QueryDocument } from '../core/query/unionModel';
-import type { QueryModel, SelectedTable } from '../core/query/queryModel';
-import { defaultTableAlias } from '../core/query/queryModel';
 import type { MetadataResolver } from '../core/query/metadataResolver';
 import type { MetaTable } from '../core/metadata/types';
 import { resolveFieldPath, type FieldPathResolution } from '../core/query/fieldPathResolver';
-import { repairSelectListsForRecovery } from '../core/query/selectListRepair';
+import { findAliasTable } from '../core/query/findAliasTable';
 
 export interface FieldChainSegment {
   /** Текст сегмента как написано в исходнике. */
@@ -141,57 +136,6 @@ export function findChainForCompletion(text: string, offset: number): string[] |
   return segments.length > 0 ? segments : null;
 }
 
-function collectAllTables(doc: BatchDocument): SelectedTable[] {
-  const out: SelectedTable[] = [];
-  const walkModel = (model: QueryModel): void => {
-    for (const t of model.tables) {
-      out.push(t);
-      if (t.subquery) walkDocument(t.subquery);
-    }
-  };
-  const walkDocument = (qdoc: QueryDocument): void => {
-    for (const member of qdoc.members) walkModel(member.model);
-  };
-  for (const member of doc.members) walkDocument(member);
-  return out;
-}
-
-/**
- * Розбирає `queryText` і знаходить таблицю, на яку посилається псевдонім `alias`
- * (голова ланцюжка) — спільна частина для `describeChain` і
- * `resolveCompletionTarget`. `meta: undefined` у результаті означає "псевдонім
- * реально резолвиться до таблиці за іменем, але метаданих для неї немає" —
- * ВІДРІЗНЯЄТЬСЯ від "псевдонім взагалі не знайдено" (`undefined` результат
- * цілком) — виклики, яким ця різниця не потрібна (наприклад, автодоповнення),
- * просто трактують обидва випадки як "нічого запропонувати".
- */
-function findAliasTable(
-  queryText: string,
-  resolver: MetadataResolver,
-  alias: string
-): { table: SelectedTable; meta: MetaTable | undefined } | undefined {
-  let doc: BatchDocument;
-  try {
-    doc = parseBatch(queryText, resolver);
-  } catch {
-    // Основний розбір провалився — ймовірно, через незавершений/ламкий SELECT-
-    // список ПІД ЧАС редагування (див. repairSelectListsForRecovery). Пробуємо
-    // ще раз без нього: нам потрібен лише блок ИЗ, не самі поля.
-    const repaired = repairSelectListsForRecovery(queryText);
-    if (repaired === undefined) return undefined;
-    try {
-      doc = parseBatch(repaired, resolver);
-    } catch {
-      return undefined;
-    }
-  }
-
-  const head = alias.toUpperCase();
-  const table = collectAllTables(doc).find(t => defaultTableAlias(t).toUpperCase() === head);
-  if (!table || table.subquery || !table.fullName || table.fullName.startsWith('&')) return undefined;
-
-  return { table, meta: resolver.tableByFullName(table.fullName) };
-}
 
 export interface ChainDescription {
   /** Полное имя метаданных таблицы, на которую ссылается голова цепочки —

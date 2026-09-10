@@ -49,8 +49,16 @@ export interface Scope {
   id: SemanticNodeId;
 }
 
+/**
+ * Phase 3a: currently always a source/table alias (`SelectedTable.alias`) —
+ * the only symbol kind this roadmap has needed so far. Kept as one concrete
+ * shape rather than a discriminated union until a second kind (e.g. an
+ * output-column symbol) is actually needed; see `collectSourceAliasSymbols`.
+ */
 export interface Symbol {
   id: SemanticNodeId;
+  /** Declared alias, ORIGINAL casing. SDBL identifiers are case-insensitive — callers matching by name must upper-case both sides themselves. */
+  alias: string;
   ref: ModelRef;
 }
 

@@ -785,7 +785,24 @@ function parseSingleQuery(
   }
 
   // Соединения: достроить ссылки на таблицы по псевдонимам.
-  const resolvedJoins = joins.map(j => resolveJoin(j, aliasToId, cur.source));
+  // Phase 3b (semantic-core roadmap): записываем диапазон условия ПО каждого
+  // соединения (без самого "ПО") — index соответствует позиции в итоговом
+  // model.joins (resolvedJoins ниже становится им один в один, без фильтрации
+  // и без переупорядочивания), что resolveAliasAt использует, чтобы понять,
+  // внутри условия КАКОГО соединения находится курсор, и применить именно его
+  // набор видимых таблиц (computeJoinVisibility).
+  const resolvedJoins = joins.map((j, i) => {
+    if (j.condTokens.length > 0) {
+      const first = j.condTokens[0];
+      const last = j.condTokens[j.condTokens.length - 1];
+      cur.sourceMap?.record({
+        kind: 'joinCondition',
+        index: i,
+        range: { start: first.pos, end: last.pos + last.text.length },
+      });
+    }
+    return resolveJoin(j, aliasToId, cur.source);
+  });
 
   // Секции после ИЗ — в каноническом порядке генератора:
   //   ГДЕ → {ГДЕ} → СГРУППИРОВАТЬ ПО → {УПОРЯДОЧИТЬ ПО} → {ИТОГИ ПО}

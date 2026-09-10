@@ -24,16 +24,18 @@ export interface TextRange {
   end: number;
 }
 
-export type SourceMapNodeKind = 'unionMember' | 'table';
+export type SourceMapNodeKind = 'unionMember' | 'table' | 'joinCondition';
 
 export interface SourceMapEvent {
   kind: SourceMapNodeKind;
   /**
-   * Position within its own list — union member index within the document, or
+   * Position within its own list — union member index within the document,
    * table index within one query's `ИЗ` clause (matches `SelectedTable.id`'s
-   * `'t' + index` numbering). NOT a cross-document/batch-wide identity; a
-   * consumer that needs that assembles it from the `parseDocument` call this
-   * event came from.
+   * `'t' + index` numbering), or `joinCondition` index within that same
+   * query's `model.joins` array (matches `Join`'s own array position — the
+   * range covers the condition text AFTER `ПО`, not including `ПО` itself).
+   * NOT a cross-document/batch-wide identity; a consumer that needs that
+   * assembles it from the `parseDocument` call this event came from.
    */
   index: number;
   range: TextRange;
