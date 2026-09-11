@@ -29,6 +29,7 @@ import type { QueryModel, SelectedField, Condition, FieldRef } from './queryMode
 import type { MetadataResolver } from './metadataResolver';
 import type { QueryDocument } from './unionModel';
 import { resolveAliases } from './sdblGenerator';
+import { computeJoinVisibility } from './joinVisibility';
 import { LITERAL_WORDS, PERIOD_WORDS } from './sdblKeywordSets';
 
 /** Структурные слова-операторы, никогда не являющиеся полем. */
@@ -65,6 +66,10 @@ const TYPE_PREFIXES = new Set([
 ]);
 
 interface SourceInfo {
+  /** `SelectedTable.id` — нужен, щоб звужувати `sources` до видимих у конкретному
+   * JOIN за `computeJoinVisibility` (не для зовнішніх/`outerSources`: там своя,
+   * вже об'єднуюча модель, id не потрібен). */
+  id: string;
   alias: string;
   /** Известный состав колонок (метаданные таблицы или выходные псевдонимы подзапроса). */
   fields?: Set<string>;
@@ -138,7 +143,7 @@ function buildContext(
     if (alias) { aliases.add(up(alias)); aliasSpelling.set(up(alias), alias); }
     if (t.subquery) {
       const cols = subqueryColumns(t.subquery);
-      sources.push({ alias, fields: cols.size > 0 ? cols : undefined, wildcard: cols.size === 0 });
+      sources.push({ id: t.id, alias, fields: cols.size > 0 ? cols : undefined, wildcard: cols.size === 0 });
       continue;
     }
     const fullName = t.fullName;
@@ -161,12 +166,24 @@ function buildContext(
       // (навигация документ→ТЧ→поле). Без них голова-ТЧ не находила владельца. (6.17)
       const names = new Set(meta.fields.map(f => up(f.name)));
       for (const ts of meta.tabularSections ?? []) names.add(up(ts.name));
-      sources.push({ alias, fields: names, wildcard: false });
+      sources.push({ id: t.id, alias, fields: names, wildcard: false });
     } else {
-      sources.push({ alias, wildcard: true });
+      sources.push({ id: t.id, alias, wildcard: true });
     }
   }
   return { aliases, aliasSpelling, outerAliases, outerSources, sources, resolver, parseDoc: activeParseDoc };
+}
+
+/**
+ * Звужує `ctx.sources` до множини `visibleIds` (з `computeJoinVisibility`) —
+ * для кваліфікації голих полів САМЕ в умові конкретного JOIN. `undefined`
+ * (немає JOIN-ів у моделі взагалі) повертає `ctx` як є. Тільки `sources`
+ * звужується: `aliases`/`aliasSpelling`/`outerAliases`/`outerSources` лишаються
+ * повними (див. виклик у `processModel`).
+ */
+function narrowContextForJoin(ctx: OwnerContext, visibleIds: ReadonlySet<string> | undefined): OwnerContext {
+  if (!visibleIds) return ctx;
+  return { ...ctx, sources: ctx.sources.filter(s => visibleIds.has(s.id)) };
 }
 
 /**
@@ -526,13 +543,24 @@ function processModel(
   // его голые поля квалифицируем владельцем подзапроса (псевдонимы соединяемых
   // источников — как коррелированные). Уже квалифицированные ссылки `Алиас.Поле`
   // самого `ПО` идемпотентно пропускаются (голова — псевдоним источника).
+  //
+  // Видимість джерел для КОЖНОГО `ПО` звужена до `computeJoinVisibility` (live-
+  // verified проти реального 1С, Phase 2a семантичного roadmap) — право-вкладене
+  // `ПО` НЕ бачить затравку зовнішнього ланцюга, флет-ланцюг не бачить наперед.
+  // Звужується лише `ctx.sources` (кандидати-власники голого поля) — `ctx.aliases`
+  // лишається повним, щоб уже написаний `Псевдонім.Поле` розпізнавався як
+  // кваліфікований, навіть якщо цей псевдонім зараз поза видимістю. ГДЕ/ИМЕЮЩИЕ/
+  // СГРУППИРОВАТЬ/УПОРЯДОЧИТЬ/ИТОГИ — це вирази ПІСЛЯ поєднання джерел, там
+  // видимість лишається повною (`ctx`), як і раніше.
+  const joinVisibility = model.joins?.length ? computeJoinVisibility(model) : undefined;
   for (const j of model.joins ?? []) {
+    const joinCtx = narrowContextForJoin(ctx, joinVisibility?.get(j));
     if (j.custom && j.expression !== undefined && j.expression.trim()) {
-      j.expression = qualifyExpression(j.expression, ctx);
+      j.expression = qualifyExpression(j.expression, joinCtx);
     }
     for (const jc of j.conditions ?? []) {
       if (jc.custom && jc.expression !== undefined && jc.expression.trim()) {
-        jc.expression = qualifyExpression(jc.expression, ctx);
+        jc.expression = qualifyExpression(jc.expression, joinCtx);
       }
     }
   }

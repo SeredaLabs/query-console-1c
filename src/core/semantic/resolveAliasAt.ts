@@ -34,7 +34,7 @@ import { rangeContains } from '../query/sourceMap';
 import type { Symbol, ModelPath, SemanticSnapshot } from './semanticSnapshot';
 import type { Resolution } from './resolution';
 import { resolveNearestAncestorMatch } from './correlation';
-import { computeJoinVisibility } from './joinVisibility';
+import { computeJoinVisibility } from '../query/joinVisibility';
 
 interface ScopeLevel {
   model: QueryModel;

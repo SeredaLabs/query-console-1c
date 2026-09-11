@@ -11,7 +11,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { parseQuery } from '../../src/core/query/sdblParser';
-import { computeJoinVisibility } from '../../src/core/semantic/joinVisibility';
+import { computeJoinVisibility } from '../../src/core/query/joinVisibility';
 
 describe('computeJoinVisibility', () => {
   it('returns an empty map when the query has no joins', () => {
