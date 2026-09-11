@@ -33,17 +33,20 @@
   setting to disable it entirely; not something a corpus/production sweep can
   fully rule out the way `findMalformedCustomExpressions` above was, since it
   depends on how a given codebase happens to build query text at runtime.
-- Autocomplete (`resolveCompletionTarget`, `hoverFieldInfo.ts`) still resolves
-  a table alias across the entire query batch (every `ОБЪЕДИНЕНИЕ` branch and
-  subquery at once), not just the scope under the cursor -- a repeated alias
-  for a different source elsewhere in the same batch can suggest fields for
-  the wrong table. Advisory only: never affects the generated query text or
-  Apply. Hover (`describeChain`) no longer has this limitation as of the
-  semantic-core roadmap's Phase 3d (memory: project-semantic-core-roadmap) --
-  it resolves the head alias via `resolveAliasAt`, a position-aware resolver
-  that respects real JOIN-condition scoping and nearest-ancestor subquery
-  correlation (live-verified against real 1C). Migrating autocomplete the same
-  way is tracked as Phase 3e, not started yet.
 
 These are documented user boundaries, not permission to weaken tests. Add a
 regression test when fixing one and update all three limitations pages.
+
+## Resolved: hover/autocomplete alias scoping
+
+Hover (`describeChain`) and autocomplete (`resolveCompletionTarget`), both in
+`hoverFieldInfo.ts`, used to resolve a table alias across the whole query
+batch, first-match -- a repeated alias for a different source elsewhere in
+the same batch could show/suggest the wrong table. As of the semantic-core
+roadmap's Phase 3d/3e (memory: project-semantic-core-roadmap), both share
+`resolveHeadTable`, which prefers `resolveAliasAt`, a position-aware resolver
+that respects real JOIN-condition scoping and nearest-ancestor subquery
+correlation (live-verified against real 1C). The old flat `findAliasTable`
+lookup is still used, but only when `resolveAliasAt` has no data to work with
+at all (a `'recovered'`/`'unavailable'` snapshot -- a broken SELECT list, the
+query-parse recovery case above), never as a fallback on scope uncertainty.

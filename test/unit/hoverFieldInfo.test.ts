@@ -194,17 +194,21 @@ describe('describeChain', () => {
 describe('findChainForCompletion', () => {
   it('курсор одразу після крапки, попереду один сегмент', () => {
     const text = 'Т.';
-    expect(findChainForCompletion(text, text.length)).toEqual(['Т']);
+    const r = findChainForCompletion(text, text.length);
+    expect(r?.map((s) => s.text)).toEqual(['Т']);
+    expect(r?.[0]).toEqual({ text: 'Т', start: 0, end: 1 });
   });
 
   it('курсор посеред частково набраного сегмента ("Т.Контр|агент") — префікс без нього', () => {
     const text = 'Т.Контрагент';
-    expect(findChainForCompletion(text, text.indexOf('Контр') + 'Контр'.length)).toEqual(['Т']);
+    const r = findChainForCompletion(text, text.indexOf('Контр') + 'Контр'.length);
+    expect(r?.map((s) => s.text)).toEqual(['Т']);
   });
 
   it('ланцюжок із кількох крапок ("Т.Контрагент.")', () => {
     const text = 'Т.Контрагент.';
-    expect(findChainForCompletion(text, text.length)).toEqual(['Т', 'Контрагент']);
+    const r = findChainForCompletion(text, text.length);
+    expect(r?.map((s) => s.text)).toEqual(['Т', 'Контрагент']);
   });
 
   it('null, якщо перед курсором немає крапки взагалі', () => {
@@ -225,43 +229,53 @@ describe('resolveCompletionTarget', () => {
   const QUERY = 'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Товары КАК Т';
 
   it('односегментний префікс — таблиця самого псевдоніма', () => {
-    const target = resolveCompletionTarget(QUERY, resolver, ['Т']);
+    const target = resolveCompletionTarget(QUERY, resolver, ['Т'], headPos(QUERY));
     expect(target?.meta.fullName).toBe('Справочник.Товары');
   });
 
   it('резолвить крізь посилальне поле до таблиці цілі', () => {
-    const target = resolveCompletionTarget(QUERY, resolver, ['Т', 'Контрагент']);
+    const target = resolveCompletionTarget(QUERY, resolver, ['Т', 'Контрагент'], headPos(QUERY));
     expect(target?.meta.fullName).toBe('Справочник.Контрагенты');
   });
 
   it('регістронезалежно', () => {
-    const target = resolveCompletionTarget(QUERY, resolver, ['т', 'контрагент']);
+    const target = resolveCompletionTarget(QUERY, resolver, ['т', 'контрагент'], headPos(QUERY));
     expect(target?.meta.fullName).toBe('Справочник.Контрагенты');
   });
 
   it('undefined для невідомого псевдоніма (unknown != invalid, не помилка)', () => {
-    expect(resolveCompletionTarget(QUERY, resolver, ['НетТакогоПсевдонима'])).toBeUndefined();
+    expect(resolveCompletionTarget(QUERY, resolver, ['НетТакогоПсевдонима'], headPos(QUERY))).toBeUndefined();
   });
 
   it('undefined, якщо префікс проходить через СКАЛЯРНЕ поле (нема куди йти далі)', () => {
-    expect(resolveCompletionTarget(QUERY, resolver, ['Т', 'Наименование'])).toBeUndefined();
+    expect(resolveCompletionTarget(QUERY, resolver, ['Т', 'Наименование'], headPos(QUERY))).toBeUndefined();
   });
 
   it('undefined, якщо префікс містить невідомий сегмент', () => {
-    expect(resolveCompletionTarget(QUERY, resolver, ['Т', 'НетТакогоПоля'])).toBeUndefined();
+    expect(resolveCompletionTarget(QUERY, resolver, ['Т', 'НетТакогоПоля'], headPos(QUERY))).toBeUndefined();
   });
 
   it('undefined для порожнього префіксу', () => {
-    expect(resolveCompletionTarget(QUERY, resolver, [])).toBeUndefined();
+    expect(resolveCompletionTarget(QUERY, resolver, [], headPos(QUERY))).toBeUndefined();
   });
 
   it('undefined, якщо метаданих таблиці немає в резолвері', () => {
     const text = 'ВЫБРАТЬ Т.Код ИЗ Справочник.НетВМетаданных КАК Т';
-    expect(resolveCompletionTarget(text, resolver, ['Т'])).toBeUndefined();
+    expect(resolveCompletionTarget(text, resolver, ['Т'], headPos(text))).toBeUndefined();
   });
 
   it('undefined для невалідного тексту запиту, а не виняток', () => {
-    expect(resolveCompletionTarget('ЦЕ НЕ ЗАПИТ ((((', resolver, ['Т'])).toBeUndefined();
+    expect(resolveCompletionTarget('ЦЕ НЕ ЗАПИТ ((((', resolver, ['Т'], 0)).toBeUndefined();
+  });
+
+  it("'unknown' від resolveAliasAt НЕ падає назад на старий плоский пошук (той самий продуктовий принцип, що й для hover)", () => {
+    const text =
+      'ВЫБРАТЬ Т1.Наименование ИЗ Справочник.Товары КАК Т1 ' +
+      'ЛЕВОЕ СОЕДИНЕНИЕ (ВЫБРАТЬ 1 КАК Знач) КАК Т2 ' +
+      'ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Товары КАК Т3 ПО Т1.Наименование = Т3.Наименование ' +
+      'ПО Т1.Наименование = Т2.Знач';
+    const posInInnerCond = text.indexOf('Т1.Наименование = Т3.Наименование');
+    expect(resolveCompletionTarget(text, resolver, ['Т1', 'Наименование'], posInInnerCond)).toBeUndefined();
   });
 });
 
@@ -299,7 +313,7 @@ describe('відновлення після зламаного SELECT-списк
   });
 
   it('resolveCompletionTarget усе одно повертає поля таблиці, попри зламаний SELECT', () => {
-    const target = resolveCompletionTarget(BROKEN_TEXT, nomenklaturaResolver, ['Номенклатура']);
+    const target = resolveCompletionTarget(BROKEN_TEXT, nomenklaturaResolver, ['Номенклатура'], 0);
     expect(target?.meta.fullName).toBe('Справочник.Номенклатура');
     expect(target?.meta.fields.map(f => f.name)).toEqual(['Ссылка', 'Наименование', 'Код', 'Артикул']);
   });
@@ -307,7 +321,7 @@ describe('відновлення після зламаного SELECT-списк
   it('undefined (не виняток), якщо запит зламаний настільки, що відновлення теж не рятує (немає ИЗ узагалі)', () => {
     const text = 'ВЫБРАТЬ Номенклатура.Ссылка, Номенклатура.';
     expect(describeChain(text, nomenklaturaResolver, ['Номенклатура'], 0)).toEqual({});
-    expect(resolveCompletionTarget(text, nomenklaturaResolver, ['Номенклатура'])).toBeUndefined();
+    expect(resolveCompletionTarget(text, nomenklaturaResolver, ['Номенклатура'], 0)).toBeUndefined();
   });
 
   it('відновлення застосовується до КОЖНОЇ гілки ОБЪЕДИНЕНИЯ на верхньому рівні', () => {
@@ -319,7 +333,7 @@ describe('відновлення після зламаного SELECT-списк
       '\tНоменклатура.\n' + // <- та сама помилка, у ДРУГІЙ гілці
       'ИЗ Справочник.Номенклатура КАК Номенклатура';
     expect(() => parseBatch(text)).toThrow();
-    const target = resolveCompletionTarget(text, nomenklaturaResolver, ['Номенклатура']);
+    const target = resolveCompletionTarget(text, nomenklaturaResolver, ['Номенклатура'], 0);
     expect(target?.meta.fullName).toBe('Справочник.Номенклатура');
   });
 });

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { findQueryAt } from './queryAtCursor';
+import { findQueryAt, rawOffsetToQueryTextOffset } from './queryAtCursor';
 import { findChainForCompletion, resolveCompletionTarget } from './hoverFieldInfo';
 import { getMetadataResolver } from './metadataResolverCache';
 import type { MetaField } from '../core/metadata/types';
@@ -8,6 +8,11 @@ import type { MetaField } from '../core/metadata/types';
  * Автодоповнення полів після крапки (`Псевдонім.|`, `Псевдонім.Поле.|`) у літералі
  * запиту `.bsl` — той самий `resolveFieldPath`-фундамент, що вже використовують
  * hover (`queryHoverProvider.ts`) і `checkFieldPaths` (semanticValidator.ts).
+ *
+ * Phase 3e (semantic-core roadmap): голова ланцюжка резолвиться позиційно-
+ * усвідомленим `resolveAliasAt` (той самий шлях, що й hover з Phase 3d) —
+ * `rawOffsetToQueryTextOffset` перекладає офсет курсора з сирого документа в
+ * координати `hit.text`, спільні з `resolveHeadTable` (`hoverFieldInfo.ts`).
  *
  * ІЗВЕСТНОЕ УПРОЩЕНИЕ (документовано, як і для hover): доповнюються лише поля
  * ПІСЛЯ крапки за вже відомим псевдонімом джерела — самі псевдоніми таблиць
@@ -34,8 +39,8 @@ export class QueryCompletionProvider implements vscode.CompletionItemProvider {
     const hit = findQueryAt(source, offset);
     if (!hit) return undefined;
 
-    const prefixChain = findChainForCompletion(source, offset);
-    if (!prefixChain) return undefined;
+    const chain = findChainForCompletion(source, offset);
+    if (!chain) return undefined;
 
     let resolver;
     try {
@@ -45,7 +50,8 @@ export class QueryCompletionProvider implements vscode.CompletionItemProvider {
       return undefined;
     }
 
-    const target = resolveCompletionTarget(hit.text, resolver, prefixChain);
+    const headPosition = rawOffsetToQueryTextOffset(source, hit, chain[0].start);
+    const target = resolveCompletionTarget(hit.text, resolver, chain.map((s) => s.text), headPosition);
     if (!target) return undefined;
 
     return target.meta.fields.map((field) => {

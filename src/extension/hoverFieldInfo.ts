@@ -10,28 +10,26 @@
  * связка с `vscode.HoverProvider`/`vscode.CompletionItemProvider` — отдельные
  * файлы (`queryHoverProvider.ts`, `queryCompletionProvider.ts`).
  *
- * Phase 3d (semantic-core roadmap, memory: project-semantic-core-roadmap):
- * `describeChain` (hover) resolves the chain's HEAD alias via `resolveAliasAt`
- * (position-aware — respects real JOIN-condition scoping and nearest-ancestor
- * subquery correlation, live-verified against real 1C) instead of the OLD flat,
- * whole-batch, first-match lookup. Per this roadmap's shadow-mode sweep (see
- * `shadowMode.ts`) and an explicit product decision: a non-`'resolved'` outcome
- * (`'unknown'`/`'ambiguous'`) shows NO hover for that alias — deliberately NOT
- * falling back to the old flat lookup, since doing so risked resurrecting
- * confidently-WRONG answers in exactly the cases (e.g. a right-nested JOIN's
- * own inner condition) this roadmap exists to fix. `resolveCompletionTarget`
- * (autocomplete, Phase 3e) still uses the OLD flat `findAliasTable` — NOT
- * migrated yet, tracked as separate follow-up work, not an oversight.
- *
- * ИЗВЕСТНОЕ УПРОЩЕНИЕ, всё ещё актуальное для `resolveCompletionTarget` (для
- * `describeChain` см. выше): псевдоним ищется по ВСЕМ таблицам пакета сразу (все
- * участники объединения, все подзапросы), первое совпадение побеждает — без учёта
- * позиции курсора. Публично задокументировано как known limitation в
- * docs/en(ru,uk)/limitations.md и docs/development/known-issues.md — обновляй
- * оба места, если это когда-нибудь будет исправлено или переформулировано.
+ * Phase 3d/3e (semantic-core roadmap, memory: project-semantic-core-roadmap):
+ * both `describeChain` (hover) and `resolveCompletionTarget` (autocomplete)
+ * resolve the chain's HEAD alias via `resolveHeadTable`, which prefers
+ * `resolveAliasAt` (position-aware — respects real JOIN-condition scoping and
+ * nearest-ancestor subquery correlation, live-verified against real 1C) over
+ * the OLD flat, whole-batch, first-match `findAliasTable`. Per this roadmap's
+ * shadow-mode sweep (see `shadowMode.ts`) and an explicit product decision: a
+ * non-`'resolved'` outcome (`'unknown'`/`'ambiguous'`) at a real, in-scope
+ * position means NO answer for that alias — deliberately NOT falling back to
+ * the old flat lookup, since doing so risked resurrecting confidently-WRONG
+ * answers in exactly the cases (e.g. a right-nested JOIN's own inner
+ * condition) this roadmap exists to fix. The old flat lookup is still used —
+ * not as a "fallback on uncertainty", but because `resolveAliasAt` has no
+ * data to work with at all: a `'recovered'`/`'unavailable'` snapshot (broken
+ * SELECT list — the exact v0.1.33 regression class) carries no
+ * `sourceMapEvents`, and neither does a `headPosition` translation failure.
  */
 import type { MetadataResolver } from '../core/query/metadataResolver';
 import type { MetaTable } from '../core/metadata/types';
+import type { SelectedTable } from '../core/query/queryModel';
 import { resolveFieldPath, type FieldPathResolution } from '../core/query/fieldPathResolver';
 import { findAliasTable } from '../core/query/findAliasTable';
 import { buildSemanticSnapshotFromText } from '../core/semantic/buildSemanticSnapshot';
@@ -118,11 +116,15 @@ export function findChainAt(text: string, offset: number): { segments: FieldChai
  * набраний сегмент НЕ входить у результат — VS Code сам фільтрує запропоновані
  * варіанти за тим, що вже введено, як для будь-якого звичайного автодоповнення).
  *
+ * Несе ті самі `[start, end)` офсети, що й `findChainAt` (Phase 3e: перший
+ * сегмент — голова-псевдонім — потрібен `rawOffsetToQueryTextOffset`, щоб
+ * передати позицію в `resolveCompletionTarget`).
+ *
  * `null`, якщо курсор не стоїть одразу після крапки, перед якою йде відомий
  * ланцюжок ідентифікаторів (наприклад, курсор на початку файлу чи після
  * пробілу/оператора без попередньої крапки) — тоді доповнювати нічого.
  */
-export function findChainForCompletion(text: string, offset: number): string[] | null {
+export function findChainForCompletion(text: string, offset: number): FieldChainSegment[] | null {
   if (offset < 0 || offset > text.length) return null;
 
   // Пропускаємо назад символи вже набраного (можливо порожнього) сегмента —
@@ -132,13 +134,13 @@ export function findChainForCompletion(text: string, offset: number): string[] |
   if (cur === 0 || text[cur - 1] !== '.') return null;
   cur--; // "з'їдаємо" крапку перед сегментом, що вводиться
 
-  const segments: string[] = [];
+  const segments: FieldChainSegment[] = [];
   for (;;) {
     if (cur === 0 || !isWordChar(text[cur - 1])) break;
     const segEnd = cur;
     let segStart = segEnd;
     while (segStart > 0 && isWordChar(text[segStart - 1])) segStart--;
-    segments.unshift(text.slice(segStart, segEnd));
+    segments.unshift({ text: text.slice(segStart, segEnd), start: segStart, end: segEnd });
     cur = segStart;
     if (cur === 0 || text[cur - 1] !== '.') break;
     cur--;
@@ -156,6 +158,46 @@ export interface ChainDescription {
   /** Резолюция сегментов ПОСЛЕ головы через `resolveFieldPath` — `undefined`, если
    * таблица головы не резолвится (см. выше) или цепочка состоит из одной головы. */
   resolution?: FieldPathResolution;
+}
+
+/**
+ * Резолвить ГОЛОВУ ланцюжка (`alias`) до її таблиці — спільне ядро для
+ * `describeChain` і `resolveCompletionTarget` (Phase 3d/3e).
+ *
+ * Коли `queryText` дає `completeness === 'complete'` снепшот (звичайний,
+ * повністю розбираний запит) І `headPosition` відомий — резолвить позиційно-
+ * усвідомлений `resolveAliasAt`; будь-який результат, крім `'resolved'`
+ * (`'unknown'`/`'ambiguous'`), означає `undefined` — свідоме продуктове
+ * рішення НЕ підстраховуватись старим плоским пошуком у цьому випадку, бо це
+ * ризикувало б повернути підтверджено НЕПРАВИЛЬНУ відповідь саме в тих
+ * випадках (право-вкладений JOIN тощо), заради яких цей резолвер і будувався.
+ *
+ * Інакше (снепшот `'recovered'`/`'unavailable'`, або `headPosition` невідомий) —
+ * `resolveAliasAt` тут принципово безпорадний: у "recovered" моделі ЗОВСІМ немає
+ * `sourceMapEvents` (репарація зсуває офсети — див. `SemanticSnapshot.
+ * sourceMapEvents`'ів власний doc), а курсор при зламаному SELECT-списку якраз і
+ * стоїть УСЕРЕДИНІ того, що repair замінив плейсхолдером. Тому тут — той самий
+ * старий плоский `findAliasTable` (позиційно-сліпий), що й завжди захищав від
+ * реального продакшн-регресу v0.1.33 (пропущена кома ламала весь SELECT).
+ */
+function resolveHeadTable(
+  queryText: string,
+  resolver: MetadataResolver,
+  alias: string,
+  headPosition: number | undefined,
+): { table: SelectedTable; meta: MetaTable | undefined } | undefined {
+  const snapshot = buildSemanticSnapshotFromText(1, queryText, resolver);
+  if (snapshot.completeness === 'complete' && headPosition !== undefined) {
+    const resolution = resolveAliasAt(snapshot, headPosition, alias);
+    if (resolution.kind !== 'resolved') return undefined;
+    const table = resolveSymbolTable(snapshot.model, resolution.value.ref.path);
+    // Те саме, що й стара findAliasTable: підзапит (fullName === '') і
+    // параметр-джерело (`&Имя`) — не справжня таблиця метаданих, unknown.
+    if (!table || !table.fullName || table.fullName.startsWith('&')) return undefined;
+    return { table, meta: resolver.tableByFullName(table.fullName) };
+  }
+
+  return findAliasTable(queryText, resolver, alias);
 }
 
 function describeViaTable(
@@ -177,22 +219,6 @@ function describeViaTable(
  * `headPosition` — смещение головы `chain[0]` В КООРДИНАТАХ `queryText` (не
  * сырого документа — см. `queryAtCursor.ts`'s `rawOffsetToQueryTextOffset` для
  * перевода).
- *
- * Phase 3d: коли `queryText` дає `completeness === 'complete'` снепшот (звичайний,
- * повністю розбираний запит) І `headPosition` відомий — голову резолвить
- * позиційно-усвідомлений `resolveAliasAt`; будь-який результат, крім `'resolved'`
- * (`'unknown'`/`'ambiguous'`), означає ПОРОЖНІЙ результат — свідоме продуктове
- * рішення НЕ підстраховуватись старим плоским пошуком у цьому випадку, бо це
- * ризикувало б повернути підтверджено НЕПРАВИЛЬНУ відповідь саме в тих випадках
- * (право-вкладений JOIN тощо), заради яких цей резолвер і будувався.
- *
- * Інакше (снепшот `'recovered'`/`'unavailable'`, або `headPosition` невідомий) —
- * `resolveAliasAt` тут принципово безпорадний: у "recovered" моделі ЗОВСІМ немає
- * `sourceMapEvents` (репарація зсуває офсети — див. `SemanticSnapshot.
- * sourceMapEvents`'ів власний doc), а курсор при зламаному SELECT-списку якраз і
- * стоїть УСЕРЕДИНІ того, що repair замінив плейсхолдером. Тому тут — той самий
- * старий плоский `findAliasTable` (позиційно-сліпий), що й завжди захищав від
- * реального продакшн-регресу v0.1.33 (пропущена кома ламала весь SELECT).
  */
 export function describeChain(
   queryText: string,
@@ -201,19 +227,7 @@ export function describeChain(
   headPosition: number | undefined,
 ): ChainDescription {
   if (chain.length === 0) return {};
-
-  const snapshot = buildSemanticSnapshotFromText(1, queryText, resolver);
-  if (snapshot.completeness === 'complete' && headPosition !== undefined) {
-    const resolution = resolveAliasAt(snapshot, headPosition, chain[0]);
-    if (resolution.kind !== 'resolved') return {};
-    const table = resolveSymbolTable(snapshot.model, resolution.value.ref.path);
-    // Те саме, що й стара findAliasTable: підзапит (fullName === '') і
-    // параметр-джерело (`&Имя`) — не справжня таблиця метаданих, unknown.
-    if (!table || !table.fullName || table.fullName.startsWith('&')) return {};
-    return describeViaTable(table, resolver.tableByFullName(table.fullName), chain, resolver);
-  }
-
-  const found = findAliasTable(queryText, resolver, chain[0]);
+  const found = resolveHeadTable(queryText, resolver, chain[0], headPosition);
   if (!found) return {};
   return describeViaTable(found.table, found.meta, chain, resolver);
 }
@@ -232,14 +246,19 @@ export interface CompletionTarget {
  * не знайдено, метаданих немає, або шлях не резолвиться до кінця (частину
  * ланцюжка не вдалося пройти) — пропонувати ВГАДАНІ варіанти тут гірше, ніж не
  * запропонувати нічого.
+ *
+ * `headPosition` — те саме, що й у `describeChain` (Phase 3e): офсет голови
+ * `prefixChain[0]` У КООРДИНАТАХ `queryText`, для позиційно-усвідомленого
+ * `resolveAliasAt` через спільний `resolveHeadTable`.
  */
 export function resolveCompletionTarget(
   queryText: string,
   resolver: MetadataResolver,
-  prefixChain: string[]
+  prefixChain: string[],
+  headPosition: number | undefined,
 ): CompletionTarget | undefined {
   if (prefixChain.length === 0) return undefined;
-  const found = findAliasTable(queryText, resolver, prefixChain[0]);
+  const found = resolveHeadTable(queryText, resolver, prefixChain[0], headPosition);
   if (!found || !found.meta) return undefined;
 
   if (prefixChain.length === 1) return { meta: found.meta };
