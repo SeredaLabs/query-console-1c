@@ -49,6 +49,25 @@ export function nodeText(el: any | null): string {
   return el?.textContent?.trim() ?? '';
 }
 
+/**
+ * Людський синонім (`<Synonym><item><lang/><content>...`) з `<Properties>`
+ * будь-якого об'єкта метаданих чи поля — той самий формат, що й у
+ * `writeConfigurationIndex` (parseConfiguration.ts), винесений сюди, щоб не
+ * дублювати для per-field синонімів (attribute.ts). Багатомовна конфігурація
+ * 1С може мати кілька `<item>` (по одному на `<lang>`) — беремо `ru`, якщо є
+ * (цільова аудиторія проєкту), інакше перший-ліпший `<item>`. Усі реальні
+ * fixture-конфігурації в цьому проєкті одномовні (ru), тому цей вибір ніяк не
+ * впливає на існуючі тести/корпус — лише страхує від майбутньої багатомовної.
+ */
+export function readSynonym(props: any | null): string | undefined {
+  const syn = props ? childByLocalName(props, 'Synonym') : null;
+  if (!syn) return undefined;
+  const items = childrenByLocalName(syn, 'item');
+  const ruItem = items.find((it) => nodeText(childByLocalName(it, 'lang')) === 'ru');
+  const item = ruItem ?? items[0];
+  return item ? nodeText(childByLocalName(item, 'content')) || undefined : undefined;
+}
+
 export function clean<T extends object>(o: T): T {
   for (const k of Object.keys(o)) {
     if ((o as Record<string, unknown>)[k] === undefined) delete (o as Record<string, unknown>)[k];

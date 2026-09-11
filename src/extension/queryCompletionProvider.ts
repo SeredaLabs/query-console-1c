@@ -3,6 +3,7 @@ import { findQueryAt, rawOffsetToQueryTextOffset } from './queryAtCursor';
 import { findChainForCompletion, resolveCompletionTarget } from './hoverFieldInfo';
 import { getMetadataResolver } from './metadataResolverCache';
 import { describeFieldTypes } from '../core/metadata/describeType';
+import { buildFieldCard, renderFieldCardMarkdown } from '../core/metadata/fieldCard';
 
 /**
  * Автодоповнення полів після крапки (`Псевдонім.|`, `Псевдонім.Поле.|`) у літералі
@@ -62,6 +63,10 @@ export class QueryCompletionProvider implements vscode.CompletionItemProvider {
       );
       const typeText = describeFieldTypes(field);
       if (typeText) item.detail = typeText;
+
+      const card = buildFieldCard(field, (fullName) => resolver.tableByFullName(fullName));
+      const markdown = renderFieldCardMarkdown(card);
+      if (markdown) item.documentation = new vscode.MarkdownString(markdown);
       return item;
     });
   }

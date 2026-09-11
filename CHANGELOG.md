@@ -5,6 +5,21 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+### Added
+
+- Field-completion suggestions now show a richer info card (synonym, type,
+  reference target, its role — attribute/standard/dimension/resource — and,
+  for a resolvable reference, its own attribute count and a short field-name
+  preview) when you expand a suggestion's details, instead of only the short
+  type hint already shown next to it.
+
+### Internal
+
+- Metadata fields now carry their human-readable synonym (`<Synonym>`) from
+  the source XML, when the configuration provides one; standard fields
+  (`Ссылка`, `Код`, ...) still have none, since they're synthesized by the
+  parser rather than read from XML.
+
 ## 0.1.48 - 2026-09-11
 
 ### Fixed

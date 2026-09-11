@@ -73,6 +73,33 @@ describe('loadMetadataFromYaml', () => {
     expect(table.fields).toHaveLength(4);
   });
 
+  it('переносить synonym поля з ParsedField у MetaField, коли він присутній', () => {
+    writeCfYaml(tmpDir, 'configuration.yaml', {
+      version: 1,
+      objects: [
+        { type: 'Справочник', name: 'Тест', fullName: 'Справочник.Тест', file: 'Catalogs/Тест.yaml' },
+      ],
+    });
+    writeCfYaml(tmpDir, 'Catalogs/Тест.yaml', {
+      version: 1,
+      kind: 'Справочник',
+      name: 'Тест',
+      fullName: 'Справочник.Тест',
+      uuid: 'x',
+      fields: [
+        { name: 'ПометкаУдаления', category: 'standard', types: [{ kind: 'Булево' }] },
+        { name: 'Артикул', category: 'attribute', types: [{ kind: 'Строка' }], synonym: 'Артикул товара' },
+      ],
+    });
+
+    const result = loadMetadataFromYaml(tmpDir);
+    const fields = result.tables[0].fields;
+
+    // Стандартне поле не несе synonym (не читається з XML для standard) — ключа немає взагалі.
+    expect(fields[0]).not.toHaveProperty('synonym');
+    expect(fields[1].synonym).toBe('Артикул товара');
+  });
+
   it('maps primitive types correctly', () => {
     writeCfYaml(tmpDir, 'configuration.yaml', {
       version: 1,

@@ -34,6 +34,8 @@ export interface MetaField {
   name: string;
   kind: FieldKind;
   types: MetaType[];
+  /** Людський синонім поля з метаданих, якщо він реально доступний (не read для стандартних полів). */
+  synonym?: string;
 }
 
 export interface VirtualTableInfo {

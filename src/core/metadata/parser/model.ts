@@ -17,6 +17,8 @@ export interface ParsedField {
   name: string;
   category: 'standard' | 'attribute' | 'dimension' | 'resource';
   types: ParsedType[];
+  /** Людський синонім поля (`<Synonym>`) — відсутній для стандартних полів (не читаються з XML). */
+  synonym?: string;
 }
 
 export interface ParsedTabularSection {

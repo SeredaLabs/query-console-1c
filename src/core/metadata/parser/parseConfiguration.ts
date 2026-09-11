@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { parseXml, firstElementChild, childByLocalName, nodeText, clean } from './dom';
+import { parseXml, firstElementChild, childByLocalName, nodeText, clean, readSynonym } from './dom';
 import { writeYaml } from './yamlWriter';
 import type { ParsedCommonAttribute } from './model';
 import {
@@ -119,9 +119,7 @@ function writeConfigurationIndex(
     const props = el ? childByLocalName(el, 'Properties') : null;
     if (props) {
       name = nodeText(childByLocalName(props, 'Name'));
-      const syn = childByLocalName(props, 'Synonym');
-      const item = syn ? childByLocalName(syn, 'item') : null;
-      synonym = item ? nodeText(childByLocalName(item, 'content')) || undefined : undefined;
+      synonym = readSynonym(props);
     }
   }
   writeYaml(

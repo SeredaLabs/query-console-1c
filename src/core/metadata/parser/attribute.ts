@@ -1,4 +1,4 @@
-import { childByLocalName, childrenByLocalName, nodeText } from './dom';
+import { childByLocalName, childrenByLocalName, nodeText, readSynonym, clean } from './dom';
 import { parseTypeBlock } from './typeParser';
 import type { ParsedField, ParsedTabularSection } from './model';
 
@@ -8,7 +8,7 @@ export function parseAttribute(attrEl: any): ParsedField | null {
   const name = nodeText(childByLocalName(props, 'Name'));
   if (!name) return null;
   const types = parseTypeBlock(childByLocalName(props, 'Type'));
-  return { name, category: 'attribute', types };
+  return clean({ name, category: 'attribute' as const, types, synonym: readSynonym(props) });
 }
 
 export function parseTabularSection(tsEl: any): ParsedTabularSection | null {

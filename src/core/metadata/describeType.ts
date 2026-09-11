@@ -4,7 +4,7 @@ import type { MetaField, MetaType } from './types';
  * Людський підпис ОДНОГО типу з квалификаторами (довжина рядка, розрядність
  * числа) — так само, як 1С Конфігуратор показує `Строка(150)`/`Число(10,2)`.
  */
-function describeOne(t: MetaType): string | undefined {
+export function describeOne(t: MetaType): string | undefined {
   if (t.primitive === 'Строка') {
     return t.length ? `Строка(${t.length})` : 'Строка';
   }

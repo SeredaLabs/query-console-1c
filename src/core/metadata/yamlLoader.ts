@@ -59,6 +59,7 @@ function mapParsedField(pf: ParsedField): MetaField {
     name: pf.name,
     kind: pf.category,
     types: (pf.types ?? []).map(mapParsedType),
+    ...(pf.synonym !== undefined ? { synonym: pf.synonym } : {}),
   };
 }
 
