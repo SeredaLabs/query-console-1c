@@ -5,6 +5,8 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.49 - 2026-09-11
+
 ### Added
 
 - Field-completion suggestions now show a richer info card (synonym, type,
