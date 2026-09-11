@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { findQueryAt, rawOffsetToQueryTextOffset } from './queryAtCursor';
 import { findChainForCompletion, resolveCompletionTarget } from './hoverFieldInfo';
 import { getMetadataResolver } from './metadataResolverCache';
-import type { MetaField } from '../core/metadata/types';
+import { describeFieldTypes } from '../core/metadata/describeType';
 
 /**
  * Автодоповнення полів після крапки (`Псевдонім.|`, `Псевдонім.Поле.|`) у літералі
@@ -65,11 +65,4 @@ export class QueryCompletionProvider implements vscode.CompletionItemProvider {
       return item;
     });
   }
-}
-
-function describeFieldTypes(field: MetaField): string {
-  return field.types
-    .map((t) => t.primitive ?? (t.ref ? `${t.ref.kind}.${t.ref.name}` : undefined))
-    .filter((s): s is string => !!s)
-    .join(' | ');
 }

@@ -11,12 +11,6 @@ function strChild(el: any, name: string): string | undefined {
   return t || undefined;
 }
 
-const REF_PREFIX: Record<string, string> = {
-  CatalogRef: 'Справочник',
-  DocumentRef: 'Документ',
-  EnumRef: 'Перечисление',
-};
-
 export const MD_PREFIX: Record<string, string> = {
   Catalog: 'Справочник',
   Document: 'Документ',
@@ -34,6 +28,22 @@ export const MD_PREFIX: Record<string, string> = {
   Constant: 'Константа',
   DocumentJournal: 'ЖурналДокументов',
 };
+
+// Ссылочные виды метаданих 1С, у яких є власний XML-тип `cfg:<Вид>Ref.<Имя>` у
+// `<Type>`-блоці поля (на відміну від регістрів/констант/журналів документів,
+// які не мають типу "посилання"). Побудовано з MD_PREFIX (а не окремим
+// дубльованим списком кирилічних підписів), щоб дві мапи не могли розійтися.
+const REF_KINDS = [
+  'Catalog', 'Document', 'Enum',
+  'ChartOfCharacteristicTypes', 'ChartOfAccounts', 'ChartOfCalculationTypes',
+  'ExchangePlan', 'BusinessProcess', 'Task',
+] as const;
+
+const REF_PREFIX: Record<string, string> = Object.fromEntries(
+  REF_KINDS.map((kind) => [`${kind}Ref`, MD_PREFIX[kind]])
+);
+
+const REF_TYPE_RE = new RegExp(`^cfg:(${REF_KINDS.map((k) => `${k}Ref`).join('|')})\\.(.+)$`);
 
 interface Qualifiers {
   stringQ: any | null;
@@ -68,7 +78,7 @@ function mapTypeString(s: string, q: Qualifiers): ParsedType {
     case 'xs:boolean':
       return { kind: 'Булево' };
   }
-  const m = s.match(/^cfg:(CatalogRef|DocumentRef|EnumRef)\.(.+)$/);
+  const m = s.match(REF_TYPE_RE);
   if (m) return { kind: 'ref', ref: `${REF_PREFIX[m[1]]}.${m[2]}` };
   return { kind: 'unknown', raw: s };
 }

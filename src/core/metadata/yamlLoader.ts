@@ -33,6 +33,10 @@ function mapParsedType(pt: ParsedType): MetaType {
       return { ref: { kind: match[1] as TableKind, name: match[2] } };
     }
   }
+  // Тип, якого парсер метаданих ще не розпізнав (див. typeParser.ts) — не
+  // відкидаємо його мовчки: несемо сирий рядок далі, щоб completion/hover
+  // могли показати хоч щось замість порожнього detail.
+  if (pt.raw) return { raw: pt.raw };
   return {};
 }
 

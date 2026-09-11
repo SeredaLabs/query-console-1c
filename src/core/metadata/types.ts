@@ -17,6 +17,13 @@ export interface MetaType {
   length?: number;
   /** Для строкового типа: 'Fixed' | 'Variable'. */
   allowedLength?: string;
+  /**
+   * Тип, ще не розпізнаний парсером метаданих (наприклад, рідкісний
+   * `cfg:<Вид>Ref`, якого немає у REF_PREFIX) — сирий XML-рядок типу, щоб
+   * hover/completion могли показати хоч щось замість мовчазної порожнечі.
+   * Ніколи не співіснує з `primitive`/`ref` для одного запису.
+   */
+  raw?: string;
 }
 
 export interface MetaField {

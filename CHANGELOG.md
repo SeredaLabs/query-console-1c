@@ -5,6 +5,18 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+### Fixed
+
+- Field-completion type hints (`detail`) went silently blank for any field
+  whose value type was a reference to a chart of characteristic types, chart
+  of accounts, chart of calculation types, exchange plan, business process,
+  or task (e.g. the near-universal `ДополнительныеРеквизитыИСведения`
+  catalog attribute) — the metadata parser only recognized
+  `Справочник`/`Документ`/`Перечисление` references, silently dropping
+  everything else instead of showing a fallback. Added support for the
+  remaining referenceable metadata kinds, and any still-unrecognized type now
+  falls back to its raw type name instead of vanishing.
+
 ## 0.1.46 - 2026-09-11
 
 ### Fixed

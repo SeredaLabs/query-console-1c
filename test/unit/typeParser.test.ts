@@ -64,10 +64,31 @@ describe('parseTypeBlock', () => {
     ]);
   });
 
-  it('неизвестный тип сохраняется как unknown+raw', () => {
-    const el = typeEl('<v8:Type>cfg:ChartOfAccountsRef.Основной</v8:Type>');
+  it('ссылки на остальные ссылочные виды метаданных (ПВХ/ПланСчетов/ПВР/ПланОбмена/БП/Задача)', () => {
+    expect(parseTypeBlock(typeEl('<v8:Type>cfg:ChartOfCharacteristicTypesRef.ДополнительныеРеквизитыИСведения</v8:Type>'))).toEqual([
+      { kind: 'ref', ref: 'ПланВидовХарактеристик.ДополнительныеРеквизитыИСведения' },
+    ]);
+    expect(parseTypeBlock(typeEl('<v8:Type>cfg:ChartOfAccountsRef.Основной</v8:Type>'))).toEqual([
+      { kind: 'ref', ref: 'ПланСчетов.Основной' },
+    ]);
+    expect(parseTypeBlock(typeEl('<v8:Type>cfg:ChartOfCalculationTypesRef.ОсновныеНачисления</v8:Type>'))).toEqual([
+      { kind: 'ref', ref: 'ПланВидовРасчета.ОсновныеНачисления' },
+    ]);
+    expect(parseTypeBlock(typeEl('<v8:Type>cfg:ExchangePlanRef.ОбменССайтом</v8:Type>'))).toEqual([
+      { kind: 'ref', ref: 'ПланОбмена.ОбменССайтом' },
+    ]);
+    expect(parseTypeBlock(typeEl('<v8:Type>cfg:BusinessProcessRef.Задание</v8:Type>'))).toEqual([
+      { kind: 'ref', ref: 'БизнесПроцесс.Задание' },
+    ]);
+    expect(parseTypeBlock(typeEl('<v8:Type>cfg:TaskRef.ЗадачаИсполнителя</v8:Type>'))).toEqual([
+      { kind: 'ref', ref: 'Задача.ЗадачаИсполнителя' },
+    ]);
+  });
+
+  it('неизвестный тип (не входит ни в один из известных cfg:*Ref) сохраняется как unknown+raw', () => {
+    const el = typeEl('<v8:Type>cfg:AnyIBRef</v8:Type>');
     expect(parseTypeBlock(el)).toEqual([
-      { kind: 'unknown', raw: 'cfg:ChartOfAccountsRef.Основной' },
+      { kind: 'unknown', raw: 'cfg:AnyIBRef' },
     ]);
   });
 

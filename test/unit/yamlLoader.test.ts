@@ -151,7 +151,7 @@ describe('loadMetadataFromYaml', () => {
     expect(field.types).toEqual([{ ref: { kind: 'Документ', name: 'РасходнаяНакладная' } }]);
   });
 
-  it('maps unknown/timestamp ref types to empty MetaType', () => {
+  it('maps unknown/timestamp ref types to empty MetaType (or raw fallback when raw text is present)', () => {
     writeCfYaml(tmpDir, 'configuration.yaml', {
       version: 1,
       objects: [
@@ -167,6 +167,7 @@ describe('loadMetadataFromYaml', () => {
       fields: [
         { name: 'ВерсияДанных', category: 'standard', types: [{ kind: 'timestamp' }] },
         { name: 'НеизвестноеПоле', category: 'attribute', types: [{ kind: 'unknown' }] },
+        { name: 'НеизвестноеПолеСRaw', category: 'attribute', types: [{ kind: 'unknown', raw: 'cfg:AnyIBRef' }] },
         { name: 'СсылкаНаПеречисление', category: 'attribute', types: [{ kind: 'ref', ref: 'Перечисление.СтатусыЗаказов' }] },
       ],
     });
@@ -176,8 +177,12 @@ describe('loadMetadataFromYaml', () => {
 
     expect(fields[0].types).toEqual([{}]);
     expect(fields[1].types).toEqual([{}]);
+    // Без raw-тексту порожній MetaType не можна перетворити на щось корисніше —
+    // це очікувано; коли raw присутній (реальний випадок з typeParser.ts), його
+    // несемо далі замість мовчазного скидання (fix для completion/hover).
+    expect(fields[2].types).toEqual([{ raw: 'cfg:AnyIBRef' }]);
     // Перечисление is now a supported kind, so ref resolves correctly
-    expect(fields[2].types).toEqual([{ ref: { kind: 'Перечисление', name: 'СтатусыЗаказов' } }]);
+    expect(fields[3].types).toEqual([{ ref: { kind: 'Перечисление', name: 'СтатусыЗаказов' } }]);
   });
 
   it('loads a Документ with fields', () => {
