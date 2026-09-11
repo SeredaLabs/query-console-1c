@@ -5,6 +5,15 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.45 - 2026-09-11
+
+### Changed
+
+- Autocomplete now resolves the source alias using the query's real
+  JOIN/subquery scope at the cursor, the same fix hover got in 0.1.44 — a
+  right-nested `JOIN`'s own condition, for example, no longer suggests
+  fields from a table that isn't actually visible there.
+
 ## 0.1.44 - 2026-09-11
 
 ### Changed
