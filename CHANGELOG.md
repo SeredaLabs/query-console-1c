@@ -5,6 +5,17 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.46 - 2026-09-11
+
+### Fixed
+
+- Generated queries with a right-nested `JOIN` (a `СОЕДИНЕНИЕ` whose own
+  condition references another nested `СОЕДИНЕНИЕ`) no longer misqualify a
+  bare field in the inner join's condition with an outer-chain table alias
+  that isn't actually visible there — matches real 1C's own join-scoping
+  behavior. Other clauses (`ГДЕ`, `ИМЕЮЩИЕ`, grouping/ordering/totals) are
+  unaffected.
+
 ## 0.1.45 - 2026-09-11
 
 ### Changed
