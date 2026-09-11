@@ -36,4 +36,26 @@ describe('describeFieldTypes', () => {
   it('составной тип, где один вариант распознан, а другой — нет: распознанный не теряется', () => {
     expect(describeFieldTypes(field([{ primitive: 'Число' }, {}]))).toBe('Число');
   });
+
+  it('строка с квалификатором длины: Строка(150)', () => {
+    expect(describeFieldTypes(field([{ primitive: 'Строка', length: 150 }]))).toBe('Строка(150)');
+  });
+
+  it('строка неограниченной длины (length: 0): без скобок', () => {
+    expect(describeFieldTypes(field([{ primitive: 'Строка', length: 0 }]))).toBe('Строка');
+  });
+
+  it('число с разрядностью и дробной частью: Число(10,2)', () => {
+    expect(describeFieldTypes(field([{ primitive: 'Число', digits: 10, fractionDigits: 2 }]))).toBe(
+      'Число(10,2)'
+    );
+  });
+
+  it('целое число без дробной части: Число(10)', () => {
+    expect(describeFieldTypes(field([{ primitive: 'Число', digits: 10 }]))).toBe('Число(10)');
+  });
+
+  it('число неограниченной разрядности (digits: 0): без скобок', () => {
+    expect(describeFieldTypes(field([{ primitive: 'Число', digits: 0 }]))).toBe('Число');
+  });
 });
