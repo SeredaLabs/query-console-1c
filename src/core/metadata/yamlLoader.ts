@@ -23,6 +23,13 @@ function mapParsedType(pt: ParsedType): MetaType {
         ...(pt.allowedLength !== undefined ? { allowedLength: pt.allowedLength } : {}),
       };
     }
+    if (k === 'Число') {
+      return {
+        primitive: k,
+        ...(pt.digits !== undefined ? { digits: pt.digits } : {}),
+        ...(pt.fractionDigits !== undefined ? { fractionDigits: pt.fractionDigits } : {}),
+      };
+    }
     return { primitive: k };
   }
   if (k === 'ref' && pt.ref) {
@@ -33,6 +40,13 @@ function mapParsedType(pt: ParsedType): MetaType {
       return { ref: { kind: match[1] as TableKind, name: match[2] } };
     }
   }
+  // ВерсияДанных (стандартний реквізит кожного об'єкта) — захардкоджений як
+  // 'timestamp' у кожному *.ts-парсері об'єктів (document.ts, catalog.ts, ...),
+  // а не виведений з XML, тому не несе raw-рядка. Це внутрішній бінарний
+  // маркер версії, а НЕ один із чотирьох примітивів SDBL (Строка/Число/Дата/
+  // Булево) — навмисно не вгадуємо конкретний примітив без реальної 1С-
+  // верифікації, а чесно позначаємо як нерозпізнаний тип.
+  if (k === 'timestamp') return { raw: 'timestamp' };
   // Тип, якого парсер метаданих ще не розпізнав (див. typeParser.ts) — не
   // відкидаємо його мовчки: несемо сирий рядок далі, щоб completion/hover
   // могли показати хоч щось замість порожнього detail.

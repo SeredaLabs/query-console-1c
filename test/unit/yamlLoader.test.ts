@@ -98,7 +98,7 @@ describe('loadMetadataFromYaml', () => {
     const fields = result.tables[0].fields;
 
     expect(fields[0].types).toEqual([{ primitive: 'Строка', length: 100 }]);
-    expect(fields[1].types).toEqual([{ primitive: 'Число' }]);
+    expect(fields[1].types).toEqual([{ primitive: 'Число', digits: 10, fractionDigits: 2 }]);
     expect(fields[2].types).toEqual([{ primitive: 'Дата' }]);
     expect(fields[3].types).toEqual([{ primitive: 'Булево' }]);
   });
@@ -151,7 +151,7 @@ describe('loadMetadataFromYaml', () => {
     expect(field.types).toEqual([{ ref: { kind: 'Документ', name: 'РасходнаяНакладная' } }]);
   });
 
-  it('maps unknown/timestamp ref types to empty MetaType (or raw fallback when raw text is present)', () => {
+  it('maps timestamp to a raw fallback, unknown without raw text to empty MetaType, unknown with raw text to a raw fallback', () => {
     writeCfYaml(tmpDir, 'configuration.yaml', {
       version: 1,
       objects: [
@@ -175,7 +175,10 @@ describe('loadMetadataFromYaml', () => {
     const result = loadMetadataFromYaml(tmpDir);
     const fields = result.tables[0].fields;
 
-    expect(fields[0].types).toEqual([{}]);
+    // ВерсияДанных: бінарний внутрішній маркер версії, не один із чотирьох
+    // примітивів SDBL — чесний raw-фолбек замість вигаданого примітиву
+    // (немає надійної 1С-верифікації точного квалифікатора).
+    expect(fields[0].types).toEqual([{ raw: 'timestamp' }]);
     expect(fields[1].types).toEqual([{}]);
     // Без raw-тексту порожній MetaType не можна перетворити на щось корисніше —
     // це очікувано; коли raw присутній (реальний випадок з typeParser.ts), його
@@ -215,7 +218,7 @@ describe('loadMetadataFromYaml', () => {
     expect(table.fields).toHaveLength(3);
     expect(table.fields[0].kind).toBe('standard');
     expect(table.fields[1].kind).toBe('attribute');
-    expect(table.fields[2].types).toEqual([{ primitive: 'Число' }]);
+    expect(table.fields[2].types).toEqual([{ primitive: 'Число', digits: 15, fractionDigits: 2 }]);
   });
 
   it('skips objects whose YAML file is missing', () => {
@@ -379,7 +382,7 @@ describe('loadMetadataFromYaml', () => {
 
     const курс = table.fields.find(f => f.name === 'Курс')!;
     expect(курс.kind).toBe('resource');
-    expect(курс.types).toEqual([{ primitive: 'Число' }]);
+    expect(курс.types).toEqual([{ primitive: 'Число', digits: 15, fractionDigits: 4 }]);
   });
 
   it('loads a Константа with Значение field', () => {

@@ -5,6 +5,17 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+### Fixed
+
+- Field-completion type hints for a numeric field silently dropped its
+  digits/fraction-digits qualifiers (`Число(10,2)` showed as bare `Число`),
+  and the standard `ВерсияДанных` attribute (present on every 1C object)
+  showed no type at all. Numeric qualifiers are now preserved end-to-end and
+  shown alongside the string-length qualifier already displayed (e.g.
+  `Строка(150)`, `Число(10,2)`); `ВерсияДанных` — an internal binary version
+  marker, not one of the four SDBL primitive types — now shows a fallback
+  instead of nothing, rather than guessing an unverified specific type for it.
+
 ## 0.1.47 - 2026-09-11
 
 ### Fixed
