@@ -5,6 +5,8 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.48 - 2026-09-11
+
 ### Fixed
 
 - Field-completion type hints for a numeric field silently dropped its
