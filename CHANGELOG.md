@@ -5,6 +5,15 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.52 - 2026-09-13
+
+### Added
+
+- Hovering over a virtual-table call's argument (e.g. `Остатки(&Дата, Условие)`)
+  now shows which parameter it is (`Период`, `Условие`, `УсловиеСчета`,
+  `Субконто`, etc.) for every catalogued register kind and slice —
+  РегистрСведений, РегистрНакопления, РегистрБухгалтерии, and РегистрРасчета.
+
 ## 0.1.51 - 2026-09-13
 
 ### Fixed
