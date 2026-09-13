@@ -5,6 +5,16 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.55 - 2026-09-13
+
+### Fixed
+
+- Hovering over (or autocompleting after) a `&Параметр` reference whose name
+  happened to match a real table alias or register field — including inside
+  a virtual-table `Условие` argument — could show confidently wrong
+  information for the unrelated alias/field instead of nothing. Query
+  parameters are no longer mistaken for identifier references.
+
 ## 0.1.54 - 2026-09-13
 
 ### Added
