@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { findQueryAt, rawOffsetToQueryTextOffset } from './queryAtCursor';
-import { findChainForCompletion, resolveCompletionTarget } from './hoverFieldInfo';
+import { findChainForCompletion, resolveCompletionTarget, virtualTableArgKeywordValues } from './hoverFieldInfo';
 import { getMetadataResolver } from './metadataResolverCache';
 import { describeFieldTypes } from '../core/metadata/describeType';
 import { buildFieldCard, renderFieldCardMarkdown } from '../core/metadata/fieldCard';
@@ -40,9 +40,6 @@ export class QueryCompletionProvider implements vscode.CompletionItemProvider {
     const hit = findQueryAt(source, offset);
     if (!hit) return undefined;
 
-    const chain = findChainForCompletion(source, offset);
-    if (!chain) return undefined;
-
     let resolver;
     try {
       resolver = await getMetadataResolver(this.resolveCfPath(), this.context, this.channel);
@@ -50,6 +47,21 @@ export class QueryCompletionProvider implements vscode.CompletionItemProvider {
       this.channel.appendLine(vscode.l10n.t('[1C Query] Completion: metadata unavailable: {error}', { error: String(e) }));
       return undefined;
     }
+
+    // Phase 2x-2, increment 3: keyword-value completion for a virtual-table
+    // argument whose role is Периодичность/МетодДополнения — a fixed,
+    // closed enum, unrelated to `findChainForCompletion`'s dot-triggered
+    // field completion below (there is no leading `.` here at all).
+    const queryPosition = rawOffsetToQueryTextOffset(source, hit, offset);
+    if (queryPosition !== undefined) {
+      const keywords = virtualTableArgKeywordValues(hit.text, resolver, queryPosition);
+      if (keywords) {
+        return keywords.map((value) => new vscode.CompletionItem(value, vscode.CompletionItemKind.EnumMember));
+      }
+    }
+
+    const chain = findChainForCompletion(source, offset);
+    if (!chain) return undefined;
 
     const headPosition = rawOffsetToQueryTextOffset(source, hit, chain[0].start);
     const target = resolveCompletionTarget(hit.text, resolver, chain.map((s) => s.text), headPosition);

@@ -37,7 +37,7 @@ import { resolveAliasAt } from '../core/semantic/resolveAliasAt';
 import { resolveSymbolTable } from '../core/semantic/collectSymbols';
 import { isOutputAliasReference } from '../core/semantic/resolveOutputAliasReference';
 import { describeVirtualTableArgAt, type VirtualTableArgDescription } from '../core/semantic/describeVirtualTableArg';
-import type { VirtualParamRole } from '../core/metadata/virtualTableSignatures';
+import { keywordValuesForRole, type VirtualParamRole } from '../core/metadata/virtualTableSignatures';
 
 export interface FieldChainSegment {
   /** Текст сегмента как написано в исходнике. */
@@ -261,6 +261,25 @@ export function describeVirtualTableArg(
   const snapshot = buildSemanticSnapshotFromText(1, queryText, resolver);
   const result = describeVirtualTableArgAt(snapshot, position);
   return result.kind === 'resolved' ? result.value : undefined;
+}
+
+/**
+ * Phase 2x-2, increment 3: the fixed keyword values for a virtual-table
+ * argument at `position`, when (and only when) that argument's role is
+ * `Периодичность`/`МетодДополнения` (`keywordValuesForRole` — the only two
+ * roles backed by a closed enum, not a field/value/condition expression).
+ * `undefined` — fail-open — for every other role, or when `position` isn't
+ * inside a virtual-table argument at all.
+ */
+export function virtualTableArgKeywordValues(
+  queryText: string,
+  resolver: MetadataResolver,
+  position: number,
+): readonly string[] | undefined {
+  const snapshot = buildSemanticSnapshotFromText(1, queryText, resolver);
+  const result = describeVirtualTableArgAt(snapshot, position);
+  if (result.kind !== 'resolved') return undefined;
+  return keywordValuesForRole(result.value.param.role);
 }
 
 /**

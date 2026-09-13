@@ -89,6 +89,22 @@ describe('Extension Host: автодоповнення полів після к�
     const items = await makeProvider().provideCompletionItems(doc, doc.positionAt(offset));
     assert.strictEqual(items, undefined);
   });
+
+  it('(Phase 2x-2, increment 3) пропонує значення Периодичность усередині аргументу віртуальної таблиці, без крапки й без метаданих регістру', async function () {
+    this.timeout(20000);
+
+    const vtQueryText = 'ВЫБРАТЬ Т.Период ИЗ РегистрНакопления.Продажи.Обороты(&Начало, &Конец, Мес, ИСТИНА) КАК Т';
+    const content = `Запрос.Текст = "${vtQueryText}";\n`;
+    const doc = await vscode.workspace.openTextDocument({ language: 'plaintext', content });
+    const offset = content.indexOf('Мес') + 1; // курсор усередині часткового значення "Мес"
+
+    const items = await makeProvider().provideCompletionItems(doc, doc.positionAt(offset));
+    assert.ok(items, 'очікувались варіанти Периодичность');
+    const labels = items!.map((i) => i.label as string);
+    assert.ok(labels.includes('Месяц'), `мало бути "Месяц", отримано: ${labels.join(', ')}`);
+    assert.ok(labels.includes('Регистратор'), `мало бути "Регистратор", отримано: ${labels.join(', ')}`);
+    assert.strictEqual(items![0].kind, vscode.CompletionItemKind.EnumMember);
+  });
 });
 
 /**

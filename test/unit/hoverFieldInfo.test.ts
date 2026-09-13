@@ -10,7 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   findChainAt, describeChain, findChainForCompletion, resolveCompletionTarget,
-  describeVirtualTableConditionFieldChain,
+  describeVirtualTableConditionFieldChain, virtualTableArgKeywordValues,
 } from '../../src/extension/hoverFieldInfo';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
 import { parseBatch } from '../../src/core/query/sdblParser';
@@ -455,5 +455,46 @@ describe('describeVirtualTableConditionFieldChain (Phase 2x-2, increment 2)', ()
     const r = describeVirtualTableConditionFieldChain(text, r2, ['Счет'], headPos);
     expect(r?.registerFullName).toBe('РегистрБухгалтерии.ХозОперации');
     expect(r?.resolution.resolved.map(s => s.field.name)).toEqual(['Счет']);
+  });
+});
+
+describe('virtualTableArgKeywordValues (Phase 2x-2, increment 3)', () => {
+  it('returns the Периодичность enum for that argument slot (РегистрНакопления.Обороты)', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрНакопления.Продажи.Обороты(&Начало, &Конец, Месяц, ИСТИНА) КАК Т';
+    const pos = text.indexOf('Месяц');
+    const values = virtualTableArgKeywordValues(text, resolver, pos);
+    expect(values).toContain('Месяц');
+    expect(values).toContain('Регистратор');
+    expect(values).toContain('Авто');
+  });
+
+  it('returns the МетодДополнения enum for that argument slot (ОстаткиИОбороты)', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрНакопления.Продажи.ОстаткиИОбороты(&Начало, &Конец, Месяц, Движения, ИСТИНА) КАК Т';
+    const pos = text.indexOf('Движения');
+    expect(virtualTableArgKeywordValues(text, resolver, pos)).toEqual(['Движения', 'ДвиженияИГраницыПериода']);
+  });
+
+  it('also applies to РегистрБухгалтерии forms sharing the same Периодичность role', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрБухгалтерии.ХозОперации.Обороты(&Начало, &Конец, Квартал, &УсловиеСчета, ИСТИНА, &Условие, &УсловиеКорСчета, ЛОЖЬ) КАК Т';
+    const pos = text.indexOf('Квартал');
+    const values = virtualTableArgKeywordValues(text, resolver, pos);
+    expect(values).toContain('Квартал');
+  });
+
+  it('undefined for a condition-shaped argument (not a keyword enum)', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрНакопления.Продажи.Остатки(&Дата, ИСТИНА) КАК Т';
+    const pos = text.indexOf('ИСТИНА');
+    expect(virtualTableArgKeywordValues(text, resolver, pos)).toBeUndefined();
+  });
+
+  it('undefined for Порядок (order-by field expression, deliberately NOT a keyword enum)', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрБухгалтерии.ХозОперации.ДвиженияССубконто(&Начало, &Конец, &Условие, Регистратор, &Первые) КАК Т';
+    const pos = text.indexOf('Регистратор');
+    expect(virtualTableArgKeywordValues(text, resolver, pos)).toBeUndefined();
+  });
+
+  it('undefined outside any virtual-table argument entirely', () => {
+    const text = 'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Товары КАК Т';
+    expect(virtualTableArgKeywordValues(text, resolver, text.indexOf('Товары'))).toBeUndefined();
   });
 });

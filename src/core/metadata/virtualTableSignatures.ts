@@ -118,3 +118,32 @@ export function lookupVirtualTableSignature(
     sig.registerKind === registerKind && (sig.slicePrefix ? slice.startsWith(sig.slice) : slice === sig.slice)
   );
 }
+
+/**
+ * Phase 2x-2, increment 3: `Периодичность`/`МетодДополнения` are the only two
+ * roles whose value is a fixed keyword from a closed set (verified against
+ * the book, §1.2) — everywhere the catalog above uses these roles (both
+ * РегистрНакопления and РегистрБухгалтерии's `Обороты`/`ОстаткиИОбороты`),
+ * the same set applies, so this is a role→values lookup, not a per-signature
+ * one.
+ *
+ * `Порядок` (`'order'` role, `ДвиженияССубконто` only) is DELIBERATELY NOT
+ * here despite being grouped under "increment 3" in this feature's original
+ * design note — it is an order-by-style FIELD expression, not a keyword
+ * enum (confirmed against the book: it sorts by real register/subconto
+ * fields, and explicitly forbids inequality comparisons on some of them) —
+ * a closed keyword list would be actively wrong for it. Left unhandled by
+ * any increment for now.
+ */
+const PERIODICITY_VALUES = [
+  'Период', 'Год', 'Полугодие', 'Квартал', 'Месяц', 'Декада', 'Неделя', 'День', 'Час', 'Минута', 'Секунда',
+  'Регистратор', 'Запись', 'Авто',
+] as const;
+
+const COMPLETION_METHOD_VALUES = ['Движения', 'ДвиженияИГраницыПериода'] as const;
+
+export function keywordValuesForRole(role: VirtualParamRole): readonly string[] | undefined {
+  if (role === 'periodicity') return PERIODICITY_VALUES;
+  if (role === 'completionMethod') return COMPLETION_METHOD_VALUES;
+  return undefined;
+}
