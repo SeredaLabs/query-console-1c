@@ -24,7 +24,7 @@ export interface TextRange {
   end: number;
 }
 
-export type SourceMapNodeKind = 'unionMember' | 'table' | 'joinCondition' | 'outputAliasSection';
+export type SourceMapNodeKind = 'unionMember' | 'table' | 'joinCondition' | 'outputAliasSection' | 'virtualTableArg';
 
 export interface SourceMapEvent {
   kind: SourceMapNodeKind;
@@ -35,11 +35,20 @@ export interface SourceMapEvent {
    * `model.joins` array (matches `Join`'s own array position — the range
    * covers the condition text AFTER `ПО`, not including `ПО` itself), or for
    * `outputAliasSection` a fixed `0` (УПОРЯДОЧИТЬ) / `1` (ИТОГИ) — at most one
-   * of each per query, so no list-position semantics needed there. NOT a
-   * cross-document/batch-wide identity; a consumer that needs that assembles
-   * it from the `parseDocument` call this event came from.
+   * of each per query, so no list-position semantics needed there. For
+   * `virtualTableArg`, this is the TABLE index (same numbering as `'table'`) —
+   * see `argIndex` for the positional argument within that table's own call.
+   * NOT a cross-document/batch-wide identity; a consumer that needs that
+   * assembles it from the `parseDocument` call this event came from.
    */
   index: number;
+  /**
+   * ONLY for `kind: 'virtualTableArg'`: the 0-based positional argument
+   * number within that table's virtual-table call, e.g. `Остатки(&Период,
+   * Условие)` records argIndex 0 for `&Период`'s range and 1 for `Условие`'s.
+   * Meaningless (absent) for every other kind.
+   */
+  argIndex?: number;
   range: TextRange;
 }
 
@@ -83,6 +92,8 @@ export interface AbsoluteSourceMapEvent {
   statementIndex: number;
   kind: SourceMapNodeKind;
   index: number;
+  /** See `SourceMapEvent.argIndex` — only meaningful for `kind: 'virtualTableArg'`. */
+  argIndex?: number;
   range: TextRange;
 }
 

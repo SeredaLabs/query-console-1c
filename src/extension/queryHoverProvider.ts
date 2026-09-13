@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { findQueryAt, rawOffsetToQueryTextOffset, type QueryHit } from './queryAtCursor';
-import { findChainAt, describeChain, type ChainDescription } from './hoverFieldInfo';
+import { findChainAt, describeChain, describeVirtualTableArg, type ChainDescription } from './hoverFieldInfo';
 import { getMetadataResolver } from './metadataResolverCache';
 import { OPEN_FROM_RANGE_COMMAND } from './openFromRangeCommand';
 
@@ -58,6 +58,27 @@ export class QueryHoverProvider implements vscode.HoverProvider {
       } catch (e) {
         this.channel.appendLine(vscode.l10n.t('[1C Query] Hover: metadata unavailable: {error}', { error: String(e) }));
       }
+    }
+
+    // Phase 2x-2 (semantic-core roadmap, memory: project-semantic-core-roadmap):
+    // virtual-table positional-argument hover — a SEPARATE check from the
+    // chain-based one above, since an argument can be `&Параметр` (lexed as a
+    // distinct token type, never an identifier chain `findChainAt` would find)
+    // or a whole condition expression, not just a bare alias/field reference.
+    try {
+      const resolver = await getMetadataResolver(this.resolveCfPath(), this.context, this.channel);
+      const queryPosition = rawOffsetToQueryTextOffset(source, hit, offset);
+      if (queryPosition !== undefined) {
+        const arg = describeVirtualTableArg(hit.text, resolver, queryPosition);
+        if (arg) {
+          const md = new vscode.MarkdownString(
+            vscode.l10n.t('**{param}** — parameter of `{table}`', { param: arg.param.name, table: arg.tableFullName })
+          );
+          return new vscode.Hover(md);
+        }
+      }
+    } catch (e) {
+      this.channel.appendLine(vscode.l10n.t('[1C Query] Hover: metadata unavailable: {error}', { error: String(e) }));
     }
 
     return genericHint(document, hit);

@@ -58,7 +58,7 @@ import type { QueryDocument, UnionMember } from './unionModel';
 import type { BatchDocument } from './batchModel';
 import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable, MetaField } from '../metadata/types';
-import type { SourceMapSink, BatchSourceMapSink, AbsoluteSourceMapEvent } from './sourceMap';
+import type { SourceMapSink, BatchSourceMapSink, AbsoluteSourceMapEvent, TextRange } from './sourceMap';
 import { RecordingSourceMapSink } from './sourceMap';
 import { expandStarFields } from './expandStarFields';
 import { expandTabSectionFields } from './expandTabSectionFields';
@@ -1937,6 +1937,7 @@ function parseTableSource(cur: Cursor, index: number): SelectedTable {
         cur.sourceMap?.record({
           kind: e.kind,
           index: e.index,
+          argIndex: e.argIndex,
           range: { start: e.range.start + offset, end: e.range.end + offset },
         });
       }
@@ -1956,7 +1957,7 @@ function parseTableSource(cur: Cursor, index: number): SelectedTable {
 
   let virtual: VirtualParams | undefined;
   if (cur.isPunct('(')) {
-    virtual = parseVirtualParams(cur, fullName);
+    virtual = parseVirtualParams(cur, fullName, index);
   }
 
   // `КАК` опционально: 1С допускает источник без явного псевдонима
@@ -2120,8 +2121,21 @@ function arg(args: string[], n: number): string {
   return args[n] ?? '';
 }
 
-function parseVirtualParams(cur: Cursor, fullName: string): VirtualParams {
-  const args = parsePositionalArgs(cur);
+function parseVirtualParams(cur: Cursor, fullName: string, tableIndex: number): VirtualParams {
+  const rawArgs = parsePositionalArgs(cur);
+  // Phase 2x-2 (semantic-core roadmap, memory: project-semantic-core-roadmap):
+  // one 'virtualTableArg' event per non-empty positional argument — purely
+  // positional (which table, which slot), no semantic role baked in here. A
+  // consumer (hover) combines this with the static catalog in
+  // `virtualTableSignatures.ts` (keyed by the table's real MetaTable.kind +
+  // this VirtualParams' own `slice`) to know what role a given argIndex means
+  // for THIS particular virtual-table form.
+  for (let i = 0; i < rawArgs.length; i++) {
+    if (rawArgs[i].text !== '') {
+      cur.sourceMap?.record({ kind: 'virtualTableArg', index: tableIndex, argIndex: i, range: rawArgs[i].range });
+    }
+  }
+  const args = rawArgs.map(a => a.text);
   const parts = fullName.split('.');
   const kind = parts[0];
   const slice = parts[2];
@@ -2220,13 +2234,20 @@ function fillAccounting(
  * построителя с собственными запятыми и псевдонимами `КАК`) считаются
  * сбалансированными — запятые внутри них НЕ дробят аргумент (фаза 6.16).
  */
-function parsePositionalArgs(cur: Cursor): string[] {
+function parsePositionalArgs(cur: Cursor): Array<{ text: string; range: TextRange }> {
   cur.expectPunct('(');
-  const args: string[] = [];
+  const args: Array<{ text: string; range: TextRange }> = [];
   let curTokens: Token[] = [];
+  let argStart = cur.peek().pos;
   let depth = 0;
   const flush = (): void => {
-    args.push(curTokens.length > 0 ? sliceSource(cur.source, curTokens) : '');
+    const end = curTokens.length > 0
+      ? curTokens[curTokens.length - 1].pos + curTokens[curTokens.length - 1].text.length
+      : argStart;
+    args.push({
+      text: curTokens.length > 0 ? sliceSource(cur.source, curTokens) : '',
+      range: { start: argStart, end },
+    });
     curTokens = [];
   };
   for (;;) {
@@ -2239,6 +2260,7 @@ function parsePositionalArgs(cur: Cursor): string[] {
     if (depth === 0 && t.type === 'punct' && t.value === ',') {
       cur.next();
       flush();
+      argStart = cur.peek().pos;
       continue;
     }
     if (t.type === 'punct' && (t.value === '(' || t.value === '{')) depth++;
@@ -5156,6 +5178,7 @@ export function parseBatch(
           statementIndex: i,
           kind: e.kind,
           index: e.index,
+          argIndex: e.argIndex,
           range: { start: e.range.start + offset, end: e.range.end + offset },
         });
       }
@@ -5204,6 +5227,7 @@ export function parseBatch(
           statementIndex: i,
           kind: e.kind,
           index: e.index,
+          argIndex: e.argIndex,
           range: { start: e.range.start + offset, end: e.range.end + offset },
         });
       }

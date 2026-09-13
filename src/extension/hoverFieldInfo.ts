@@ -36,6 +36,7 @@ import { buildSemanticSnapshotFromText } from '../core/semantic/buildSemanticSna
 import { resolveAliasAt } from '../core/semantic/resolveAliasAt';
 import { resolveSymbolTable } from '../core/semantic/collectSymbols';
 import { isOutputAliasReference } from '../core/semantic/resolveOutputAliasReference';
+import { describeVirtualTableArgAt, type VirtualTableArgDescription } from '../core/semantic/describeVirtualTableArg';
 
 export interface FieldChainSegment {
   /** Текст сегмента как написано в исходнике. */
@@ -236,6 +237,29 @@ export function describeChain(
   const found = resolveHeadTable(queryText, resolver, chain[0], headPosition);
   if (!found) return {};
   return describeViaTable(found.table, found.meta, chain, resolver);
+}
+
+/**
+ * Phase 2x-2: describes the virtual-table positional argument at `position`
+ * (in `queryText` coordinates — same as `describeChain`'s `headPosition`),
+ * e.g. "this is the `Период` parameter of `РегистрНакопления.Продажи.Остатки`".
+ *
+ * Deliberately a SEPARATE entry point from `describeChain`/`findChainAt`: an
+ * argument can be `&Параметр` (lexed as a distinct `'param'` token, never an
+ * identifier chain `findChainAt` would even find) or a whole condition
+ * expression (`Регистратор = &Регистратор`) — there is no head alias to
+ * resolve here at all, just a raw text position inside a known argument slot.
+ * `undefined` — fail-open (unknown != invalid) — whenever
+ * `describeVirtualTableArgAt` can't say (see its own doc).
+ */
+export function describeVirtualTableArg(
+  queryText: string,
+  resolver: MetadataResolver,
+  position: number,
+): VirtualTableArgDescription | undefined {
+  const snapshot = buildSemanticSnapshotFromText(1, queryText, resolver);
+  const result = describeVirtualTableArgAt(snapshot, position);
+  return result.kind === 'resolved' ? result.value : undefined;
 }
 
 export interface CompletionTarget {

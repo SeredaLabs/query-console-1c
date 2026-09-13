@@ -326,3 +326,82 @@ describe('source-map oracle: outputAliasSection ranges (Phase 2x-1)', () => {
     expect(containing).toHaveLength(0);
   });
 });
+
+describe('source-map oracle: virtualTableArg ranges (Phase 2x-2, position tracking)', () => {
+  it('РегистрСведений.СрезПоследних: one event per non-empty argument, indexed 0/1, keyed to the table', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрСведений.ЦеныНоменклатуры.СрезПоследних(&Дата, ИСТИНА) КАК Т';
+    const events = recordEvents(text);
+    const table = events.find((e) => e.kind === 'table')!;
+    const args = events.filter((e) => e.kind === 'virtualTableArg').sort((a, b) => (a.argIndex ?? 0) - (b.argIndex ?? 0));
+    expect(args).toHaveLength(2);
+    expect(args.map((a) => a.index)).toEqual([table.index, table.index]);
+    expect(args.map((a) => a.argIndex)).toEqual([0, 1]);
+    expect(text.slice(args[0].range.start, args[0].range.end)).toBe('&Дата');
+    expect(text.slice(args[1].range.start, args[1].range.end)).toBe('ИСТИНА');
+  });
+
+  it('РегистрНакопления.Остатки: argument ranges are nested within the table range and never overlap', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрНакопления.Продажи.Остатки(&Дата, ИСТИНА) КАК Т';
+    const events = recordEvents(text);
+    const table = events.find((e) => e.kind === 'table')!;
+    const args = events.filter((e) => e.kind === 'virtualTableArg');
+    expect(args).toHaveLength(2);
+    for (const a of args) {
+      expect(a.range.start).toBeGreaterThanOrEqual(table.range.start);
+      expect(a.range.end).toBeLessThanOrEqual(table.range.end);
+    }
+    expect(args[0].range.end).toBeLessThanOrEqual(args[1].range.start);
+  });
+
+  it('РегистрБухгалтерии.Остатки: 4 positional slots all get their own event, in source order', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрБухгалтерии.ХозОперации.Остатки(&Дата, &УсловиеСчета, ИСТИНА, &Условие) КАК Т';
+    const events = recordEvents(text);
+    const args = events.filter((e) => e.kind === 'virtualTableArg').sort((a, b) => (a.argIndex ?? 0) - (b.argIndex ?? 0));
+    expect(args.map((a) => a.argIndex)).toEqual([0, 1, 2, 3]);
+    expect(text.slice(args[0].range.start, args[0].range.end)).toBe('&Дата');
+    expect(text.slice(args[1].range.start, args[1].range.end)).toBe('&УсловиеСчета');
+    expect(text.slice(args[2].range.start, args[2].range.end)).toBe('ИСТИНА');
+    expect(text.slice(args[3].range.start, args[3].range.end)).toBe('&Условие');
+  });
+
+  it('РегистрРасчета.ФактическийПериодДействия: single-argument form gets exactly one argIndex-0 event', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ФактическийПериодДействия(Регистратор = &Регистратор) КАК Т';
+    const events = recordEvents(text);
+    const args = events.filter((e) => e.kind === 'virtualTableArg');
+    expect(args).toHaveLength(1);
+    expect(args[0].argIndex).toBe(0);
+    expect(text.slice(args[0].range.start, args[0].range.end)).toBe('Регистратор = &Регистратор');
+  });
+
+  it('РегистрРасчета.База<Имя>: 4-argument form records argIndex 0..3', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.БазаНачисленияБазовые(&ИзмОсн, &ИзмБаза, &Разрезы, ИСТИНА) КАК Т';
+    const events = recordEvents(text);
+    const args = events.filter((e) => e.kind === 'virtualTableArg').sort((a, b) => (a.argIndex ?? 0) - (b.argIndex ?? 0));
+    expect(args.map((a) => a.argIndex)).toEqual([0, 1, 2, 3]);
+    expect(text.slice(args[3].range.start, args[3].range.end)).toBe('ИСТИНА');
+  });
+
+  it('an empty positional slot (skipped argument) records NO virtualTableArg event for that slot', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрНакопления.Продажи.Остатки(, ИСТИНА) КАК Т';
+    const events = recordEvents(text);
+    const args = events.filter((e) => e.kind === 'virtualTableArg');
+    expect(args).toHaveLength(1);
+    expect(args[0].argIndex).toBe(1);
+    expect(text.slice(args[0].range.start, args[0].range.end)).toBe('ИСТИНА');
+  });
+
+  it('a regular (non-virtual) table source records no virtualTableArg events at all', () => {
+    const text = 'ВЫБРАТЬ Т.Поле ИЗ Справочник.Валюты КАК Т';
+    const events = recordEvents(text);
+    expect(events.filter((e) => e.kind === 'virtualTableArg')).toHaveLength(0);
+  });
+
+  it('findContaining resolves a position inside a specific argument to that virtualTableArg event first', () => {
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрСведений.ЦеныНоменклатуры.СрезПоследних(&Дата, ИСТИНА) КАК Т';
+    const events = recordEvents(text);
+    const posInSecondArg = text.indexOf('ИСТИНА') + 1;
+    const containing = findContaining(events, posInSecondArg);
+    expect(containing[0].kind).toBe('virtualTableArg');
+    expect(containing[0].argIndex).toBe(1);
+  });
+});

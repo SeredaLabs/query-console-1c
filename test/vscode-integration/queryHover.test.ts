@@ -104,6 +104,23 @@ describe('Extension Host: hover на цепочці поля запиту', () =
     assert.ok(md.value.includes('command:queryConsole1c.openFromRange'), 'hover мав містити клікабельне command-посилання');
     assert.strictEqual(md.isTrusted, true, 'markdown з command-посиланням має бути isTrusted, інакше VS Code його не виконає');
   });
+
+  it('provideHover (Phase 2x-2) описує позиційний аргумент віртуальної таблиці незалежно від метаданих регістру', async function () {
+    this.timeout(20000);
+
+    const vtQueryText = 'ВЫБРАТЬ Т.Период ИЗ РегистрНакопления.Продажи.Остатки(&Дата, ИСТИНА) КАК Т';
+    const doc = await vscode.workspace.openTextDocument({
+      language: 'plaintext',
+      content: `Запрос.Текст = "${vtQueryText}";\n`,
+    });
+    const offset = doc.getText().indexOf('&Дата') + 1; // курсор всередині першого аргументу ВТ
+
+    const hover = await makeProvider().provideHover(doc, doc.positionAt(offset));
+    assert.ok(hover, 'очікувався hover для аргументу віртуальної таблиці');
+    const value = (hover!.contents[0] as vscode.MarkdownString).value;
+    assert.ok(value.includes('Период'), `hover мав назвати роль параметра ("Период"), отримано: ${value}`);
+    assert.ok(value.includes('РегистрНакопления.Продажи.Остатки'), `hover мав назвати повне ім'я ВТ, отримано: ${value}`);
+  });
 });
 
 /**
