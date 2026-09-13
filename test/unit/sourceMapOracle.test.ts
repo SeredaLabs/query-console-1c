@@ -283,3 +283,46 @@ describe('source-map oracle: joinCondition ranges (Phase 3b)', () => {
     expect(containing[0].index).toBe(1);
   });
 });
+
+describe('source-map oracle: outputAliasSection ranges (Phase 2x-1)', () => {
+  it('records index 0 for УПОРЯДОЧИТЬ, covering the whole section (keyword through field list)', () => {
+    const text = 'ВЫБРАТЬ Т.Поле КАК Алиас ИЗ Справочник.А КАК Т УПОРЯДОЧИТЬ ПО Алиас';
+    const events = recordEvents(text);
+    const sections = events.filter((e) => e.kind === 'outputAliasSection');
+    expect(sections).toHaveLength(1);
+    expect(sections[0].index).toBe(0);
+    expect(text.slice(sections[0].range.start, sections[0].range.end)).toBe('УПОРЯДОЧИТЬ ПО Алиас');
+  });
+
+  it('records index 1 for ИТОГИ, covering the whole section (keyword through field list)', () => {
+    const text = 'ВЫБРАТЬ Т.Поле КАК Алиас ИЗ Справочник.А КАК Т ИТОГИ Алиас ПО Алиас';
+    const events = recordEvents(text);
+    const sections = events.filter((e) => e.kind === 'outputAliasSection');
+    expect(sections).toHaveLength(1);
+    expect(sections[0].index).toBe(1);
+    expect(text.slice(sections[0].range.start, sections[0].range.end)).toBe('ИТОГИ Алиас ПО Алиас');
+  });
+
+  it('records BOTH sections, correctly indexed, when a query has both УПОРЯДОЧИТЬ and ИТОГИ (canonical order)', () => {
+    const text = 'ВЫБРАТЬ Т.Поле КАК Алиас ИЗ Справочник.А КАК Т УПОРЯДОЧИТЬ ПО Алиас ИТОГИ Алиас ПО Алиас';
+    const events = recordEvents(text);
+    const sections = events.filter((e) => e.kind === 'outputAliasSection').sort((a, b) => a.index - b.index);
+    expect(sections).toHaveLength(2);
+    expect(sections[0].index).toBe(0); // УПОРЯДОЧИТЬ
+    expect(sections[1].index).toBe(1); // ИТОГИ
+  });
+
+  it('records no outputAliasSection event for a query with neither УПОРЯДОЧИТЬ nor ИТОГИ', () => {
+    const text = 'ВЫБРАТЬ Т.Поле ИЗ Справочник.А КАК Т';
+    const events = recordEvents(text);
+    expect(events.filter((e) => e.kind === 'outputAliasSection')).toHaveLength(0);
+  });
+
+  it('a position inside ГДЕ (not УПОРЯДОЧИТЬ/ИТОГИ) is NOT covered by any outputAliasSection', () => {
+    const text = 'ВЫБРАТЬ Т.Поле КАК Алиас ИЗ Справочник.А КАК Т ГДЕ Т.Поле = 1 УПОРЯДОЧИТЬ ПО Алиас';
+    const events = recordEvents(text);
+    const posInWhere = text.indexOf('Т.Поле = 1');
+    const containing = findContaining(events, posInWhere).filter((e) => e.kind === 'outputAliasSection');
+    expect(containing).toHaveLength(0);
+  });
+});

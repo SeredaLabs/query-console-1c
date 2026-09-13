@@ -35,6 +35,7 @@ import { findAliasTable } from '../core/query/findAliasTable';
 import { buildSemanticSnapshotFromText } from '../core/semantic/buildSemanticSnapshot';
 import { resolveAliasAt } from '../core/semantic/resolveAliasAt';
 import { resolveSymbolTable } from '../core/semantic/collectSymbols';
+import { isOutputAliasReference } from '../core/semantic/resolveOutputAliasReference';
 
 export interface FieldChainSegment {
   /** Текст сегмента как написано в исходнике. */
@@ -188,6 +189,11 @@ function resolveHeadTable(
 ): { table: SelectedTable; meta: MetaTable | undefined } | undefined {
   const snapshot = buildSemanticSnapshotFromText(1, queryText, resolver);
   if (snapshot.completeness === 'complete' && headPosition !== undefined) {
+    // Phase 2x-1: a bare identifier inside УПОРЯДОЧИТЬ/ИТОГИ can name a
+    // SELECT-output column, not a source alias at all — resolving it as one
+    // would risk a confident, WRONG answer if the name happens to collide
+    // with a real table alias elsewhere in the query.
+    if (isOutputAliasReference(snapshot, headPosition, alias)) return undefined;
     const resolution = resolveAliasAt(snapshot, headPosition, alias);
     if (resolution.kind !== 'resolved') return undefined;
     const table = resolveSymbolTable(snapshot.model, resolution.value.ref.path);

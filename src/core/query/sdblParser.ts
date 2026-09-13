@@ -957,10 +957,14 @@ function parseSingleQuery(
   const sectionCtx = inheritedSectionCtx ?? ownSectionCtx;
 
   if (cur.isKeyword('УПОРЯДОЧИТЬ') || cur.isKeyword('АВТОУПОРЯДОЧИВАНИЕ')) {
+    const start = cur.peek().pos;
     model.order = parseOrder(cur, sectionCtx);
+    cur.sourceMap?.record({ kind: 'outputAliasSection', index: 0, range: { start, end: cur.peek().pos } });
   }
   if (cur.isKeyword('ИТОГИ')) {
+    const start = cur.peek().pos;
     model.totals = parseTotals(cur, sectionCtx);
+    cur.sourceMap?.record({ kind: 'outputAliasSection', index: 1, range: { start, end: cur.peek().pos } });
   }
   // АВТОУПОРЯДОЧИВАНИЕ может стоять В САМОМ КОНЦЕ запроса — ПОСЛЕ ИТОГИ (1С печатает
   // его последней строкой). Если осталось — выставляем флаг auto на секции порядка

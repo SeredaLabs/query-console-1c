@@ -189,6 +189,23 @@ describe('describeChain', () => {
     const r = describeChain(text, resolver, ['Т1', 'Наименование'], posInInnerCond);
     expect(r).toEqual({});
   });
+
+  it("Phase 2x-1: a bare УПОРЯДОЧИТЬ reference that COLLIDES with a real table alias resolves to NOTHING (it names the SELECT-output column, not that table)", () => {
+    const text =
+      'ВЫБРАТЬ Т.Наименование КАК Х ИЗ Справочник.Товары КАК Т ' +
+      'ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Контрагенты КАК Х ПО Т.Контрагент = Х.Ссылка ' +
+      'УПОРЯДОЧИТЬ ПО Х';
+    const posInOrder = text.lastIndexOf('Х');
+    const r = describeChain(text, resolver, ['Х'], posInOrder);
+    expect(r).toEqual({});
+  });
+
+  it('Phase 2x-1: a genuine Alias.Field reference INSIDE УПОРЯДОЧИТЬ still resolves normally (not suppressed just because it is in that section)', () => {
+    const text = 'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Товары КАК Т УПОРЯДОЧИТЬ ПО Т.Наименование';
+    const posInOrder = text.lastIndexOf('Т.Наименование');
+    const r = describeChain(text, resolver, ['Т', 'Наименование'], posInOrder);
+    expect(r.tableFullName).toBe('Справочник.Товары');
+  });
 });
 
 describe('findChainForCompletion', () => {

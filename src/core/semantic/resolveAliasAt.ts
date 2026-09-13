@@ -126,6 +126,20 @@ function localSymbolsFor(allSymbols: readonly Symbol[], scopePath: ModelPath): S
 }
 
 /**
+ * The `QueryModel` whose own text directly contains `position` (the innermost
+ * scope level, same lookup `resolveAliasAt` itself does) — exported for other
+ * position-aware checks that need "which model is this" without the rest of
+ * alias-resolution (Phase 2x-1: `resolveOutputAliasReference.ts` uses this to
+ * find the right model's `selectOutputAliases`). `undefined` for a
+ * non-`'complete'` snapshot or a position outside any recorded scope, same as
+ * `resolveAliasAt`'s own fail-open cases.
+ */
+export function findModelAt(snapshot: SemanticSnapshot, position: number): QueryModel | undefined {
+  if (snapshot.completeness !== 'complete') return undefined;
+  return findScopeChain(snapshot.model, snapshot.sourceMapEvents, position)[0]?.model;
+}
+
+/**
  * Resolves a bare alias reference at a raw-text `position` (absolute offset
  * into the original source, matching `snapshot.sourceMapEvents`'s coordinate
  * system) against the visible source aliases at that exact point.

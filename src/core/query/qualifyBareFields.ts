@@ -414,8 +414,24 @@ function qualifyExpression(raw: string, ctx: OwnerContext): string {
  * Множество псевдонимов выходных колонок выборки (верхний регистр). Поле секции
  * УПОРЯДОЧИТЬ/ИТОГИ, чьё имя совпадает с псевдонимом колонки, адресуется ПО
  * псевдониму (печатается голым) — конструктор 1С его НЕ квалифицирует.
+ *
+ * Exported (semantic-core roadmap Phase 2x-1, memory:
+ * project-semantic-core-roadmap): `resolveOutputAliasReference.ts` reuses this
+ * SAME corpus-proven set to stop hover/completion from misreading a bare
+ * УПОРЯДОЧИТЬ/ИТОГИ reference to an output column as a table-alias lookup —
+ * without this, a collision between an output alias and a real table alias
+ * elsewhere in the query would make hover show the WRONG source.
+ * Deliberately NOT extended to `ИМЕЮЩИЕ` (HAVING) — this pass itself doesn't
+ * protect HAVING bare fields the same way (see `qualifyExpression`'s `doCond`
+ * call site), and this is CORRECT: live-verified against a real 1C instance
+ * (2026-09-13) that HAVING never resolves a bare identifier against a
+ * SELECT-output alias at all — two decisive tests (a bare name that IS a
+ * real, out-of-group source field → "Field is not in group"; a bare name
+ * that matches NO real field anywhere → "Field not found") both show 1C
+ * always attempts real-field resolution for a bare HAVING identifier, never
+ * falling back to the output-alias set the way ORDER BY/TOTALS do.
  */
-function selectOutputAliases(model: QueryModel): Set<string> {
+export function selectOutputAliases(model: QueryModel): Set<string> {
   const out = new Set<string>();
   const addName = (n: string | undefined): void => { if (n) out.add(up(n)); };
   const add = (f: SelectedField): void => {
