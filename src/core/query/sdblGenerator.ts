@@ -204,6 +204,23 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
     return renderVirtualParams(t.fullName, positions, v.condition ?? '', bodyTabs);
   }
 
+  // Регистр расчета: раскладка подтверждена (Хрусталёва, «Язык запросов
+  // "1С:Предприятия 8"», 2-е изд., с. 327-334), см. `parseVirtualParams`.
+  if (kind === 'РегистрРасчета') {
+    if (slice === 'ФактическийПериодДействия' || slice === 'ДанныеГрафика') {
+      // [condition] — единственный параметр, арность 1.
+      const positions = [v.condition ?? ''];
+      if (!positions.some(p => p !== '') && !v.hadParens) return t.fullName;
+      return renderVirtualParams(t.fullName, positions, v.condition ?? '', bodyTabs);
+    }
+    if (slice.startsWith('База')) {
+      // [ИзмеренияОсновногоРегистра, ИзмеренияБазовогоРегистра, Разрезы, Условие] — арность 4.
+      const positions = [v.mainDimensions ?? '', v.baseDimensions ?? '', v.sections ?? '', v.condition ?? ''];
+      if (!positions.some(p => p !== '') && !v.hadParens) return t.fullName;
+      return renderVirtualParams(t.fullName, positions, v.condition ?? '', bodyTabs);
+    }
+  }
+
   // Остатки/срезы регистра сведений и накопления: фиксированная арность (Период, Условие),
   // как у регистра бухгалтерии и по эталону конструктора 1С — хвостовые пустые позиции
   // сохраняются. Скобки — только если задан хоть один параметр.

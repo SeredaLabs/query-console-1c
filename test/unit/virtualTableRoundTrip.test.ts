@@ -50,6 +50,12 @@ describe('VT round-trip — LOSSLESS (несвязанная правка не �
     ['РегистрБухгалтерии.Обороты (+ ВидыСубконто с обеих сторон corr, PR-04 fix)', 'ВЫБРАТЬ Т.Период ИЗ РегистрБухгалтерии.ХозОперации.Обороты(&Начало, &Конец, Месяц, &УсловиеСчета, ИСТИНА, &Условие, &УсловиеКорСчета, ЛОЖЬ) КАК Т'],
     ['РегистрБухгалтерии.ОборотыДтКт (+ ВидыСубконто Дт/Кт, PR-04 fix)', 'ВЫБРАТЬ Т.Период ИЗ РегистрБухгалтерии.ХозОперации.ОборотыДтКт(&Начало, &Конец, Месяц, &УсловиеДт, ИСТИНА, &УсловиеКт, ЛОЖЬ, &Условие) КАК Т'],
     ['РегистрБухгалтерии.Субконто (PR-04 fix)', 'ВЫБРАТЬ Т.Период ИЗ РегистрБухгалтерии.ХозОперации.Субконто(&Период, &УсловиеСчета) КАК Т'],
+    // Раскладка регистра расчета подтверждена (Хрусталёва, «Язык запросов
+    // "1С:Предприятия 8"», 2-е изд., с. 327-334) — semantic-core roadmap
+    // follow-up (memory: project-semantic-core-roadmap), не PR-04/05.
+    ['РегистрРасчета.ФактическийПериодДействия (арность 1, подтверждено)', 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ФактическийПериодДействия(Регистратор = &Регистратор) КАК Т'],
+    ['РегистрРасчета.ДанныеГрафика (арность 1, подтверждено)', 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(Регистратор = &Регистратор) КАК Т'],
+    ['РегистрРасчета.База<Имя> (арность 4, подтверждено)', 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.БазаНачисленияБазовые(&ИзмОсн, &ИзмБаза, &Разрезы, ИСТИНА) КАК Т'],
   ];
 
   for (const [label, text] of cases) {
@@ -70,30 +76,47 @@ describe('VT round-trip — LOSSLESS (несвязанная правка не �
 });
 
 describe('VT round-trip — SEMANTIC LOSS (подтверждённые, известные границы)', () => {
-  it('РегистрРасчета.*.ДанныеГрафика: ≤2 аргумента — LOSSLESS, 3-й аргумент — теряется молча', () => {
+  // ОБНОВЛЕНО (semantic-core roadmap follow-up, memory:
+  // project-semantic-core-roadmap): раскладка ДанныеГрафика/
+  // ФактическийПериодДействия подтверждена — арность РІВНО 1 (Условие), а не
+  // [period, condition] (арность 2), як вважалося раніше. Поріг "зайвого"
+  // аргументу тепер коректно 1, а не 2.
+  it('РегистрРасчета.*.ДанныеГрафика: 1 аргумент — LOSSLESS, 2-й аргумент — помечается unsafe и теряется', () => {
+    const oneArg = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А) КАК Т';
+    const oneArgDoc = parseBatch(oneArg);
+    expect(generateBatch(oneArgDoc)).toContain('&А');
+    expect(firstTable(oneArgDoc).virtual?.unsafeExtraArgs).toBeUndefined();
+
     const twoArgs = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б) КАК Т';
     const twoArgsDoc = parseBatch(twoArgs);
-    expect(generateBatch(twoArgsDoc)).toContain('&А, &Б');
-    // ≤2 аргумента — раскладка [period, condition] полная, unsafeExtraArgs НЕ ставится
-    // (иначе Apply блокировал бы безопасные запросы — см. findUnsafeVirtualTables).
-    expect(firstTable(twoArgsDoc).virtual?.unsafeExtraArgs).toBeUndefined();
-
-    const threeArgs = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК Т';
-    const threeArgsDoc = parseBatch(threeArgs);
-    const out = generateBatch(threeArgsDoc);
-    expect(out, 'известная, ещё не исправленная потеря 3-го параметра — см. docs/development/known-issues.md').not.toContain('&В');
+    const out = generateBatch(twoArgsDoc);
+    expect(out, 'подтверждённая арность 1 — 2-й аргумент вне модели, теряется').not.toContain('&Б');
     // PR-05 (ТЗ §54 P0.5): потерянный аргумент помечен для Apply-blocking.
-    expect(firstTable(threeArgsDoc).virtual?.unsafeExtraArgs).toBe(true);
-    expect(findUnsafeVirtualTables(threeArgsDoc)).toEqual(['РегистрРасчета.Начисления.ДанныеГрафика']);
+    expect(firstTable(twoArgsDoc).virtual?.unsafeExtraArgs).toBe(true);
+    expect(findUnsafeVirtualTables(twoArgsDoc)).toEqual(['РегистрРасчета.Начисления.ДанныеГрафика']);
   });
 
-  it('РегистрРасчета.*.ФактическийПериодДействия: тот же класс потери на 3-м аргументе', () => {
-    const threeArgs = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ФактическийПериодДействия(&А, &Б, &В) КАК Т';
-    const doc = parseBatch(threeArgs);
+  it('РегистрРасчета.*.ФактическийПериодДействия: тот же класс потери на 2-м аргументе', () => {
+    const twoArgs = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ФактическийПериодДействия(&А, &Б) КАК Т';
+    const doc = parseBatch(twoArgs);
     const out = generateBatch(doc);
-    expect(out).not.toContain('&В');
+    expect(out).not.toContain('&Б');
     expect(firstTable(doc).virtual?.unsafeExtraArgs).toBe(true);
     expect(findUnsafeVirtualTables(doc)).toHaveLength(1);
+  });
+
+  it('РегистрРасчета.База<Имя>: 4 аргумента — LOSSLESS, 5-й — помечается unsafe и теряется', () => {
+    const fourArgs = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.БазаНачисленияБазовые(&А, &Б, &В, &Г) КАК Т';
+    const fourArgsDoc = parseBatch(fourArgs);
+    const outFour = generateBatch(fourArgsDoc);
+    expect(outFour).toContain('&А, &Б, &В, &Г');
+    expect(firstTable(fourArgsDoc).virtual?.unsafeExtraArgs).toBeUndefined();
+
+    const fiveArgs = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.БазаНачисленияБазовые(&А, &Б, &В, &Г, &Д) КАК Т';
+    const fiveArgsDoc = parseBatch(fiveArgs);
+    const outFive = generateBatch(fiveArgsDoc);
+    expect(outFive).not.toContain('&Д');
+    expect(firstTable(fiveArgsDoc).virtual?.unsafeExtraArgs).toBe(true);
   });
 });
 

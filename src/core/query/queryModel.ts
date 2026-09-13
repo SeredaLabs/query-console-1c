@@ -14,6 +14,12 @@ export interface VirtualParams {
   accountKtCondition?: string;   // УсловиеСчетаКт (ОборотыДтКт)
   order?: string;                // Порядок (ДвиженияССубконто)
   top?: string;                  // Первые (ДвиженияССубконто)
+  // регистр расчета, форма <ОсновнойРегистр>.База<БазовыйРегистр>(...) —
+  // раскладка подтверждена (Хрусталёва, «Язык запросов "1С:Предприятия 8"»,
+  // 2-е изд., с. 332-334), см. `parseVirtualParams`.
+  mainDimensions?: string;  // ИзмеренияОсновногоРегистра
+  baseDimensions?: string;  // ИзмеренияБазовогоРегистра
+  sections?: string;        // Разрезы
   correspondence?: boolean;      // проброшен из метаданных при добавлении ВТ
   hadParens?: boolean;           // во вводе были скобки параметров (даже пустые `(, )`)
   subconto?: boolean;            // регистр бухгалтерии имеет субконто (план счетов с maxExtDimensionCount>0)
@@ -31,12 +37,14 @@ export interface VirtualParams {
   /**
    * Позиция 3+ виртуальной таблицы, попавшей под generic-fallback раскладку
    * `[period, condition]` (см. `parseVirtualParams`), содержала непустое значение —
-   * настоящая раскладка для таких форм (`РегистрРасчета.*.ДанныеГрафика`,
-   * `ФактическийПериодДействия`, `Последовательность.*.Границы`) неизвестна (нет
-   * evidence по конкретной арности/именам), поэтому она молча пропадает при
-   * generate (PR-04, ТЗ §31, KNOWN_ISSUES.md). Apply блокируется, пока это не
-   * исправлено (PR-05, ТЗ §54 P0.5, §27/28: unknown preservation → BLOCK) —
-   * см. `findUnsafeVirtualTables` в semanticValidator.ts.
+   * настоящая раскладка для таких форм неизвестна (нет evidence по конкретной
+   * арности/именам), поэтому она молча пропадает при generate (PR-04, ТЗ §31,
+   * KNOWN_ISSUES.md). Сейчас это касается только `Последовательность.*.Границы`
+   * — регистр расчета (`ДанныеГрафика`/`ФактическийПериодДействия`/`База<Имя>`)
+   * подтверждён и вынесен в собственную раскладку выше (semantic-core roadmap
+   * follow-up, memory: project-semantic-core-roadmap). Apply блокируется, пока
+   * это не исправлено (PR-05, ТЗ §54 P0.5, §27/28: unknown preservation →
+   * BLOCK) — см. `findUnsafeVirtualTables` в semanticValidator.ts.
    */
   unsafeExtraArgs?: boolean;
 }

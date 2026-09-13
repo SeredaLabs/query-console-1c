@@ -22,14 +22,19 @@ dot-navigation chain, or platform-specific construct is valid.
 
 ## ⛔ Round-trip exclusions
 
-> Do not apply designer changes to the following virtual tables when they use
-> three or more positional parameters:
+> Do not apply designer changes to `Последовательность.*.Границы` when it
+> uses three or more positional parameters.
 
-- `РегистрРасчета.*.ДанныеГрафика`
-- `РегистрРасчета.*.ФактическийПериодДействия`
-- `Последовательность.*.Границы`
+The real parameter layout for this virtual table isn't confirmed, so the
+common fallback can't guarantee lossless reconstruction beyond its first two
+positions.
 
-The common fallback cannot guarantee lossless reconstruction for those forms.
+`РегистрРасчета.*.ДанныеГрафика`/`ФактическийПериодДействия` (a single
+`Условие` parameter) and `<main register>.База<base register name>` (four
+parameters) are fully supported now — their real layout was confirmed and
+implemented; only a genuinely extra parameter beyond that (which real 1C
+queries never produce) is blocked.
+
 Accounting-register `Субконто(...)` parameters are supported and regression
 tested; older documentation that marked them unsafe is obsolete.
 

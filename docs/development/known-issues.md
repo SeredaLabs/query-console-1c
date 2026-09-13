@@ -20,10 +20,16 @@
   the only hits on real code were already-incomplete fragments from runtime
   string concatenation (not something the constructor itself ever produces,
   since it always edits one complete query string).
-- Three-or-more positional arguments cannot be losslessly reconstructed by the
-  generic fallback for `РегистрРасчета.*.ДанныеГрафика`,
-  `РегистрРасчета.*.ФактическийПериодДействия`, and
-  `Последовательность.*.Границы`; marked models are blocked from apply.
+- `Последовательность.*.Границы` still falls back to a generic, unverified
+  `[period, condition]` layout -- a third positional argument cannot be
+  losslessly reconstructed; marked models are blocked from apply.
+  `РегистрРасчета.*.ДанныеГрафика`/`ФактическийПериодДействия` (arity 1:
+  `Условие`) and `<ОсновнойРегистр>.База<БазовыйРегистр>` (arity 4) are no
+  longer part of this gap -- their real layout was confirmed (Хрусталёва,
+  «Язык запросов "1С:Предприятия 8"», 2nd ed., pp. 327-334) and modeled
+  directly in `parseVirtualParams`/the generator; an argument beyond their
+  own confirmed arity is still correctly blocked, just at the right
+  threshold now.
 - Auto-discovery is bounded and may require an explicit metadata path.
 - Query-parse diagnostics (`queryConsole.queryDiagnosticsEnabled`) scan one
   string literal at a time and can flag a query assembled by string
