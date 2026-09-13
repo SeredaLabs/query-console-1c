@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
 import { findQueryAt, rawOffsetToQueryTextOffset, type QueryHit } from './queryAtCursor';
-import { findChainAt, describeChain, describeVirtualTableArg, type ChainDescription } from './hoverFieldInfo';
+import {
+  findChainAt, describeChain, describeVirtualTableArg, describeVirtualTableConditionFieldChain,
+  type ChainDescription, type VirtualTableConditionFieldChain,
+} from './hoverFieldInfo';
+import type { FieldPathResolution } from '../core/query/fieldPathResolver';
 import { getMetadataResolver } from './metadataResolverCache';
 import { OPEN_FROM_RANGE_COMMAND } from './openFromRangeCommand';
 
@@ -48,8 +52,25 @@ export class QueryHoverProvider implements vscode.HoverProvider {
       try {
         const resolver = await getMetadataResolver(this.resolveCfPath(), this.context, this.channel);
         const headPosition = rawOffsetToQueryTextOffset(source, hit, chain.segments[0].start);
-        const description = describeChain(hit.text, resolver, chain.segments.map((s) => s.text), headPosition);
-        const message = buildHoverMessage(chain.hoveredIndex, chain.segments.map((s) => s.text), description);
+        const segmentTexts = chain.segments.map((s) => s.text);
+
+        // Phase 2x-2, increment 2: a bare identifier inside a virtual-table
+        // `Условие`/`УсловиеСчета`/etc. argument names a field of the
+        // REGISTER ITSELF, not a source alias — try this FIRST, since
+        // `describeChain`'s alias-based resolution would just fail (chain[0]
+        // is never a real alias here) and fall through to nothing anyway.
+        const vtField = describeVirtualTableConditionFieldChain(hit.text, resolver, segmentTexts, headPosition);
+        if (vtField) {
+          const message = buildVirtualTableFieldHoverMessage(chain.hoveredIndex, segmentTexts, vtField);
+          if (message) {
+            const hovered = chain.segments[chain.hoveredIndex];
+            const range = new vscode.Range(document.positionAt(hovered.start), document.positionAt(hovered.end));
+            return new vscode.Hover(message, range);
+          }
+        }
+
+        const description = describeChain(hit.text, resolver, segmentTexts, headPosition);
+        const message = buildHoverMessage(chain.hoveredIndex, segmentTexts, description);
         if (message) {
           const hovered = chain.segments[chain.hoveredIndex];
           const range = new vscode.Range(document.positionAt(hovered.start), document.positionAt(hovered.end));
@@ -112,9 +133,39 @@ function buildHoverMessage(
   }
 
   if (!description.resolution) return undefined;
-  const { resolution } = description;
-  const segIdx = hoveredIndex - 1;
+  return describeFieldPathSegment(description.resolution, hoveredIndex - 1, segmentTexts[hoveredIndex], description.tableFullName);
+}
 
+/**
+ * Phase 2x-2, increment 2: a virtual-table `Условие`/etc. argument has NO
+ * alias segment at all — the whole chain (including index 0) names fields of
+ * the register directly, so unlike `buildHoverMessage` there is no special
+ * "index 0 is the source" case; every index maps straight into
+ * `resolution.resolved`/`unresolvedTail`.
+ */
+function buildVirtualTableFieldHoverMessage(
+  hoveredIndex: number,
+  segmentTexts: string[],
+  vtField: VirtualTableConditionFieldChain
+): vscode.MarkdownString | undefined {
+  return describeFieldPathSegment(vtField.resolution, hoveredIndex, segmentTexts[hoveredIndex], vtField.registerFullName);
+}
+
+/**
+ * Shared rendering for a single chain segment already resolved (or proven
+ * not-found) via `resolveFieldPath` — extracted so `buildHoverMessage`
+ * (alias-headed chains) and `buildVirtualTableFieldHoverMessage` (headless
+ * register-field chains) don't duplicate the resolved/reference/not-found
+ * rendering, differing only in how the segment INDEX maps into
+ * `resolution.resolved` and what "owner" fallback name to report for a
+ * not-found FIRST segment.
+ */
+function describeFieldPathSegment(
+  resolution: FieldPathResolution,
+  segIdx: number,
+  segmentText: string,
+  headFullName: string | undefined
+): vscode.MarkdownString | undefined {
   if (segIdx < resolution.resolved.length) {
     const seg = resolution.resolved[segIdx];
     const lines = [`**${seg.field.name}**`];
@@ -134,9 +185,9 @@ function buildHoverMessage(
   if (resolution.stoppedReason !== 'fieldNotFound') return undefined;
   const owner = resolution.resolved.length > 0
     ? resolution.resolved[resolution.resolved.length - 1].refTarget?.fullName
-    : description.tableFullName;
+    : headFullName;
   if (!owner) return undefined;
   return new vscode.MarkdownString(
-    vscode.l10n.t('Field "{field}" not found in "{table}"', { field: segmentTexts[hoveredIndex], table: owner })
+    vscode.l10n.t('Field "{field}" not found in "{table}"', { field: segmentText, table: owner })
   );
 }

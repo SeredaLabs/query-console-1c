@@ -37,6 +37,7 @@ import { resolveAliasAt } from '../core/semantic/resolveAliasAt';
 import { resolveSymbolTable } from '../core/semantic/collectSymbols';
 import { isOutputAliasReference } from '../core/semantic/resolveOutputAliasReference';
 import { describeVirtualTableArgAt, type VirtualTableArgDescription } from '../core/semantic/describeVirtualTableArg';
+import type { VirtualParamRole } from '../core/metadata/virtualTableSignatures';
 
 export interface FieldChainSegment {
   /** Текст сегмента как написано в исходнике. */
@@ -260,6 +261,68 @@ export function describeVirtualTableArg(
   const snapshot = buildSemanticSnapshotFromText(1, queryText, resolver);
   const result = describeVirtualTableArgAt(snapshot, position);
   return result.kind === 'resolved' ? result.value : undefined;
+}
+
+/**
+ * Phase 2x-2, increment 2: roles whose argument text is an SDBL condition
+ * expression evaluated against the REGISTER'S OWN fields (dimensions/
+ * resources/attributes, unqualified — no alias prefix, confirmed against
+ * Хрусталёва's book for every catalogued form) rather than a value list,
+ * keyword, or array of field-name strings — those (`subconto*`, `order`/
+ * `limit`, `mainDimensions`/`baseDimensions`/`sections`) are a genuinely
+ * different shape, deliberately out of scope here (increments 3/4).
+ */
+const CONDITION_ROLES: ReadonlySet<VirtualParamRole> = new Set([
+  'condition', 'accountCondition', 'accountConditionDt', 'accountConditionKt', 'corrAccountCondition',
+]);
+
+/**
+ * `<Kind>.<Name>.<Slice>` → `<Kind>.<Name>` — the REAL register a virtual-table
+ * slice was built from. 1C metadata names never contain a dot, so dropping the
+ * last dotted segment is exact, not a heuristic (matches how
+ * `virtualTableSignatures.ts` itself derives `registerKind`/`slice` from the
+ * same three segments).
+ */
+function baseRegisterFullName(virtualTableFullName: string): string {
+  return virtualTableFullName.split('.').slice(0, 2).join('.');
+}
+
+export interface VirtualTableConditionFieldChain {
+  /** The REGISTER's own full name (not the virtual-table slice) — `Условие`
+   *  fields are the register's raw fields, evaluated BEFORE the slice/output
+   *  columns are computed (e.g. `Товар`, not `ТоварОстаток`). */
+  registerFullName: string;
+  resolution: FieldPathResolution;
+}
+
+/**
+ * Phase 2x-2, increment 2: resolves `chain` (a bare identifier, or a chain
+ * through a reference field — e.g. `Контрагент.ИНН`) found at `headPosition`
+ * INSIDE a virtual-table `Условие`/`УсловиеСчета`/etc. argument, against the
+ * underlying register's own metadata — NOT an alias lookup (there is no alias
+ * here at all, unlike `describeChain`/`resolveHeadTable`: the identifier
+ * names a field of the register directly, so the WHOLE chain — including
+ * `chain[0]` — is fed to `resolveFieldPath`, not just the tail after a head).
+ *
+ * `undefined` — fail-open — whenever `headPosition` isn't inside a
+ * condition-shaped virtual-table argument at all, or the register's own
+ * metadata isn't available (`unknown != invalid`, matches every other check
+ * in this module).
+ */
+export function describeVirtualTableConditionFieldChain(
+  queryText: string,
+  resolver: MetadataResolver,
+  chain: string[],
+  headPosition: number | undefined,
+): VirtualTableConditionFieldChain | undefined {
+  if (headPosition === undefined || chain.length === 0) return undefined;
+  const snapshot = buildSemanticSnapshotFromText(1, queryText, resolver);
+  const result = describeVirtualTableArgAt(snapshot, headPosition);
+  if (result.kind !== 'resolved' || !CONDITION_ROLES.has(result.value.param.role)) return undefined;
+  const registerFullName = baseRegisterFullName(result.value.tableFullName);
+  const meta = resolver.tableByFullName(registerFullName);
+  if (!meta) return undefined;
+  return { registerFullName, resolution: resolveFieldPath(meta, chain, resolver) };
 }
 
 export interface CompletionTarget {

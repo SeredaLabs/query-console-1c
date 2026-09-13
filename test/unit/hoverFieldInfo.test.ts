@@ -10,6 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   findChainAt, describeChain, findChainForCompletion, resolveCompletionTarget,
+  describeVirtualTableConditionFieldChain,
 } from '../../src/extension/hoverFieldInfo';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
 import { parseBatch } from '../../src/core/query/sdblParser';
@@ -352,5 +353,107 @@ describe('відновлення після зламаного SELECT-списк
     expect(() => parseBatch(text)).toThrow();
     const target = resolveCompletionTarget(text, nomenklaturaResolver, ['Номенклатура'], 0);
     expect(target?.meta.fullName).toBe('Справочник.Номенклатура');
+  });
+});
+
+describe('describeVirtualTableConditionFieldChain (Phase 2x-2, increment 2)', () => {
+  const NOMENKLATURA: MetaTable = {
+    kind: 'Справочник', name: 'Номенклатура', fullName: 'Справочник.Номенклатура',
+    fields: [{ name: 'Наименование', kind: 'standard', types: [{ primitive: 'Строка' }] }],
+  };
+  const PRODAZHI: MetaTable = {
+    kind: 'РегистрНакопления', name: 'Продажи', fullName: 'РегистрНакопления.Продажи',
+    fields: [
+      { name: 'Товар', kind: 'dimension', types: [{ ref: { kind: 'Справочник', name: 'Номенклатура' } }] },
+      { name: 'Склад', kind: 'dimension', types: [{ primitive: 'Строка' }] },
+      { name: 'Количество', kind: 'resource', types: [{ primitive: 'Число' }] },
+    ],
+  };
+  // Слепок «Остатки»: измерения без изменений + развёрнутый ресурс
+  // (КоличествоОстаток) — те же имена, что реально строит `buildAccumRegSlices`
+  // в `yamlLoader.ts`. Условие резолвится против БАЗОВОГО регистра (raw
+  // "Количество"/"Товар"), а не против ЭТИХ развёрнутых полей.
+  const PRODAZHI_OSTATKI: MetaTable = {
+    kind: 'РегистрНакопления', name: 'Продажи.Остатки', fullName: 'РегистрНакопления.Продажи.Остатки',
+    fields: [
+      { name: 'Товар', kind: 'dimension', types: PRODAZHI.fields[0].types },
+      { name: 'Склад', kind: 'dimension', types: [{ primitive: 'Строка' }] },
+      { name: 'КоличествоОстаток', kind: 'resource', types: [{ primitive: 'Число' }] },
+    ],
+    virtual: { slice: 'Остатки', baseFullName: 'РегистрНакопления.Продажи' },
+  };
+  const resolver = buildResolverFromTables([PRODAZHI, PRODAZHI_OSTATKI, NOMENKLATURA]);
+
+  it('resolves a bare dimension field inside Условие against the REAL register, not the slice', () => {
+    const text = 'ВЫБРАТЬ Т.Количество ИЗ РегистрНакопления.Продажи.Остатки(&Дата, Товар = &Товар) КАК Т';
+    const headPos = text.indexOf('Товар');
+    const r = describeVirtualTableConditionFieldChain(text, resolver, ['Товар'], headPos);
+    expect(r?.registerFullName).toBe('РегистрНакопления.Продажи');
+    expect(r?.resolution.resolved.map(s => s.field.name)).toEqual(['Товар']);
+    expect(r?.resolution.resolved[0].kind).toBe('reference');
+  });
+
+  it('resolves a chain through a reference dimension (Товар.Наименование)', () => {
+    const text = 'ВЫБРАТЬ Т.Количество ИЗ РегистрНакопления.Продажи.Остатки(&Дата, Товар.Наименование = &Имя) КАК Т';
+    const headPos = text.indexOf('Товар');
+    const r = describeVirtualTableConditionFieldChain(text, resolver, ['Товар', 'Наименование'], headPos);
+    expect(r?.resolution.resolved.map(s => s.field.name)).toEqual(['Товар', 'Наименование']);
+  });
+
+  it('a bare resource field ("Количество", raw — not "КоличествоОстаток") resolves too', () => {
+    const text = 'ВЫБРАТЬ Т.Количество ИЗ РегистрНакопления.Продажи.Остатки(&Дата, Количество > 0) КАК Т';
+    const headPos = text.indexOf('Количество >');
+    const r = describeVirtualTableConditionFieldChain(text, resolver, ['Количество'], headPos);
+    expect(r?.resolution.resolved.map(s => s.field.name)).toEqual(['Количество']);
+  });
+
+  it('undefined for a position inside a NON-condition argument (Период, argIndex 0)', () => {
+    const text = 'ВЫБРАТЬ Т.Количество ИЗ РегистрНакопления.Продажи.Остатки(&Дата, Товар = &Товар) КАК Т';
+    const headPos = text.indexOf('&Дата') + 1;
+    expect(describeVirtualTableConditionFieldChain(text, resolver, ['Дата'], headPos)).toBeUndefined();
+  });
+
+  it('undefined outside any virtual-table argument entirely (regular table source)', () => {
+    const text = 'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Номенклатура КАК Т';
+    const headPos = text.indexOf('Номенклатура');
+    expect(describeVirtualTableConditionFieldChain(text, resolver, ['ЧтоУгодно'], headPos)).toBeUndefined();
+  });
+
+  it('fieldNotFound is reported (not silently swallowed) for an unknown identifier inside Условие', () => {
+    const text = 'ВЫБРАТЬ Т.Количество ИЗ РегистрНакопления.Продажи.Остатки(&Дата, НетТакогоПоля = 1) КАК Т';
+    const headPos = text.indexOf('НетТакогоПоля');
+    const r = describeVirtualTableConditionFieldChain(text, resolver, ['НетТакогоПоля'], headPos);
+    expect(r?.resolution.stoppedReason).toBe('fieldNotFound');
+  });
+
+  it('undefined when the base register has no metadata in the resolver (unknown != invalid)', () => {
+    const noBaseResolver = buildResolverFromTables([PRODAZHI_OSTATKI]); // base register itself missing
+    const text = 'ВЫБРАТЬ Т.Количество ИЗ РегистрНакопления.Продажи.Остатки(&Дата, Товар = &Товар) КАК Т';
+    const headPos = text.indexOf('Товар');
+    expect(describeVirtualTableConditionFieldChain(text, noBaseResolver, ['Товар'], headPos)).toBeUndefined();
+  });
+
+  it('undefined for headPosition === undefined (translation failure upstream)', () => {
+    const text = 'ВЫБРАТЬ Т.Количество ИЗ РегистрНакопления.Продажи.Остатки(&Дата, Товар = &Товар) КАК Т';
+    expect(describeVirtualTableConditionFieldChain(text, resolver, ['Товар'], undefined)).toBeUndefined();
+  });
+
+  it('УсловиеСчета (regs бухгалтерии) is ALSO treated as a condition role', () => {
+    const chart = { kind: 'ПланСчетов' as const, name: 'Хозрасчетный', fullName: 'ПланСчетов.Хозрасчетный', fields: [] };
+    const hozOperacii: MetaTable = {
+      kind: 'РегистрБухгалтерии', name: 'ХозОперации', fullName: 'РегистрБухгалтерии.ХозОперации',
+      fields: [{ name: 'Счет', kind: 'standard', types: [{ ref: { kind: 'ПланСчетов', name: 'Хозрасчетный' } }] }],
+    };
+    const hozOperaciiOstatki: MetaTable = {
+      kind: 'РегистрБухгалтерии', name: 'ХозОперации.Остатки', fullName: 'РегистрБухгалтерии.ХозОперации.Остатки',
+      fields: [{ name: 'Счет', kind: 'standard', types: hozOperacii.fields[0].types }],
+      virtual: { slice: 'Остатки', baseFullName: 'РегистрБухгалтерии.ХозОперации' },
+    };
+    const r2 = buildResolverFromTables([hozOperacii, hozOperaciiOstatki, chart]);
+    const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрБухгалтерии.ХозОперации.Остатки(&Дата, Счет = &Счет, ИСТИНА, &Условие) КАК Т';
+    const headPos = text.indexOf('Счет =');
+    const r = describeVirtualTableConditionFieldChain(text, r2, ['Счет'], headPos);
+    expect(r?.registerFullName).toBe('РегистрБухгалтерии.ХозОперации');
+    expect(r?.resolution.resolved.map(s => s.field.name)).toEqual(['Счет']);
   });
 });

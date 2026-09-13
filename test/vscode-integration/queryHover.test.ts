@@ -28,6 +28,9 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { QueryHoverProvider } from '../../src/extension/queryHoverProvider';
 import { FIXTURE_CF } from './testUtil';
+import { setMetadataResolver } from '../../src/extension/metadataResolverCache';
+import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
+import type { MetaTable } from '../../src/core/metadata/types';
 
 const QUERY_TEXT = 'ВЫБРАТЬ Т.Активен ИЗ Справочник.Тест КАК Т';
 const QUERY_LITERAL = `Запрос.Текст = "${QUERY_TEXT}";\n`;
@@ -120,6 +123,78 @@ describe('Extension Host: hover на цепочці поля запиту', () =
     const value = (hover!.contents[0] as vscode.MarkdownString).value;
     assert.ok(value.includes('Период'), `hover мав назвати роль параметра ("Период"), отримано: ${value}`);
     assert.ok(value.includes('РегистрНакопления.Продажи.Остатки'), `hover мав назвати повне ім'я ВТ, отримано: ${value}`);
+  });
+});
+
+/**
+ * Phase 2x-2, increment 2: bare-field resolution inside a virtual-table
+ * `Условие` argument, against the register's own REAL metadata (dimensions/
+ * resources), seeded directly via `setMetadataResolver` (post-release audit
+ * P1 №3's mechanism) rather than through the XML fixture — `test/fixtures/cf`
+ * has no register at all, and building one out just for this would be a much
+ * bigger fixture change than the feature itself needs.
+ */
+describe('Extension Host: hover на полі всередині Условие віртуальної таблиці (Phase 2x-2, increment 2)', () => {
+  const cfPath = '/nonexistent/path/for/vt-condition-field-hover-test';
+
+  before(() => {
+    const nomenklatura: MetaTable = {
+      kind: 'Справочник', name: 'Номенклатура', fullName: 'Справочник.Номенклатура',
+      fields: [{ name: 'Наименование', kind: 'standard', types: [{ primitive: 'Строка' }] }],
+    };
+    const prodazhi: MetaTable = {
+      kind: 'РегистрНакопления', name: 'Продажи', fullName: 'РегистрНакопления.Продажи',
+      fields: [
+        { name: 'Товар', kind: 'dimension', types: [{ ref: { kind: 'Справочник', name: 'Номенклатура' } }] },
+        { name: 'Количество', kind: 'resource', types: [{ primitive: 'Число' }] },
+      ],
+    };
+    const prodazhiOstatki: MetaTable = {
+      kind: 'РегистрНакопления', name: 'Продажи.Остатки', fullName: 'РегистрНакопления.Продажи.Остатки',
+      fields: [
+        { name: 'Товар', kind: 'dimension', types: prodazhi.fields[0].types },
+        { name: 'КоличествоОстаток', kind: 'resource', types: [{ primitive: 'Число' }] },
+      ],
+      virtual: { slice: 'Остатки', baseFullName: 'РегистрНакопления.Продажи' },
+    };
+    setMetadataResolver(cfPath, buildResolverFromTables([prodazhi, prodazhiOstatki, nomenklatura]));
+  });
+
+  function makeProvider(): QueryHoverProvider {
+    const outputChannel = { appendLine: () => {} } as unknown as vscode.OutputChannel;
+    return new QueryHoverProvider(
+      { globalStorageUri: vscode.Uri.file(os.tmpdir()) } as unknown as vscode.ExtensionContext,
+      outputChannel,
+      () => cfPath
+    );
+  }
+
+  it('resolves a bare dimension field ("Товар") inside Условие against the register, not an alias', async function () {
+    this.timeout(20000);
+
+    const vtQueryText = 'ВЫБРАТЬ Т.Количество ИЗ РегистрНакопления.Продажи.Остатки(&Дата, Товар = &Товар) КАК Т';
+    const doc = await vscode.workspace.openTextDocument({ language: 'plaintext', content: `Запрос.Текст = "${vtQueryText}";\n` });
+    const offset = doc.getText().indexOf('Товар = &Товар');
+
+    const hover = await makeProvider().provideHover(doc, doc.positionAt(offset));
+    assert.ok(hover, 'очікувався hover для поля "Товар" усередині Условие');
+    const value = (hover!.contents[0] as vscode.MarkdownString).value;
+    assert.ok(value.includes('Товар'), `hover мав згадувати назву поля "Товар", отримано: ${value}`);
+    assert.ok(value.includes('Справочник.Номенклатура'), `hover мав показати ціль посилання, отримано: ${value}`);
+  });
+
+  it('reports "field not found" for an unknown identifier inside Условие (proven, not a metadata gap)', async function () {
+    this.timeout(20000);
+
+    const vtQueryText = 'ВЫБРАТЬ Т.Количество ИЗ РегистрНакопления.Продажи.Остатки(&Дата, НетТакогоПоля = 1) КАК Т';
+    const doc = await vscode.workspace.openTextDocument({ language: 'plaintext', content: `Запрос.Текст = "${vtQueryText}";\n` });
+    const offset = doc.getText().indexOf('НетТакогоПоля');
+
+    const hover = await makeProvider().provideHover(doc, doc.positionAt(offset));
+    assert.ok(hover, 'очікувався hover, що повідомляє "поле не знайдено"');
+    const value = (hover!.contents[0] as vscode.MarkdownString).value;
+    assert.ok(value.includes('НетТакогоПоля'), `hover мав назвати саме це поле, отримано: ${value}`);
+    assert.ok(value.includes('РегистрНакопления.Продажи'), `hover мав назвати БАЗОВИЙ регістр (не слайс), отримано: ${value}`);
   });
 });
 
