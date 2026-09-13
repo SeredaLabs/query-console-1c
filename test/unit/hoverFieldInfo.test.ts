@@ -74,6 +74,24 @@ describe('findChainAt', () => {
     const r = findChainAt(text, 1);
     expect(r!.segments.map(s => s.text)).toEqual(['Товары']);
   });
+
+  it('BUG FIX: `&Параметр` — курсор на буквах після `&` НЕ повертає ланцюжок (це ім\'я параметра, не ідентифікатор)', () => {
+    const text = 'ГДЕ Товар.Наименование = &Товар';
+    const r = findChainAt(text, text.lastIndexOf('Товар') + 1);
+    expect(r).toBeNull();
+  });
+
+  it('BUG FIX: те саме для дереференс-подібного вигляду `&Параметр.Щось` — жодного ланцюжка з голови-параметра', () => {
+    const text = 'ГДЕ &Параметр.Поле = 1';
+    const r = findChainAt(text, text.indexOf('Параметр') + 1);
+    expect(r).toBeNull();
+  });
+
+  it('звичайний ланцюжок ОДРАЗУ ПІСЛЯ параметра (не всередині його імені) резолвиться як завжди', () => {
+    const text = '&Параметр = Товар.Наименование';
+    const r = findChainAt(text, text.indexOf('Товар') + 1);
+    expect(r!.segments.map(s => s.text)).toEqual(['Товар', 'Наименование']);
+  });
 });
 
 // ── Fixture: Справочник.Товары.Контрагент → Справочник.Контрагенты.Наименование ──
@@ -207,6 +225,14 @@ describe('describeChain', () => {
     const r = describeChain(text, resolver, ['Т', 'Наименование'], posInOrder);
     expect(r.tableFullName).toBe('Справочник.Товары');
   });
+
+  it('BUG FIX: `&Параметр` whose name COLLIDES with a real table alias must NOT resolve to that alias (was a confidently-wrong hover before the findChainAt guard)', () => {
+    const text = 'ВЫБРАТЬ Товар.Наименование ИЗ Справочник.Товары КАК Товар ГДЕ Товар.Наименование = &Товар';
+    const paramPos = text.lastIndexOf('&Товар') + 1;
+    // findChainAt itself must already refuse — describeChain has no separate
+    // guard of its own, it only ever sees what findChainAt hands it.
+    expect(findChainAt(text, paramPos)).toBeNull();
+  });
 });
 
 describe('findChainForCompletion', () => {
@@ -240,6 +266,12 @@ describe('findChainForCompletion', () => {
   it('null для offset за межами рядка', () => {
     expect(findChainForCompletion('Т.', -1)).toBeNull();
     expect(findChainForCompletion('Т.', 10)).toBeNull();
+  });
+
+  it('BUG FIX: `&Параметр.|` — жодного доповнення, це не псевдонім таблиці', () => {
+    const text = 'ГДЕ Товар.Наименование = &Товар.';
+    const r = findChainForCompletion(text, text.length);
+    expect(r).toBeNull();
   });
 });
 
@@ -436,6 +468,18 @@ describe('describeVirtualTableConditionFieldChain (Phase 2x-2, increment 2)', ()
   it('undefined for headPosition === undefined (translation failure upstream)', () => {
     const text = 'ВЫБРАТЬ Т.Количество ИЗ РегистрНакопления.Продажи.Остатки(&Дата, Товар = &Товар) КАК Т';
     expect(describeVirtualTableConditionFieldChain(text, resolver, ['Товар'], undefined)).toBeUndefined();
+  });
+
+  it('BUG FIX end-to-end: a `&Товар` PARAMETER whose name collides with the real field "Товар" must not surface a chain at all (real entry point: findChainAt first, same as queryHoverProvider.ts)', () => {
+    const text = 'ВЫБРАТЬ Т.Количество ИЗ РегистрНакопления.Продажи.Остатки(&Дата, Товар = &Товар) КАК Т';
+    const paramPos = text.lastIndexOf('&Товар') + 1;
+    // The real hover provider ALWAYS calls findChainAt first and only passes
+    // its segments into describeVirtualTableConditionFieldChain — before the
+    // fix, findChainAt returned {segments: ['Товар'], ...} here (indistinguishable
+    // from the real bare field "Товар" a few tokens earlier), which this
+    // function would then have confidently (and wrongly) resolved as a
+    // reference to Справочник.Номенклатура.
+    expect(findChainAt(text, paramPos)).toBeNull();
   });
 
   it('УсловиеСчета (regs бухгалтерии) is ALSO treated as a condition role', () => {

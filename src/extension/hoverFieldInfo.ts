@@ -110,6 +110,19 @@ export function findChainAt(text: string, offset: number): { segments: FieldChai
     cur = segEnd;
   }
 
+  // `&Параметр`: the SDBL lexer's own 'param' token is '&' immediately
+  // followed by the name — `findChainAt` itself works on raw characters, not
+  // lexer tokens, so it happily finds "Параметр" as a head segment when the
+  // cursor sits on those letters, indistinguishable from a real alias/field
+  // reference of the same spelling. Without this guard, every caller
+  // (alias/field hover, virtual-table condition-field hover) could
+  // confidently resolve a PARAMETER reference to an unrelated real alias or
+  // field that happens to share its name — exactly the "confidently wrong"
+  // class of bug this whole roadmap exists to avoid. No chain here at all is
+  // the correct fail-open answer (Phase 2x-3, not started, is where a real
+  // parameter-aware resolution would eventually live).
+  if (segments[0].start > 0 && text[segments[0].start - 1] === '&') return null;
+
   return { segments, hoveredIndex };
 }
 
@@ -149,7 +162,10 @@ export function findChainForCompletion(text: string, offset: number): FieldChain
     cur--;
   }
 
-  return segments.length > 0 ? segments : null;
+  if (segments.length === 0) return null;
+  // Same `&Параметр` guard as `findChainAt` — see its comment.
+  if (segments[0].start > 0 && text[segments[0].start - 1] === '&') return null;
+  return segments;
 }
 
 
