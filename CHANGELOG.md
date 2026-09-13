@@ -5,6 +5,17 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.51 - 2026-09-13
+
+### Fixed
+
+- Queries using `РегистрРасчета.*.ФактическийПериодДействия`,
+  `РегистрРасчета.*.ДанныеГрафика`, or a `<register>.База<...>` virtual
+  table now correctly preserve their actual parameters on Apply — these
+  forms were previously handled by a generic fallback that didn't match
+  their real parameter layout. `Последовательность.*.Границы` is unaffected
+  and remains a documented round-trip exclusion for 3+ arguments.
+
 ## 0.1.50 - 2026-09-13
 
 ### Fixed
