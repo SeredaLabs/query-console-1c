@@ -5,6 +5,15 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.54 - 2026-09-13
+
+### Added
+
+- Autocomplete now suggests the valid keyword values (`Год`, `Месяц`,
+  `Регистратор`, `Движения`, etc.) when the cursor is on a virtual-table
+  call's `Периодичность` or `МетодДополнения` argument (e.g. `Обороты(&Нач,
+  &Кон, |, Условие)`), for both РегистрНакопления and РегистрБухгалтерии forms.
+
 ## 0.1.53 - 2026-09-13
 
 ### Added
