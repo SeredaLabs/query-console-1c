@@ -5,6 +5,17 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.53 - 2026-09-13
+
+### Added
+
+- Hovering over a bare field name inside a virtual-table `Условие`/
+  `УсловиеСчета`/etc. argument (e.g. `Товар` in `Остатки(&Дата, Товар =
+  &Товар)`) now resolves it against the register's own real fields
+  (dimensions/resources/attributes, including through reference
+  dereferencing like `Товар.Наименование`), the same way `Alias.Field` hover
+  already works for regular table sources.
+
 ## 0.1.52 - 2026-09-13
 
 ### Added
