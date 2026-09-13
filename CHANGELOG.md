@@ -5,6 +5,16 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.50 - 2026-09-13
+
+### Fixed
+
+- Hover and autocomplete could show information for the wrong table when a
+  bare field name inside `УПОРЯДОЧИТЬ` (ORDER BY) or `ИТОГИ` (TOTALS)
+  happened to match both a `SELECT`-list output alias and an unrelated table
+  alias elsewhere in the same query. They now correctly recognize it as the
+  output column and show nothing rather than a confidently wrong answer.
+
 ## 0.1.49 - 2026-09-11
 
 ### Added
