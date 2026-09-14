@@ -235,6 +235,42 @@ describe('describeChain', () => {
   });
 });
 
+/**
+ * Semantic Core v1 Freeze Audit — the one confirmed real gap: temp-table
+ * (`ПОМЕСТИТЬ`) source visibility is computed by `tempTableVisibility.ts`
+ * (Phase 2c), but that computation has NO consumer anywhere in `describeChain`'s
+ * resolution path — the hover/completion metadata resolver (`getMetadataResolver`,
+ * built from the XML config) never learns about a temp table created mid-batch.
+ * This locks in the CURRENT, safe behavior (fail-open on the FIELD, no fallback
+ * onto unrelated metadata) so a future "helpful" fallback added to
+ * `resolveHeadTable` (the same shape of change that added the virtual-table
+ * fallback) can't start guessing wrong for temp tables without this test
+ * catching it first. NOT a fix, NOT a change to `computeTempTableVisibility`
+ * (still unwired) — a regression lock on today's contract.
+ */
+describe('describeChain: temp-table source alias field hover (Semantic Core v1 Freeze Audit)', () => {
+  const NOMENKLATURA: MetaTable = {
+    kind: 'Справочник', name: 'Номенклатура', fullName: 'Справочник.Номенклатура',
+    fields: [{ name: 'Код', kind: 'standard', types: [{ primitive: 'Строка' }] }],
+  };
+  const resolver = buildResolverFromTables([NOMENKLATURA]);
+
+  it('поле аліасу тимчасової таблиці (ПОМЕСТИТЬ) не резолвиться — fail-open, без підстановки чужих метаданих', () => {
+    const text =
+      'ВЫБРАТЬ Т.Код КАК Код ПОМЕСТИТЬ ВТ_Товары ИЗ Справочник.Номенклатура КАК Т; ' +
+      'ВЫБРАТЬ Т2.Код ИЗ ВТ_Товары КАК Т2';
+    const headPosition = text.lastIndexOf('ИЗ');
+
+    const r = describeChain(text, resolver, ['Т2', 'Код'], headPosition);
+    // Ім'я самої тимчасової таблиці — чесна інформація (alias дійсно на неї
+    // вказує), тому tableFullName присутній; головне — resolution ВІДСУТНІЙ:
+    // схема ВТ ніде не відома цьому резолверу, тож ПОЛЕ не резолвиться взагалі
+    // (а не підміняється якоюсь випадковою реальною таблицею з тим самим ім'ям).
+    expect(r.tableFullName).toBe('ВТ_Товары');
+    expect(r.resolution).toBeUndefined();
+  });
+});
+
 describe('findChainForCompletion', () => {
   it('курсор одразу після крапки, попереду один сегмент', () => {
     const text = 'Т.';
