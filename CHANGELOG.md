@@ -5,6 +5,22 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.63 - 2026-09-14
+
+### Fixed
+
+- `docs:check` broke on a clean checkout of `main` since the previous
+  release: the roadmap page linked to an in-progress design doc that was
+  never actually committed. De-linked it until it ships.
+
+### Internal
+
+- Added a regression test locking in that the tolerant hover/completion
+  snapshot builder (which recovers from broken query text by rewriting it)
+  can never leak its rewritten text or the resolver it used back into a
+  later, separate strict parse — the same class of module-level parser
+  state leak the previous release's fix addressed.
+
 ## 0.1.62 - 2026-09-14
 
 ### Docs
