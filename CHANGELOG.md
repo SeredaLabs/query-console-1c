@@ -5,6 +5,14 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.60 - 2026-09-14
+
+### Internal
+
+- Added a regression test locking in that hovering a field on a temp-table
+  (`ПОМЕСТИТЬ`) source alias stays unresolved (no metadata is guessed for it).
+  No functional change.
+
 ## 0.1.59 - 2026-09-14
 
 ### Fixed
