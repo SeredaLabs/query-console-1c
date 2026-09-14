@@ -5,6 +5,21 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.64 - 2026-09-14
+
+### Internal
+
+- `docs:check` now also catches a documented command with no matching
+  manifest entry (previously only checked the reverse direction).
+- `assertValidSdbl`'s test-suite-wide silent skip (when the independent SDBL
+  grammar oracle isn't vendored) now warns once instead of staying silent.
+- Strengthened the shorthand-temp-table-subquery regression test to also
+  check generated text and semantic validation, and added a second test
+  reproducing the real production trigger (a batch's own `ПОМЕСТИТЬ`
+  registering the temp table) instead of only a resolver mock.
+- Corrected a stale doc comment in `loadMetadataSafe.ts` describing an
+  already-widened code path's old, narrower scope.
+
 ## 0.1.63 - 2026-09-14
 
 ### Fixed
