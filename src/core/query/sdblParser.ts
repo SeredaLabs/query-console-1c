@@ -3244,7 +3244,13 @@ function trySubqueryParam(paramTokens: Token[], source: string): QueryDocument |
   const close = paramTokens[closeIdx];
   const innerText = source.slice(open.pos + 1, close.pos);
   try {
-    return withSubqueryRecursionGuard(() => parseDocument(innerText));
+    // Резолвер прокидається так само, як в аналогічному FROM-clause-subquery
+    // шляху (рядок ~1926): без нього module-level `sourceResolver` обнуляється
+    // на час цього вкладеного розбору (`parseDocument`'s save/restore), і
+    // `synthesizeTempTableFrom` (не бачачи резолвера) не може синтезувати
+    // `ИЗ <ВТ>` для скорочення `(ВЫБРАТЬ ВТ.Поле)` без явного `ИЗ` — поле
+    // залишається сирим виразом з автопсевдонімом, джерело губиться (P0).
+    return withSubqueryRecursionGuard(() => parseDocument(innerText, sourceResolver));
   } catch (e) {
     if (e instanceof SubqueryRecursionLimitError) throw e;
     return undefined;

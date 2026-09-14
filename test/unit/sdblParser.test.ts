@@ -2416,4 +2416,25 @@ describe('синтез неявного ИЗ (6.16.17/6.16.77) через parseD
     const model = batch.members[0].members[0].model;
     expect(model.tables).toEqual([]);
   });
+
+  it('synthesizeTempTableFrom СЕРЕДИНІ condition-subquery-операнда (В (ВЫБРАТЬ ВТ.Код), без ИЗ) теж синтезує ИЗ', () => {
+    // Регресія: trySubqueryParam (розбір правого операнда `В (ВЫБРАТЬ …)`) раніше
+    // викликав parseDocument БЕЗ резолвера — module-level sourceResolver
+    // обнулявся на час цього вкладеного розбору, synthesizeTempTableFrom (яка
+    // читає sourceResolver) НЕ бачила резолвер і не могла синтезувати `ИЗ ВТ` —
+    // поле лишалось сирим виразом (`expression`, автопсевдонім `Поле1`), джерело
+    // губилося (`tables: []`), а validateBatchSemantics це мовчки пропускала.
+    const tempResolver = {
+      tableByFullName: (full: string) =>
+        full === 'ВТ' ? { kind: 'РегистрСведений' as const, name: 'ВТ', fullName: 'ВТ', fields: [] } : undefined,
+    };
+    const batch = parseBatch(
+      'ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код В (ВЫБРАТЬ ВТ.Код)',
+      tempResolver
+    );
+    const model = batch.members[0].members[0].model;
+    const cond = model.conditions![0] as any;
+    expect(cond.subquery.members[0].model.tables).toEqual([{ id: 't0', fullName: 'ВТ', alias: 'ВТ' }]);
+    expect(cond.subquery.members[0].model.fields).toEqual([{ tableId: 't0', path: 'Код', qualified: true }]);
+  });
 });
