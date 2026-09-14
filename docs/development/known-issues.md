@@ -43,6 +43,44 @@
 These are documented user boundaries, not permission to weaken tests. Add a
 regression test when fixing one and update all three limitations pages.
 
+## Permanent scope boundary: virtual-table `Субконто`/`Разрезы`/`Измерения*` hover and completion
+
+Hover and completion for virtual-table positional arguments (semantic-core
+roadmap Phase 2x-2) cover the `Период`/`Условие`/`УсловиеСчета`-family
+condition arguments (hover resolves bare fields against the real register,
+including reference dereferencing) and the `Периодичность`/`МетодДополнения`
+keyword arguments (completion suggests the closed enum). Two argument
+families were investigated and are **deliberately, permanently out of
+scope**, not simply deferred:
+
+- **`Субконто`/`СубконтоДт`/`СубконтоКт`/`КорСубконто`** (accounting
+  registers): these name specific VALUES of a
+  `ПланВидовХарактеристикСсылка.<name>` (e.g.
+  `ПланВидовХарактеристик.ВидыСубконто.Контрагенты`). The metadata parser
+  (`chartOfCharacteristicTypes.ts`) only reads a ПВХ's own STRUCTURE
+  (`Ссылка`/`Наименование`/`Предопределенный`, etc.), never its items — and
+  it structurally cannot, since a ПВХ's items are DATA rows in the real 1C
+  database, not something a `Configuration.xml` export (the only thing this
+  extension ever reads) describes. There is no metadata-only path to
+  enumerate real Субконто values.
+- **`ИзмеренияОсновногоРегистра`/`ИзмеренияБазовогоРегистра`/`Разрезы`**
+  (calculation register `База<Имя>` form): these are field-NAME STRINGS from
+  the register's own BASE register (the one named by the `<Имя>` slice
+  suffix). `calculationRegister.ts` does not parse the "base registers"
+  association from `Configuration.xml` at all (regs расчета virtual tables
+  aren't modeled as `MetaTable.virtual` entries beyond their bare slice
+  name), and `virtualTableSignatures.ts` only prefix-matches the literal
+  `'База'` — it has no way to know WHICH register a given `<Имя>` suffix
+  names. Supporting this would need a new, disproportionately large
+  metadata-extraction feature (register→base-register linkage) as a
+  prerequisite, for a comparatively low-value completion feature.
+
+If this extension ever gains real database access (a much bigger,
+separate architectural change), or a future contributor adds explicit
+calc-register base-register parsing for an unrelated reason, revisit this
+boundary — but do not attempt a partial/best-guess implementation of
+either in the meantime.
+
 ## Resolved: hover/autocomplete alias scoping
 
 Hover (`describeChain`) and autocomplete (`resolveCompletionTarget`), both in
