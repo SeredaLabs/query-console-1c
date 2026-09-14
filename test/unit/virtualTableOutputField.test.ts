@@ -49,6 +49,7 @@ describe('describeVirtualTableOutputField: РегистрНакопления', 
     // жоден суфікс не повинен дати хибне сумісне "знайдено".
     expect(describeVirtualTableOutputField('РегистрНакопления', ACCUM_BASE, 'НеіснуєОстаток')).toBeUndefined();
   });
+
 });
 
 const ACCOUNTING_BASE: MetaTable = {

@@ -639,6 +639,30 @@ describe('describeChain: VT output field hover — broader register-kind/slice m
     expect(r.virtualTableField).toBeUndefined(); // РегистрСведений has no suffix table at all
   });
 
+  it('reviewed concern (safe, not a bug): describeVirtualTableOutputField tries накопления\'s FULL suffix union, not scoped to one slice — but a Turnovers-only "Обороты" VT never even HAS a Приход/Расход-suffixed field, so resolveFieldPath gates it before enrichment is ever reached', () => {
+    const base: MetaTable = {
+      kind: 'РегистрНакопления', name: 'Продажи', fullName: 'РегистрНакопления.Продажи',
+      fields: [{ name: 'Сумма', kind: 'resource', types: [{ primitive: 'Число' }] }],
+    };
+    // Turnovers-only Обороты (buildAccumRegSlices' isBalance=false path):
+    // expandResources(resources, ['Оборот']) ONLY — "СуммаПриход"/"СуммаРасход"
+    // are never generated as fields on THIS slice's own metadata at all.
+    const oborotyTurnoversOnly: MetaTable = {
+      kind: 'РегистрНакопления', name: 'Продажи.Обороты', fullName: 'РегистрНакопления.Продажи.Обороты',
+      fields: [{ name: 'СуммаОборот', kind: 'resource', types: [{ primitive: 'Число' }] }],
+      virtual: { slice: 'Обороты', baseFullName: 'РегистрНакопления.Продажи' },
+    };
+    const resolver = buildResolverFromTables([base, oborotyTurnoversOnly]);
+    const text = 'ВЫБРАТЬ Т.СуммаПриход ИЗ РегистрНакопления.Продажи.Обороты(&Начало, &Конец, ИСТИНА) КАК Т';
+    const headPos = text.indexOf('ИЗ');
+    const r = describeChain(text, resolver, ['Т', 'СуммаПриход'], headPos);
+    // Not found on THIS slice's metadata — proven fieldNotFound, never a
+    // guessed/enriched answer, even though "СуммаПриход" textually reverse-maps
+    // to a real base resource ("Сумма" + suffix "Приход") in the general case.
+    expect(r.resolution!.stoppedReason).toBe('fieldNotFound');
+    expect(r.virtualTableField).toBeUndefined();
+  });
+
   it('РегистрБухгалтерии Остатки: resource-suffix field DOES get enrichment (own, different suffix set from накопления)', () => {
     const base: MetaTable = {
       kind: 'РегистрБухгалтерии', name: 'ХозОперации', fullName: 'РегистрБухгалтерии.ХозОперации',

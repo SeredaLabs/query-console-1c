@@ -62,6 +62,23 @@ function reverseMap(baseMeta: MetaTable, outputName: string, suffixes: readonly 
  * table (РегистрСведений has no suffixes at all; fields pass through
  * unchanged), or when no suffix reconstructs `outputName` against a real
  * base resource field.
+ *
+ * Deliberately NOT scoped to the specific `virtual.slice` this `outputName`
+ * came from — tries the UNION of every suffix that register kind's slices
+ * can produce (накопления's `Остатки`/`Обороты`/`ОстаткиИОбороты` sets, or
+ * бухгалтерии's own), not just the ones valid for this one slice. This is
+ * safe, not a guess: the ONLY caller (`describeViaTable`) invokes this AFTER
+ * `resolveFieldPath` has already confirmed `outputName` is a REAL field on
+ * THIS SPECIFIC slice's own metadata — and the metadata builders
+ * (`buildAccumRegSlices`/`buildAccountingRegSlices`) only ever put a
+ * suffixed field on a slice using ITS OWN suffix set in the first place
+ * (e.g. a Turnovers-only регистр's `Обороты` slice literally never gets a
+ * `<ресурс>Приход` field at all, so that name could never reach this
+ * function to begin with). A union suffix list could only misfire if two
+ * DIFFERENT (base field, suffix) pairs reconstructed the exact same string
+ * AND both happened to be real resource names — a pathological metadata
+ * coincidence, not a realistic one; narrowing by `slice` to close even that
+ * isn't worth the extra parameter/complexity unless it's ever observed.
  */
 export function describeVirtualTableOutputField(
   registerKind: TableKind,
