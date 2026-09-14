@@ -199,6 +199,64 @@ describe('Extension Host: hover на полі всередині Условие 
 });
 
 /**
+ * Phase 2x-2 follow-up: hover for a virtual-table OUTPUT field (e.g.
+ * `Остатки.КоличествоОстаток` in the SELECT list) — a long-standing gap
+ * (showed only "Source: <table>", never the field itself) fixed via a
+ * `virtualTableByFullName` fallback in `resolveHeadTable`, plus a base-
+ * resource enrichment line for resource-suffix fields. Reuses the same
+ * `prodazhi`/`prodazhiOstatki` fixture seeded above, under its own cfPath.
+ */
+describe('Extension Host: hover на output-полі віртуальної таблиці (Phase 2x-2 follow-up)', () => {
+  const cfPath = '/nonexistent/path/for/vt-output-field-hover-test';
+
+  before(() => {
+    const nomenklatura: MetaTable = {
+      kind: 'Справочник', name: 'Номенклатура', fullName: 'Справочник.Номенклатура',
+      fields: [{ name: 'Наименование', kind: 'standard', types: [{ primitive: 'Строка' }] }],
+    };
+    const prodazhi: MetaTable = {
+      kind: 'РегистрНакопления', name: 'Продажи', fullName: 'РегистрНакопления.Продажи',
+      fields: [
+        { name: 'Товар', kind: 'dimension', types: [{ ref: { kind: 'Справочник', name: 'Номенклатура' } }] },
+        { name: 'Количество', kind: 'resource', types: [{ primitive: 'Число' }] },
+      ],
+    };
+    const prodazhiOstatki: MetaTable = {
+      kind: 'РегистрНакопления', name: 'Продажи.Остатки', fullName: 'РегистрНакопления.Продажи.Остатки',
+      fields: [
+        { name: 'Товар', kind: 'dimension', types: prodazhi.fields[0].types },
+        { name: 'КоличествоОстаток', kind: 'resource', types: [{ primitive: 'Число' }] },
+      ],
+      virtual: { slice: 'Остатки', baseFullName: 'РегистрНакопления.Продажи' },
+    };
+    setMetadataResolver(cfPath, buildResolverFromTables([prodazhi, prodazhiOstatki, nomenklatura]));
+  });
+
+  function makeProvider(): QueryHoverProvider {
+    const outputChannel = { appendLine: () => {} } as unknown as vscode.OutputChannel;
+    return new QueryHoverProvider(
+      { globalStorageUri: vscode.Uri.file(os.tmpdir()) } as unknown as vscode.ExtensionContext,
+      outputChannel,
+      () => cfPath
+    );
+  }
+
+  it('resolves a virtual-table resource output field and enriches it with the base resource', async function () {
+    this.timeout(20000);
+
+    const vtQueryText = 'ВЫБРАТЬ Т.КоличествоОстаток ИЗ РегистрНакопления.Продажи.Остатки(&Дата, ИСТИНА) КАК Т';
+    const doc = await vscode.workspace.openTextDocument({ language: 'plaintext', content: `Запрос.Текст = "${vtQueryText}";\n` });
+    const offset = doc.getText().indexOf('КоличествоОстаток');
+
+    const hover = await makeProvider().provideHover(doc, doc.positionAt(offset));
+    assert.ok(hover, 'очікувався hover для output-поля "КоличествоОстаток"');
+    const value = (hover!.contents[0] as vscode.MarkdownString).value;
+    assert.ok(value.includes('КоличествоОстаток'), `hover мав назвати саме поле, отримано: ${value}`);
+    assert.ok(value.includes('Количество'), `hover мав показати базовий ресурс "Количество", отримано: ${value}`);
+  });
+});
+
+/**
  * На відміну від тестів вище (прямий виклик класу), цей блок йде через
  * `vscode.executeHoverProvider` — вбудовану команду, яка реально проганяє документ
  * через селектор-роутинг VS Code так само, як інтерактивний ховер миші. Файл

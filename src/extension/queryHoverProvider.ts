@@ -4,6 +4,7 @@ import {
   findChainAt, describeChain, describeVirtualTableArg, describeVirtualTableConditionFieldChain,
   type ChainDescription, type VirtualTableConditionFieldChain,
 } from './hoverFieldInfo';
+import type { VirtualTableOutputFieldInfo } from '../core/metadata/virtualTableOutputField';
 import type { FieldPathResolution } from '../core/query/fieldPathResolver';
 import { getMetadataResolver } from './metadataResolverCache';
 import { OPEN_FROM_RANGE_COMMAND } from './openFromRangeCommand';
@@ -133,7 +134,13 @@ function buildHoverMessage(
   }
 
   if (!description.resolution) return undefined;
-  return describeFieldPathSegment(description.resolution, hoveredIndex - 1, segmentTexts[hoveredIndex], description.tableFullName);
+  const segIdx = hoveredIndex - 1;
+  // The output-field enrichment (base resource + suffix) only ever applies to
+  // the FIRST segment after the head alias — that's the only one that's
+  // literally a field of the virtual table itself; any further dereference
+  // (`Т.Товар.Наименование`) walks into a DIFFERENT table's own real fields.
+  const virtualTableField = segIdx === 0 ? description.virtualTableField : undefined;
+  return describeFieldPathSegment(description.resolution, segIdx, segmentTexts[hoveredIndex], description.tableFullName, virtualTableField);
 }
 
 /**
@@ -164,7 +171,8 @@ function describeFieldPathSegment(
   resolution: FieldPathResolution,
   segIdx: number,
   segmentText: string,
-  headFullName: string | undefined
+  headFullName: string | undefined,
+  virtualTableField?: VirtualTableOutputFieldInfo
 ): vscode.MarkdownString | undefined {
   if (segIdx < resolution.resolved.length) {
     const seg = resolution.resolved[segIdx];
@@ -175,6 +183,9 @@ function describeFieldPathSegment(
           ? vscode.l10n.t('Reference to: `{table}`', { table: seg.refTarget.fullName })
           : vscode.l10n.t('Reference (target metadata unavailable)')
       );
+    }
+    if (virtualTableField) {
+      lines.push(vscode.l10n.t('Base resource: `{base}`', { base: virtualTableField.baseFieldName }));
     }
     return new vscode.MarkdownString(lines.join('\n\n'));
   }

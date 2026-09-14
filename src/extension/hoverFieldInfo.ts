@@ -38,6 +38,7 @@ import { resolveSymbolTable } from '../core/semantic/collectSymbols';
 import { isOutputAliasReference } from '../core/semantic/resolveOutputAliasReference';
 import { describeVirtualTableArgAt, type VirtualTableArgDescription } from '../core/semantic/describeVirtualTableArg';
 import { keywordValuesForRole, type VirtualParamRole } from '../core/metadata/virtualTableSignatures';
+import { describeVirtualTableOutputField, type VirtualTableOutputFieldInfo } from '../core/metadata/virtualTableOutputField';
 
 export interface FieldChainSegment {
   /** Текст сегмента как написано в исходнике. */
@@ -177,6 +178,18 @@ export interface ChainDescription {
   /** Резолюция сегментов ПОСЛЕ головы через `resolveFieldPath` — `undefined`, если
    * таблица головы не резолвится (см. выше) или цепочка состоит из одной головы. */
   resolution?: FieldPathResolution;
+  /**
+   * Set only when the head resolves to a virtual-table source AND the FIRST
+   * segment after it is a resource field this project's own metadata
+   * builders expanded from a real base-register resource (see
+   * `virtualTableOutputField.ts`) — hover enrichment naming which base field
+   * it represents. `undefined` for every other case: dimensions/attributes
+   * pass through unchanged and already show correct info from the virtual
+   * table's own metadata with no enrichment needed; регистр бухгалтерии's
+   * synthesized fields (Счет, СубконтоN, etc.) have no base field to map
+   * back to at all.
+   */
+  virtualTableField?: VirtualTableOutputFieldInfo;
 }
 
 /**
@@ -218,7 +231,18 @@ function resolveHeadTable(
     // Те саме, що й стара findAliasTable: підзапит (fullName === '') і
     // параметр-джерело (`&Имя`) — не справжня таблиця метаданих, unknown.
     if (!table || !table.fullName || table.fullName.startsWith('&')) return undefined;
-    return { table, meta: resolver.tableByFullName(table.fullName) };
+    // A virtual-table source (`ИЗ РегистрНакопления.Х.Остатки(...) КАК Т`) is
+    // NEVER in `tableByFullName` — `buildResolverFromTables` deliberately
+    // keeps virtual tables in a separate map (`virtualTableByFullName`), real
+    // tables take priority on a name collision. Without this fallback, hover/
+    // completion on ANY field of a virtual-table alias (`Т.КоличествоОстаток`)
+    // silently showed nothing at all — not wrong, just always empty — since
+    // `meta` came back `undefined` for every virtual source, regardless of
+    // this roadmap's other work. Long-standing gap (same omission already
+    // existed in `findAliasTable.ts`'s old flat lookup below), not a
+    // regression from any specific phase.
+    const meta = resolver.tableByFullName(table.fullName) ?? resolver.virtualTableByFullName?.(table.fullName);
+    return { table, meta };
   }
 
   return findAliasTable(queryText, resolver, alias);
@@ -232,7 +256,13 @@ function describeViaTable(
 ): ChainDescription {
   if (!meta) return { tableFullName: table.fullName };
   if (chain.length === 1) return { tableFullName: meta.fullName };
-  return { tableFullName: meta.fullName, resolution: resolveFieldPath(meta, chain.slice(1), resolver) };
+  const resolution = resolveFieldPath(meta, chain.slice(1), resolver);
+  let virtualTableField: VirtualTableOutputFieldInfo | undefined;
+  if (meta.virtual && resolution.resolved.length > 0) {
+    const baseMeta = resolver.tableByFullName(meta.virtual.baseFullName);
+    if (baseMeta) virtualTableField = describeVirtualTableOutputField(meta.kind, baseMeta, resolution.resolved[0].field.name);
+  }
+  return { tableFullName: meta.fullName, resolution, virtualTableField };
 }
 
 /**

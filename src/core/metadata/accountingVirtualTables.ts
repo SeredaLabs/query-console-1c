@@ -1,23 +1,11 @@
 import type { MetaField, MetaTable, VirtualTableInfo } from './types';
 import type { ParsedObject } from './parser/model';
+import { ACCOUNTING_RESOURCE_SUFFIXES as RESOURCE_SUFFIXES } from './virtualTableResourceSuffixes';
 
 export interface AccChartInfo {
   maxExtDimensionCount: number;
   extDimensionTypes: string; // имя ПВХ, напр. 'ВидыСубконто'
 }
-
-const RESOURCE_SUFFIXES: Record<string, string[]> = {
-  Остатки: ['Остаток', 'ОстатокДт', 'ОстатокКт', 'РазвернутыйОстатокДт', 'РазвернутыйОстатокКт'],
-  Обороты: ['Оборот', 'ОборотДт', 'ОборотКт'],
-  ОборотыДтКт: ['Оборот'],
-  ОстаткиИОбороты: [
-    'НачальныйОстаток', 'НачальныйОстатокДт', 'НачальныйОстатокКт',
-    'НачальныйРазвернутыйОстатокДт', 'НачальныйРазвернутыйОстатокКт',
-    'Оборот', 'ОборотДт', 'ОборотКт',
-    'КонечныйОстаток', 'КонечныйОстатокДт', 'КонечныйОстатокКт',
-    'КонечныйРазвернутыйОстатокДт', 'КонечныйРазвернутыйОстатокКт',
-  ],
-};
 
 export function buildAccountingRegSlices(
   obj: ParsedObject,

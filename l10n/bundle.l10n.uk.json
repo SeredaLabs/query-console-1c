@@ -36,6 +36,7 @@
   "Source: `{table}`": "Джерело: `{table}`",
   "Reference to: `{table}`": "Посилання на: `{table}`",
   "Reference (target metadata unavailable)": "Посилання (метадані цілі недоступні)",
+  "Base resource: `{base}`": "Базовий ресурс: `{base}`",
   "Field \"{field}\" not found in \"{table}\"": "Поле «{field}» не знайдено в «{table}»",
   "**{param}** — parameter of `{table}`": "**{param}** — параметр `{table}`",
   "Open in Query Designer": "Відкрити в конструкторі запитів",

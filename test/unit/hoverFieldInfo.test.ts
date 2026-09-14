@@ -542,3 +542,137 @@ describe('virtualTableArgKeywordValues (Phase 2x-2, increment 3)', () => {
     expect(virtualTableArgKeywordValues(text, resolver, text.indexOf('Товары'))).toBeUndefined();
   });
 });
+
+describe('describeChain: virtual-table OUTPUT field hover (fixes a long-standing gap, not a Phase 2x-2 regression)', () => {
+  // Той самий реєстр/слайс, що і в блоці describeVirtualTableConditionFieldChain
+  // вище, але тут нас цікавить ІНША позиція — не аргумент Условие, а звичайне
+  // поле-вивід ВТ у SELECT/ГДЕ/тощо (`Остатки.КоличествоОстаток`).
+  const PRODAZHI: MetaTable = {
+    kind: 'РегистрНакопления', name: 'Продажи', fullName: 'РегистрНакопления.Продажи',
+    fields: [
+      { name: 'Товар', kind: 'dimension', types: [{ ref: { kind: 'Справочник', name: 'Номенклатура' } }] },
+      { name: 'Количество', kind: 'resource', types: [{ primitive: 'Число' }] },
+    ],
+  };
+  const PRODAZHI_OSTATKI: MetaTable = {
+    kind: 'РегистрНакопления', name: 'Продажи.Остатки', fullName: 'РегистрНакопления.Продажи.Остатки',
+    fields: [
+      { name: 'Товар', kind: 'dimension', types: PRODAZHI.fields[0].types },
+      { name: 'КоличествоОстаток', kind: 'resource', types: [{ primitive: 'Число' }] },
+    ],
+    virtual: { slice: 'Остатки', baseFullName: 'РегистрНакопления.Продажи' },
+  };
+  const NOMENKLATURA: MetaTable = {
+    kind: 'Справочник', name: 'Номенклатура', fullName: 'Справочник.Номенклатура',
+    fields: [{ name: 'Наименование', kind: 'standard', types: [{ primitive: 'Строка' }] }],
+  };
+  const vtResolver = buildResolverFromTables([PRODAZHI, PRODAZHI_OSTATKI, NOMENKLATURA]);
+
+  it('resolves a resource output field (КоличествоОстаток) on a virtual-table alias — was undefined before the fix', () => {
+    const text = 'ВЫБРАТЬ Т.КоличествоОстаток ИЗ РегистрНакопления.Продажи.Остатки(&Дата, ИСТИНА) КАК Т';
+    const headPos = text.indexOf('ИЗ');
+    const r = describeChain(text, vtResolver, ['Т', 'КоличествоОстаток'], headPos);
+    expect(r.tableFullName).toBe('РегистрНакопления.Продажи.Остатки');
+    expect(r.resolution).toBeDefined();
+    expect(r.resolution!.resolved.map(s => s.field.name)).toEqual(['КоличествоОстаток']);
+    expect(r.resolution!.resolved[0].kind).toBe('scalar');
+    // Stage B enrichment: knows this came from the base register's own "Количество".
+    expect(r.virtualTableField).toEqual({ outputName: 'КоличествоОстаток', baseFieldName: 'Количество', suffix: 'Остаток' });
+  });
+
+  it('enrichment only applies to the FIRST segment after the head — a further dereference does not carry it', () => {
+    const text = 'ВЫБРАТЬ Т.Товар ИЗ РегистрНакопления.Продажи.Остатки(&Дата, ИСТИНА) КАК Т';
+    const headPos = text.indexOf('ИЗ');
+    const r = describeChain(text, vtResolver, ['Т', 'Товар', 'Наименование'], headPos);
+    // "Товар" itself has no suffix (a dimension, passes through unchanged) — no enrichment.
+    expect(r.virtualTableField).toBeUndefined();
+  });
+
+  it('resolves a dimension output field that passes through unchanged (Товар) and dereferences its reference', () => {
+    const text = 'ВЫБРАТЬ Т.Товар ИЗ РегистрНакопления.Продажи.Остатки(&Дата, ИСТИНА) КАК Т';
+    const headPos = text.indexOf('ИЗ');
+    const r = describeChain(text, vtResolver, ['Т', 'Товар', 'Наименование'], headPos);
+    expect(r.resolution!.resolved.map(s => s.field.name)).toEqual(['Товар', 'Наименование']);
+  });
+
+  it('the head alone (chain.length === 1) still reports just the VT fullName, as before', () => {
+    const text = 'ВЫБРАТЬ Т.Товар ИЗ РегистрНакопления.Продажи.Остатки(&Дата, ИСТИНА) КАК Т';
+    const headPos = text.indexOf('ИЗ');
+    const r = describeChain(text, vtResolver, ['Т'], headPos);
+    expect(r.tableFullName).toBe('РегистрНакопления.Продажи.Остатки');
+    expect(r.resolution).toBeUndefined();
+  });
+
+  it('an unknown field on the virtual table still correctly reports fieldNotFound (not silently swallowed by the fallback)', () => {
+    const text = 'ВЫБРАТЬ Т.НетТакогоПоля ИЗ РегистрНакопления.Продажи.Остатки(&Дата, ИСТИНА) КАК Т';
+    const headPos = text.indexOf('ИЗ');
+    const r = describeChain(text, vtResolver, ['Т', 'НетТакогоПоля'], headPos);
+    expect(r.resolution!.stoppedReason).toBe('fieldNotFound');
+  });
+
+  it('a REAL (non-virtual) table alias is unaffected by the fallback — still resolves via tableByFullName as before', () => {
+    const text = 'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Номенклатура КАК Т';
+    const headPos = text.indexOf('ИЗ');
+    const r = describeChain(text, vtResolver, ['Т', 'Наименование'], headPos);
+    expect(r.tableFullName).toBe('Справочник.Номенклатура');
+    expect(r.resolution!.resolved.map(s => s.field.name)).toEqual(['Наименование']);
+  });
+});
+
+describe('describeChain: VT output field hover — broader register-kind/slice matrix', () => {
+  it('РегистрСведений СрезПоследних: fields pass through unchanged, no enrichment expected, but hover still works', () => {
+    const base: MetaTable = {
+      kind: 'РегистрСведений', name: 'Цены', fullName: 'РегистрСведений.Цены',
+      fields: [{ name: 'Цена', kind: 'resource', types: [{ primitive: 'Число' }] }],
+    };
+    const slice: MetaTable = {
+      kind: 'РегистрСведений', name: 'Цены.СрезПоследних', fullName: 'РегистрСведений.Цены.СрезПоследних',
+      fields: [{ name: 'Цена', kind: 'resource', types: [{ primitive: 'Число' }] }],
+      virtual: { slice: 'СрезПоследних', baseFullName: 'РегистрСведений.Цены' },
+    };
+    const resolver = buildResolverFromTables([base, slice]);
+    const text = 'ВЫБРАТЬ Т.Цена ИЗ РегистрСведений.Цены.СрезПоследних(&Дата) КАК Т';
+    const headPos = text.indexOf('ИЗ');
+    const r = describeChain(text, resolver, ['Т', 'Цена'], headPos);
+    expect(r.tableFullName).toBe('РегистрСведений.Цены.СрезПоследних');
+    expect(r.resolution!.resolved.map(s => s.field.name)).toEqual(['Цена']);
+    expect(r.virtualTableField).toBeUndefined(); // РегистрСведений has no suffix table at all
+  });
+
+  it('РегистрБухгалтерии Остатки: resource-suffix field DOES get enrichment (own, different suffix set from накопления)', () => {
+    const base: MetaTable = {
+      kind: 'РегистрБухгалтерии', name: 'ХозОперации', fullName: 'РегистрБухгалтерии.ХозОперации',
+      fields: [{ name: 'Сумма', kind: 'resource', types: [{ primitive: 'Число' }] }],
+    };
+    const slice: MetaTable = {
+      kind: 'РегистрБухгалтерии', name: 'ХозОперации.Остатки', fullName: 'РегистрБухгалтерии.ХозОперации.Остатки',
+      fields: [{ name: 'СуммаОстатокДт', kind: 'resource', types: [{ primitive: 'Число' }] }],
+      virtual: { slice: 'Остатки', baseFullName: 'РегистрБухгалтерии.ХозОперации' },
+    };
+    const resolver = buildResolverFromTables([base, slice]);
+    const text = 'ВЫБРАТЬ Т.СуммаОстатокДт ИЗ РегистрБухгалтерии.ХозОперации.Остатки(&Дата) КАК Т';
+    const headPos = text.indexOf('ИЗ');
+    const r = describeChain(text, resolver, ['Т', 'СуммаОстатокДт'], headPos);
+    expect(r.virtualTableField).toEqual({ outputName: 'СуммаОстатокДт', baseFieldName: 'Сумма', suffix: 'ОстатокДт' });
+  });
+
+  it('РегистрБухгалтерии synthesized field (Счет): resolves correctly via the VT\'s own metadata (Stage A), no false enrichment', () => {
+    const base: MetaTable = {
+      kind: 'РегистрБухгалтерии', name: 'ХозОперации', fullName: 'РегистрБухгалтерии.ХозОперации',
+      fields: [{ name: 'Сумма', kind: 'resource', types: [{ primitive: 'Число' }] }],
+    };
+    const chart: MetaTable = { kind: 'ПланСчетов', name: 'Хозрасчетный', fullName: 'ПланСчетов.Хозрасчетный', fields: [] };
+    const slice: MetaTable = {
+      kind: 'РегистрБухгалтерии', name: 'ХозОперации.Остатки', fullName: 'РегистрБухгалтерии.ХозОперации.Остатки',
+      fields: [{ name: 'Счет', kind: 'standard', types: [{ ref: { kind: 'ПланСчетов', name: 'Хозрасчетный' } }] }],
+      virtual: { slice: 'Остатки', baseFullName: 'РегистрБухгалтерии.ХозОперации' },
+    };
+    const resolver = buildResolverFromTables([base, chart, slice]);
+    const text = 'ВЫБРАТЬ Т.Счет ИЗ РегистрБухгалтерии.ХозОперации.Остатки(&Дата) КАК Т';
+    const headPos = text.indexOf('ИЗ');
+    const r = describeChain(text, resolver, ['Т', 'Счет'], headPos);
+    expect(r.resolution!.resolved[0].kind).toBe('reference');
+    expect(r.resolution!.resolved[0].refTarget?.fullName).toBe('ПланСчетов.Хозрасчетный');
+    expect(r.virtualTableField).toBeUndefined(); // no base-register equivalent — correctly not reverse-mapped
+  });
+});

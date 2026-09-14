@@ -36,6 +36,7 @@
   "Source: `{table}`": "Source: `{table}`",
   "Reference to: `{table}`": "Reference to: `{table}`",
   "Reference (target metadata unavailable)": "Reference (target metadata unavailable)",
+  "Base resource: `{base}`": "Base resource: `{base}`",
   "Field \"{field}\" not found in \"{table}\"": "Field \"{field}\" not found in \"{table}\"",
   "**{param}** — parameter of `{table}`": "**{param}** — parameter of `{table}`",
   "Open in Query Designer": "Open in Query Designer",

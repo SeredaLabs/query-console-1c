@@ -4,6 +4,7 @@ import { parse } from 'yaml';
 import type { MetadataModel, MetaTable, MetaField, MetaType, TableKind, VirtualTableInfo } from './types';
 import type { ParsedObject, ParsedField, ParsedType, ParsedCommonAttribute } from './parser/model';
 import { buildAccountingRegSlices, type AccChartInfo } from './accountingVirtualTables';
+import { ACCUM_RESOURCE_SUFFIXES } from './virtualTableResourceSuffixes';
 
 const SUPPORTED_KINDS: ReadonlySet<string> = new Set([
   'Справочник', 'Документ', 'Константа', 'Перечисление',
@@ -149,16 +150,15 @@ function buildAccumRegSlices(obj: ParsedObject, base: MetaTable): MetaTable[] {
     virtual: { slice, baseFullName: obj.fullName },
   });
 
-  const oborotSuffixes = isBalance ? ['Оборот', 'Приход', 'Расход'] : ['Оборот'];
+  const oborotSuffixes = isBalance ? ACCUM_RESOURCE_SUFFIXES.ОборотыBalance : ACCUM_RESOURCE_SUFFIXES.ОборотыTurnovers;
 
   const result: MetaTable[] = [];
   if (isBalance) {
-    result.push(makeVT('Остатки', expandResources(resources, ['Остаток'])));
+    result.push(makeVT('Остатки', expandResources(resources, [...ACCUM_RESOURCE_SUFFIXES.Остатки])));
   }
-  result.push(makeVT('Обороты', expandResources(resources, oborotSuffixes)));
+  result.push(makeVT('Обороты', expandResources(resources, [...oborotSuffixes])));
   if (isBalance) {
-    result.push(makeVT('ОстаткиИОбороты',
-      expandResources(resources, ['НачальныйОстаток', 'Оборот', 'Приход', 'Расход', 'КонечныйОстаток'])));
+    result.push(makeVT('ОстаткиИОбороты', expandResources(resources, [...ACCUM_RESOURCE_SUFFIXES.ОстаткиИОбороты])));
   }
   return result;
 }
