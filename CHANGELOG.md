@@ -5,6 +5,21 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.61 - 2026-09-14
+
+### Fixed
+
+- A membership condition using the shorthand form
+  `<Поле> В (ВЫБРАТЬ <ВТ>.<Поле>)` — an inline subquery against a temp table
+  with no explicit `ИЗ` — silently dropped the temp-table source and turned
+  the field into an opaque raw expression instead of synthesizing the
+  implicit `ИЗ <ВТ>`, because the nested parse of that subquery lost access
+  to the metadata resolver it needed to recognize the temp table. Apply had
+  nothing to flag it on, since the resulting (wrong) model was internally
+  consistent — this could silently corrupt an affected query. Fixed by
+  threading the resolver through, matching how an equivalent subquery
+  already worked in a `ИЗ (ВЫБРАТЬ …)` source position.
+
 ## 0.1.60 - 2026-09-14
 
 ### Internal
