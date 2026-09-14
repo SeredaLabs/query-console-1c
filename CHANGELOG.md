@@ -5,6 +5,15 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.58 - 2026-09-14
+
+### Fixed
+
+- v0.1.57's package accidentally included a stray, unreferenced development
+  build artifact (an in-progress webview bundle, unreachable from any
+  registered command) left over from a local build. No functional change;
+  removed and excluded from future packaging.
+
 ## 0.1.57 - 2026-09-14
 
 ### Added

@@ -23,6 +23,7 @@ out/**/*.map
 out/cli/**
 out/test-integration/**
 out/corpus-verify/**
+out/webview/canvasApp.js
 bench/**
 .env
 .env.*
