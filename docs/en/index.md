@@ -1,5 +1,5 @@
 <!--
-source_version: 2
+source_version: 3
 translation_status: canonical
 -->
 
@@ -8,13 +8,15 @@ translation_status: canonical
 [English](../en/index.md) · [Українська](../uk/index.md) · [Русский](../ru/index.md)
 
 🧩 **1C: Query Constructor** is a visual editor for static 1C SDBL queries embedded in
-BSL source files. It generates code; it is not a query console connected to a 1C
-database.
+BSL source files, and a semantic layer — hover, autocomplete, and diagnostics —
+that works directly on query text without opening the designer. It generates
+code; it is not a query console connected to a 1C database.
 
 ## 🧭 Contents
 
 - [🚀 Getting started](getting-started.md)
 - [🧩 Using the query designer](query-designer.md)
+- [🔍 Hover, autocomplete, and diagnostics](hover-and-completion.md)
 - [✏️ Editing existing queries](editing-existing-queries.md)
 - [🗂️ Metadata](metadata.md)
 - [⚙️ Settings](settings.md)

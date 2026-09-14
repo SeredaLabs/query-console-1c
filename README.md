@@ -1,5 +1,5 @@
 <!--
-source_version: 1
+source_version: 2
 translation_status: canonical
 -->
 
@@ -33,6 +33,7 @@ connecting to a 1C database or executing the query.
 | 🧩 **Visual query design** | Tables, fields, joins, conditions, grouping, ordering, and totals |
 | 🧱 **Complex query structure** | Unions, temporary tables, batches, virtual-table parameters, and indexes |
 | 🗂️ **Metadata-aware workflow** | Search, field types, and relationships from a 1C XML export |
+| 🔍 **Hover, autocomplete & diagnostics** | Field/table/virtual-table/parameter hover, `.`/`&` autocomplete, and parse-warning diagnostics—directly on query text, no designer needed |
 | 🔄 **Round-trip editing** | Parse, validate, format, reopen, and replace supported static SDBL strings |
 | 🧪 **Query text tools** | Comments, expression editing, and optional experimental Query Text v2 |
 | 🌍 **Localized experience** | English, Ukrainian, and Russian UI and documentation |
@@ -76,7 +77,8 @@ complex or generated query text.
 | [User guide](docs/en/index.md) | [Development guide](docs/development/index.md) |
 | [Getting started](docs/en/getting-started.md) | [Contributing](CONTRIBUTING.md) |
 | [Query designer](docs/en/query-designer.md) | [Changelog](CHANGELOG.md) |
-| [Troubleshooting](docs/en/troubleshooting.md) | [Known issues](docs/development/known-issues.md) |
+| [Hover, autocomplete & diagnostics](docs/en/hover-and-completion.md) | [Known issues](docs/development/known-issues.md) |
+| [Troubleshooting](docs/en/troubleshooting.md) | |
 
 ## 💬 Feedback
 
@@ -88,6 +90,9 @@ reproducible bugs and feature proposals. Do not attach proprietary configuration
 MIT — see [LICENSE](LICENSE). Third-party attributions are listed in
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-This project began as a fork of
-[AlekseyUAM/query_console_vscode](https://github.com/AlekseyUAM/query_console_vscode)
-and is now maintained independently by SeredaLabs.
+This project began in August 2026 as a fork of
+[AlekseyUAM/query_console_vscode](https://github.com/AlekseyUAM/query_console_vscode).
+Since then the query engine, metadata model, and validation have been rewritten,
+and an entirely new semantic layer—hover, autocomplete, and diagnostics—was
+added that did not exist in the original. It is now an independent project,
+maintained by SeredaLabs.
