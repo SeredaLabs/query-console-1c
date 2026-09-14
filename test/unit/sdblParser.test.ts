@@ -5,6 +5,7 @@ import { tokenize } from '../../src/core/query/sdblLexer';
 import type { QueryModel, AggregateFunction } from '../../src/core/query/queryModel';
 import type { QueryDocument, UnionMember } from '../../src/core/query/unionModel';
 import type { BatchDocument } from '../../src/core/query/batchModel';
+import { validateBatchSemantics } from '../../src/core/query/semanticValidator';
 
 /** Round-trip oracle: generate(parseQuery(generate(model))) === generate(model). */
 function roundTrip(model: QueryModel): void {
@@ -2425,16 +2426,73 @@ describe('синтез неявного ИЗ (6.16.17/6.16.77) через parseD
     // поле лишалось сирим виразом (`expression`, автопсевдонім `Поле1`), джерело
     // губилося (`tables: []`), а validateBatchSemantics це мовчки пропускала.
     const tempResolver = {
-      tableByFullName: (full: string) =>
-        full === 'ВТ' ? { kind: 'РегистрСведений' as const, name: 'ВТ', fullName: 'ВТ', fields: [] } : undefined,
+      tableByFullName: (full: string) => {
+        if (full === 'ВТ') {
+          return {
+            kind: 'РегистрСведений' as const, name: 'ВТ', fullName: 'ВТ',
+            fields: [{ name: 'Код', kind: 'attribute' as const, types: [] }],
+          };
+        }
+        if (full === 'Справочник.Валюты') {
+          return {
+            kind: 'Справочник' as const, name: 'Валюты', fullName: 'Справочник.Валюты',
+            fields: [{ name: 'Код', kind: 'attribute' as const, types: [] }],
+          };
+        }
+        return undefined;
+      },
     };
-    const batch = parseBatch(
-      'ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код В (ВЫБРАТЬ ВТ.Код)',
-      tempResolver
-    );
+    const text = 'ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код В (ВЫБРАТЬ ВТ.Код)';
+    const batch = parseBatch(text, tempResolver);
     const model = batch.members[0].members[0].model;
     const cond = model.conditions![0] as any;
     expect(cond.subquery.members[0].model.tables).toEqual([{ id: 't0', fullName: 'ВТ', alias: 'ВТ' }]);
     expect(cond.subquery.members[0].model.fields).toEqual([{ tableId: 't0', path: 'Код', qualified: true }]);
+    // Generation: the synthesized `ИЗ ВТ` must actually reach the generated
+    // text — a correct MODEL that still failed to generate `ИЗ` would be just
+    // as much of a silent regression as the original bug.
+    const generated = generateBatch(batch);
+    expect(generated).toContain('ИЗ\n\t\t\t\tВТ КАК ВТ');
+    // Silent-semantic-loss check: the original bug produced a model that
+    // `validateBatchSemantics` waved through with zero errors (raw expression
+    // + empty `tables` is internally consistent, just wrong) — Apply had
+    // nothing to catch it on. Confirm the FIXED model still validates clean,
+    // not that validation would have caught the old broken one (it wouldn't
+    // have) — the real guarantee here is the model/generation assertions above.
+    expect(validateBatchSemantics(batch, tempResolver, text)).toEqual([]);
+  });
+
+  it('той самий регрес у РЕАЛЬНОМУ production-сценарії: пакет ПОМЕСТИТЬ ВТ ; наступний ГДЕ В (ВЫБРАТЬ ВТ.Поле) — БЕЗ штучного резолвера', () => {
+    // На відміну від тесту вище (штучний resolver, який уже "знає" ВТ напряму),
+    // тут ВТ реєструється так, як це реально відбувається в production: перший
+    // оператор пакета створює її через ПОМЕСТИТЬ, `parseBatch` сам накопичує
+    // реєстр (`tempTables`) і сам augment-ить резолвер для НАСТУПНОГО оператора
+    // (`augmentResolverWithTempTables`, sdblParser.ts:5430) — жодного зовнішнього
+    // резолвера не передаємо взагалі (`undefined`), щоб довести, що синтез працює
+    // з чистого внутрішнього реєстру пакета, а не лише коли тест підсовує
+    // резолвер, що вже знає відповідь наперед.
+    const batchText = [
+      'ВЫБРАТЬ',
+      '\tТовары.Код КАК Ключ',
+      'ПОМЕСТИТЬ ВТТовары',
+      'ИЗ',
+      '\tСправочник.Валюты КАК Товары',
+      ';',
+      'ВЫБРАТЬ',
+      '\tЗаказы.Код',
+      'ИЗ',
+      '\tСправочник.Валюты КАК Заказы',
+      'ГДЕ',
+      '\tЗаказы.Код В (ВЫБРАТЬ ВТТовары.Ключ)',
+    ].join('\n');
+
+    const batch = parseBatch(batchText);
+    const stmt2 = batch.members[1].members[0].model;
+    const cond = stmt2.conditions![0] as any;
+    expect(cond.subquery.members[0].model.tables).toEqual([{ id: 't0', fullName: 'ВТТовары', alias: 'ВТТовары' }]);
+    expect(cond.subquery.members[0].model.fields).toEqual([{ tableId: 't0', path: 'Ключ', qualified: true }]);
+
+    const generated = generateBatch(batch);
+    expect(generated).toContain('ИЗ\n\t\t\t\tВТТовары КАК ВТТовары');
   });
 });

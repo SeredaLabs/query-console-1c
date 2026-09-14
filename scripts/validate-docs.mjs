@@ -77,14 +77,28 @@ for (const locale of locales) {
 
   const gettingStartedFile = `docs/${locale}/getting-started.md`;
   const gettingStartedText = fs.readFileSync(path.join(root, gettingStartedFile), 'utf8');
-  for (const command of packageJson.contributes?.commands ?? []) {
+  const visibleTitles = (packageJson.contributes?.commands ?? []).map(command => {
     const titleKey = command.title.match(/^%([^%]+)%$/)?.[1];
     const categoryKey = command.category?.match(/^%([^%]+)%$/)?.[1];
     const title = titleKey ? manifestByLocale[locale][titleKey] : command.title;
     const category = categoryKey ? manifestByLocale[locale][categoryKey] : command.category;
-    const visibleTitle = category ? `${category}: ${title}` : title;
+    return category ? `${category}: ${title}` : title;
+  });
+  for (const visibleTitle of visibleTitles) {
     if (!gettingStartedText.includes(`**${visibleTitle}**`)) {
       errors.push(`${gettingStartedFile}: missing manifest command title ${visibleTitle}`);
+    }
+  }
+  // Reverse direction: every row of the "Commands" table (marked by the
+  // language-independent ⌨️ emoji, so this works across all locales without
+  // depending on the translated heading text) must correspond to a REAL
+  // manifest command — otherwise a doc could promise a command that was
+  // renamed or removed from package.json without anyone noticing.
+  const commandsSectionMatch = gettingStartedText.match(/## ⌨️[^\n]*\n([\s\S]*?)(?:\n## |$)/);
+  const commandsSection = commandsSectionMatch?.[1] ?? '';
+  for (const match of commandsSection.matchAll(/^\|\s*\*\*(.+?)\*\*\s*\|/gm)) {
+    if (!visibleTitles.includes(match[1])) {
+      errors.push(`${gettingStartedFile}: documented command "${match[1]}" has no matching manifest command`);
     }
   }
 }

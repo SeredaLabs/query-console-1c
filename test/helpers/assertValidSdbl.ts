@@ -17,6 +17,23 @@ const SDBL_WASM = path.join(FIXTURES, 'tree-sitter-sdbl.wasm');
  */
 export const sdblGrammarAvailable = fs.existsSync(SDBL_WASM);
 
+// Every `assertValidSdbl` call across the suite (~30+ call sites in
+// sdblParser.fixtures.test.ts/sdblGenerator.test.ts) silently no-oped when the
+// grammar wasn't vendored, with zero signal — CI showed all of them green
+// without the independent grammar oracle ever actually running, a false sense
+// of coverage. `tree-sitter-sdbl.wasm` is not committed to this repo and no
+// CI workflow builds it (`tooling/scripts/build-wasm.sh` needs an
+// emscripten + tree-sitter-cli toolchain not installed in CI) — making the
+// oracle an actual required gate is tracked as separate follow-up work, not
+// done here. This is only the honest signal: warn once so anyone reading
+// test output can tell the oracle was skipped rather than assuming it ran.
+if (!sdblGrammarAvailable) {
+  console.warn(
+    '[assertValidSdbl] tree-sitter-sdbl.wasm not vendored (see tooling/scripts/build-wasm.sh) — ' +
+    'independent SDBL grammar oracle is SKIPPED for this entire test run; only the golden corpus is checked.'
+  );
+}
+
 let _parser: Parser | null = null;
 
 async function getParser(): Promise<Parser> {

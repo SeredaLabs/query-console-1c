@@ -3,8 +3,9 @@
  * Production Metadata Switch, PR-10).
  *
  * `loadMetadataSnapshotFirst` is the production entry point wired into
- * `panel.ts` (see there) for the "no YAML generation exists yet" cold-build
- * case: it tries the direct XML→JSON snapshot path (`buildMetadataSnapshotFromXml`,
+ * `metadataLoader.ts`'s `loadMetadata` (extracted from `panel.ts`, now shared
+ * with the hover provider) for EVERY `cfPath`, not just a cold-build case: it
+ * tries the direct XML→JSON snapshot path (`buildMetadataSnapshotFromXml`,
  * PR-08) first, reusing an already-committed snapshot when it is still fresh
  * relative to `cfPath`'s XML (same freshness contract as `modelCache.ts`'s
  * `loadMetadataCached`, just compared against the XML source directly instead
@@ -16,14 +17,13 @@
  * The only cost of a fallback is one extra failed attempt, never data loss or
  * a crash — see `loadMetadataWithFallback` below.
  *
- * Scope of this production switch is deliberately narrow (ТЗ §47 PR-by-PR
- * safety rule): `panel.ts` only calls this when NO YAML generation exists on
- * disk yet (brand-new project, or after the YAML dir was removed) — an
- * existing YAML generation (the overwhelmingly common case for a returning
- * user) keeps going through the exact same `loadMetadataCached` path as
- * always, completely untouched by this file. The explicit «Обновить кэш»
- * command also still always rebuilds via the YAML path unconditionally — not
- * switched in this PR, to keep the change to one clearly bounded slice.
+ * Scope note (widened past the original PR-10, ТЗ §47 PR-by-PR safety rule):
+ * this used to run only when NO YAML generation existed yet on disk
+ * (brand-new project, or after the YAML dir was removed); it now runs for
+ * every load, including a returning user with an existing YAML generation —
+ * see `metadataLoader.ts`'s own comment on `loadMetadata` for the widened
+ * call site. The explicit «Обновить кэш» command still always rebuilds via
+ * the YAML path unconditionally, unaffected by this file either way.
  */
 import * as fs from 'fs';
 import * as path from 'path';
