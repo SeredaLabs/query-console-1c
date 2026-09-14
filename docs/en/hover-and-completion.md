@@ -14,7 +14,8 @@ Query Designer first. They read the same metadata export as the designer
 ## 🖱️ Hover
 
 - A table alias shows the source metadata table.
-- A field shows its type, and for a reference field, the table it points to.
+- A field on a reference type shows the table it points to (its type is not
+  yet shown in hover; autocomplete already shows it).
 - A field on a virtual table (`Остатки`, `Обороты`, and similar) shows which
   base register resource it comes from.
 - A `&Параметр` reference shows it as a query parameter.

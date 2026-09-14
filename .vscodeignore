@@ -15,6 +15,7 @@ docs/en/**
 docs/uk/**
 docs/ru/**
 docs/development/**
+docs/design/**
 docs/*.md
 docs/*.yml
 scripts/**

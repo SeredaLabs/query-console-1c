@@ -14,6 +14,10 @@ Features such as query execution, database connections, result grids, history,
 and transport are not implemented. They require separate product and security
 decisions and must not be inferred from the phrase “query console.”
 
+New Builder (the canvas-based visual constructor under `src/webview-canvas`)
+is in-progress preview work; approved visual references for it are tracked in
+[`docs/design/new-builder/`](../design/new-builder/README.md).
+
 ## Explicitly considered and not planned
 
 Evaluated and deliberately not pursued, so they don't need re-litigating from

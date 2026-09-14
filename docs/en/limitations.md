@@ -40,6 +40,8 @@ tested; older documentation that marked them unsafe is obsolete.
 
 ## 🗂️ Metadata boundaries
 
-The cache is not automatically compared with the XML export. Workspace discovery
-has a bounded depth, and unsupported metadata kinds do not appear in the tree.
-Rebuild explicitly after exporting a configuration.
+The cache is checked against the XML export's modification time and rebuilt
+automatically when it is stale — manual rebuild is only needed to force it
+sooner, or when a sync tool preserved the file's timestamp across an export.
+Workspace discovery has a bounded depth, and unsupported metadata kinds do not
+appear in the tree.

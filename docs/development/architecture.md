@@ -26,6 +26,7 @@ src/extension  <--- src/shared/messages.ts --->  src/webview (React)
 | `src/extension` | Commands, active editor, paths, WebView panel, insertion |
 | `src/core/metadata` | XML import, YAML compatibility data, JSON cache, metadata model |
 | `src/core/query` | `QueryModel`, SDBL parsing/generation, validation, transforms |
+| `src/core/semantic` | Tolerant snapshot building for hover/completion/analysis (recovers from malformed queries; distinct from the strict Apply path) |
 | `src/webview` | React UI and model editing; no direct filesystem access |
 | `src/shared` | Typed host/WebView protocol and locale contract |
 

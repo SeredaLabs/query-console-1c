@@ -14,12 +14,14 @@ generator honest against it as both evolve.
 
 ## Decision
 
-`generateBatch(parseBatch(text)) === text` (for text the platform itself
-accepts) is the contract, and it is enforced by a golden-oracle regression
-corpus, not by hand-written unit examples alone: a committed corpus of real
-query texts with the *real 1C platform's own* accepted output
-(`test/fixtures/corpus/golden.jsonl`), currently gated at exactly 1976/1976
-matching queries in the fast, committed suite
+`generateBatch(parseBatch(input)) === query_text` is the contract, where
+`query_text` is the *real 1C platform's own* accepted, canonical output for
+`input` — not necessarily `input` itself (the platform's own normalization
+means the two differ verbatim for roughly half the committed corpus). It is
+enforced by a golden-oracle regression corpus, not by hand-written unit
+examples alone: a committed corpus of real query texts paired with 1C's
+canonical output (`test/fixtures/corpus/golden.jsonl`), currently gated at
+exactly 1976/1976 matching queries in the fast, committed suite
 (`test/unit/corpusRegression.test.ts`), with a larger 17933-query corpus run
 available via `npm run accept:oracle` for changes that need broader
 confidence than the committed subset. Any reader/writer of `QueryModel` that
