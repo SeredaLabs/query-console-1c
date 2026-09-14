@@ -50,4 +50,12 @@ via hook injection rather than restructured away: `sdblGenerator.ts` ↔
 future decomposition of `src/core/query` should account for it deliberately
 rather than assume the current file boundaries are the natural module seams.
 
+`sdblParser.ts` also keeps the active `MetadataResolver` in module-scoped state
+only for the duration of a synchronous `parseDocument` call, restoring the
+previous value in `finally` so nested parses remain isolated. Do not introduce
+`await`, callbacks that outlive that call, or parallel parsing through this
+state. A future parser decomposition should pass an explicit parse context
+instead; until then, preserve the stack discipline and its strict/tolerant
+boundary regression coverage.
+
 Related decisions: see [`decisions/`](decisions/README.md).

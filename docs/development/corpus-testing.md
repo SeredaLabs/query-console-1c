@@ -22,6 +22,21 @@ no committed entry may drop from a better class to a worse one
 (`SUPPORTED` → `RECOVERED`/`UNSUPPORTED`/`INVALID`, etc.) without that being an
 explicit, reviewed, reported change — never a side effect nobody noticed.
 
+## Semantic resolver shadow baseline
+
+The position-aware resolver is compared with the legacy flat alias resolver on
+the complete committed corpus. Disagreements are expected in legitimate scope
+cases, so a raw count is not a correctness metric. Instead,
+`test/fixtures/corpus/shadow-mode-baseline.json` freezes the identity and
+classification of every disagreement, together with a corpus hash and summary
+totals.
+
+`npm run test:unit` compares the live sweep with that reviewed baseline. For an
+intentional semantic change, first inspect the failing diff, then regenerate it
+explicitly with `npm run corpus:shadow-baseline -- --write`. Include the number,
+categories, and representative semantic justification in the change review;
+never refresh this artifact just to make a test pass.
+
 ## Changing expected output
 
 Classify every change before updating a baseline. Report the number of affected

@@ -5,6 +5,19 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.65 - 2026-09-14
+
+### Internal
+
+- The semantic resolver's corpus-wide shadow-mode sweep is now a reviewed
+  regression gate. It compares every meaningful resolver disagreement with a
+  committed baseline instead of merely printing aggregate counts.
+- Added `npm run corpus:shadow-baseline` for explicit, atomically written
+  baseline regeneration after semantic review; it never updates the artifact
+  during an ordinary test run.
+- Documented the synchronous stack discipline required by the parser's active
+  metadata resolver and aligned the documented regression-gate order with CI.
+
 ## 0.1.64 - 2026-09-14
 
 ### Internal

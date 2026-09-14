@@ -7,8 +7,8 @@ Run checks in this order where relevant:
 ```bash
 npm run docs:check
 npm run typecheck
-npm run test:unit
 npm run build
+npm run test:unit
 npm run test:e2e
 npm run test:integration
 ```
