@@ -6,6 +6,7 @@ import {
 } from './hoverFieldInfo';
 import type { VirtualTableOutputFieldInfo } from '../core/metadata/virtualTableOutputField';
 import type { FieldPathResolution } from '../core/query/fieldPathResolver';
+import { findQueryParameterAt } from '../core/query/queryParameters';
 import { getMetadataResolver } from './metadataResolverCache';
 import { OPEN_FROM_RANGE_COMMAND } from './openFromRangeCommand';
 
@@ -101,6 +102,23 @@ export class QueryHoverProvider implements vscode.HoverProvider {
       }
     } catch (e) {
       this.channel.appendLine(vscode.l10n.t('[1C Query] Hover: metadata unavailable: {error}', { error: String(e) }));
+    }
+
+    // Level 0 query parameter semantics (semantic-core roadmap, memory:
+    // project-semantic-core-roadmap — "Query parameter semantics boundary").
+    // Any OTHER `&Параметр` occurrence (not a virtual-table argument, handled
+    // more specifically above) is still a query-local named parameter, scoped
+    // to the whole batch. No resolver needed — a pure lexer scan, never
+    // throws — and deliberately minimal: names ONLY that this is a parameter,
+    // never where its value comes from (see this feature's own acceptance
+    // boundary in `queryParameters.ts`/`resultProcessingTemplate.ts`).
+    const queryPosition = rawOffsetToQueryTextOffset(source, hit, offset);
+    if (queryPosition !== undefined) {
+      const occurrence = findQueryParameterAt(hit.text, queryPosition);
+      if (occurrence) {
+        const md = new vscode.MarkdownString(vscode.l10n.t('**{name}** — query parameter', { name: occurrence.name }));
+        return new vscode.Hover(md);
+      }
     }
 
     return genericHint(document, hit);

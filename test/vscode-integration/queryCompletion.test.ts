@@ -105,6 +105,22 @@ describe('Extension Host: автодоповнення полів після к�
     assert.ok(labels.includes('Регистратор'), `мало бути "Регистратор", отримано: ${labels.join(', ')}`);
     assert.strictEqual(items![0].kind, vscode.CompletionItemKind.EnumMember);
   });
+
+  it('(Level 0) пропонує вже використані в запиті імена параметрів одразу після "&"', async function () {
+    this.timeout(20000);
+
+    const queryText = 'ВЫБРАТЬ Т.Активен ИЗ Справочник.Тест КАК Т ГДЕ Т.Активен = &Актив И Т.Код = &Код';
+    const content = `Запрос.Текст = "${queryText}";\n`;
+    const doc = await vscode.workspace.openTextDocument({ language: 'plaintext', content });
+    const offset = content.lastIndexOf('&Код') + 1; // курсор одразу після другого "&"
+
+    const items = await makeProvider().provideCompletionItems(doc, doc.positionAt(offset));
+    assert.ok(items, 'очікувались варіанти імен параметрів');
+    const labels = items!.map((i) => i.label as string);
+    assert.ok(labels.includes('Актив'), `мало бути "Актив", отримано: ${labels.join(', ')}`);
+    assert.ok(labels.includes('Код'), `мало бути "Код", отримано: ${labels.join(', ')}`);
+    assert.strictEqual(items!.find((i) => i.label === 'Актив')!.kind, vscode.CompletionItemKind.Variable);
+  });
 });
 
 /**

@@ -136,7 +136,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const completionProvider = vscode.languages.registerCompletionItemProvider(
     { pattern: '**/*.bsl' },
     new QueryCompletionProvider(context, outputChannel, resolveCfPath),
-    '.'
+    '.',
+    '&'
   );
 
   context.subscriptions.push(

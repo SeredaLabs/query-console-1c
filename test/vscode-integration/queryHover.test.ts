@@ -124,6 +124,23 @@ describe('Extension Host: hover на цепочці поля запиту', () =
     assert.ok(value.includes('Период'), `hover мав назвати роль параметра ("Период"), отримано: ${value}`);
     assert.ok(value.includes('РегистрНакопления.Продажи.Остатки'), `hover мав назвати повне ім'я ВТ, отримано: ${value}`);
   });
+
+  it('provideHover (Level 0) називає &Параметр ПОЗА аргументом віртуальної таблиці параметром запиту', async function () {
+    this.timeout(20000);
+
+    const queryText = 'ВЫБРАТЬ Т.Активен ИЗ Справочник.Тест КАК Т ГДЕ Т.Активен = &Актив';
+    const doc = await vscode.workspace.openTextDocument({
+      language: 'plaintext',
+      content: `Запрос.Текст = "${queryText}";\n`,
+    });
+    const offset = doc.getText().indexOf('&Актив') + 2; // курсор всередині &Актив, не на аргументі ВТ
+
+    const hover = await makeProvider().provideHover(doc, doc.positionAt(offset));
+    assert.ok(hover, 'очікувався hover для &Параметр');
+    const value = (hover!.contents[0] as vscode.MarkdownString).value;
+    assert.ok(value.includes('Актив'), `hover мав назвати ім'я параметра, отримано: ${value}`);
+    assert.ok(value.includes('query parameter'), `hover мав позначити це як параметр запиту, отримано: ${value}`);
+  });
 });
 
 /**

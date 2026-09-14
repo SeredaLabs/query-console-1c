@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { findQueryAt, rawOffsetToQueryTextOffset } from './queryAtCursor';
 import { findChainForCompletion, resolveCompletionTarget, virtualTableArgKeywordValues } from './hoverFieldInfo';
+import { collectQueryParameters } from '../core/query/queryParameters';
 import { getMetadataResolver } from './metadataResolverCache';
 import { describeFieldTypes } from '../core/metadata/describeType';
 import { buildFieldCard, renderFieldCardMarkdown } from '../core/metadata/fieldCard';
@@ -58,6 +59,19 @@ export class QueryCompletionProvider implements vscode.CompletionItemProvider {
       if (keywords) {
         return keywords.map((value) => new vscode.CompletionItem(value, vscode.CompletionItemKind.EnumMember));
       }
+    }
+
+    // Level 0 query parameter semantics (semantic-core roadmap, memory:
+    // project-semantic-core-roadmap — "Query parameter semantics boundary"):
+    // right after `&`, suggest names already used elsewhere in the SAME
+    // query (batch-wide, per Level 0's scope) — no resolver needed, purely
+    // off the lexer's `'param'` tokens, unrelated to the dot-triggered field
+    // completion below.
+    if (queryPosition !== undefined && queryPosition > 0 && hit.text[queryPosition - 1] === '&') {
+      const items = [...collectQueryParameters(hit.text).values()].map(
+        (occurrences) => new vscode.CompletionItem(occurrences[0].name, vscode.CompletionItemKind.Variable)
+      );
+      if (items.length > 0) return items;
     }
 
     const chain = findChainForCompletion(source, offset);
