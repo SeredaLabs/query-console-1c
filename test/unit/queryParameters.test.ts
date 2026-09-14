@@ -57,12 +57,16 @@ describe('findQueryParameterAt', () => {
   it('finds the occurrence when position is inside its range (including on the leading `&`)', () => {
     expect(findQueryParameterAt(text, paramStart)?.name).toBe('Код');
     expect(findQueryParameterAt(text, paramStart + 2)?.name).toBe('Код');
-    expect(findQueryParameterAt(text, paramStart + 4)?.name).toBe('Код');
+    expect(findQueryParameterAt(text, paramStart + 3)?.name).toBe('Код'); // last char of "&Код" (index 3 = "д")
   });
 
-  it('returns undefined just outside the range', () => {
-    expect(findQueryParameterAt(text, paramStart - 1)).toBeUndefined();
+  it('returns undefined at and beyond the range end (half-open [start, end), same convention as rangeContains)', () => {
+    expect(findQueryParameterAt(text, paramStart + '&Код'.length)).toBeUndefined(); // position === range.end
     expect(findQueryParameterAt(text, paramStart + 5)).toBeUndefined();
+  });
+
+  it('returns undefined just before the range', () => {
+    expect(findQueryParameterAt(text, paramStart - 1)).toBeUndefined();
   });
 
   it('returns undefined when the position is on an ordinary identifier, not a parameter', () => {

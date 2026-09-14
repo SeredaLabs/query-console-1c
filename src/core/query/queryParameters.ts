@@ -28,7 +28,7 @@
  * through the parser's batch/statement coordinate-stitching would have been.
  */
 import { tokenize } from './sdblLexer';
-import type { TextRange } from './sourceMap';
+import { rangeContains, type TextRange } from './sourceMap';
 
 export interface QueryParameterOccurrence {
   /** Parameter name as typed, WITHOUT the leading `&` (e.g. "Товар"). */
@@ -69,10 +69,11 @@ export function collectQueryParameters(queryText: string): Map<string, QueryPara
  * The `&Параметр` occurrence at `position` (`position` inside its range,
  * INCLUDING the leading `&`) — `undefined` if `position` isn't on a
  * parameter token at all. Used by hover/completion to answer "is the cursor
- * on a query parameter, and which one".
+ * on a query parameter, and which one". Range containment goes through the
+ * shared `rangeContains` (half-open `[start, end)`, same as every other
+ * `TextRange` consumer in this codebase) — `position === range.end` is the
+ * boundary right AFTER the token, not on it.
  */
 export function findQueryParameterAt(queryText: string, position: number): QueryParameterOccurrence | undefined {
-  return collectQueryParameterOccurrences(queryText).find(
-    (occ) => position >= occ.range.start && position <= occ.range.end
-  );
+  return collectQueryParameterOccurrences(queryText).find((occ) => rangeContains(occ.range, position));
 }
