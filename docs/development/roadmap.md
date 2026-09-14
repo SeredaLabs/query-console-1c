@@ -16,7 +16,8 @@ decisions and must not be inferred from the phrase “query console.”
 
 New Builder (the canvas-based visual constructor under `src/webview-canvas`)
 is in-progress preview work; approved visual references for it are tracked in
-[`docs/design/new-builder/`](../design/new-builder/README.md).
+`docs/design/new-builder/` in the working tree — not yet committed, so not
+linked here until it ships.
 
 ## Explicitly considered and not planned
 
