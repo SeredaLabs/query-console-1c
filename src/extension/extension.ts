@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { createPanel } from './panel';
+import { createCanvasPanel } from './canvasPanel';
 import { resolveCfPath } from './resolveCfPath';
 import { registerParseCommand } from './parseCommand';
 import { planQueryConstructor, type OpenPlan } from './queryConstructorPlan';
@@ -97,6 +98,18 @@ async function runQueryConstructorCommand(context: vscode.ExtensionContext, resu
 }
 
 /**
+ * Команда «New Builder (Preview)» (.claude/new_builder_roadmap.md). На відміну
+ * від `runQueryConstructorCommand`, НЕ шукає запит під курсором — Structure/
+ * Fields ще не реалізовані, відкривати shell доречно незалежно від активного
+ * редактора. Phase 2 додає резолв cfPath (та сама `resolveCfPathWithLogging`,
+ * що й Classic-команди) — Sidebar-метадані потребують знати, звідки вантажити.
+ */
+function runQueryConstructorCanvasCommand(context: vscode.ExtensionContext): void {
+  const cfPath = resolveCfPathWithLogging();
+  createCanvasPanel(context, cfPath, outputChannel);
+}
+
+/**
  * Обработчик command-ссылки из hover (`queryHoverProvider.ts`'s `genericHint`) —
  * офсет всегда указывает на уже найденный `findQueryAt`-хит, поэтому `plan.kind`
  * здесь всегда должен быть `'open'`; ветка `'prompt'` — защитный no-op на случай
@@ -129,6 +142,9 @@ export function activate(context: vscode.ExtensionContext): void {
   const cmdOpenFromRange = vscode.commands.registerCommand(OPEN_FROM_RANGE_COMMAND, (arg: { uri: string; offset: number }) =>
     openConstructorFromRange(context, arg)
   );
+  const cmdCanvas = vscode.commands.registerCommand('1c.queryConstructorCanvas', () =>
+    runQueryConstructorCanvasCommand(context)
+  );
   const hoverProvider = vscode.languages.registerHoverProvider(
     { pattern: '**/*.bsl' },
     new QueryHoverProvider(context, outputChannel, resolveCfPath)
@@ -144,6 +160,7 @@ export function activate(context: vscode.ExtensionContext): void {
     cmd,
     cmdWithResult,
     cmdOpenFromRange,
+    cmdCanvas,
     hoverProvider,
     completionProvider,
     registerParseCommand(context, outputChannel),

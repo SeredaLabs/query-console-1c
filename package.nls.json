@@ -4,6 +4,7 @@
   "commands.category": "1C",
   "commands.queryConstructor.title": "Query text only",
   "commands.queryConstructorWithResult.title": "With result-processing code",
+  "commands.queryConstructorCanvas.title": "New Builder (Preview)",
   "commands.parseMetadata.title": "1C: Rebuild metadata index",
   "menus.queryConstructor.label": "1C: Query Designer",
   "configuration.title": "Query Console 1C",

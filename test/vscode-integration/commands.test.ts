@@ -8,8 +8,9 @@
  */
 import * as assert from 'assert';
 import * as vscode from 'vscode';
+import { waitUntil } from './testUtil';
 
-const COMMAND_IDS = ['1c.queryConstructor', '1c.queryConstructorWithResult', '1c.parseMetadata'];
+const COMMAND_IDS = ['1c.queryConstructor', '1c.queryConstructorWithResult', '1c.parseMetadata', '1c.queryConstructorCanvas'];
 
 describe('Extension Host: активация и регистрация команд', () => {
   it('расширение находится и активируется', async () => {
@@ -19,7 +20,7 @@ describe('Extension Host: активация и регистрация кома�
     assert.strictEqual(ext!.isActive, true);
   });
 
-  it('все три команды из package.json реально зарегистрированы после активации', async () => {
+  it('все команды из package.json реально зарегистрированы после активации', async () => {
     const commands = await vscode.commands.getCommands(true);
     for (const id of COMMAND_IDS) {
       assert.ok(commands.includes(id), `команда "${id}" не зарегистрирована`);
@@ -32,5 +33,21 @@ describe('Extension Host: активация и регистрация кома�
       () => Promise.resolve(vscode.commands.executeCommand('1c.queryConstructor')),
       'команда не должна падать, когда нет активного редактора — только предупреждение (см. extension.ts)'
     );
+  });
+
+  it('«1c.queryConstructorCanvas» (Phase 1 shell) открывает панель без активного редактора и без исключений', async function () {
+    this.timeout(15000);
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    const tabsBefore = vscode.window.tabGroups.all.flatMap(g => g.tabs).length;
+    await assert.doesNotReject(
+      () => Promise.resolve(vscode.commands.executeCommand('1c.queryConstructorCanvas')),
+      'Phase 1 shell не требует активного редактора и не должен падать (см. canvasPanel.ts)'
+    );
+    const gotNewTab = await waitUntil(
+      () => vscode.window.tabGroups.all.flatMap(g => g.tabs).length > tabsBefore,
+      10000
+    );
+    assert.ok(gotNewTab, 'команда должна была открыть новую панель/вкладку New Builder');
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
   });
 });

@@ -4,6 +4,7 @@
   "commands.category": "1C",
   "commands.queryConstructor.title": "Лише текст запиту",
   "commands.queryConstructorWithResult.title": "З кодом обробки результату",
+  "commands.queryConstructorCanvas.title": "Новий конструктор (Preview)",
   "commands.parseMetadata.title": "1С: Перебудувати індекс метаданих",
   "menus.queryConstructor.label": "1C: Конструктор запитів",
   "configuration.title": "Query Console 1C",

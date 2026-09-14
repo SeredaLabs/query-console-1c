@@ -1,5 +1,5 @@
 <!--
-source_version: 3
+source_version: 4
 translation_status: canonical
 -->
 
@@ -21,6 +21,7 @@ translation_status: canonical
 | **1C: Query text only** | Insert or edit a query string |
 | **1C: With result-processing code** | Create a new query with a BSL result-processing wrapper |
 | **1C: Rebuild metadata index** | Rebuild the derived metadata files and cache |
+| **1C: New Builder (Preview)** | Open the New Builder shell — Phase 1 preview, no query editing yet |
 
 ## 🛠️ Create a query
 

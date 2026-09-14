@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ES2020",
+    "lib": ["ES2020", "DOM"],
+    "jsx": "react",
+    "resolveJsonModule": true,
+    "outDir": "out/webview",
+    "rootDir": "src",
+    "noEmit": true
+  },
+  "include": [
+    "src/webview-canvas/**/*",
+    "src/shared/**/*",
+    "src/core/metadata/types.ts",
+    "src/core/query/queryModel.ts",
+    "src/webview/state/**/*"
+  ],
+  "exclude": ["src/extension/**/*", "src/webview/components/**/*", "src/webview/*.tsx", "src/webview/i18n/**/*", "node_modules"],
+  "files": [
+    "src/webview/components/Chevron.tsx",
+    "src/webview/components/MetaKindIcon.tsx",
+    "src/webview/components/metadataKindIcons.ts"
+  ]
+}
