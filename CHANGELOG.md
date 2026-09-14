@@ -5,6 +5,22 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.62 - 2026-09-14
+
+### Docs
+
+- Fixed a metadata-cache doc contradiction: `limitations.md` (all three
+  locales) wrongly said the cache is not automatically compared against the
+  XML export; it is, matching `metadata.md`.
+- `hover-and-completion.md` (all three locales) no longer promises a field's
+  type in hover — only autocomplete shows it today.
+- Reworded ADR 0004's round-trip contract to match what
+  `corpusRegression.test.ts` actually asserts: output is compared against the
+  oracle's canonical `query_text`, not literal input-text equality.
+- `architecture.md` now lists the `src/core/semantic` module.
+- Excluded `docs/design/**` from the packaged VSIX and linked it from the
+  roadmap so it's no longer an orphaned, unreachable doc page.
+
 ## 0.1.61 - 2026-09-14
 
 ### Fixed
