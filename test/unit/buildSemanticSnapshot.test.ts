@@ -6,6 +6,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { buildSemanticSnapshotFromText } from '../../src/core/semantic/buildSemanticSnapshot';
+import { parseBatch } from '../../src/core/query/sdblParser';
+import { tryParseBatch } from '../../src/core/query/validateBatch';
 
 describe('buildSemanticSnapshotFromText', () => {
   it("a cleanly-parseable query yields completeness 'complete' with the real model", () => {
@@ -83,5 +85,52 @@ describe('buildSemanticSnapshotFromText', () => {
     for (const text of inputs) {
       expect(() => buildSemanticSnapshotFromText(1, text)).not.toThrow();
     }
+  });
+});
+
+/**
+ * Strict/tolerant boundary (architectural debt review, 2026-09-14): the tolerant
+ * snapshot builder above internally calls the SAME `parseBatch` that Apply's
+ * strict path (`tryParseBatch`/`validateBatchText`) uses — on a REWRITTEN
+ * (`repairSelectListsForRecovery`) copy of the text, and `parseDocument` keeps
+ * module-level parser state (`sourceResolver`, see the P0 regression fixed the
+ * same day this test was added — a nested `parseDocument` call that forgot to
+ * thread it corrupted an unrelated sibling query). These tests lock in that
+ * running the tolerant path — on broken input, with its own resolver — can
+ * never leak into a SEPARATE, later strict `parseBatch` call: neither the
+ * repaired TEXT, nor any resolver used to build the tolerant snapshot.
+ */
+describe('strict/tolerant boundary: buildSemanticSnapshotFromText never affects a later, separate parseBatch', () => {
+  const BROKEN = 'ВЫБРАТЬ Т.Поле1 Т.Поле2 ИЗ Справочник.Валюты КАК Т ГДЕ Т.Поле1 = 1'; // missing comma
+
+  it('building a tolerant/recovered snapshot for broken text does not make a later strict parse of the SAME text succeed', () => {
+    expect(tryParseBatch(BROKEN).ok).toBe(false);
+    const snapshot = buildSemanticSnapshotFromText(1, BROKEN);
+    expect(snapshot.completeness).toBe('recovered');
+    // Apply's own strict check, run AFTER the tolerant path, must fail exactly
+    // as before — the repaired text must never leak back as if it were real.
+    expect(tryParseBatch(BROKEN).ok).toBe(false);
+  });
+
+  it('a resolver used only for a broken/tolerant snapshot does not leak into an unrelated, later strict parseBatch call', () => {
+    // Probe query depends on the same module-level sourceResolver the P0 fix
+    // addressed: the shorthand membership-subquery form needs a resolver that
+    // recognizes the temp table to synthesize its `ИЗ`.
+    const tempResolver = {
+      tableByFullName: (full: string) =>
+        full === 'ВТ' ? { kind: 'РегистрСведений' as const, name: 'ВТ', fullName: 'ВТ', fields: [] } : undefined,
+    };
+    const probe = 'ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код В (ВЫБРАТЬ ВТ.Код)';
+
+    // A DIFFERENT resolver (knows nothing about "ВТ") feeds the tolerant path.
+    const unrelatedResolver = { tableByFullName: () => undefined };
+    buildSemanticSnapshotFromText(1, BROKEN, unrelatedResolver);
+
+    // The probe, parsed strictly with ITS OWN resolver right after, must still
+    // resolve "ВТ" correctly — unaffected by whichever resolver (or none) the
+    // tolerant call above used internally.
+    const batch = parseBatch(probe, tempResolver);
+    const cond = (batch.members[0].members[0].model.conditions![0] as any);
+    expect(cond.subquery.members[0].model.tables).toEqual([{ id: 't0', fullName: 'ВТ', alias: 'ВТ' }]);
   });
 });
