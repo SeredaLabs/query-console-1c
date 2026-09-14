@@ -5,6 +5,14 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.59 - 2026-09-14
+
+### Fixed
+
+- Hovering right after a `&Параметр` reference (the cursor position
+  immediately following the token, e.g. on the following space or operator)
+  no longer incorrectly showed it as a query parameter.
+
 ## 0.1.58 - 2026-09-14
 
 ### Fixed
