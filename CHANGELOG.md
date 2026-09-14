@@ -5,6 +5,14 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.57 - 2026-09-14
+
+### Added
+
+- Hovering over any `&Параметр` reference in a query now shows it as a query
+  parameter, even outside a virtual-table argument position. Typing `&` also
+  suggests parameter names already used elsewhere in the same query.
+
 ## 0.1.56 - 2026-09-14
 
 ### Fixed
