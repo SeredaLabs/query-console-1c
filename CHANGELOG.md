@@ -5,6 +5,17 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.67 - 2026-09-17
+
+### Fixed
+
+- The new batch-tab hover card (0.1.66) was rendered in the DOM for every
+  side tab at once, unpositioned until hover — with several batch queries
+  this piled up as overlapping cards in an arbitrary spot on screen. The
+  card now mounts only for the hovered/focused tab, and its position is
+  clamped to the window bounds (flipping to the other side of the tab when
+  there isn't room) so it always renders fully visible.
+
 ## 0.1.66 - 2026-09-17
 
 ### Changed

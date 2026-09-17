@@ -45,15 +45,43 @@ function Tab({ info, index, isActive, onSelect }: {
   const btnRef = React.useRef<HTMLButtonElement>(null);
   const cardRef = React.useRef<HTMLDivElement>(null);
   const isTemp = info.queryType !== 'select';
+  // Картка існує в DOM лише під час наведення/фокуса — інакше кожна з N вкладок
+  // одночасно рендерила б свою картку без left/top (fixed без офсетів лягає в
+  // «статичну» позицію браузера), і всі N карток накладалися б в одному місці.
+  // `anchor` — координати кнопки в момент показу; `pos` — фінальна, притиснута
+  // до меж вікна позиція картки, порахована ПІСЛЯ монтування за її реальним
+  // розміром (довжина імені через camelBreak() непередбачувано впливає на
+  // висоту). До готовності `pos` картка невидима (visibility), щоб не
+  // блимнути в неправильному місці.
+  const [anchor, setAnchor] = React.useState<{ left: number; top: number; height: number } | null>(null);
+  const [pos, setPos] = React.useState<{ left: number; top: number } | null>(null);
 
-  function position(): void {
+  function show(): void {
     const btn = btnRef.current;
-    const card = cardRef.current;
-    if (!btn || !card) return;
+    if (!btn) return;
     const r = btn.getBoundingClientRect();
-    card.style.left = `${r.left - CARD_WIDTH - 8}px`;
-    card.style.top = `${Math.max(8, r.top + r.height / 2 - 60)}px`;
+    setAnchor({ left: r.left, top: r.top, height: r.height });
+    setPos(null);
   }
+  function hide(): void {
+    setAnchor(null);
+    setPos(null);
+  }
+
+  React.useLayoutEffect(() => {
+    if (!anchor || !cardRef.current) return;
+    const cardHeight = cardRef.current.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    // Зазвичай зліва від вкладки (смуга — на правому краю вікна); якщо зліва
+    // не вистачає місця (вузьке вікно) — перевертаємо праворуч від вкладки.
+    let left = anchor.left - CARD_WIDTH - 8;
+    if (left < 8) left = anchor.left + 24;
+    left = Math.max(8, Math.min(left, vw - CARD_WIDTH - 8));
+    let top = anchor.top + anchor.height / 2 - cardHeight / 2;
+    top = Math.max(8, Math.min(top, vh - cardHeight - 8));
+    setPos({ left, top });
+  }, [anchor]);
 
   return (
     <button
@@ -62,8 +90,10 @@ function Tab({ info, index, isActive, onSelect }: {
       data-testid="side-tab"
       data-active={isActive || undefined}
       onClick={onSelect}
-      onMouseEnter={position}
-      onFocus={position}
+      onMouseEnter={show}
+      onMouseLeave={hide}
+      onFocus={show}
+      onBlur={hide}
       style={{
         all: 'unset', boxSizing: 'border-box', position: 'relative', width: '100%',
         display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -81,11 +111,14 @@ function Tab({ info, index, isActive, onSelect }: {
         background: isTemp ? 'var(--vscode-charts-purple, #b180d7)' : 'var(--vscode-descriptionForeground, #8b8b8b)',
       }} />
       {index + 1}
+      {anchor && (
       <div
         ref={cardRef}
         className="qc-side-tab-card"
         style={{
           position: 'fixed', width: CARD_WIDTH,
+          left: pos ? pos.left : anchor.left, top: pos ? pos.top : anchor.top,
+          visibility: pos ? 'visible' : 'hidden',
           background: 'var(--vscode-editor-background, #1e1e1e)',
           border: '1px solid var(--qc-border)', borderRadius: 5,
           boxShadow: '0 6px 20px rgba(0,0,0,0.45)', padding: '10px 12px',
@@ -110,6 +143,7 @@ function Tab({ info, index, isActive, onSelect }: {
           {info.memberCount > 1 && <Row label={t('sideTabs.memberCount')} value={info.memberCount} />}
         </div>
       </div>
+      )}
     </button>
   );
 }

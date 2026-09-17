@@ -761,6 +761,40 @@ test.describe('Query Constructor Webview', () => {
     expect(overflow).toBe('auto');
   });
 
+  // Регрессия: карточка с подсказкой раньше рендерилась в DOM для КАЖДОЙ
+  // вкладки сразу (просто без left/top до наведения), из-за чего N вкладок
+  // давали N наложенных друг на друга карточек в случайном месте экрана.
+  test('боковой стрип пакета: карточка-подсказка видна только при наведении, и только одна за раз', async ({ page }) => {
+    await page.goto(BASE);
+    await page.locator('[data-testid="tabsbar"] [data-tab="Пакет запросов"]').click();
+    await page.locator('button[title="Добавить"]').click();
+    await page.locator('button[title="Добавить"]').click();
+    await page.locator('[data-testid="tabsbar"] [data-tab="Таблицы и поля"]').click();
+
+    // Без наведения — ни одной карточки в DOM.
+    await expect(page.locator('.qc-side-tab-card')).toHaveCount(0);
+
+    // При наведении на одну вкладку — ровно одна карточка, и она внутри окна.
+    const tabs = page.locator('[data-testid="side-strip"] [data-testid="side-tab"]');
+    await tabs.nth(1).hover();
+    const card = page.locator('.qc-side-tab-card');
+    await expect(card).toHaveCount(1);
+    const box = await card.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    if (box && viewport) {
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+      expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+    }
+
+    // Уводим курсор — карточка снова пропадает из DOM.
+    await page.locator('[data-testid="tabsbar"] [data-tab="Таблицы и поля"]').hover();
+    await expect(page.locator('.qc-side-tab-card')).toHaveCount(0);
+  });
+
   test('#ВТ: открытие из текста показывает имя с # в окне ВТ', async ({ page }) => {
     await page.goto(BASE);
     const TEXT =
