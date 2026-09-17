@@ -5,6 +5,15 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.66 - 2026-09-17
+
+### Changed
+
+- The batch query designer's side tab strip no longer rotates long temp-table
+  names sideways (`writingMode: vertical-rl`). Each batch query is now a
+  compact numbered tab with a type dot; hovering shows the full name, query
+  type, and field/table/condition counts.
+
 ## 0.1.65 - 2026-09-14
 
 ### Internal
