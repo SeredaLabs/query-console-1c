@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { createPanel } from './panel';
+import { createCanvasPanel } from './canvasPanel';
+import { isCanvasPreviewEnabled } from './canvasPreview';
 import { resolveCfPath } from './resolveCfPath';
 import { registerParseCommand } from './parseCommand';
 import { planQueryConstructor, type OpenPlan } from './queryConstructorPlan';
@@ -97,6 +99,18 @@ async function runQueryConstructorCommand(context: vscode.ExtensionContext, resu
 }
 
 /**
+ * Команда «New Builder (Preview)» (.claude/new_builder_roadmap.md). На відміну
+ * від `runQueryConstructorCommand`, НЕ шукає запит під курсором — Structure/
+ * Fields ще не реалізовані, відкривати shell доречно незалежно від активного
+ * редактора. Phase 2 додає резолв cfPath (та сама `resolveCfPathWithLogging`,
+ * що й Classic-команди) — Sidebar-метадані потребують знати, звідки вантажити.
+ */
+function runQueryConstructorCanvasCommand(context: vscode.ExtensionContext): void {
+  const cfPath = resolveCfPathWithLogging();
+  createCanvasPanel(context, cfPath, outputChannel);
+}
+
+/**
  * Обработчик command-ссылки из hover (`queryHoverProvider.ts`'s `genericHint`) —
  * офсет всегда указывает на уже найденный `findQueryAt`-хит, поэтому `plan.kind`
  * здесь всегда должен быть `'open'`; ветка `'prompt'` — защитный no-op на случай
@@ -119,6 +133,10 @@ async function openConstructorFromRange(
 
 export function activate(context: vscode.ExtensionContext): void {
   outputChannel = vscode.window.createOutputChannel('1C Query Constructor');
+
+  const cmdCanvas = vscode.commands.registerCommand('1c.queryConstructorCanvas', () =>
+    runQueryConstructorCanvasCommand(context)
+  );
 
   const cmd = vscode.commands.registerCommand('1c.queryConstructor', () =>
     runQueryConstructorCommand(context, false)
@@ -144,12 +162,19 @@ export function activate(context: vscode.ExtensionContext): void {
     cmd,
     cmdWithResult,
     cmdOpenFromRange,
+    cmdCanvas,
     hoverProvider,
     completionProvider,
     registerParseCommand(context, outputChannel),
     registerQueryDiagnostics(),
     outputChannel
   );
+
+  // This only affects the Extension Development Host; release builds expose
+  // Canvas through the explicit experimental setting in package.json.
+  if (isCanvasPreviewEnabled(context.extensionMode === vscode.ExtensionMode.Development)) {
+    void vscode.commands.executeCommand('1c.queryConstructorCanvas');
+  }
 }
 
 export function deactivate(): void {}

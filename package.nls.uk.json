@@ -4,6 +4,7 @@
   "commands.category": "1C",
   "commands.queryConstructor.title": "Лише текст запиту",
   "commands.queryConstructorWithResult.title": "З кодом обробки результату",
+  "commands.queryConstructorCanvas.title": "Новий конструктор (Preview)",
   "commands.parseMetadata.title": "1С: Перебудувати індекс метаданих",
   "menus.queryConstructor.label": "1C: Конструктор запитів",
   "configuration.title": "Query Console 1C",
@@ -11,5 +12,6 @@
   "configuration.parserOutputPath.description": "Каталог для згенерованих файлів метаданих. Відносні шляхи обчислюються від кореня робочої області.",
   "configuration.openInNewWindow.description": "Переміщувати Конструктор запитів в окреме вікно VS Code замість поточного вікна.",
   "configuration.queryTextEditorV2.description": "Увімкнути експериментальне вікно Query Text v2 з панеллю інструментів, структурою, параметрами та перевіркою.",
-  "configuration.queryDiagnosticsEnabled.description": "Показувати попередження на літералі тексту запиту, який не може розібрати Конструктор запитів. Вимкніть, якщо це дає хибні спрацювання для запитів, зібраних конкатенацією рядків."
+  "configuration.queryDiagnosticsEnabled.description": "Показувати попередження на літералі тексту запиту, який не може розібрати Конструктор запитів. Вимкніть, якщо це дає хибні спрацювання для запитів, зібраних конкатенацією рядків.",
+  "configuration.enableNewBuilderPreview.description": "Показувати команду «Новий конструктор (Preview)». Цей візуальний інтерфейс ще розробляється і типово вимкнений."
 }
