@@ -24,7 +24,6 @@ out/**/*.map
 out/cli/**
 out/test-integration/**
 out/corpus-verify/**
-out/canvas-preview-extension/**
 bench/**
 .env
 .env.*

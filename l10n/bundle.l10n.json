@@ -42,5 +42,7 @@
   "**{name}** — query parameter": "**{name}** — query parameter",
   "Open in Query Designer": "Open in Query Designer",
   "[1C Query] Completion: metadata unavailable: {error}": "[1C Query] Completion: metadata unavailable: {error}",
-  "Query Designer cannot parse this query: {error}": "Query Designer cannot parse this query: {error}"
+  "Query Designer cannot parse this query: {error}": "Query Designer cannot parse this query: {error}",
+  "1C: Query Builder (Preview)": "1C: Query Builder (Preview)",
+  "[1C Query] New Builder (Preview) panel opened.": "[1C Query] New Builder (Preview) panel opened."
 }

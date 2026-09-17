@@ -5,6 +5,19 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.70 - 2026-09-17
+
+### Added
+
+- Added the experimental Canvas-based New Builder. It remains disabled by
+  default; enable `queryConsole.enableNewBuilderPreview` to show its command
+  in Command Palette. The stable Classic Constructor remains unchanged.
+
+### Changed
+
+- Localized the native New Builder panel title and its Output Channel entry
+  for English, Ukrainian, and Russian VS Code display languages.
+
 ## 0.1.69 - 2026-09-17
 
 ### Changed

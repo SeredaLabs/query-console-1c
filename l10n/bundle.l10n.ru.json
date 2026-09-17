@@ -42,5 +42,7 @@
   "**{name}** — query parameter": "**{name}** — параметр запроса",
   "Open in Query Designer": "Открыть в конструкторе запросов",
   "[1C Query] Completion: metadata unavailable: {error}": "[1C Query] Автодополнение: метаданные недоступны: {error}",
-  "Query Designer cannot parse this query: {error}": "Конструктор запросов не может разобрать этот запрос: {error}"
+  "Query Designer cannot parse this query: {error}": "Конструктор запросов не может разобрать этот запрос: {error}",
+  "1C: Query Builder (Preview)": "1C: Новый конструктор (Preview)",
+  "[1C Query] New Builder (Preview) panel opened.": "[1C Query] Открыта панель «Новый конструктор (Preview)»."
 }

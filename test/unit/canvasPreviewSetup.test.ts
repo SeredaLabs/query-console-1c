@@ -16,6 +16,11 @@ const launchJson = JSON.parse(fs.readFileSync(path.join(root, '.vscode/launch.js
   configurations: Array<{ env?: Record<string, string> }>;
 };
 const vscodeIgnore = fs.readFileSync(path.join(root, '.vscodeignore'), 'utf8');
+const runtimeBundles = [
+  'l10n/bundle.l10n.json',
+  'l10n/bundle.l10n.uk.json',
+  'l10n/bundle.l10n.ru.json',
+].map(file => JSON.parse(fs.readFileSync(path.join(root, file), 'utf8')) as Record<string, string>);
 
 describe('Canvas preview setup', () => {
   it('only enables automatic preview in an opted-in Extension Development Host', () => {
@@ -29,7 +34,13 @@ describe('Canvas preview setup', () => {
     expect(packageJson.scripts.typecheck).toContain('typecheck:canvas');
     expect(packageJson.scripts['preview:canvas']).toContain('QUERY_CONSOLE_CANVAS_PREVIEW=1');
     expect(vscodeIgnore).not.toContain('out/webview/canvasApp.js');
-    expect(vscodeIgnore).toContain('out/canvas-preview-extension/**');
+  });
+
+  it('localizes native Canvas panel strings in every supported locale', () => {
+    for (const bundle of runtimeBundles) {
+      expect(bundle).toHaveProperty('1C: Query Builder (Preview)');
+      expect(bundle).toHaveProperty('[1C Query] New Builder (Preview) panel opened.');
+    }
   });
 
   it('hides New Builder until its experimental setting is enabled', () => {
