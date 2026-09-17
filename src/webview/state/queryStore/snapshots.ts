@@ -117,15 +117,50 @@ export function restoreBatch(state: QueryState, snap: BatchSnapshot | null): Par
   return { queryList: snap.queryList, activeQuery: snap.activeQuery, savedQueries, ...restoreSaved(state, snap.savedQueries[snap.activeQuery]) };
 }
 
-/** Производное имя запроса пакета по первому участнику объединения его документа. */
-export function batchMemberName(state: QueryState, i: number): string {
-  const first = i === state.activeBatch
+/**
+ * Сводка запроса пакета для бокової смуги вкладок (`ConstructorView.tsx`'s
+ * `sideTabsStrip`) — ім'я + все, що можна показати в підказці без нового
+ * обчислення: тип, кількість вибраних полів/джерел/умов і кількість учасників
+ * ОБЪЕДИНЕНИЯ. Усі лічильники — з ПЕРШОГО учасника документа, тим самим
+ * принципом, що й саме ім'я нижче (див. коментар `batchMemberName`).
+ */
+export interface BatchMemberInfo {
+  name: string;
+  queryType: QueryType;
+  fieldsCount: number;
+  tablesCount: number;
+  conditionsCount: number;
+  /** Кількість учасників ОБЪЕДИНЕНИЯ в цьому запиті пакета (>1, якщо є). */
+  memberCount: number;
+}
+
+export function batchMemberInfo(state: QueryState, i: number): BatchMemberInfo {
+  const isActive = i === state.activeBatch;
+  const first = isActive
     ? (state.activeQuery === 0 ? snapshotActive(state) : state.savedQueries[0]!)
     : state.batchSaved[i]!.savedQueries[0];
-  const model = buildModelFromFlat(first);
-  if ((model.queryType === 'createTemp' || model.queryType === 'appendTemp') && model.tempTableName) return model.tempTableName;
-  if (model.queryType === 'dropTemp') return `- ${model.tempTableName}`;
-  return `Запрос пакета ${i + 1}`;
+  const memberCount = isActive ? state.queryList.length : state.batchSaved[i]!.queryList.length;
+  // Пряме читання з `SavedQuery` (не через `buildModelFromFlat`): усі поля тут
+  // обов'язкові (на відміну від опціональних `QueryModel.queryType`/`.conditions`,
+  // призначених для інших сценаріїв), тож зайвого приведення типів не треба.
+  const name = (first.queryType === 'createTemp' || first.queryType === 'appendTemp') && first.tempTableName
+    ? first.tempTableName
+    : first.queryType === 'dropTemp'
+      ? `- ${first.tempTableName}`
+      : `Запрос пакета ${i + 1}`;
+  return {
+    name,
+    queryType: first.queryType,
+    fieldsCount: first.selectedFields.length,
+    tablesCount: first.selectedTables.length,
+    conditionsCount: first.conditions.length,
+    memberCount,
+  };
+}
+
+/** Производное имя запроса пакета по первому участнику объединения его документа. */
+export function batchMemberName(state: QueryState, i: number): string {
+  return batchMemberInfo(state, i).name;
 }
 
 /**

@@ -785,8 +785,9 @@ test.describe('Query Constructor Webview', () => {
     // На первом запросе (врем) группы «Временные таблицы» ещё нет.
     await expect(page.locator('[data-testid="temp-tables-group"]')).toHaveCount(0);
 
-    // Переключаемся на запрос «врем1» (боковая полоса пакета).
-    await page.locator('[data-testid="side-strip"] >> text=врем1').click();
+    // Переключаемся на запрос «врем1» (боковая полоса пакета: только номера,
+    // имя — во всплывающей подсказке; второй пакетный запрос — индекс 1).
+    await page.locator('[data-testid="side-strip"] [data-testid="side-tab"]').nth(1).click();
 
     // Группа появилась; раскрываем — видна `врем`.
     const group = page.locator('[data-testid="temp-tables-group"]');
@@ -823,12 +824,12 @@ test.describe('Query Constructor Webview', () => {
     await expect(page.locator('[data-union-query="Запрос 1"]')).toBeVisible();
     await expect(page.locator('[data-union-query="Запрос 2"]')).toBeVisible();
 
-    // Переключаемся на 2-й запрос пакета (1 участник) — полоса участников исчезает.
-    await page.locator('[data-testid="side-strip"] >> text=Запрос пакета 2').click();
+    // Переключаемся на 2-й запрос пакета (1 участник, индекс 1) — полоса участников исчезает.
+    await page.locator('[data-testid="side-strip"] [data-testid="side-tab"]').nth(1).click();
     await expect(page.locator('[data-testid="union-strip"]')).toHaveCount(0);
 
-    // Назад на «Пакет1» — полоса участников снова видна.
-    await page.locator('[data-testid="side-strip"] >> text=Пакет1').click();
+    // Назад на «Пакет1» (индекс 0) — полоса участников снова видна.
+    await page.locator('[data-testid="side-strip"] [data-testid="side-tab"]').nth(0).click();
     await expect(page.locator('[data-testid="union-strip"]')).toBeVisible();
   });
 

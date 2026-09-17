@@ -9,6 +9,7 @@ import {
   snapshotActiveBatch,
   restoreBatch,
   batchMemberName,
+  batchMemberInfo,
   assembleBatch,
   metadataCatalogRef,
 } from '../../src/webview/state/queryStore';
@@ -1370,6 +1371,46 @@ describe('queryStore — пакет запросов (batch, фаза 5.8)', () 
       s = reducer(s, { type: 'ADD_BATCH_QUERY' }); // пакет 1 (активен, обычный)
       expect(batchMemberName(s, 0)).toBe('ВТ_Первый');
       expect(batchMemberName(s, 1)).toBe('Запрос пакета 2');
+    });
+  });
+
+  describe('batchMemberInfo', () => {
+    it('пустой обычный запрос → нулевые счётчики, queryType select, memberCount 1', () => {
+      const s = initialState();
+      expect(batchMemberInfo(s, 0)).toEqual({
+        name: 'Запрос пакета 1', queryType: 'select', fieldsCount: 0, tablesCount: 0, conditionsCount: 0, memberCount: 1,
+      });
+    });
+
+    it('считает выбранные поля, таблицы и условия активного запроса', () => {
+      let s = withField(initialState(), 'Справочник.Валюты', 'Код');
+      const tableId = s.selectedTables[0]!.id;
+      s = reducer(s, { type: 'ADD_CONDITION', tableId, path: 'Код' });
+      const info = batchMemberInfo(s, 0);
+      expect(info.fieldsCount).toBe(1);
+      expect(info.tablesCount).toBe(1);
+      expect(info.conditionsCount).toBe(1);
+    });
+
+    it('memberCount = число участников ОБЪЕДИНЕНИЯ активного запроса', () => {
+      let s = withField(initialState(), 'Справочник.Валюты', 'Код');
+      s = reducer(s, { type: 'ADD_QUERY' });
+      expect(batchMemberInfo(s, 0).memberCount).toBe(2);
+    });
+
+    it('createTemp с именем ВТ → имя и тип совпадают с batchMemberName', () => {
+      let s = reducer(initialState(), { type: 'SET_QUERY_TYPE', queryType: 'createTemp' });
+      s = reducer(s, { type: 'SET_TEMP_TABLE_NAME', name: 'ВТ_Курсы' });
+      const info = batchMemberInfo(s, 0);
+      expect(info.name).toBe('ВТ_Курсы');
+      expect(info.queryType).toBe('createTemp');
+    });
+
+    it('счётчики неактивного запроса пакета берутся из его снимка, а не из активного', () => {
+      let s = withField(initialState(), 'Справочник.Валюты', 'Код'); // пакет 0: 1 поле
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' }); // пакет 1 (активен, пустой)
+      expect(batchMemberInfo(s, 0).fieldsCount).toBe(1);
+      expect(batchMemberInfo(s, 1).fieldsCount).toBe(0);
     });
   });
 

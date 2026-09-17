@@ -9,6 +9,7 @@ import {
   assembleBatch,
   assembleMembers,
   availableTempTables,
+  batchMemberInfo,
   batchMemberName,
   buildModelFromFlat,
   docToSnapshot,
@@ -21,12 +22,14 @@ import {
   stripBatchComments,
   stripFieldComments,
   tempTableDialogInitial,
+  type BatchMemberInfo,
 } from './queryStore/snapshots';
 
 export {
   assembleBatch,
   assembleMembers,
   availableTempTables,
+  batchMemberInfo,
   batchMemberName,
   buildModelFromFlat,
   docToSnapshot,
@@ -38,6 +41,7 @@ export {
   stripBatchComments,
   tempTableDialogInitial,
 };
+export type { BatchMemberInfo };
 
 /** Метаданные одного запроса-участника объединения. */
 export interface QueryMeta {

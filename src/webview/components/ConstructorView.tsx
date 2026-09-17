@@ -27,7 +27,8 @@ import type { MetaField, MetaTable } from '../../core/metadata/types';
 import type { RefId } from '../../shared/messages';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import type { QueryState, QueryAction } from '../state/queryStore';
-import { assembleMembers, batchMemberName, initialState, reducer, tempTableDialogInitial, availableTempTables, allTables, metadataCatalogRef } from '../state/queryStore';
+import { assembleMembers, batchMemberInfo, initialState, reducer, tempTableDialogInitial, availableTempTables, allTables, metadataCatalogRef } from '../state/queryStore';
+import { SideTabsRail } from './SideTabsRail';
 import { computeBatchTextSafe } from '../computeBatchText';
 import { deriveUnionColumns } from '../../core/query/unionModel';
 import type { QueryDocument } from '../../core/query/unionModel';
@@ -200,8 +201,10 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   const members = useMemo(() => assembleMembers(state), [state]);
   const unionColumns = useMemo(() => deriveUnionColumns(members), [members]);
 
-  // Имена запросов пакета — для вкладки «Пакет запросов» и боковой полосы.
-  const batchNames = useMemo(() => state.batchSaved.map((_, i) => batchMemberName(state, i)), [state]);
+  // Сводки запросов пакета (имя + тип + счётчики) — для вкладки «Пакет запросов»
+  // (только имена) и боковой полосы SideTabsRail (полная карточка по наведению).
+  const batchInfos = useMemo(() => state.batchSaved.map((_, i) => batchMemberInfo(state, i)), [state]);
+  const batchNames = useMemo(() => batchInfos.map(info => info.name), [batchInfos]);
 
   // Видимые вкладки: «Связи» — сразу после «Таблицы и поля» и только при > 1 таблице.
   // При типе dropTemp видны только «Дополнительно» и «Пакет запросов».
@@ -250,38 +253,17 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   }, [finalTabs, activeTab]);
 
   // Вертикальная полоса боковых вкладок запросов пакета (только если запросов
-  // пакета > 1 и активна не сама вкладка «Пакет запросов»).
+  // пакета > 1 и активна не сама вкладка «Пакет запросов»). Компактные номера
+  // с крапкой типа замінили колишній writingMode:'vertical-rl' — довгі
+  // ідентифікатори ВТ там доводилось читати, повернувши голову вбік.
   const showSideTabs = state.batchSaved.length > 1 && activeTab !== 'Пакет запросов';
   const sideTabsStrip = showSideTabs ? (
-    <div data-testid="side-strip" style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', maxHeight: '100%', borderLeft: '1px solid var(--qc-border)', background: 'var(--vscode-editorGroupHeader-tabsBackground, #252526)' }}>
-      {state.batchSaved.map((_, i) => {
-        const name = batchNames[i];
-        const isActive = i === state.activeBatch;
-        return (
-          <div
-            key={i}
-            className="qc-side-tab"
-            onClick={() => dispatch({ type: 'SET_ACTIVE_BATCH', index: i })}
-            title={name}
-            style={{
-              writingMode: 'vertical-rl',
-              flexShrink: 0,
-              padding: '14px 7px',
-              cursor: 'pointer',
-              letterSpacing: 0.3,
-              borderLeft: isActive ? '2px solid var(--vscode-focusBorder, #007fd4)' : '2px solid transparent',
-              color: isActive ? 'var(--vscode-tab-activeForeground, #fff)' : 'var(--vscode-descriptionForeground, #aaa)',
-              background: isActive ? 'var(--vscode-tab-activeBackground, #1e1e1e)' : undefined,
-              fontWeight: isActive ? 600 : 400,
-              fontSize: 13,
-              userSelect: 'none',
-            }}
-          >
-            {name}
-          </div>
-        );
-      })}
-    </div>
+    <SideTabsRail
+      testId="side-strip"
+      items={batchInfos}
+      active={state.activeBatch}
+      onSelect={i => dispatch({ type: 'SET_ACTIVE_BATCH', index: i })}
+    />
   ) : null;
 
   // Вертикальная полоса участников ОБЪЕДИНЕНИЯ активного запроса (если их > 1). В 1С

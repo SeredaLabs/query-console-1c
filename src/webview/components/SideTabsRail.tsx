@@ -1,0 +1,142 @@
+import * as React from 'react';
+import type { QueryType } from '../../core/query/queryModel';
+import type { BatchMemberInfo } from '../state/queryStore';
+import { t, type MessageKey } from '../i18n';
+
+/**
+ * Бокова вертикальна смуга вкладок запитів пакета (замінює колишній
+ * `writingMode: 'vertical-rl'` варіант — обертати довгі 1С-ідентифікатори
+ * ВТ (типу `ВТОстаткиТоваровПоСкладамНаКонецПериода`) на бік було нечитабельно).
+ * Компактні номери з кольоровою крапкою типу завжди видно; повна назва +
+ * деталі — у картці по наведенню/фокусу.
+ */
+
+interface SideTabsRailProps {
+  items: BatchMemberInfo[];
+  active: number;
+  onSelect: (index: number) => void;
+  testId?: string;
+}
+
+const TYPE_LABEL: Record<QueryType, MessageKey> = {
+  select: 'sideTabs.type.select',
+  createTemp: 'sideTabs.type.createTemp',
+  appendTemp: 'sideTabs.type.appendTemp',
+  dropTemp: 'sideTabs.type.dropTemp',
+};
+
+const CARD_WIDTH = 236;
+
+/**
+ * Вставляє zero-width space на межах PascalCase (наприклад, у
+ * `ВТОстаткиТоваровПоСкладам`), щоб довгий ідентифікатор без пробілів
+ * переносився в підказці по «словах», а не посеред слова.
+ */
+function camelBreak(name: string): string {
+  return name.replace(/([а-яёa-z])([А-ЯЁA-Z])/g, '$1​$2');
+}
+
+function Tab({ info, index, isActive, onSelect }: {
+  info: BatchMemberInfo;
+  index: number;
+  isActive: boolean;
+  onSelect: () => void;
+}): React.ReactElement {
+  const btnRef = React.useRef<HTMLButtonElement>(null);
+  const cardRef = React.useRef<HTMLDivElement>(null);
+  const isTemp = info.queryType !== 'select';
+
+  function position(): void {
+    const btn = btnRef.current;
+    const card = cardRef.current;
+    if (!btn || !card) return;
+    const r = btn.getBoundingClientRect();
+    card.style.left = `${r.left - CARD_WIDTH - 8}px`;
+    card.style.top = `${Math.max(8, r.top + r.height / 2 - 60)}px`;
+  }
+
+  return (
+    <button
+      ref={btnRef}
+      className="qc-side-tab"
+      data-testid="side-tab"
+      data-active={isActive || undefined}
+      onClick={onSelect}
+      onMouseEnter={position}
+      onFocus={position}
+      style={{
+        all: 'unset', boxSizing: 'border-box', position: 'relative', width: '100%',
+        display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+        padding: '9px 0', cursor: 'pointer',
+        borderLeft: isActive ? '2px solid var(--vscode-focusBorder, #007fd4)' : '2px solid transparent',
+        color: isActive ? 'var(--vscode-tab-activeForeground, #fff)' : 'var(--vscode-descriptionForeground, #aaa)',
+        background: isActive ? 'var(--vscode-tab-activeBackground, #1e1e1e)' : undefined,
+        fontWeight: isActive ? 600 : 400,
+        fontFamily: 'var(--vscode-editor-font-family, monospace)',
+        fontSize: 12,
+      }}
+    >
+      <span style={{
+        width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+        background: isTemp ? 'var(--vscode-charts-purple, #b180d7)' : 'var(--vscode-descriptionForeground, #8b8b8b)',
+      }} />
+      {index + 1}
+      <div
+        ref={cardRef}
+        className="qc-side-tab-card"
+        style={{
+          position: 'fixed', width: CARD_WIDTH,
+          background: 'var(--vscode-editor-background, #1e1e1e)',
+          border: '1px solid var(--qc-border)', borderRadius: 5,
+          boxShadow: '0 6px 20px rgba(0,0,0,0.45)', padding: '10px 12px',
+          fontFamily: 'var(--vscode-font-family, sans-serif)', textAlign: 'left',
+          zIndex: 50, pointerEvents: 'none',
+        }}
+      >
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--vscode-tab-activeForeground, #fff)', lineHeight: 1.35, marginBottom: 6, overflowWrap: 'break-word' }}>
+          {camelBreak(info.name)}
+        </div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, color: 'var(--vscode-descriptionForeground, #8b8b8b)', marginBottom: 8 }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+            background: isTemp ? 'var(--vscode-charts-purple, #b180d7)' : 'var(--vscode-descriptionForeground, #8b8b8b)',
+          }} />
+          {t(TYPE_LABEL[info.queryType])}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <Row label={t('sideTabs.fieldsCount')} value={info.fieldsCount} />
+          <Row label={t('sideTabs.tablesCount')} value={info.tablesCount} />
+          <Row label={t('sideTabs.conditionsCount')} value={info.conditionsCount} />
+          {info.memberCount > 1 && <Row label={t('sideTabs.memberCount')} value={info.memberCount} />}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function Row({ label, value }: { label: string; value: number }): React.ReactElement {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 11.5, color: 'var(--vscode-descriptionForeground, #8b8b8b)' }}>
+      <span>{label}</span>
+      <b style={{ color: 'var(--vscode-tab-activeForeground, #fff)', fontFamily: 'var(--vscode-editor-font-family, monospace)', fontWeight: 500 }}>{value}</b>
+    </div>
+  );
+}
+
+export function SideTabsRail({ items, active, onSelect, testId }: SideTabsRailProps): React.ReactElement {
+  return (
+    <div
+      data-testid={testId}
+      style={{
+        display: 'flex', flexDirection: 'column', overflowY: 'auto', maxHeight: '100%',
+        borderLeft: '1px solid var(--qc-border)',
+        background: 'var(--vscode-editorGroupHeader-tabsBackground, #252526)',
+        flexShrink: 0, width: 40,
+      }}
+    >
+      {items.map((info, i) => (
+        <Tab key={i} info={info} index={i} isActive={i === active} onSelect={() => onSelect(i)} />
+      ))}
+    </div>
+  );
+}
