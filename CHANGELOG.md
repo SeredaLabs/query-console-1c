@@ -5,6 +5,14 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.68 - 2026-09-17
+
+### Changed
+
+- The batch-tab hover card now lists the selected field names (e.g. "Код,
+  Наименование, Ссылка") instead of just a field count, truncated to the
+  first 4 with a "+N" suffix when there are more.
+
 ## 0.1.67 - 2026-09-17
 
 ### Fixed

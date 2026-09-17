@@ -42,7 +42,7 @@
   "sideTabs.type.createTemp": "Створює тимчасову таблицю",
   "sideTabs.type.appendTemp": "Доповнює тимчасову таблицю",
   "sideTabs.type.dropTemp": "Видаляє тимчасову таблицю",
-  "sideTabs.fieldsCount": "Полів вибрано",
+  "sideTabs.fields": "Поля",
   "sideTabs.tablesCount": "Джерел",
   "sideTabs.conditionsCount": "Умов",
   "sideTabs.memberCount": "Учасників об'єднання",

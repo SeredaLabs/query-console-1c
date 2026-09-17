@@ -3,6 +3,14 @@ import type { QueryType } from '../../core/query/queryModel';
 import type { BatchMemberInfo } from '../state/queryStore';
 import { t, type MessageKey } from '../i18n';
 
+/** Компактний перелік назв полів: перші кілька + «+N», а не просто кількість. */
+const MAX_FIELD_NAMES = 4;
+function formatFieldNames(names: string[]): string {
+  if (names.length === 0) return t('common.noneSelected');
+  if (names.length <= MAX_FIELD_NAMES) return names.join(', ');
+  return `${names.slice(0, MAX_FIELD_NAMES).join(', ')} +${names.length - MAX_FIELD_NAMES}`;
+}
+
 /**
  * Бокова вертикальна смуга вкладок запитів пакета (замінює колишній
  * `writingMode: 'vertical-rl'` варіант — обертати довгі 1С-ідентифікатори
@@ -136,8 +144,13 @@ function Tab({ info, index, isActive, onSelect }: {
           }} />
           {t(TYPE_LABEL[info.queryType])}
         </div>
+        <div style={{ fontSize: 11, color: 'var(--vscode-descriptionForeground, #8b8b8b)', marginBottom: 8 }}>
+          <div style={{ marginBottom: 2 }}>{t('sideTabs.fields')}</div>
+          <div style={{ color: 'var(--vscode-tab-activeForeground, #fff)', fontFamily: 'var(--vscode-editor-font-family, monospace)', overflowWrap: 'break-word' }}>
+            {formatFieldNames(info.fieldNames)}
+          </div>
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <Row label={t('sideTabs.fieldsCount')} value={info.fieldsCount} />
           <Row label={t('sideTabs.tablesCount')} value={info.tablesCount} />
           <Row label={t('sideTabs.conditionsCount')} value={info.conditionsCount} />
           {info.memberCount > 1 && <Row label={t('sideTabs.memberCount')} value={info.memberCount} />}

@@ -1378,16 +1378,17 @@ describe('queryStore — пакет запросов (batch, фаза 5.8)', () 
     it('пустой обычный запрос → нулевые счётчики, queryType select, memberCount 1', () => {
       const s = initialState();
       expect(batchMemberInfo(s, 0)).toEqual({
-        name: 'Запрос пакета 1', queryType: 'select', fieldsCount: 0, tablesCount: 0, conditionsCount: 0, memberCount: 1,
+        name: 'Запрос пакета 1', queryType: 'select', fieldNames: [], tablesCount: 0, conditionsCount: 0, memberCount: 1,
       });
     });
 
-    it('считает выбранные поля, таблицы и условия активного запроса', () => {
+    it('перечисляет имена выбранных полей (а не только их число), считает таблицы и условия активного запроса', () => {
       let s = withField(initialState(), 'Справочник.Валюты', 'Код');
+      s = withField(s, 'Справочник.Валюты', 'Наименование');
       const tableId = s.selectedTables[0]!.id;
       s = reducer(s, { type: 'ADD_CONDITION', tableId, path: 'Код' });
       const info = batchMemberInfo(s, 0);
-      expect(info.fieldsCount).toBe(1);
+      expect(info.fieldNames).toEqual(['Код', 'Наименование']);
       expect(info.tablesCount).toBe(1);
       expect(info.conditionsCount).toBe(1);
     });
@@ -1406,11 +1407,11 @@ describe('queryStore — пакет запросов (batch, фаза 5.8)', () 
       expect(info.queryType).toBe('createTemp');
     });
 
-    it('счётчики неактивного запроса пакета берутся из его снимка, а не из активного', () => {
-      let s = withField(initialState(), 'Справочник.Валюты', 'Код'); // пакет 0: 1 поле
+    it('имена полей неактивного запроса пакета берутся из его снимка, а не из активного', () => {
+      let s = withField(initialState(), 'Справочник.Валюты', 'Код'); // пакет 0: поле «Код»
       s = reducer(s, { type: 'ADD_BATCH_QUERY' }); // пакет 1 (активен, пустой)
-      expect(batchMemberInfo(s, 0).fieldsCount).toBe(1);
-      expect(batchMemberInfo(s, 1).fieldsCount).toBe(0);
+      expect(batchMemberInfo(s, 0).fieldNames).toEqual(['Код']);
+      expect(batchMemberInfo(s, 1).fieldNames).toEqual([]);
     });
   });
 

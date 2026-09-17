@@ -120,14 +120,15 @@ export function restoreBatch(state: QueryState, snap: BatchSnapshot | null): Par
 /**
  * Сводка запроса пакета для бокової смуги вкладок (`ConstructorView.tsx`'s
  * `sideTabsStrip`) — ім'я + все, що можна показати в підказці без нового
- * обчислення: тип, кількість вибраних полів/джерел/умов і кількість учасників
- * ОБЪЕДИНЕНИЯ. Усі лічильники — з ПЕРШОГО учасника документа, тим самим
- * принципом, що й саме ім'я нижче (див. коментар `batchMemberName`).
+ * обчислення: тип, назви вибраних полів, кількість джерел/умов і кількість
+ * учасників ОБЪЕДИНЕНИЯ. Усі значення — з ПЕРШОГО учасника документа, тим
+ * самим принципом, що й саме ім'я нижче (див. коментар `batchMemberName`).
  */
 export interface BatchMemberInfo {
   name: string;
   queryType: QueryType;
-  fieldsCount: number;
+  /** Назви вибраних полів (алиас/вираз/останній сегмент шляху) — не лише к-сть. */
+  fieldNames: string[];
   tablesCount: number;
   conditionsCount: number;
   /** Кількість учасників ОБЪЕДИНЕНИЯ в цьому запиті пакета (>1, якщо є). */
@@ -151,7 +152,7 @@ export function batchMemberInfo(state: QueryState, i: number): BatchMemberInfo {
   return {
     name,
     queryType: first.queryType,
-    fieldsCount: first.selectedFields.length,
+    fieldNames: first.selectedFields.map(f => fieldAlias(f)),
     tablesCount: first.selectedTables.length,
     conditionsCount: first.conditions.length,
     memberCount,

@@ -42,7 +42,7 @@
   "sideTabs.type.createTemp": "Creates a temp table",
   "sideTabs.type.appendTemp": "Adds to a temp table",
   "sideTabs.type.dropTemp": "Drops a temp table",
-  "sideTabs.fieldsCount": "Fields selected",
+  "sideTabs.fields": "Fields",
   "sideTabs.tablesCount": "Sources",
   "sideTabs.conditionsCount": "Conditions",
   "sideTabs.memberCount": "Union members",
