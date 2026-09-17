@@ -1,5 +1,5 @@
 <!--
-source_version: 4
+source_version: 5
 translation_status: current
 -->
 
@@ -16,6 +16,7 @@ translation_status: current
 | `queryConsole.openInNewWindow` | `true` | Відкрити конструктор в окремому вікні VS Code |
 | `queryConsole.queryTextEditorV2` | `false` | Увімкнути експериментальний редактор v2 |
 | `queryConsole.queryDiagnosticsEnabled` | `true` | Попереджати про літерал запиту, який не розбирає конструктор |
+| `queryConsole.enableNewBuilderPreview` | `false` | Показати експериментальну команду Нового конструктора; новий візуальний інтерфейс ще розробляється |
 
 ## 🗺️ Область і шляхи
 

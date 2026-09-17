@@ -1,5 +1,5 @@
 <!--
-source_version: 2
+source_version: 3
 translation_status: canonical
 -->
 
@@ -48,6 +48,13 @@ connecting to a 1C database or executing the query.
 
 > ⚠️ **Important:** The result-processing option generates a BSL wrapper. The
 > extension does not connect to a 1C database or execute queries.
+
+## 🧪 Experimental New Builder
+
+The new visual constructor is still under development and is off by default.
+To test it, enable `queryConsole.enableNewBuilderPreview` in VS Code Settings,
+then run **1C: New Builder (Preview)** from Command Palette. It does not replace
+the stable Classic Constructor.
 
 ## 🗂️ Metadata setup
 

@@ -45,6 +45,11 @@
         "category": "%commands.category%"
       },
       {
+        "command": "1c.queryConstructorCanvas",
+        "title": "%commands.queryConstructorCanvas.title%",
+        "category": "%commands.category%"
+      },
+      {
         "command": "1c.parseMetadata",
         "title": "%commands.parseMetadata.title%"
       }
@@ -56,6 +61,12 @@
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "1c.queryConstructorCanvas",
+          "when": "config.queryConsole.enableNewBuilderPreview"
+        }
+      ],
       "editor/context": [
         {
           "submenu": "1c.queryConstructorSubmenu",
@@ -101,6 +112,11 @@
           "type": "boolean",
           "default": true,
           "description": "%configuration.queryDiagnosticsEnabled.description%"
+        },
+        "queryConsole.enableNewBuilderPreview": {
+          "type": "boolean",
+          "default": false,
+          "description": "%configuration.enableNewBuilderPreview.description%"
         }
       }
     }
@@ -109,7 +125,7 @@
     "vscode:prepublish": "npm run build",
     "setup": "bash tooling/setup/install.sh",
     "package": "vsce package --out query-console-1c.vsix",
-    "build": "npm run build:extension && npm run build:webview",
+    "build": "npm run build:extension && npm run build:webview && npm run build:canvas",
     "build:extension": "esbuild src/extension/extension.ts --bundle --outfile=out/extension/extension.js --platform=node --format=cjs --external:vscode --sourcemap",
     "build:cli": "esbuild src/cli/parseMetadata.ts --bundle --outfile=out/cli/parseMetadata.js --platform=node --format=cjs",
     "parse": "npm run build:cli && node out/cli/parseMetadata.js",
@@ -124,9 +140,11 @@
     "accept:oracle": "npm run build:oracle && node out/cli/oracleAcceptCli.js",
     "oracle:diff": "esbuild src/cli/oracleDiff.ts --bundle --outfile=out/cli/oracleDiff.js --platform=node --format=cjs && node out/cli/oracleDiff.js",
     "build:webview": "esbuild src/webview/main.tsx --bundle --outfile=out/webview/main.js --platform=browser --format=iife --loader:.tsx=tsx --loader:.ts=ts && node scripts/copy-files.mjs out/webview/ node_modules/@vscode/codicons/dist/codicon.css node_modules/@vscode/codicons/dist/codicon.ttf",
+    "build:canvas": "esbuild src/webview-canvas/main.tsx --bundle --outfile=out/webview/canvasApp.js --platform=browser --format=iife --loader:.tsx=tsx --loader:.ts=ts",
     "typecheck:extension": "tsc -p tsconfig.json --noEmit",
     "typecheck:webview": "tsc -p tsconfig.webview.json --noEmit",
-    "typecheck": "npm run typecheck:extension && npm run typecheck:webview",
+    "typecheck:canvas": "tsc -p tsconfig.webview-canvas.json --noEmit",
+    "typecheck": "npm run typecheck:extension && npm run typecheck:webview && npm run typecheck:canvas",
     "watch:extension": "tsc -p tsconfig.json --watch",
     "watch:webview": "npm run build:webview -- --watch",
     "test:unit": "vitest run",
@@ -142,6 +160,7 @@
     "corpus:scan-unsafe-vt": "esbuild src/cli/scanUnsafeVirtualTables.ts --bundle --outfile=out/cli/scanUnsafeVirtualTables.js --platform=node --format=cjs && node out/cli/scanUnsafeVirtualTables.js",
     "docs:check": "node scripts/validate-docs.mjs",
     "test": "npm run typecheck && npm run test:unit",
+    "preview:canvas": "npm run build && QUERY_CONSOLE_CANVAS_PREVIEW=1 code --extensionDevelopmentPath=.",
     "dev": "npm run build && code --extensionDevelopmentPath=."
   },
   "devDependencies": {

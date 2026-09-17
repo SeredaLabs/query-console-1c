@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { createPanel } from './panel';
 import { createCanvasPanel } from './canvasPanel';
+import { isCanvasPreviewEnabled } from './canvasPreview';
 import { resolveCfPath } from './resolveCfPath';
 import { registerParseCommand } from './parseCommand';
 import { planQueryConstructor, type OpenPlan } from './queryConstructorPlan';
@@ -133,6 +134,10 @@ async function openConstructorFromRange(
 export function activate(context: vscode.ExtensionContext): void {
   outputChannel = vscode.window.createOutputChannel('1C Query Constructor');
 
+  const cmdCanvas = vscode.commands.registerCommand('1c.queryConstructorCanvas', () =>
+    runQueryConstructorCanvasCommand(context)
+  );
+
   const cmd = vscode.commands.registerCommand('1c.queryConstructor', () =>
     runQueryConstructorCommand(context, false)
   );
@@ -141,9 +146,6 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   const cmdOpenFromRange = vscode.commands.registerCommand(OPEN_FROM_RANGE_COMMAND, (arg: { uri: string; offset: number }) =>
     openConstructorFromRange(context, arg)
-  );
-  const cmdCanvas = vscode.commands.registerCommand('1c.queryConstructorCanvas', () =>
-    runQueryConstructorCanvasCommand(context)
   );
   const hoverProvider = vscode.languages.registerHoverProvider(
     { pattern: '**/*.bsl' },
@@ -167,6 +169,12 @@ export function activate(context: vscode.ExtensionContext): void {
     registerQueryDiagnostics(),
     outputChannel
   );
+
+  // This only affects the Extension Development Host; release builds expose
+  // Canvas through the explicit experimental setting in package.json.
+  if (isCanvasPreviewEnabled(context.extensionMode === vscode.ExtensionMode.Development)) {
+    void vscode.commands.executeCommand('1c.queryConstructorCanvas');
+  }
 }
 
 export function deactivate(): void {}
