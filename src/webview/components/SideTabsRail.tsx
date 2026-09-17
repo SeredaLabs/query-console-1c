@@ -16,7 +16,9 @@ function formatFieldNames(names: string[]): string {
  * `writingMode: 'vertical-rl'` варіант — обертати довгі 1С-ідентифікатори
  * ВТ (типу `ВТОстаткиТоваровПоСкладамНаКонецПериода`) на бік було нечитабельно).
  * Компактні номери з кольоровою крапкою типу завжди видно; повна назва +
- * деталі — у картці по наведенню/фокусу.
+ * деталі — у картці по наведенню/фокусу. Дизайн картки (значок-сутність,
+ * бейдж типу, іконки полів/джерел/умов, синій акцент ВТ) узгоджений з
+ * користувачем на прототипі (Artifact-канва «Batch tab hover card»).
  */
 
 interface SideTabsRailProps {
@@ -26,12 +28,25 @@ interface SideTabsRailProps {
   testId?: string;
 }
 
+/** Повний опис типу — для title/aria (a11y), бейдж на картці показує лише коротку позначку. */
 const TYPE_LABEL: Record<QueryType, MessageKey> = {
   select: 'sideTabs.type.select',
   createTemp: 'sideTabs.type.createTemp',
   appendTemp: 'sideTabs.type.appendTemp',
   dropTemp: 'sideTabs.type.dropTemp',
 };
+
+/** Коротка позначка на бейджі — тільки для операцій з ВТ; звичайний запит бейджа не показує. */
+const BADGE_LABEL: Partial<Record<QueryType, MessageKey>> = {
+  createTemp: 'sideTabs.badge.createTemp',
+  appendTemp: 'sideTabs.badge.appendTemp',
+  dropTemp: 'sideTabs.badge.dropTemp',
+};
+
+const ACCENT = 'var(--vscode-charts-purple, #b180d7)';
+const ACCENT_SOFT = 'rgba(177, 128, 215, 0.16)';
+const NEUTRAL = 'var(--vscode-descriptionForeground, #8b8b8b)';
+const NEUTRAL_SOFT = 'rgba(139, 139, 139, 0.14)';
 
 const CARD_WIDTH = 236;
 
@@ -44,6 +59,40 @@ function camelBreak(name: string): string {
   return name.replace(/([а-яёa-z])([А-ЯЁA-Z])/g, '$1​$2');
 }
 
+function FieldsIcon(): React.ReactElement {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+      <path d="M2 3h12M2 8h12M2 13h7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TablesIcon(): React.ReactElement {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+      <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M2 7.5h12M6.3 3v10" stroke="currentColor" strokeWidth="1.1" />
+    </svg>
+  );
+}
+
+function ConditionsIcon(): React.ReactElement {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+      <path d="M2.5 3h11l-4 5v4.5l-3 1.5V8L2.5 3z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function EntityIcon({ color }: { color: string }): React.ReactElement {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+      <rect x="2" y="2" width="12" height="12" rx="1.5" stroke={color} strokeWidth="1.4" />
+      <path d="M2 8h12M8 2v12" stroke={color} strokeWidth="1.2" />
+    </svg>
+  );
+}
+
 function Tab({ info, index, isActive, onSelect }: {
   info: BatchMemberInfo;
   index: number;
@@ -53,6 +102,9 @@ function Tab({ info, index, isActive, onSelect }: {
   const btnRef = React.useRef<HTMLButtonElement>(null);
   const cardRef = React.useRef<HTMLDivElement>(null);
   const isTemp = info.queryType !== 'select';
+  const accent = isTemp ? ACCENT : NEUTRAL;
+  const accentSoft = isTemp ? ACCENT_SOFT : NEUTRAL_SOFT;
+  const badgeKey = BADGE_LABEL[info.queryType];
   // Картка існує в DOM лише під час наведення/фокуса — інакше кожна з N вкладок
   // одночасно рендерила б свою картку без left/top (fixed без офсетів лягає в
   // «статичну» позицію браузера), і всі N карток накладалися б в одному місці.
@@ -114,10 +166,7 @@ function Tab({ info, index, isActive, onSelect }: {
         fontSize: 12,
       }}
     >
-      <span style={{
-        width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-        background: isTemp ? 'var(--vscode-charts-purple, #b180d7)' : 'var(--vscode-descriptionForeground, #8b8b8b)',
-      }} />
+      <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: accent }} />
       {index + 1}
       {anchor && (
       <div
@@ -134,30 +183,59 @@ function Tab({ info, index, isActive, onSelect }: {
           zIndex: 50, pointerEvents: 'none',
         }}
       >
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--vscode-tab-activeForeground, #fff)', lineHeight: 1.35, marginBottom: 6, overflowWrap: 'break-word' }}>
-          {camelBreak(info.name)}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <span
+            title={t(TYPE_LABEL[info.queryType])}
+            style={{
+              width: 20, height: 20, borderRadius: 5, background: accentSoft, flexShrink: 0,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <EntityIcon color={accent} />
+          </span>
+          <div style={{ flexGrow: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--vscode-tab-activeForeground, #fff)', lineHeight: 1.35, overflowWrap: 'break-word' }}>
+            {camelBreak(info.name)}
+          </div>
+          {badgeKey && (
+            <span style={{
+              fontSize: 9.5, fontWeight: 700, letterSpacing: 0.3, color: accent, background: accentSoft,
+              padding: '2px 7px', borderRadius: 9, whiteSpace: 'nowrap', flexShrink: 0,
+            }}>
+              {t(badgeKey)}
+            </span>
+          )}
         </div>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, color: 'var(--vscode-descriptionForeground, #8b8b8b)', marginBottom: 8 }}>
-          <span style={{
-            width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-            background: isTemp ? 'var(--vscode-charts-purple, #b180d7)' : 'var(--vscode-descriptionForeground, #8b8b8b)',
-          }} />
-          {t(TYPE_LABEL[info.queryType])}
-        </div>
-        <div style={{ fontSize: 11, color: 'var(--vscode-descriptionForeground, #8b8b8b)', marginBottom: 8 }}>
-          <div style={{ marginBottom: 2 }}>{t('sideTabs.fields')}</div>
-          <div style={{ color: 'var(--vscode-tab-activeForeground, #fff)', fontFamily: 'var(--vscode-editor-font-family, monospace)', overflowWrap: 'break-word' }}>
-            {formatFieldNames(info.fieldNames)}
+
+        <div style={{ height: 1, background: 'var(--qc-border)', margin: '0 0 8px' }} />
+
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <span style={{ color: 'var(--vscode-descriptionForeground, #8b8b8b)', flexShrink: 0, marginTop: 2 }}><FieldsIcon /></span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 10, color: 'var(--vscode-descriptionForeground, #8b8b8b)', marginBottom: 3 }}>{t('sideTabs.fields')}</div>
+            <div style={{ fontSize: 11.5, color: 'var(--vscode-tab-activeForeground, #fff)', fontFamily: 'var(--vscode-editor-font-family, monospace)', overflowWrap: 'break-word' }}>
+              {formatFieldNames(info.fieldNames)}
+            </div>
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <Row label={t('sideTabs.tablesCount')} value={info.tablesCount} />
-          <Row label={t('sideTabs.conditionsCount')} value={info.conditionsCount} />
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <IconRow icon={<TablesIcon />} label={t('sideTabs.tablesCount')} value={info.tablesCount} />
+          <IconRow icon={<ConditionsIcon />} label={t('sideTabs.conditionsCount')} value={info.conditionsCount} />
           {info.memberCount > 1 && <Row label={t('sideTabs.memberCount')} value={info.memberCount} />}
         </div>
       </div>
       )}
     </button>
+  );
+}
+
+function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }): React.ReactElement {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--vscode-descriptionForeground, #8b8b8b)' }}>
+      <span style={{ flexShrink: 0, display: 'inline-flex' }}>{icon}</span>
+      <span style={{ flexGrow: 1 }}>{label}</span>
+      <b style={{ fontSize: 11.5, color: 'var(--vscode-tab-activeForeground, #fff)', fontFamily: 'var(--vscode-editor-font-family, monospace)', fontWeight: 600 }}>{value}</b>
+    </div>
   );
 }
 

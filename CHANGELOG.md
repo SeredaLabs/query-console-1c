@@ -5,6 +5,15 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.69 - 2026-09-17
+
+### Changed
+
+- Restructured the batch-tab hover card: an entity icon and a short type
+  badge ("ВТ"/"ВТ+"/"ВТ−") replace the old dot-plus-sentence type row, and
+  the fields/sources/conditions rows now carry small icons instead of
+  plain text labels, for faster scanning.
+
 ## 0.1.68 - 2026-09-17
 
 ### Changed
