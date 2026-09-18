@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { ConditionOperator } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
 import { allTables } from '../../webview/state/queryStore';
@@ -10,12 +11,13 @@ import {
   boundingBox,
   cardRect,
   contentExceedsViewport,
+  joinCurve,
   minimapTransform,
   screenToWorld,
   type Point,
   type Rect,
 } from './geometry';
-import { joinKindLabel } from './joinKind';
+import { joinKindLabel, type JoinKindLabel } from './joinKind';
 import type { Pos } from './layout';
 import { Minimap } from './Minimap';
 import { JoinOverlay } from './JoinOverlay';
@@ -158,8 +160,17 @@ export function StructureWorkspace({
       const rectB = tableRect(join.rightTableId);
       if (!rectA || !rectB) return null;
       const { a, b } = anchorPoints(rectA, rectB);
-      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-      return { index, a, b, mid, kind: joinKindLabel(join.leftAll, join.rightAll) };
+      // `mid` тепер точка РІВНО на вигнутій лінії (той самий `joinCurve`, що
+      // малює саму лінію в JoinPath) — інакше badge/маркери "плавали" б
+      // поза кривою для несиметричних з'єднань (gap analysis: плавніша лінія).
+      const { mid } = joinCurve(a, b);
+      return {
+        index,
+        a,
+        b,
+        mid,
+        kind: joinKindLabel(join.leftAll, join.rightAll),
+      };
     });
   }, [state.joins, tableRect]);
 
@@ -207,7 +218,15 @@ export function StructureWorkspace({
     [dispatch]
   );
 
-  const handleCreateJoin = (sourceId: string, targetId: string): void => {
+  const handleCreateJoin = (
+    sourceId: string,
+    targetId: string,
+    kind: JoinKindLabel,
+    leftField: string,
+    rightField: string,
+    expression: string,
+    operator: ConditionOperator
+  ): void => {
     // Ланцюжок з ІСНУЮЧИХ дій (design gate): ADD_JOIN завжди з'єднує
     // selectedTables[0]/[1] — одразу коригуємо на реально обрані Джерело/Ціль
     // через SET_JOIN_TABLE (теж вже існуюча дія). Новий join завжди в кінці
@@ -216,6 +235,22 @@ export function StructureWorkspace({
     dispatch({ type: 'ADD_JOIN' });
     dispatch({ type: 'SET_JOIN_TABLE', index: newIndex, side: 'left', tableId: sourceId });
     dispatch({ type: 'SET_JOIN_TABLE', index: newIndex, side: 'right', tableId: targetId });
+    // Тип з'єднання — одразу при створенні, не тільки INNER за замовчуванням
+    // (gap analysis: "немає можливості зразу тип ліве/внутрішнє"). LEFT/INNER/
+    // FULL — саме два booleans leftAll/rightAll, як і рахує joinKindLabel().
+    dispatch({ type: 'SET_JOIN_ALL', index: newIndex, side: 'left', value: kind !== 'INNER' });
+    dispatch({ type: 'SET_JOIN_ALL', index: newIndex, side: 'right', value: kind === 'FULL' });
+    // Умова — довільний вираз (SET_JOIN_CUSTOM+SET_JOIN_EXPRESSION) або просте
+    // поле з обох сторін (SET_JOIN_FIELD); інакше лишається порожня умова,
+    // донастроювана в Inspector — як і раніше.
+    if (expression.trim()) {
+      dispatch({ type: 'SET_JOIN_CUSTOM', index: newIndex, custom: true });
+      dispatch({ type: 'SET_JOIN_EXPRESSION', index: newIndex, expression });
+    } else if (leftField && rightField) {
+      dispatch({ type: 'SET_JOIN_FIELD', index: newIndex, side: 'left', path: leftField });
+      dispatch({ type: 'SET_JOIN_FIELD', index: newIndex, side: 'right', path: rightField });
+      if (operator !== '=') dispatch({ type: 'SET_JOIN_OPERATOR', index: newIndex, operator });
+    }
     setSelection({ kind: 'join', joinIndex: newIndex });
   };
 
@@ -299,6 +334,9 @@ export function StructureWorkspace({
         locale={locale}
         zoomPercent={Math.round(transform.zoom * 100)}
         tables={state.selectedTables}
+        tablesMeta={tablesMeta}
+        joins={state.joins}
+        selectedJoinIndex={selection?.kind === 'join' ? selection.joinIndex : null}
         onZoomOut={() => zoomButton(-1)}
         onZoomIn={() => zoomButton(1)}
         onZoomReset={resetZoom}
@@ -306,6 +344,8 @@ export function StructureWorkspace({
         onAutoLayout={resetLayout}
         onAddSource={openSourceBrowser}
         onCreateJoin={handleCreateJoin}
+        onSelectJoin={handleSelectJoin}
+        onRemoveJoin={handleRemoveJoin}
         sourceButtonRef={sourceButtonRef}
       />
       {sourcePopoverOpen && (
@@ -367,8 +407,19 @@ export function StructureWorkspace({
           ) : undefined
         }
       >
-        {/* Шар 1 — SVG JOIN-лінії, ПІД картками (design: "JOIN проходить під TableCard"). */}
-        <svg width={0} height={0} style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible' }}>
+        {/*
+          Шар 1 — SVG JOIN-лінії, ПІД картками (design: "JOIN проходить під
+          TableCard"). Bug fix: попередній `width={0} height={0}` +
+          `overflow:visible` ("безрозмірний SVG") ламається, коли батьківський
+          world-контейнер має CSS `transform` (pan/zoom) — Chromium створює
+          для 0×0-елемента власний compositing layer і НЕ малює контент, що
+          виходить за межі цього layer'а, хоча pointer-events (клік/hover на
+          лінії) продовжують працювати — тому лінія була клікабельна, але
+          візуально невидима між маркерами й badge. Фікс — реальний (великий)
+          розмір SVG замість 0×0, з тим самим `overflow:visible` як safety net
+          для контенту, що все ж вийде за ці межі.
+        */}
+        <svg width={20000} height={20000} style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible', pointerEvents: 'none' }}>
           {joinGeometry.map(g => {
             if (!g) return null;
             return (
@@ -377,6 +428,7 @@ export function StructureWorkspace({
                 index={g.index}
                 a={g.a}
                 b={g.b}
+                kind={g.kind}
                 selected={selection?.kind === 'join' && selection.joinIndex === g.index}
                 hovered={hoveredJoin === g.index}
                 dimmed={isJoinDimmed(g.index)}

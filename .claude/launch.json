@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "e2e-harness",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "test/e2e/harness", "-l", "4173"],
+      "port": 4173
+    }
+  ]
+}

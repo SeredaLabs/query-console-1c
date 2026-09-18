@@ -18,6 +18,13 @@ const DEFAULT_CARD_SIZE: Size = { width: 240, height: 232 };
 const HORIZONTAL_GAP = 100; // 80-120px за visual spec §33
 const VERTICAL_GAP = 52; // 40-64px за visual spec §33
 const SINGLETON_COLUMNS = 4; // скільки карток без зв'язків в одному ряду, щоб не витягувати canvas в одну довгу лінію
+// Gap analysis: перша картка ставилась рівно в (0,0) світових координат —
+// "магнітиться" до верхнього лівого кута canvas без жодного відступу. Разом
+// із тим, що canvas стартує з transform.pan = {0,0}, це візуально виглядало
+// як картка, притиснута до самого краю. Невеликий сталий відступ ЛИШЕ для
+// starting layout (коли ще немає жодної існуючої позиції) — не змінює сам
+// layout-алгоритм/gaps між картками.
+const CANVAS_MARGIN = 24;
 
 /**
  * Layered/BFS auto-layout (.claude/new_builder_phase3_design.md §layout).
@@ -72,8 +79,8 @@ export function computeAutoLayout(
     const size = cardSize(id);
     return { x1: pos.x, y1: pos.y, x2: pos.x + size.width, y2: pos.y + size.height };
   });
-  let cursorX = occupiedRects.length > 0 ? Math.max(...occupiedRects.map(r => r.x2)) + HORIZONTAL_GAP : 0;
-  const baseY = occupiedRects.length > 0 ? Math.min(...occupiedRects.map(r => r.y1)) : 0;
+  let cursorX = occupiedRects.length > 0 ? Math.max(...occupiedRects.map(r => r.x2)) + HORIZONTAL_GAP : CANVAS_MARGIN;
+  const baseY = occupiedRects.length > 0 ? Math.min(...occupiedRects.map(r => r.y1)) : CANVAS_MARGIN;
 
   const result: Record<string, Pos> = {};
   const singleton: string[] = [];

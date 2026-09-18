@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { TOKENS } from '../theme';
 import type { Point } from './geometry';
-import type { JoinKindLabel } from './joinKind';
+import { joinKindVisual, type JoinKindLabel } from './joinKind';
 
 const MARKER_SIZE = 5; // Phase 3D: 6→5, трохи менш домінантний normal-стан (§7 gap analysis)
 
@@ -54,13 +54,13 @@ export const JoinOverlay = React.memo(function JoinOverlay({
   onRemove: (index: number) => void;
 }): React.ReactElement {
   const active = selected || hovered;
-  const color = active ? TOKENS.accent : TOKENS.border;
+  const visual = joinKindVisual(kind, TOKENS);
   // Phase 3D: normal-стан endpoint markers — subtle (§7); full at selected/hovered.
-  const markerOpacity = active ? 1 : 0.6;
+  const markerOpacity = active ? 1 : 0.7;
   return (
     <div style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', opacity: dimmed ? 0.45 : 1 }}>
-      <Marker point={a} color={color} opacity={markerOpacity} />
-      <Marker point={b} color={color} opacity={markerOpacity} />
+      <Marker point={a} color={visual.color} opacity={markerOpacity} />
+      <Marker point={b} color={visual.color} opacity={markerOpacity} />
       <div
         className="qcc-join-badge"
         style={{
@@ -78,17 +78,21 @@ export const JoinOverlay = React.memo(function JoinOverlay({
             height: 20,
             display: 'flex',
             alignItems: 'center',
+            gap: 4,
             padding: '0 6px',
             fontSize: 11,
             fontWeight: 600,
             borderRadius: 4,
             background: TOKENS.surface1,
-            border: `1px solid ${color}`,
-            color: active ? TOKENS.accent : TOKENS.textSecondary,
+            // Selected — accent ring (той самий принцип, що й на лінії: kind-колір лишається, selection — окремий cue).
+            border: `1px solid ${visual.color}`,
+            boxShadow: selected ? `0 0 0 1px ${TOKENS.accent}` : 'none',
+            color: visual.color,
             whiteSpace: 'nowrap',
           }}
         >
-          {kind}
+          <span className={`codicon codicon-${visual.icon}`} style={{ fontSize: 11, flexShrink: 0 }} />
+          <span>{kind}</span>
         </div>
         {selected && (
           <button

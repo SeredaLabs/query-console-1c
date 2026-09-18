@@ -3,6 +3,7 @@ import type { MetaTable, MetaField } from '../../core/metadata/types';
 import type { SelectedTable, Join, JoinCondition, ConditionOperator } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
+import { fieldsTypeCompatible } from '../../core/query/fieldTypeCompat';
 import { IconButton } from './IconButton';
 import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox, ROW_PADDING_Y } from '../sharedStyles';
 import { t } from '../i18n';
@@ -73,13 +74,17 @@ export function ConnectionsTab(props: Props): React.ReactElement {
     onSetOperator, onOpenExpressionBuilder,
   } = props;
 
-  /** Список полей таблицы по её id (имена полей, без префикса). */
-  function fieldNames(tableId: string): string[] {
+  /** Поля таблицы по её id. */
+  function fieldsMeta(tableId: string): MetaField[] {
     const sel = selectedTables.find(t => t.id === tableId);
     if (!sel) return [];
     const meta = metaTables.find(m => m.fullName === sel.fullName);
     if (!meta) return [];
-    return tableFields(meta, sel).map(f => f.name);
+    return tableFields(meta, sel);
+  }
+
+  function fieldMeta(tableId: string, name: string): MetaField | undefined {
+    return fieldsMeta(tableId).find(f => f.name === name);
   }
 
   const tableSelect = (index: number, condIndex: number, side: 'left' | 'right', value: string) => {
@@ -99,15 +104,20 @@ export function ConnectionsTab(props: Props): React.ReactElement {
     );
   };
 
-  const fieldSelect = (index: number, condIndex: number, side: 'left' | 'right', tableId: string, value: string) => (
+  /** `compatibleWith` — поле іншого боку умови (Строка ↔ ДокументСсылка тощо
+   * зараз ніде не перевіряється, хоча в 1С така умова впаде тільки при
+   * виконанні запиту); заданий лише для правого select'а, щоб не блокувати
+   * ще не обране ліве поле. */
+  const fieldSelect = (index: number, condIndex: number, side: 'left' | 'right', tableId: string, value: string, compatibleWith?: MetaField) => (
     <select
       value={value}
       onChange={e => onSetField(index, side, e.target.value, condIndex)}
       style={{ ...INPUT, flex: 1, minWidth: 0 }}
+      title={compatibleWith ? t('connections.fieldTypeMismatchHint') : undefined}
     >
       <option value=""></option>
-      {fieldNames(tableId).map(name => (
-        <option key={name} value={name}>{name}</option>
+      {fieldsMeta(tableId).map(f => (
+        <option key={f.name} value={f.name} disabled={!!compatibleWith && !fieldsTypeCompatible(compatibleWith, f)}>{f.name}</option>
       ))}
     </select>
   );
@@ -177,7 +187,7 @@ export function ConnectionsTab(props: Props): React.ReactElement {
                       >
                         {OPERATORS.map(op => <option key={op} value={op}>{op}</option>)}
                       </select>
-                      {fieldSelect(i, ci, 'right', rightTableId, c.rightPath ?? '')}
+                      {fieldSelect(i, ci, 'right', rightTableId, c.rightPath ?? '', fieldMeta(leftTableId, c.leftPath ?? ''))}
                     </div>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
