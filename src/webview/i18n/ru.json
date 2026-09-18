@@ -86,6 +86,7 @@
   "connections.deleteCondition": "Удалить условие",
   "connections.deleteJoin": "Удалить связь",
   "connections.addHint": "Нажмите +, чтобы добавить связь между таблицами.",
+  "connections.fieldTypeMismatchHint": "Поля с несовместимым типом недоступны для выбора",
   "conditions.custom": "Произвольное условие",
   "conditions.openExpression": "Открыть конструктор выражения",
   "conditions.delete": "Удалить условие",

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { TOKENS } from '../theme';
-import type { Point } from './geometry';
+import { joinCurve, type Point } from './geometry';
+import { joinKindVisual, type JoinKindLabel } from './joinKind';
 
 /**
  * SVG-частина одного JOIN (design §5/§7): видима лінія (2px / 3px selected)
@@ -9,6 +10,12 @@ import type { Point } from './geometry';
  * ПІД картками (design §1) — картки, намальовані пізніше в DOM, візуально
  * перекривають кінці лінії там, де вона проходить під ними.
  *
+ * Gap analysis: лінія раніше завжди була одного кольору (border/accent) —
+ * "не ідентифікує зв'язок". Тепер колір лінії = kind identity
+ * (`joinKindVisual`, той самий, що вже в панелі налаштування) — тип видно
+ * одразу, без наведення/вибору. Accent залишається за selection/hover, але
+ * як підсилення (товщина + вищий opacity), не заміна кольору.
+ *
  * `React.memo` + `index`-параметр у колбеках (Phase 3C performance pass) —
  * той самий підхід, що й TableCard: батько передає стабільний `useCallback`.
  */
@@ -16,6 +23,7 @@ export const JoinPath = React.memo(function JoinPath({
   index,
   a,
   b,
+  kind,
   selected,
   hovered,
   dimmed,
@@ -25,6 +33,7 @@ export const JoinPath = React.memo(function JoinPath({
   index: number;
   a: Point;
   b: Point;
+  kind: JoinKindLabel;
   selected: boolean;
   hovered: boolean;
   /** Phase 5 focus/dimming — знижує opacity ЛИШЕ видимого stroke; hit-path лишається клікабельним. */
@@ -32,13 +41,27 @@ export const JoinPath = React.memo(function JoinPath({
   onClick: (index: number) => void;
   onHoverChange: (index: number, hovered: boolean) => void;
 }): React.ReactElement {
-  const d = `M ${a.x} ${a.y} L ${b.x} ${b.y}`;
-  const color = selected || hovered ? TOKENS.accent : TOKENS.border;
+  const { d } = joinCurve(a, b);
+  const color = joinKindVisual(kind, TOKENS).color;
+  const active = selected || hovered;
   const strokeWidth = selected ? 3 : 2;
 
   return (
     <>
-      <path d={d} stroke={color} strokeWidth={strokeWidth} fill="none" pointerEvents="none" opacity={dimmed ? 0.45 : 1} />
+      {selected && (
+        // Selection halo — окремий ширший accent-stroke ПІД kind-кольоровою
+        // лінією: розрізняє "яка це connection is selected" від "який тип
+        // з'єднання", не змішуючи selection-семантику (accent) з kind-color.
+        <path d={d} stroke={TOKENS.accent} strokeWidth={7} fill="none" pointerEvents="none" opacity={0.25} />
+      )}
+      <path
+        d={d}
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill="none"
+        pointerEvents="none"
+        opacity={dimmed ? 0.35 : active ? 1 : 0.75}
+      />
       <path
         d={d}
         stroke="transparent"

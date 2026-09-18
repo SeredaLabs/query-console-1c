@@ -86,6 +86,7 @@
   "connections.deleteCondition": "Видалити умову",
   "connections.deleteJoin": "Видалити з’єднання",
   "connections.addHint": "Натисніть +, щоб додати з’єднання між таблицями.",
+  "connections.fieldTypeMismatchHint": "Поля з несумісним типом недоступні для вибору",
   "conditions.custom": "Довільна умова",
   "conditions.openExpression": "Відкрити конструктор виразів",
   "conditions.delete": "Видалити умову",

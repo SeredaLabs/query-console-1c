@@ -1,8 +1,13 @@
 import * as React from 'react';
-import { defaultTableAlias, type SelectedTable } from '../../core/query/queryModel';
+import type { MetaTable } from '../../core/metadata/types';
+import { type ConditionOperator, type Join, type SelectedTable } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import { t } from '../i18n';
 import { TOKENS } from '../theme';
+import { JoinManagerPopover } from './JoinManagerPopover';
+import type { JoinKindLabel } from './joinKind';
+
+export type ConditionMode = 'field' | 'custom';
 
 const BAR_STYLE: React.CSSProperties = {
   height: 36,
@@ -24,115 +29,75 @@ const BTN: React.CSSProperties = {
   fontSize: 12,
   padding: '4px 8px',
   borderRadius: 4,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 5,
 };
+
+/** Semantic codicon перед лейблом дії — та сама scanning-допомога, що вже в
+ * TableCard/WorkspaceNav/Inspector, тільки для toolbar-кнопок. */
+function BtnIcon({ name, muted = true }: { name: string; muted?: boolean }): React.ReactElement {
+  return <span className={`codicon codicon-${name}`} style={{ fontSize: 14, opacity: muted ? 0.85 : 1, flexShrink: 0 }} />;
+}
 
 const BTN_DISABLED: React.CSSProperties = { opacity: 0.4, cursor: 'not-allowed' };
 
-function tableLabel(table: SelectedTable): string {
-  return `${defaultTableAlias(table)} (${table.fullName})`;
-}
-
 /**
- * "+ Додати зв'язок" popover — найпростіший UX, який дозволяє ІСНУЮЧИЙ
- * reducer (design gate): два <select> (Джерело/Ціль), попередньо заповнені
- * тими самими двома таблицями, що й ADD_JOIN обрав би за замовчуванням
- * (selectedTables[0]/[1]). "Створити" викликає onCreateJoin(sourceId,
- * targetId) — сам ланцюжок ADD_JOIN→SET_JOIN_TABLE×2 живе у StructureWorkspace.
+ * "Просте поле" / "Довільний вираз" — спільний перемикач режиму умови,
+ * використовується і в creation popover, і в Inspector (JoinInspector).
  */
-function JoinPopover({
+export function ConditionModeToggle({
   locale,
-  tables,
-  onCreate,
-  onClose,
+  mode,
+  onChange,
 }: {
   locale: SupportedLocale;
-  tables: SelectedTable[];
-  onCreate: (sourceId: string, targetId: string) => void;
-  onClose: () => void;
+  mode: ConditionMode;
+  onChange: (mode: ConditionMode) => void;
 }): React.ReactElement {
-  const [source, setSource] = React.useState(tables[0]?.id ?? '');
-  const [target, setTarget] = React.useState(tables[1]?.id ?? '');
-
   return (
-    <>
-      <div
-        style={{ position: 'fixed', inset: 0, zIndex: 10 }}
-        onClick={onClose}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          top: 36,
-          right: 8,
-          zIndex: 11,
-          width: 260,
-          padding: 12,
-          borderRadius: 6,
-          border: `1px solid ${TOKENS.border}`,
-          background: TOKENS.surface1,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <label style={{ fontSize: 11, color: TOKENS.textSecondary }}>
-          {t(locale, 'structureJoinSource')}
-          <select
-            value={source}
-            onChange={e => setSource(e.target.value)}
-            style={{ display: 'block', width: '100%', marginTop: 2, fontSize: 12, padding: '3px 4px' }}
-          >
-            {tables.map(tb => (
-              <option key={tb.id} value={tb.id}>
-                {tableLabel(tb)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label style={{ fontSize: 11, color: TOKENS.textSecondary }}>
-          {t(locale, 'structureJoinTarget')}
-          <select
-            value={target}
-            onChange={e => setTarget(e.target.value)}
-            style={{ display: 'block', width: '100%', marginTop: 2, fontSize: 12, padding: '3px 4px' }}
-          >
-            {tables.map(tb => (
-              <option key={tb.id} value={tb.id}>
-                {tableLabel(tb)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-          <button type="button" style={BTN} onClick={onClose}>
-            {t(locale, 'cancel')}
-          </button>
+    <div style={{ display: 'flex', gap: 4 }}>
+      {(['field', 'custom'] as ConditionMode[]).map(m => {
+        const active = m === mode;
+        return (
           <button
+            key={m}
             type="button"
-            style={{ ...BTN, border: `1px solid ${TOKENS.accent}`, color: TOKENS.accent }}
-            onClick={() => {
-              onCreate(source, target);
-              onClose();
+            onClick={() => onChange(m)}
+            style={{
+              flex: 1,
+              fontSize: 11,
+              fontWeight: active ? 600 : 400,
+              padding: '4px 6px',
+              borderRadius: 4,
+              cursor: 'pointer',
+              border: `1px solid ${active ? TOKENS.accent : TOKENS.border}`,
+              background: active ? `color-mix(in srgb, ${TOKENS.accent} 12%, transparent)` : 'transparent',
+              color: active ? TOKENS.accent : TOKENS.textSecondary,
             }}
           >
-            {t(locale, 'structureJoinCreate')}
+            {t(locale, m === 'field' ? 'structureJoinModeField' : 'structureJoinModeCustom')}
           </button>
-        </div>
-      </div>
-    </>
+        );
+      })}
+    </div>
   );
 }
 
 /**
  * Structure toolbar: zoom + Fit + Auto Layout + "+ Джерело" (Phase 3A) +
- * "+ Додати зв'язок" (Phase 3B, активна лише при ≥2 джерелах).
+ * "Зв'язки" (Phase 3B + Phase 6, об'єднано — gap analysis: "Додати зв'язок"
+ * і "Зв'язки (N)" були двома окремими кнопками з дублюючою логікою, хоча
+ * концептуально одна дія "керування зв'язками" — тепер один вхід,
+ * `JoinManagerPopover` сам перемикає список/форму створення всередині).
  */
 export function Toolbar({
   locale,
   zoomPercent,
   tables,
+  tablesMeta,
+  joins,
+  selectedJoinIndex,
   onZoomOut,
   onZoomIn,
   onZoomReset,
@@ -140,26 +105,87 @@ export function Toolbar({
   onAutoLayout,
   onAddSource,
   onCreateJoin,
+  onSelectJoin,
+  onRemoveJoin,
   sourceButtonRef,
 }: {
   locale: SupportedLocale;
   zoomPercent: number;
   tables: SelectedTable[];
+  /** Для field-select'ів у Join popover (тип/поля з'єднання одразу при створенні). */
+  tablesMeta: MetaTable[];
+  joins: Join[];
+  selectedJoinIndex: number | null;
   onZoomOut: () => void;
   onZoomIn: () => void;
   onZoomReset: () => void;
   onFit: () => void;
   onAutoLayout: () => void;
   onAddSource: () => void;
-  onCreateJoin: (sourceId: string, targetId: string) => void;
+  onCreateJoin: (
+    sourceId: string,
+    targetId: string,
+    kind: JoinKindLabel,
+    leftField: string,
+    rightField: string,
+    expression: string,
+    operator: ConditionOperator
+  ) => void;
+  onSelectJoin: (index: number) => void;
+  onRemoveJoin: (index: number) => void;
   /** Phase 3E: якір для floating Source Browser (StructureWorkspace вимірює позицію кнопки). */
   sourceButtonRef?: React.Ref<HTMLButtonElement>;
 }): React.ReactElement {
-  const [joinPopoverOpen, setJoinPopoverOpen] = React.useState(false);
+  const [joinManagerOpen, setJoinManagerOpen] = React.useState(false);
   const canJoin = tables.length >= 2;
+  const hasAnyJoin = joins.length > 0;
 
   return (
     <div style={BAR_STYLE}>
+      {/* Graph actions (створення) — тепер ЛІВОРУЧ, першими: це primary
+          actions при побудові запиту, а zoom/layout — view-controls, які
+          природньо йдуть праворуч (той самий порядок, що в більшості
+          editor-подібних тулбарів — VS Code, Figma). */}
+      <button
+        type="button"
+        ref={sourceButtonRef}
+        className="qcc-btn"
+        style={{ ...BTN, color: TOKENS.textSecondary }}
+        onClick={onAddSource}
+      >
+        <BtnIcon name="add" />
+        {t(locale, 'structureAddSource')}
+      </button>
+      <span style={{ position: 'relative' }}>
+        <button
+          type="button"
+          className="qcc-btn"
+          style={{ ...BTN, color: TOKENS.textSecondary, ...(canJoin || hasAnyJoin ? {} : BTN_DISABLED) }}
+          disabled={!canJoin && !hasAnyJoin}
+          title={canJoin || hasAnyJoin ? undefined : t(locale, 'structureJoinNeedsTwoSources')}
+          onClick={() => setJoinManagerOpen(v => !v)}
+        >
+          <BtnIcon name="link" />
+          {t(locale, 'structureJoinsOverview')}
+          {hasAnyJoin && ` (${joins.length})`}
+        </button>
+        {joinManagerOpen && (canJoin || hasAnyJoin) && (
+          <JoinManagerPopover
+            locale={locale}
+            tables={tables}
+            tablesMeta={tablesMeta}
+            joins={joins}
+            selectedJoinIndex={selectedJoinIndex}
+            onSelectJoin={onSelectJoin}
+            onRemoveJoin={onRemoveJoin}
+            onCreate={onCreateJoin}
+            onClose={() => setJoinManagerOpen(false)}
+          />
+        )}
+      </span>
+      <span style={{ width: 1, height: 18, background: TOKENS.border, margin: '0 4px' }} />
+      <span style={{ flex: 1 }} />
+      {/* View-controls (zoom/Fit/Авто-компоновка) — праворуч. */}
       <button type="button" className="qcc-btn" style={BTN} title={t(locale, 'structureZoomOut')} onClick={onZoomOut}>
         −
       </button>
@@ -177,43 +203,13 @@ export function Toolbar({
       </button>
       <span style={{ width: 1, height: 18, background: TOKENS.border, margin: '0 4px' }} />
       <button type="button" className="qcc-btn" style={BTN} onClick={onFit}>
+        <BtnIcon name="screen-full" />
         {t(locale, 'structureFit')}
       </button>
       <button type="button" className="qcc-btn" style={BTN} onClick={onAutoLayout}>
+        <BtnIcon name="layout" />
         {t(locale, 'structureAutoLayout')}
       </button>
-      {/* Phase 3D: другий subtle divider — відділяє Navigation-групу (zoom/Fit/
-          Авто-компоновка) від Graph actions-групи (+Джерело/+Зв'язок), без
-          важких group-контейнерів (explicit рішення користувача). */}
-      <span style={{ width: 1, height: 18, background: TOKENS.border, margin: '0 4px' }} />
-      <span style={{ flex: 1 }} />
-      <button
-        type="button"
-        ref={sourceButtonRef}
-        className="qcc-btn"
-        style={{ ...BTN, color: TOKENS.textSecondary }}
-        onClick={onAddSource}
-      >
-        {t(locale, 'structureAddSource')}
-      </button>
-      <button
-        type="button"
-        className="qcc-btn"
-        style={{ ...BTN, color: TOKENS.textSecondary, ...(canJoin ? {} : BTN_DISABLED) }}
-        disabled={!canJoin}
-        title={canJoin ? undefined : t(locale, 'structureJoinNeedsTwoSources')}
-        onClick={() => setJoinPopoverOpen(v => !v)}
-      >
-        {t(locale, 'structureAddJoin')}
-      </button>
-      {joinPopoverOpen && canJoin && (
-        <JoinPopover
-          locale={locale}
-          tables={tables}
-          onCreate={onCreateJoin}
-          onClose={() => setJoinPopoverOpen(false)}
-        />
-      )}
     </div>
   );
 }

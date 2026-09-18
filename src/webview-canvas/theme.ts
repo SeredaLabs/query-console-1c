@@ -44,6 +44,16 @@ export const TOKENS: Record<string, string> = {
   danger: 'var(--vscode-errorForeground)',
   warning: 'var(--vscode-editorWarning-foreground)',
   success: 'var(--vscode-terminal-ansiGreen, var(--vscode-charts-green))',
+  /**
+   * JOIN-kind color identity (INNER/LEFT/FULL) — навмисно НЕ ті самі токени,
+   * що selection (`accent`) чи inclusion (`success`, зарезервований лише
+   * для field/source checkbox-семантики): три різні `--vscode-charts-*`
+   * кольори дають кожному типу з'єднання власну ідентичність без конфлікту
+   * з уже зафіксованими семантиками.
+   */
+  chartBlue: 'var(--vscode-charts-blue, var(--vscode-focusBorder))',
+  chartOrange: 'var(--vscode-charts-orange, var(--vscode-editorWarning-foreground))',
+  chartPurple: 'var(--vscode-charts-purple, var(--vscode-descriptionForeground))',
 };
 
 /** Кореневий inline-стиль App: базові фон/текст/шрифт з токенів вище. */

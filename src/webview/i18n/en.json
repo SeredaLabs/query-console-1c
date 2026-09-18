@@ -86,6 +86,7 @@
   "connections.deleteCondition": "Delete condition",
   "connections.deleteJoin": "Delete join",
   "connections.addHint": "Select + to add a join between tables.",
+  "connections.fieldTypeMismatchHint": "Fields with an incompatible type are disabled",
   "conditions.custom": "Custom condition",
   "conditions.openExpression": "Open expression builder",
   "conditions.delete": "Delete condition",
