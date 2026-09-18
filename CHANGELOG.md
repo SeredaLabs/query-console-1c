@@ -5,6 +5,21 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.71 - 2026-09-18
+
+### Added
+
+- New Builder: joins on the canvas now show a kind-colored curved line and a
+  consolidated join manager popover (search + one popover for both listing
+  and creating joins) instead of two separate buttons.
+- New Builder Inspector: join conditions can now set a comparison operator
+  (`=`, `<>`, `>`, ...), not just an implicit `=`, matching the Classic
+  Constructor.
+- Both Classic and New Builder now block selecting join fields with
+  incompatible types (e.g. a string field joined to a reference field) in
+  the field pickers, instead of allowing a condition that would only fail
+  when the query actually runs in 1C.
+
 ## 0.1.70 - 2026-09-17
 
 ### Added
