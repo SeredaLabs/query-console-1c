@@ -180,17 +180,40 @@ Conditions Workspace territory). Canvas-бейдж (`JoinOverlay`) кольор�
 JoinKindPicker НЕ отримав — той лишається frozen (Phase 5 visual
 freeze), кольорова identity — тільки в панелях налаштування.
 
-## 10. Інші panels (Phase 7-11, ще НЕ реалізовано)
+## 10. Інші panels (оновлено 2026-09-19: Fields і Conditions реалізовано, Grouping/Sorting/Additional — ще НІ)
 
-`WorkspaceNav` вкладки Поля/Умови/Групування/Сортування/Додатково --- і
-досі Phase 1 placeholder (текст "Цей workspace буде реалізовано в
-наступній фазі"). Жодного порту Conditions/Grouping/Order/Additional/
-FieldPicker/SDBL-preview UI з Classic у Canvas НЕ відбулося --- це
-неправда, яка була в попередній версії цього документа; перевірено по
-`WorkspaceNav.tsx`/`Workspace.tsx` (2026-09-18). SDBL preview (`SdblDock`)
-у Canvas існує (низ екрана, collapsible), але це той самий read-only
-generated-text dock, що й у Phase 1 shell, не field-level cross-highlight
-(Phase 15, не почато).
+**Fields Workspace (Phase 7) --- реалізовано** (`src/webview-canvas/fields/FieldsWorkspace.tsx`):
+грід ВЖЕ вибраного SELECT-списку (checkbox/#/Вираз/Псевдонім/Тип/Агрегація),
+клік по рядку --- "Вираз поля" знизу + "Властивості поля" праворуч,
+той самий SET_FIELD_EXPRESSION/SET_FIELD_ALIAS/SET_FIELD_FUNC/MOVE_FIELD/
+REMOVE_FIELD/ADD_EXPRESSION_FIELD reducer actions. Адаптивний layout
+(wide ≥1200 / medium 850-1200 / narrow &lt;850, ResizeObserver) --- toolbar
+компактується, `table-layout:fixed` грід з ellipsis+tooltip, вертикальний
+стек нижче 850px. Resizable Properties-панель і resizable колонки
+(Псевдонім/Тип/Агрегація).
+
+**Conditions Workspace (Phase 8) --- реалізовано** (2026-09-19,
+`src/webview-canvas/conditions/ConditionsWorkspace.tsx`): той самий
+грід-патерн, що й Fields --- таблиця ВЖЕ доданих WHERE-умов
+(`state.conditions: Condition[]`, ПЛОСКИЙ список, генератор з'єднує
+елементи неявним "І"/AND, без структурного OR/групування), клік по
+рядку --- "Вираз умови" знизу (editable лише для custom) + "Властивості
+умови" праворуч (Оператор/Параметр/чекбокс "Використовувати як
+довільний вираз"). Reducer actions --- ADD_CONDITION/REMOVE_CONDITION/
+SET_CONDITION_CUSTOM/SET_CONDITION_OPERATOR/SET_CONDITION_PARAM/
+SET_CONDITION_EXPRESSION (той самий набір, що вже використовував Classic
+`ConditionsTab.tsx`) --- жодних нових reducer actions. Немає екшена для
+створення `subquery`/`hierarchy`/`negated`-умов (заповнюються лише
+парсингом існуючого SDBL, якого New Builder ще не робить) --- UI такі
+умови не створює. Простий v1-layout (без адаптивних breakpoints, як у
+Fields) --- кандидат для вирівнювання з Fields-патерном пізніше, якщо
+знадобиться на вузьких viewport.
+
+`WorkspaceNav` вкладки Групування/Сортування/Додатково --- і досі Phase 1
+placeholder (текст "Цей workspace буде реалізовано в наступній фазі").
+SDBL preview (`SdblDock`) у Canvas існує (низ екрана, collapsible), але
+це той самий read-only generated-text dock, що й у Phase 1 shell, не
+field-level cross-highlight (Phase 15, не почато).
 
 ## 11. Відомі обмеження / gaps (оновлено 2026-09-18)
 
@@ -219,8 +242,9 @@ generated-text dock, що й у Phase 1 shell, не field-level cross-highlight
   Canvas parity (Phase 13, окремий implementation gate перед стартом --
   див. Query Scope рішення в roadmap);
 - немає SKD/report builder mode;
-- Fields/Conditions/Grouping/Sorting/Additional workspace-и (Phase 7-11)
-  --- placeholder, не почато.
+- Fields (Phase 7) і Conditions (Phase 8) --- реалізовано, див. §10;
+  Grouping/Sorting/Additional workspace-и (Phase 9-11) --- placeholder,
+  не почато.
 
 Ці твердження обов'язково перевірити по актуальному repository перед
 реалізацією.

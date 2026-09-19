@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
 import { t, type MessageKey } from '../i18n';
+import { ConditionsWorkspace } from '../conditions/ConditionsWorkspace';
 import { FieldsWorkspace } from '../fields/FieldsWorkspace';
 import { StructureWorkspace, type StructureSelection } from '../structure/StructureWorkspace';
 import { TOKENS } from '../theme';
@@ -34,9 +35,9 @@ const BODY_STYLE: React.CSSProperties = {
 };
 
 /**
- * Workspace: nav + вміст активної вкладки. Structure (Phase 3A) і Fields
- * (Phase 7) мають реальний вміст; Conditions/Grouping/Sorting/Additional
- * лишаються Phase 1 заглушкою (Phase 8-11).
+ * Workspace: nav + вміст активної вкладки. Structure (Phase 3A), Fields
+ * (Phase 7) і Conditions (Phase 8) мають реальний вміст; Grouping/Sorting/
+ * Additional лишаються Phase 1 заглушкою (Phase 9-11).
  */
 export function Workspace({
   locale,
@@ -88,7 +89,10 @@ export function Workspace({
       <div style={{ display: active === 'fields' ? 'flex' : 'none', flex: 1, minWidth: 0, minHeight: 0 }}>
         <FieldsWorkspace locale={locale} state={state} dispatch={dispatch} onGoToStructure={() => onChange('structure')} />
       </div>
-      {active !== 'structure' && active !== 'fields' && (
+      <div style={{ display: active === 'conditions' ? 'flex' : 'none', flex: 1, minWidth: 0, minHeight: 0 }}>
+        <ConditionsWorkspace locale={locale} state={state} dispatch={dispatch} onGoToStructure={() => onChange('structure')} />
+      </div>
+      {active !== 'structure' && active !== 'fields' && active !== 'conditions' && (
         <div style={BODY_STYLE}>
           <div style={{ textAlign: 'center', color: TOKENS.textMuted, fontSize: 13, maxWidth: 320 }}>
             <div style={{ fontWeight: 600, marginBottom: 4, color: TOKENS.textSecondary }}>
