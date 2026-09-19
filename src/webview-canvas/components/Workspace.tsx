@@ -1,23 +1,13 @@
 import * as React from 'react';
 import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
-import { t, type MessageKey } from '../i18n';
+import { AdditionalWorkspace } from '../additional/AdditionalWorkspace';
 import { ConditionsWorkspace } from '../conditions/ConditionsWorkspace';
 import { FieldsWorkspace } from '../fields/FieldsWorkspace';
 import { GroupingWorkspace } from '../grouping/GroupingWorkspace';
 import { SortingWorkspace } from '../sorting/SortingWorkspace';
 import { StructureWorkspace, type StructureSelection } from '../structure/StructureWorkspace';
-import { TOKENS } from '../theme';
 import { WorkspaceNav, type WorkspaceTab } from './WorkspaceNav';
-
-const TAB_TITLE_KEY: Record<WorkspaceTab, MessageKey> = {
-  structure: 'workspaceStructure',
-  fields: 'workspaceFields',
-  conditions: 'workspaceConditions',
-  grouping: 'workspaceGrouping',
-  sorting: 'workspaceSorting',
-  additional: 'workspaceAdditional',
-};
 
 const CONTAINER_STYLE: React.CSSProperties = {
   flex: 1,
@@ -27,19 +17,13 @@ const CONTAINER_STYLE: React.CSSProperties = {
   overflow: 'hidden',
 };
 
-const BODY_STYLE: React.CSSProperties = {
-  flex: 1,
-  minHeight: 0,
-  overflowY: 'auto',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-};
-
 /**
- * Workspace: nav + вміст активної вкладки. Structure (Phase 3A), Fields
- * (Phase 7), Conditions (Phase 8), Grouping (Phase 9) і Sorting (Phase 10)
- * мають реальний вміст; Additional лишається Phase 1 заглушкою (Phase 11).
+ * Workspace: nav + вміст активної вкладки. Усі 6 вкладок тепер мають
+ * реальний вміст (Structure Phase 3A, Fields Phase 7, Conditions Phase 8,
+ * Grouping Phase 9, Sorting Phase 10, Additional Phase 11) — generic
+ * "буде реалізовано в наступній фазі" placeholder (`workspacePlaceholder`)
+ * більше нікуди не рендериться, лишений в i18n на випадок майбутньої
+ * вкладки, не видалений звідти навмисно.
  */
 export function Workspace({
   locale,
@@ -100,16 +84,9 @@ export function Workspace({
       <div style={{ display: active === 'sorting' ? 'flex' : 'none', flex: 1, minWidth: 0, minHeight: 0 }}>
         <SortingWorkspace locale={locale} state={state} dispatch={dispatch} onGoToFields={() => onChange('fields')} />
       </div>
-      {active !== 'structure' && active !== 'fields' && active !== 'conditions' && active !== 'grouping' && active !== 'sorting' && (
-        <div style={BODY_STYLE}>
-          <div style={{ textAlign: 'center', color: TOKENS.textMuted, fontSize: 13, maxWidth: 320 }}>
-            <div style={{ fontWeight: 600, marginBottom: 4, color: TOKENS.textSecondary }}>
-              {t(locale, TAB_TITLE_KEY[active])}
-            </div>
-            <div>{t(locale, 'workspacePlaceholder')}</div>
-          </div>
-        </div>
-      )}
+      <div style={{ display: active === 'additional' ? 'flex' : 'none', flex: 1, minWidth: 0, minHeight: 0 }}>
+        <AdditionalWorkspace locale={locale} state={state} dispatch={dispatch} />
+      </div>
     </div>
   );
 }

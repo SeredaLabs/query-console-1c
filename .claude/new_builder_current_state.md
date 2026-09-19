@@ -180,7 +180,7 @@ Conditions Workspace territory). Canvas-бейдж (`JoinOverlay`) кольор�
 JoinKindPicker НЕ отримав — той лишається frozen (Phase 5 visual
 freeze), кольорова identity — тільки в панелях налаштування.
 
-## 10. Інші panels (оновлено 2026-09-19: Fields, Conditions, Grouping і Sorting реалізовано, Additional — ще НІ)
+## 10. Інші panels (оновлено 2026-09-19: усі 6 вкладок WorkspaceNav тепер мають реальний вміст — Fields/Conditions/Grouping/Sorting/Additional)
 
 **Fields Workspace (Phase 7) --- реалізовано** (`src/webview-canvas/fields/FieldsWorkspace.tsx`):
 грід ВЖЕ вибраного SELECT-списку (checkbox/#/Вираз/Псевдонім/Тип/Агрегація),
@@ -258,11 +258,34 @@ Live-QA підтвердив: додавання поля, зміна напря
 автоупорядкування і видалення --- усі коректно відображаються в
 згенерованому SDBL (`УПОРЯДОЧИТЬ ПО ... УБЫВ` / `АВТОУПОРЯДОЧИВАНИЕ`).
 
-`WorkspaceNav` вкладка Додатково --- і досі Phase 1 placeholder (текст
-"Цей workspace буде реалізовано в наступній фазі"). SDBL preview
-(`SdblDock`) у Canvas існує (низ екрана, collapsible), але це той самий
-read-only generated-text dock, що й у Phase 1 shell, не field-level
-cross-highlight (Phase 15, не почато).
+**Additional Workspace (Phase 11) --- реалізовано** (2026-09-19,
+`src/webview-canvas/additional/AdditionalWorkspace.tsx`, ОСТАННЯ вкладка
+з roadmap --- усі 6 вкладок `WorkspaceNav` тепер мають реальний вміст).
+Форма налаштувань (не грід-патерн, як інші вкладки) з двох секцій:
+- **"Вибірка записів"** --- ПЕРВЫЕ N / РАЗЛИЧНЫЕ / РАЗРЕШЕННЫЕ
+  (SET_SELECTION_TOP/SET_SELECTION_DISTINCT/SET_SELECTION_ALLOWED,
+  `state.selection: Selection`);
+- **"Блокування"** --- ДЛЯ ИЗМЕНЕНИЯ (SET_LOCK_ENABLED/ADD_LOCK_TABLE/
+  REMOVE_LOCK_TABLE, `state.lockForUpdate: string[]` адресує таблиці за
+  `fullName`, НЕ за `id`; чекбокс-список будується з `state.selectedTables`).
+
+Жодних нових reducer actions. Свідомо НЕ включено (explicit scope
+decision користувача, з 4 секцій Classic `AdditionalTab.tsx`):
+- **"Тип запиту"** (`QueryType`: createTemp/appendTemp/dropTemp +
+  тимчасова таблиця) --- ВЖЕ окремо зарезервовано в roadmap як Phase 13
+  ("manual temp table / subquery-as-source... окремий implementation
+  gate перед стартом") --- реалізація тут обійшла б це рішення;
+- **"Кеш метаданих"** (refresh-button + preserveComments) --- Classic-
+  специфічний host-round-trip механізм, без архітектурного еквівалента
+  в New Builder (client-side `computeBatchTextSafe`, без host cache).
+
+Live-QA підтвердив точний порядок ключових слів генератора (`selectionModifiers()`:
+РАЗРЕШЕННЫЕ → РАЗЛИЧНЫЕ → ПЕРВЫЕ N) і коректний `ДЛЯ ИЗМЕНЕНИЯ
+<Таблиця>` при виборі джерела для блокування.
+
+SDBL preview (`SdblDock`) у Canvas існує (низ екрана, collapsible), але
+це той самий read-only generated-text dock, що й у Phase 1 shell, не
+field-level cross-highlight (Phase 15, не почато).
 
 ## 11. Відомі обмеження / gaps (оновлено 2026-09-18)
 
@@ -291,10 +314,11 @@ cross-highlight (Phase 15, не почато).
   Canvas parity (Phase 13, окремий implementation gate перед стартом --
   див. Query Scope рішення в roadmap);
 - немає SKD/report builder mode;
-- Fields (Phase 7), Conditions (Phase 8), Grouping (Phase 9) і Sorting
-  (Phase 10) --- реалізовано, див. §10; Additional workspace (Phase 11)
-  --- placeholder, не почато; HAVING, "групуючі набори" і reorder
-  пріоритету сортування --- свідомо поза scope (див. §10).
+- Fields (Phase 7), Conditions (Phase 8), Grouping (Phase 9), Sorting
+  (Phase 10) і Additional (Phase 11) --- усі реалізовано, див. §10; це
+  ЗАВЕРШУЄ всі 6 вкладок `WorkspaceNav` з roadmap. HAVING, "групуючі
+  набори", reorder пріоритету сортування, "Тип запиту"/тимчасові таблиці
+  (Phase 13) і "Кеш метаданих" --- свідомо поза scope (див. §10).
 
 Ці твердження обов'язково перевірити по актуальному repository перед
 реалізацією.
