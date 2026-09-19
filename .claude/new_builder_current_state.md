@@ -180,7 +180,7 @@ Conditions Workspace territory). Canvas-бейдж (`JoinOverlay`) кольор�
 JoinKindPicker НЕ отримав — той лишається frozen (Phase 5 visual
 freeze), кольорова identity — тільки в панелях налаштування.
 
-## 10. Інші panels (оновлено 2026-09-19: Fields і Conditions реалізовано, Grouping/Sorting/Additional — ще НІ)
+## 10. Інші panels (оновлено 2026-09-19: Fields, Conditions і Grouping реалізовано, Sorting/Additional — ще НІ)
 
 **Fields Workspace (Phase 7) --- реалізовано** (`src/webview-canvas/fields/FieldsWorkspace.tsx`):
 грід ВЖЕ вибраного SELECT-списку (checkbox/#/Вираз/Псевдонім/Тип/Агрегація),
@@ -209,11 +209,38 @@ SET_CONDITION_EXPRESSION (той самий набір, що вже викори
 Fields) --- кандидат для вирівнювання з Fields-патерном пізніше, якщо
 знадобиться на вузьких viewport.
 
-`WorkspaceNav` вкладки Групування/Сортування/Додатково --- і досі Phase 1
-placeholder (текст "Цей workspace буде реалізовано в наступній фазі").
-SDBL preview (`SdblDock`) у Canvas існує (низ екрана, collapsible), але
-це той самий read-only generated-text dock, що й у Phase 1 shell, не
-field-level cross-highlight (Phase 15, не почато).
+**Grouping Workspace (Phase 9) --- реалізовано** (2026-09-19,
+`src/webview-canvas/grouping/GroupingWorkspace.tsx`): НАВМИСНО мінімальний
+--- лише список `grouping.groupFields: FieldRef[]` (ADD_GROUP_FIELD/
+REMOVE_GROUP_FIELD), без properties-панелі чи expression-бару (FieldRef
+тут не має нічого іншого редагованого). Свідомо НЕ включено (explicit
+scope decision користувача, задокументовано в коді):
+- `grouping.aggregates` (окремий legacy/Classic-механізм призначення
+  агрегатних функцій, паралельний `SelectedField.func`, яким уже керує
+  Fields tab) --- НЕ дубльовано тут, щоб не було двох місць для одного
+  поняття;
+- "групуючі набори" (`grouping.multiple`/`groupSets`, Classic
+  GroupingTab.tsx) --- окремий scope пізніше;
+- HAVING (`model.having`) --- генератор його рендерить (`renderHaving`),
+  але reducer не має ЖОДНОГО ADD_HAVING/SET_HAVING_* action; додавання
+  такого UI вимагало б нових reducer actions, що суперечить принципу
+  "переюзати наявне" цього проходу.
+
+Reducer-side нюанс: `REMOVE_GROUP_FIELD` адресує елемент за (tableId,path)
+--- для expression-based записів (tableId==='', path=''), що їх
+auto-додає `SET_FIELD_FUNC` з Fields tab, це видалило б УСІ такі записи
+одночасно; тому UI дозволяє remove лише для простих (не-expression)
+рядків (expression-рядки читаються, але керуються тільки з Fields tab).
+Live-QA підтвердив: ручний groupField + окремий агрегат на іншому полі
+через Fields tab коректно співіснують без дублювання/конфліктів
+(`СГРУППИРОВАТЬ ПО` містить лише явно згруповане поле, агрегатне поле
+в SELECT не потрапляє в групування).
+
+`WorkspaceNav` вкладки Сортування/Додатково --- і досі Phase 1 placeholder
+(текст "Цей workspace буде реалізовано в наступній фазі"). SDBL preview
+(`SdblDock`) у Canvas існує (низ екрана, collapsible), але це той самий
+read-only generated-text dock, що й у Phase 1 shell, не field-level
+cross-highlight (Phase 15, не почато).
 
 ## 11. Відомі обмеження / gaps (оновлено 2026-09-18)
 
@@ -242,9 +269,10 @@ field-level cross-highlight (Phase 15, не почато).
   Canvas parity (Phase 13, окремий implementation gate перед стартом --
   див. Query Scope рішення в roadmap);
 - немає SKD/report builder mode;
-- Fields (Phase 7) і Conditions (Phase 8) --- реалізовано, див. §10;
-  Grouping/Sorting/Additional workspace-и (Phase 9-11) --- placeholder,
-  не почато.
+- Fields (Phase 7), Conditions (Phase 8) і Grouping (Phase 9) ---
+  реалізовано, див. §10; Sorting/Additional workspace-и (Phase 10-11)
+  --- placeholder, не почато; HAVING і "групуючі набори" --- свідомо
+  поза scope Phase 9 (див. §10).
 
 Ці твердження обов'язково перевірити по актуальному repository перед
 реалізацією.
