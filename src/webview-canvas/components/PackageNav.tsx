@@ -35,8 +35,22 @@ const UNION_KEYWORD_BTN: React.CSSProperties = {
   fontWeight: 600,
   letterSpacing: 0.3,
   padding: '2px 3px',
-  color: TOKENS.chartOrange,
+  // Design review (2026-09-19): раніше chartOrange — "кричало" на
+  // користувача, ніби ОБ'ЄДНАТИ ВСЕ це команда, а не режим композиції.
+  // Нейтральний textSecondary + окремий muted label ("⑂ Об'єднання:")
+  // пояснює контекст, не привертаючи зайвої уваги; єдиний акцентний
+  // колір у стрічці — активний SELECT-чип (TOKENS.accent).
+  color: TOKENS.textSecondary,
   whiteSpace: 'nowrap',
+};
+
+const UNION_LABEL: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
+  color: TOKENS.textMuted,
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
 };
 
 const UNION_REMOVE_BTN: React.CSSProperties = {
@@ -75,54 +89,90 @@ export function PackageNav({
   const activeName = batchMemberName(state, state.activeBatch);
   const isTempTable = activeModel?.queryType === 'createTemp' || activeModel?.queryType === 'appendTemp';
 
+  // Design review (2026-09-19): одноразова контекстна підказка — з'являється
+  // ЛИШЕ в момент створення першого union-члена (не при кожному відкритті),
+  // ховається по dismiss або якщо union знову звели до 1 SELECT.
+  const [showUnionHint, setShowUnionHint] = React.useState(false);
+  React.useEffect(() => {
+    if (state.queryList.length <= 1) setShowUnionHint(false);
+  }, [state.queryList.length]);
+
   return (
-    <div style={BAR_STYLE}>
-      <span style={{ color: TOKENS.textSecondary }}>{t(locale, 'sidebarPackage')}:</span>
-      {batch.members.map((_, i) => {
-        const active = i === state.activeBatch;
-        return (
+    <div>
+      <div style={BAR_STYLE}>
+        <span style={{ color: TOKENS.textSecondary }}>{t(locale, 'sidebarPackage')}:</span>
+        {batch.members.map((_, i) => {
+          const active = i === state.activeBatch;
+          return (
+            <button
+              key={i}
+              type="button"
+              className="qcc-btn"
+              title={batchMemberName(state, i)}
+              onClick={() => {
+                if (!active) dispatch({ type: 'SET_ACTIVE_BATCH', index: i });
+              }}
+              style={{
+                ...NUMBER_BTN,
+                color: active ? TOKENS.accent : TOKENS.textSecondary,
+                fontWeight: active ? 700 : 400,
+              }}
+            >
+              {active ? `[${i + 1}]` : `${i + 1}`}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          className="qcc-btn"
+          title={t(locale, 'packageAddQuery')}
+          onClick={() => dispatch({ type: 'ADD_BATCH_QUERY' })}
+          style={{ ...NUMBER_BTN, fontWeight: 600 }}
+        >
+          +
+        </button>
+        <span style={{ width: 1, height: 14, background: TOKENS.border, margin: '0 2px', flexShrink: 0 }} />
+        <span
+          style={{
+            flex: '0 1 auto',
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            color: TOKENS.text,
+          }}
+        >
+          {activeName}
+          {isTempTable && <span style={{ color: TOKENS.textMuted }}> · {t(locale, 'packageIdentityTempTable')}</span>}
+        </span>
+        <UnionStrip locale={locale} state={state} dispatch={dispatch} onFirstUnionCreated={() => setShowUnionHint(true)} />
+      </div>
+      {showUnionHint && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 6,
+            padding: '5px 12px',
+            fontSize: 11,
+            color: TOKENS.textMuted,
+            background: TOKENS.surface1,
+            borderBottom: `1px solid ${TOKENS.border}`,
+          }}
+        >
+          <span className="codicon codicon-info" style={{ fontSize: 12, flexShrink: 0, marginTop: 1 }} />
+          <span style={{ flex: 1, minWidth: 0 }}>{t(locale, 'packageUnionHint')}</span>
           <button
-            key={i}
             type="button"
             className="qcc-btn"
-            title={batchMemberName(state, i)}
-            onClick={() => {
-              if (!active) dispatch({ type: 'SET_ACTIVE_BATCH', index: i });
-            }}
-            style={{
-              ...NUMBER_BTN,
-              color: active ? TOKENS.accent : TOKENS.textSecondary,
-              fontWeight: active ? 700 : 400,
-            }}
+            title={t(locale, 'packageUnionHintDismiss')}
+            onClick={() => setShowUnionHint(false)}
+            style={{ border: 'none', background: 'transparent', color: TOKENS.textMuted, cursor: 'pointer', fontSize: 12, padding: '0 2px', flexShrink: 0 }}
           >
-            {active ? `[${i + 1}]` : `${i + 1}`}
+            <span className="codicon codicon-close" />
           </button>
-        );
-      })}
-      <button
-        type="button"
-        className="qcc-btn"
-        title={t(locale, 'packageAddQuery')}
-        onClick={() => dispatch({ type: 'ADD_BATCH_QUERY' })}
-        style={{ ...NUMBER_BTN, fontWeight: 600 }}
-      >
-        +
-      </button>
-      <span style={{ width: 1, height: 14, background: TOKENS.border, margin: '0 2px', flexShrink: 0 }} />
-      <span
-        style={{
-          flex: '0 1 auto',
-          minWidth: 0,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          color: TOKENS.text,
-        }}
-      >
-        {activeName}
-        {isTempTable && <span style={{ color: TOKENS.textMuted }}> · {t(locale, 'packageIdentityTempTable')}</span>}
-      </span>
-      <UnionStrip locale={locale} state={state} dispatch={dispatch} />
+        </div>
+      )}
     </div>
   );
 }
@@ -152,10 +202,12 @@ function UnionStrip({
   locale,
   state,
   dispatch,
+  onFirstUnionCreated,
 }: {
   locale: SupportedLocale;
   state: QueryState;
   dispatch: React.Dispatch<QueryAction>;
+  onFirstUnionCreated: () => void;
 }): React.ReactElement {
   const queryList = state.queryList;
 
@@ -165,7 +217,10 @@ function UnionStrip({
         type="button"
         className="qcc-btn"
         title={t(locale, 'packageUnionAdd')}
-        onClick={() => dispatch({ type: 'ADD_QUERY' })}
+        onClick={() => {
+          dispatch({ type: 'ADD_QUERY' });
+          onFirstUnionCreated();
+        }}
         style={{ ...NUMBER_BTN, flexShrink: 0, color: TOKENS.textMuted }}
       >
         {t(locale, 'packageAddUnion')}
@@ -173,11 +228,19 @@ function UnionStrip({
     );
   }
 
+  const unionLabel = (
+    <span style={UNION_LABEL} title={t(locale, 'packageUnionLabelTooltip')}>
+      <span className="codicon codicon-git-merge" style={{ fontSize: 12 }} />
+      {t(locale, 'packageUnionLabel')}
+    </span>
+  );
+
   if (queryList.length > UNION_INLINE_LIMIT) {
     const active = state.activeQuery;
     const keywordLabel = active > 0 ? (queryList[active].distinct ? t(locale, 'packageUnionKeywordDistinct') : t(locale, 'packageUnionKeywordAll')) : null;
     return (
       <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+        {unionLabel}
         <button
           type="button"
           className="qcc-btn"
@@ -227,6 +290,7 @@ function UnionStrip({
 
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+      {unionLabel}
       {queryList.map((q, i) => {
         const active = i === state.activeQuery;
         return (
