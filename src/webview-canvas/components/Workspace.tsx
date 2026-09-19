@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
 import { t, type MessageKey } from '../i18n';
+import { FieldsWorkspace } from '../fields/FieldsWorkspace';
 import { StructureWorkspace, type StructureSelection } from '../structure/StructureWorkspace';
 import { TOKENS } from '../theme';
 import { WorkspaceNav, type WorkspaceTab } from './WorkspaceNav';
@@ -33,9 +34,9 @@ const BODY_STYLE: React.CSSProperties = {
 };
 
 /**
- * Workspace: nav + вміст активної вкладки. Structure (Phase 3A) — єдина
- * вкладка з реальним вмістом; решта лишаються Phase 1 заглушкою (Fields/
- * Conditions/Grouping/Sorting/Additional — Phase 7-11).
+ * Workspace: nav + вміст активної вкладки. Structure (Phase 3A) і Fields
+ * (Phase 7) мають реальний вміст; Conditions/Grouping/Sorting/Additional
+ * лишаються Phase 1 заглушкою (Phase 8-11).
  */
 export function Workspace({
   locale,
@@ -46,6 +47,8 @@ export function Workspace({
   metadataLoaded,
   selection,
   onSelectionChange,
+  inspectorWidth,
+  onInspectorResize,
 }: {
   locale: SupportedLocale;
   active: WorkspaceTab;
@@ -55,6 +58,8 @@ export function Workspace({
   metadataLoaded: boolean;
   selection: StructureSelection;
   onSelectionChange: (selection: StructureSelection) => void;
+  inspectorWidth: number;
+  onInspectorResize: (delta: number) => void;
 }): React.ReactElement {
   // Bug fix: StructureWorkspace раніше рендерився лише при active==='structure'
   // (умовний unmount/remount) — перемикання на будь-яку іншу вкладку й назад
@@ -68,7 +73,7 @@ export function Workspace({
   return (
     <div style={CONTAINER_STYLE}>
       <WorkspaceNav locale={locale} active={active} onChange={onChange} />
-      <div style={{ display: active === 'structure' ? 'flex' : 'none', flex: 1, minHeight: 0 }}>
+      <div style={{ display: active === 'structure' ? 'flex' : 'none', flex: 1, minWidth: 0, minHeight: 0 }}>
         <StructureWorkspace
           locale={locale}
           state={state}
@@ -76,9 +81,14 @@ export function Workspace({
           metadataLoaded={metadataLoaded}
           selection={selection}
           onSelectionChange={onSelectionChange}
+          inspectorWidth={inspectorWidth}
+          onInspectorResize={onInspectorResize}
         />
       </div>
-      {active !== 'structure' && (
+      <div style={{ display: active === 'fields' ? 'flex' : 'none', flex: 1, minWidth: 0, minHeight: 0 }}>
+        <FieldsWorkspace locale={locale} state={state} dispatch={dispatch} onGoToStructure={() => onChange('structure')} />
+      </div>
+      {active !== 'structure' && active !== 'fields' && (
         <div style={BODY_STYLE}>
           <div style={{ textAlign: 'center', color: TOKENS.textMuted, fontSize: 13, maxWidth: 320 }}>
             <div style={{ fontWeight: 600, marginBottom: 4, color: TOKENS.textSecondary }}>

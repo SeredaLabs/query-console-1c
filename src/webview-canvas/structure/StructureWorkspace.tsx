@@ -3,6 +3,7 @@ import type { ConditionOperator } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
 import { allTables } from '../../webview/state/queryStore';
+import { Inspector } from '../components/Inspector';
 import { t } from '../i18n';
 import { TOKENS } from '../theme';
 import { CanvasSurface } from './CanvasSurface';
@@ -42,14 +43,22 @@ export function StructureWorkspace({
   metadataLoaded,
   selection,
   onSelectionChange,
+  inspectorWidth,
+  onInspectorResize,
 }: {
   locale: SupportedLocale;
   state: QueryState;
   dispatch: React.Dispatch<QueryAction>;
   metadataLoaded: boolean;
-  /** Phase 4: selection піднято в App.tsx — Inspector рендериться поза Structure. */
+  /** Selection лишається піднятим в App.tsx (переживає перемикання вкладок),
+   * але сам Inspector рендериться ТУТ — нижче Toolbar/WorkspaceNav, поруч із
+   * канвою, а не sibling'ом усього Workspace — щоб картка властивостей не
+   * перекривала панель кнопок (+Джерело/Зв'язки) і рядок вкладок розділів,
+   * і була на тому ж вертикальному рівні, що й права панель на вкладці Поля. */
   selection: StructureSelection;
   onSelectionChange: (selection: StructureSelection) => void;
+  inspectorWidth: number;
+  onInspectorResize: (delta: number) => void;
 }): React.ReactElement {
   const setSelection = onSelectionChange;
   // Phase 3E: floating Source Browser замінює persistent Sidebar → Метадані.
@@ -359,6 +368,8 @@ export function StructureWorkspace({
           onClose={() => setSourcePopoverOpen(false)}
         />
       )}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
+      <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex' }}>
       <CanvasSurface
         transform={transform}
         onWheelZoom={zoomAt}
@@ -482,6 +493,19 @@ export function StructureWorkspace({
           );
         })}
       </CanvasSurface>
+      </div>
+      {selection !== null && (
+        <Inspector
+          locale={locale}
+          width={inspectorWidth}
+          onResize={onInspectorResize}
+          state={state}
+          dispatch={dispatch}
+          selection={selection}
+          onClearSelection={() => setSelection(null)}
+        />
+      )}
+      </div>
     </div>
   );
 }

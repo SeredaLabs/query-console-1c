@@ -10,7 +10,8 @@ export const DIMENSIONS = {
   // Phase 3E: компактна package-стрічка над WorkspaceNav (замінює Sidebar → Пакет).
   packageNav: 32,
   workspaceNav: 40,
-  inspector: { default: 300, min: 260, max: 380 },
+  inspector: { default: 300, min: 260, max: 460 },
+  fieldsPanel: { default: 280, min: 220, max: 420 },
   sdbl: { collapsed: 36, default: 180, min: 120, max: 400 },
   resizeHandle: 6,
 } as const;
@@ -77,4 +78,13 @@ export const SECTION_LABEL: React.CSSProperties = {
   textTransform: 'uppercase',
   letterSpacing: 0.4,
   color: TOKENS.textSecondary,
+};
+
+/** Окрема округла картка-панель (рамка з усіх боків, а не flush border-left) —
+ * використовується для візуально відокремлених панелей (Fields grid/bar/panel,
+ * Structure Inspector), щоб кожна виглядала як самостійний блок, а не суцільна смуга. */
+export const CARD: React.CSSProperties = {
+  background: TOKENS.surface1,
+  border: `1px solid ${TOKENS.border}`,
+  borderRadius: 8,
 };

@@ -52,6 +52,11 @@ interface Props {
    * запрашивались.
    */
   richFeatures?: boolean;
+  /** Read-only перегляд (напр. SDBL-превʼю New Builder) — підсвітка синтаксису
+   * лишається, курсор/виділення/копіювання працюють, але доку не можна редагувати
+   * і `onChange` ніколи не викликається. Опційно — інші місця використання не
+   * зачеплені. */
+  readOnly?: boolean;
 }
 
 /**
@@ -63,7 +68,7 @@ interface Props {
  * токенизатора (queryHighlight.ts), без Lezer-грамматики.
  */
 export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function CodeEditor(
-  { value, onChange, onDragOver, onDrop, spellCheck, testId, wrapperStyle, textStyle, richFeatures },
+  { value, onChange, onDragOver, onDrop, spellCheck, testId, wrapperStyle, textStyle, richFeatures, readOnly },
   forwardedRef
 ) {
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -232,6 +237,7 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
       EditorView.contentAttributes.of({ spellcheck: spellCheck === false ? 'false' : 'true' }),
     ];
     if (wrapLines) extensions.push(EditorView.lineWrapping);
+    if (readOnly) extensions.push(EditorState.readOnly.of(true), EditorView.contentAttributes.of({ 'aria-readonly': 'true' }));
     if (richFeatures) {
       extensions.push(
         lineNumbers(),
@@ -259,7 +265,7 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
     // Пересоздаём редактор при смене режима переноса строк или набора расширений —
     // остальные пропсы (onChange/цвета/spellCheck) читаются через рефы/статичные стили.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wrapLines, richFeatures]);
+  }, [wrapLines, richFeatures, readOnly]);
 
   // Синхронизация извне (сброс текста при повторном открытии диалога, кнопка
   // «Форматировать» — стадия 5 плана) — свои же изменения (через onChange выше) сюда

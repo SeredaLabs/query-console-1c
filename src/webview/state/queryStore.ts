@@ -163,6 +163,15 @@ export type QueryAction =
   // 7.8.15: двойной клик по синониму подзапроса переоткрывает конструктор; ОК обновляет подзапрос.
   | { type: 'UPDATE_SUBQUERY_TABLE'; tableId: string; subquery: QueryDocument; columns: string[] }
   | { type: 'REMOVE_FIELD'; fieldIdx: number }
+  // New Builder Phase 7 (Fields Workspace): порядок SELECT-списку — це порядок
+  // масиву selectedFields, тож reorder = переставити два сусідні елементи.
+  | { type: 'MOVE_FIELD'; fieldIdx: number; direction: 'up' | 'down' }
+  | { type: 'SET_FIELD_ALIAS'; fieldIdx: number; alias: string }
+  // func живе прямо на SelectedField (queryModel.ts), окремо від
+  // grouping.aggregates/totals.totalFields — це РІЗНІ agregate-механізми
+  // (per-field function vs GROUP BY aggregate), тому власний action, а не
+  // повторне використання ADD_SUMMABLE_FIELD/SET_SUMMABLE_FUNC.
+  | { type: 'SET_FIELD_FUNC'; fieldIdx: number; func: AggregateFunction | undefined }
   | { type: 'ADD_TAB_SECTION_WITH_TABLE'; parentTableFullName: string; tsName: string; tsFullName: string; tsFields: string[] }
   | { type: 'REMOVE_TAB_SECTION'; tableId: string; tsName: string }
   | { type: 'REMOVE_TAB_SECTION_SUB_FIELD'; tableId: string; tsName: string; fieldName: string }
@@ -1007,6 +1016,79 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
         })),
       };
       return { ...state, selectedFields: fields, grouping, order, totals, indexing, focusedSelectedFieldIdx: null };
+    }
+
+    case 'MOVE_FIELD': {
+      const from = action.fieldIdx;
+      const to = action.direction === 'up' ? from - 1 : from + 1;
+      if (from < 0 || from >= state.selectedFields.length || to < 0 || to >= state.selectedFields.length) return state;
+      const selectedFields = state.selectedFields.slice();
+      [selectedFields[from], selectedFields[to]] = [selectedFields[to], selectedFields[from]];
+      return { ...state, selectedFields };
+    }
+
+    case 'SET_FIELD_ALIAS': {
+      const cur = state.selectedFields[action.fieldIdx];
+      if (!cur) return state;
+      const alias = action.alias.trim();
+      const next: SelectedField = { ...cur };
+      if (alias) next.alias = alias;
+      else delete next.alias;
+      const selectedFields = state.selectedFields.map((f, i) => (i === action.fieldIdx ? next : f));
+      return { ...state, selectedFields };
+    }
+
+    case 'SET_FIELD_FUNC': {
+      const cur = state.selectedFields[action.fieldIdx];
+      if (!cur) return state;
+      const next: SelectedField = { ...cur };
+      if (action.func) {
+        next.func = action.func;
+        // UI завжди адресує операнд як table.path (той самий вигляд, що й
+        // `Аліас.Шлях` у SDBL) — це РІВНО те, що парсер (tryAggregate,
+        // sdblParser.ts) позначає `operandQualified: true`. Без цього прапорця
+        // generator (buildFieldLines) не синтезує автопсевдонім для агрегату
+        // (`СУММА(...)` лишається без `КАК`) — саме цей баг і був знайдений
+        // живим QA (2026-09-18): агрегатне поле без псевдоніма в SELECT.
+        next.funcOperandQualified = true;
+      } else {
+        delete next.func;
+        delete next.funcOperandQualified;
+      }
+      const selectedFields = state.selectedFields.map((f, i) => (i === action.fieldIdx ? next : f));
+      if (!action.func) return { ...state, selectedFields };
+      // SDBL-правило (як і в SQL): якщо в SELECT є хоч один агрегат, усі
+      // НЕагреговані поля мають бути в ГРУППИРОВАТЬ ПО, інакше запит не
+      // скомпілюється в 1С — знайдено живим QA (2026-09-18): агрегат на одному
+      // полі + прості поля без групування генерував невалідний SDBL. Автоматично
+      // додаємо решту неагрегованих полів у grouping.groupFields — ПРОСТІ поля
+      // (той самий dedup, що й ADD_GROUP_FIELD) і ДОВІЛЬНІ ВИРАЗИ (той самий FieldRef
+      // {expression}, що вже вміє рендерити генератор — appendMissingGroupRefs,
+      // sdblGenerator.ts, сам вирішує коли вираз "покритий" уже згрупованим полем
+      // і не дублює). Без виразів: якщо єдине неагреговане поле — довільний вираз
+      // (без жодного простого поля поруч), groupFields лишався б порожнім,
+      // renderGrouping's "дописуємо лише при АКТИВНІЙ групуванні" ніколи не
+      // спрацьовував — і вираз мовчки лишався поза групуванням (той самий випадок,
+      // що і зі звичайним полем, тільки для довільного виразу; знайдено 2026-09-18).
+      const groupRefs: FieldRef[] = [];
+      for (const f of selectedFields) {
+        if (f.func !== undefined) continue;
+        if (f.expression !== undefined) {
+          if (!groupRefs.some(r => r.expression === f.expression)) groupRefs.push({ tableId: '', path: '', expression: f.expression });
+        } else if (f.path !== '' && !groupRefs.some(r => r.tableId === f.tableId && r.path === f.path)) {
+          groupRefs.push({ tableId: f.tableId, path: f.path });
+        }
+      }
+      const existingGroupFields = state.grouping.groupFields;
+      const newGroupFields = groupRefs.filter(
+        r => !existingGroupFields.some(g => (r.expression !== undefined ? g.expression === r.expression : g.tableId === r.tableId && g.path === r.path))
+      );
+      if (newGroupFields.length === 0) return { ...state, selectedFields };
+      return {
+        ...state,
+        selectedFields,
+        grouping: { ...state.grouping, groupFields: [...existingGroupFields, ...newGroupFields] },
+      };
     }
 
     case 'FOCUS_SELECTED_TABLE':

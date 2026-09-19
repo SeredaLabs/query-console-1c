@@ -1,9 +1,9 @@
 import * as React from 'react';
 import type { SupportedLocale } from '../shared/locale';
+import { computeBatchTextSafe } from '../webview/computeBatchText';
 import { initialState, reducer } from '../webview/state/queryStore';
 import { onHostMessage, postToHost } from './bridge';
 import { DocumentBar } from './components/DocumentBar';
-import { Inspector } from './components/Inspector';
 import { PackageNav } from './components/PackageNav';
 import { SdblDock } from './components/SdblDock';
 import { Workspace } from './components/Workspace';
@@ -38,6 +38,10 @@ export function App(): React.ReactElement {
 
   const [sdblCollapsed, setSdblCollapsed] = React.useState(true);
   const [sdblHeight, setSdblHeight] = React.useState<number>(DIMENSIONS.sdbl.default);
+  // Той самий client-side шлях, що й Classic (computeBatchText.ts) — жодного
+  // host round-trip: assembleBatch(state) + generateBatch(...), обгорнуто в
+  // try/catch (контрольована помилка замість краху всього webview).
+  const batchText = React.useMemo(() => computeBatchTextSafe(state, true), [state]);
 
   const [workspaceTab, setWorkspaceTab] = React.useState<WorkspaceTab>('structure');
 
@@ -96,23 +100,16 @@ export function App(): React.ReactElement {
           metadataLoaded={metadataLoaded}
           selection={selection}
           onSelectionChange={setSelection}
+          inspectorWidth={inspectorWidth}
+          onInspectorResize={resizeInspector}
         />
-        {selection !== null && (
-          <Inspector
-            locale={locale}
-            width={inspectorWidth}
-            onResize={resizeInspector}
-            state={state}
-            dispatch={dispatch}
-            selection={selection}
-            onClearSelection={() => setSelection(null)}
-          />
-        )}
       </div>
       <SdblDock
         locale={locale}
         collapsed={sdblCollapsed}
         height={sdblHeight}
+        text={batchText.text}
+        error={batchText.error}
         onToggleCollapsed={() => setSdblCollapsed(v => !v)}
         onResize={resizeSdbl}
       />

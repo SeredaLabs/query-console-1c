@@ -8,6 +8,29 @@ import * as React from 'react';
  * документ незалежно від того, де в дереві він змонтований.
  */
 const CSS = `
+/* Responsive layout fix (Fields tab audit): без border-box, будь-який
+   елемент із padding/border І відсотковою шириною (width:'100%') рендериться
+   ШИРШИМ за свій контейнер на суму padding+border (content-box — дефолт
+   браузера) — саме так \`FieldPropertiesPanel\`/inputs у ньому вилазили за
+   межі кореня на вузьких viewport, коли ширина панелі стала '100%' замість
+   фіксованого пікселя. Раніше це не проявлялося, бо всі ширини в New Builder
+   були fixed-px (де content-box лише додає кілька px до самого елемента,
+   не спричиняючи overflow контейнера) — глобально, а не патчем щоразу.
+*/
+#root, #root *, #root *::before, #root *::after {
+  box-sizing: border-box;
+}
+
+/* Fields grid "Псевдонім" cell (and any other transparent-background input)
+   had poor placeholder contrast — with no explicit ::placeholder rule the
+   browser UA default (a fixed mid-gray) is used instead of a theme-aware
+   token, which reads badly against a dark editor theme. */
+#root input::placeholder,
+#root textarea::placeholder {
+  color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground));
+  opacity: 1;
+}
+
 .qcc-btn:hover:not(:disabled) {
   background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
 }

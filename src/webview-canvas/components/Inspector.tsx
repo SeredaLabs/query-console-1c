@@ -6,21 +6,19 @@ import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
 import { allTables } from '../../webview/state/queryStore';
 import { MetaKindIcon } from '../../webview/components/MetaKindIcon';
-import { ConditionModeToggle } from '../structure/Toolbar';
 import { JoinKindPicker } from '../structure/JoinKindPicker';
-import { joinKindLabel } from '../structure/joinKind';
+import { joinKindLabel, joinKindVisual } from '../structure/joinKind';
 import type { StructureSelection } from '../structure/StructureWorkspace';
 import { groupLabel, t } from '../i18n';
-import { DIMENSIONS, SECTION_LABEL, TOKENS } from '../theme';
+import { CARD, DIMENSIONS, SECTION_LABEL, TOKENS } from '../theme';
 import { ResizeHandle } from './ResizeHandle';
 
 const CONTAINER_STYLE: React.CSSProperties = {
+  ...CARD,
   display: 'flex',
   flexDirection: 'column',
-  height: '100%',
   overflow: 'hidden',
-  borderLeft: `1px solid ${TOKENS.border}`,
-  background: TOKENS.surface1,
+  margin: '10px 10px 10px 0',
 };
 
 const HEADER_STYLE: React.CSSProperties = {
@@ -71,6 +69,91 @@ const BADGE: React.CSSProperties = {
   padding: '1px 6px',
   marginTop: 4,
   marginRight: 4,
+};
+
+const SOURCE_PILL: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 600,
+  color: TOKENS.text,
+  background: TOKENS.surface2,
+  border: `1px solid ${TOKENS.border}`,
+  borderRadius: 6,
+  padding: '4px 10px',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  flex: '1 1 0',
+  minWidth: 0,
+};
+
+/** Dark-themed `<select>` — рідний браузерний білий select дуже сильно
+ * вибивався з VS Code UI (design review). Тільки токени, як і решта Builder. */
+const DARK_SELECT: React.CSSProperties = {
+  display: 'block',
+  width: '100%',
+  fontSize: 12,
+  padding: '4px 6px',
+  borderRadius: 4,
+  border: `1px solid var(--vscode-dropdown-border, ${TOKENS.border})`,
+  background: 'var(--vscode-dropdown-background)',
+  color: 'var(--vscode-dropdown-foreground)',
+};
+
+const IDENT_NAME: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 600,
+  color: TOKENS.text,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+const IDENT_KIND: React.CSSProperties = {
+  fontSize: 11,
+  color: TOKENS.textMuted,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+const AND_PILL: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: 0.4,
+  color: TOKENS.textMuted,
+  textAlign: 'center',
+  margin: '4px 0',
+};
+
+const KEBAB_BTN: React.CSSProperties = {
+  border: 'none',
+  background: 'transparent',
+  color: TOKENS.textMuted,
+  cursor: 'pointer',
+  padding: '2px 4px',
+  borderRadius: 3,
+  flexShrink: 0,
+};
+
+const MENU_ITEM: React.CSSProperties = {
+  padding: '6px 10px',
+  fontSize: 12,
+  color: TOKENS.textSecondary,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+};
+
+const DESTRUCTIVE_LINK: React.CSSProperties = {
+  border: 'none',
+  background: 'transparent',
+  color: TOKENS.danger,
+  cursor: 'pointer',
+  fontSize: 12,
+  padding: '4px 2px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  opacity: 0.85,
 };
 
 const REMOVE_BTN: React.CSSProperties = {
@@ -148,14 +231,6 @@ function SourceInspector({
   );
 }
 
-const SELECT_STYLE: React.CSSProperties = {
-  display: 'block',
-  width: '100%',
-  marginTop: 2,
-  fontSize: 12,
-  padding: '3px 4px',
-};
-
 /** Той самий перелік, що й Classic ConnectionsTab (`OPERATORS`) — раніше в New Builder
  * Inspector умова поле=поле мала лише неявний `=`, хоча домен/reducer (`SET_JOIN_OPERATOR`)
  * і Classic вже підтримують довільний оператор. */
@@ -168,6 +243,53 @@ function fieldsOf(tableId: string, selectedTables: SelectedTable[], tablesMeta: 
   return meta ? meta.fields : [];
 }
 
+function metaOf(tableId: string, selectedTables: SelectedTable[], state: QueryState): MetaTable | undefined {
+  const table = selectedTables.find(tb => tb.id === tableId);
+  if (!table) return undefined;
+  return allTables(state).find(m => m.fullName === table.fullName);
+}
+
+/** Легкий overflow-меню — той самий backdrop+absolute патерн, що вже є в
+ * FieldsWorkspace ("+ Поле" popover), не нова взаємодія для кодбази. */
+function KebabMenu({ items, onClose }: { items: { label: string; onClick: () => void; danger?: boolean }[]; onClose: () => void }): React.ReactElement {
+  return (
+    <>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={onClose} />
+      <div
+        style={{
+          position: 'absolute',
+          top: '100%',
+          right: 0,
+          marginTop: 4,
+          zIndex: 11,
+          minWidth: 160,
+          borderRadius: 6,
+          border: `1px solid ${TOKENS.border}`,
+          background: TOKENS.surface1,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          overflow: 'hidden',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {items.map((item, i) => (
+          <div
+            key={i}
+            onClick={() => {
+              item.onClick();
+              onClose();
+            }}
+            style={{ ...MENU_ITEM, color: item.danger ? TOKENS.danger : TOKENS.textSecondary }}
+            onMouseEnter={e => (e.currentTarget.style.background = TOKENS.surfaceHover)}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >
+            {item.label}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 function JoinInspector({
   locale,
   join,
@@ -176,6 +298,7 @@ function JoinInspector({
   state,
   dispatch,
   onRemoved,
+  width,
 }: {
   locale: SupportedLocale;
   join: Join;
@@ -184,6 +307,7 @@ function JoinInspector({
   state: QueryState;
   dispatch: React.Dispatch<QueryAction>;
   onRemoved: () => void;
+  width: number;
 }): React.ReactElement {
   const leftLabel = tableLabel(join.leftTableId, selectedTables);
   const rightLabel = tableLabel(join.rightTableId, selectedTables);
@@ -199,15 +323,39 @@ function JoinInspector({
     () => fieldsOf(join.rightTableId, selectedTables, tablesMeta),
     [join.rightTableId, selectedTables, tablesMeta]
   );
+  const leftMeta = metaOf(join.leftTableId, selectedTables, state);
+  const rightMeta = metaOf(join.rightTableId, selectedTables, state);
   const kind = joinKindLabel(join.leftAll, join.rightAll);
+  const [openMenu, setOpenMenu] = React.useState<number | null>(null);
+  // Design review (2026-09-19): field/operator/field розкладка в один рядок
+  // ламається на вузькій панелі (3 select стиснуті нема куди) — той самий
+  // "adaptive" принцип, що й Fields tab, лише виміряний з уже готового
+  // `width` prop (Inspector сам ресайзиться, а не canvas-container), тому
+  // без окремого ResizeObserver.
+  const stacked = width < 400;
 
   return (
     <div>
-      <div style={SECTION_GAP}>
-        <div style={{ ...SECTION_LABEL, marginBottom: 8 }}>{t(locale, 'structureJoinSectionSources')}</div>
-        <Field label={t(locale, 'inspectorJoinSourceA')}>{leftLabel}</Field>
-        <Field label={t(locale, 'inspectorJoinSourceB')}>{rightLabel}</Field>
+      {/* Ідентифікація зв'язку — інформаційна, не input-подібна (design
+          review: "виглядають так, ніби їх можна редагувати"). Тип
+          з'єднання більше НЕ дублюється тут текстом — джерело правди
+          лише сегментований picker нижче. */}
+      <div style={{ ...SECTION_GAP, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={IDENT_NAME} title={leftLabel}>
+            {leftLabel}
+          </div>
+          <div style={IDENT_KIND}>{leftMeta ? groupLabel(locale, leftMeta.kind) : '—'}</div>
+        </div>
+        <span className="codicon codicon-arrow-right" style={{ fontSize: 14, color: TOKENS.textMuted, flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+          <div style={IDENT_NAME} title={rightLabel}>
+            {rightLabel}
+          </div>
+          <div style={IDENT_KIND}>{rightMeta ? groupLabel(locale, rightMeta.kind) : '—'}</div>
+        </div>
       </div>
+
       <div style={SECTION_GAP}>
         <div style={{ ...SECTION_LABEL, marginBottom: 8 }}>{t(locale, 'structureJoinKind')}</div>
         <JoinKindPicker
@@ -218,118 +366,140 @@ function JoinInspector({
           }}
         />
       </div>
+
       <div style={SECTION_GAP}>
-        <div style={{ ...SECTION_LABEL, marginBottom: 8 }}>{t(locale, 'structureJoinSectionCondition')}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={SECTION_LABEL}>{t(locale, 'structureJoinSectionCondition')}</span>
+          {conditions.length > 1 && <span style={{ ...SECTION_LABEL, color: TOKENS.textMuted }}>{conditions.length}</span>}
+        </div>
         {/*
-          Кожен конюнкт (AND-умова) редагується незалежно — той самий
-          `ConditionModeToggle`, що й для creation popover, тільки з
-          `condIndex`. Reducer це вже підтримує (`ADD_JOIN_CONDITION`/
-          `REMOVE_JOIN_CONDITION`/`SET_JOIN_FIELD`/`SET_JOIN_EXPRESSION`/
-          `SET_JOIN_CUSTOM` з опційним condIndex) — раніше просто не було
-          UI для >1 умови (fallback на read-only). Жодних нових domain
-          capabilities: multi-conjunct AND — вже існуюча модель `Join.
-          conditions[]`.
+          Кожен конюнкт (AND-умова) редагується незалежно — reducer вже
+          підтримує це (`ADD_JOIN_CONDITION`/`REMOVE_JOIN_CONDITION`/
+          `SET_JOIN_FIELD`/`SET_JOIN_EXPRESSION`/`SET_JOIN_CUSTOM` з
+          опційним condIndex). Design review: `ConditionModeToggle` як
+          завжди видимий segmented control прибрано — перемикання
+          поле/вираз тепер лише в "⋮"-меню кожної умови (властивість
+          КОНКРЕТНОЇ умови, не всього JOIN), а AND-роздільник між умовами
+          читається як логічний вираз "A = B AND C = D", а не список
+          dropdown'ів.
         */}
-        {conditions.map((c, i) => (
-          <div key={i}>
-            {i > 0 && (
-              <div style={{ fontSize: 10, fontWeight: 600, color: TOKENS.textMuted, margin: '8px 0 4px' }}>
-                {t(locale, 'structureJoinAnd')}
-              </div>
-            )}
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <ConditionModeToggle
-                  locale={locale}
-                  mode={c.custom ? 'custom' : 'field'}
-                  onChange={mode => dispatch({ type: 'SET_JOIN_CUSTOM', index: joinIndex, custom: mode === 'custom', condIndex: i })}
-                />
-                <div style={{ height: 6 }} />
+        {conditions.map((c, i) => {
+          const selectedLeft = leftFields.find(f => f.name === c.leftPath);
+          return (
+            <React.Fragment key={i}>
+              {i > 0 && <div style={AND_PILL}>{t(locale, 'structureJoinAnd')}</div>}
+              <div style={{ position: 'relative', border: `1px solid ${TOKENS.border}`, borderRadius: 6, padding: 8, background: TOKENS.surface2 }}>
+                <div style={{ position: 'absolute', top: 4, right: 4 }}>
+                  <button type="button" title={t(locale, 'inspectorActionsSection')} onClick={() => setOpenMenu(i)} style={KEBAB_BTN}>
+                    <span className="codicon codicon-kebab-vertical" style={{ fontSize: 14 }} />
+                  </button>
+                  {openMenu === i && (
+                    <KebabMenu
+                      onClose={() => setOpenMenu(null)}
+                      items={[
+                        c.custom
+                          ? { label: t(locale, 'structureJoinModeField'), onClick: () => dispatch({ type: 'SET_JOIN_CUSTOM', index: joinIndex, custom: false, condIndex: i }) }
+                          : { label: t(locale, 'structureJoinModeCustom'), onClick: () => dispatch({ type: 'SET_JOIN_CUSTOM', index: joinIndex, custom: true, condIndex: i }) },
+                        ...(conditions.length > 1
+                          ? [{ label: t(locale, 'structureJoinRemoveCondition'), danger: true, onClick: () => dispatch({ type: 'REMOVE_JOIN_CONDITION', index: joinIndex, condIndex: i }) }]
+                          : []),
+                      ]}
+                    />
+                  )}
+                </div>
                 {c.custom ? (
                   <input
                     type="text"
                     value={c.expression ?? ''}
                     onChange={e => dispatch({ type: 'SET_JOIN_EXPRESSION', index: joinIndex, expression: e.target.value, condIndex: i })}
                     placeholder={t(locale, 'structureJoinExpressionPlaceholder')}
-                    style={{ ...SELECT_STYLE, fontFamily: 'var(--vscode-editor-font-family, monospace)' }}
+                    style={{ ...DARK_SELECT, paddingRight: 24, fontFamily: 'var(--vscode-editor-font-family, monospace)' }}
                   />
+                ) : stacked ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingRight: 20 }}>
+                    <select
+                      value={c.leftPath ?? ''}
+                      onChange={e => dispatch({ type: 'SET_JOIN_FIELD', index: joinIndex, side: 'left', path: e.target.value, condIndex: i })}
+                      style={DARK_SELECT}
+                      title={t(locale, 'structureJoinFieldSource')}
+                    >
+                      <option value="">—</option>
+                      {leftFields.map(f => (
+                        <option key={f.name} value={f.name}>
+                          {leftLabel}.{f.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={c.operator ?? '='}
+                      onChange={e => dispatch({ type: 'SET_JOIN_OPERATOR', index: joinIndex, operator: e.target.value as ConditionOperator, condIndex: i })}
+                      style={{ ...DARK_SELECT, textAlign: 'center' }}
+                    >
+                      {OPERATORS.map(op => (
+                        <option key={op} value={op}>
+                          {op}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={c.rightPath ?? ''}
+                      onChange={e => dispatch({ type: 'SET_JOIN_FIELD', index: joinIndex, side: 'right', path: e.target.value, condIndex: i })}
+                      style={DARK_SELECT}
+                      title={selectedLeft ? t(locale, 'structureJoinFieldTypeMismatchHint') : t(locale, 'structureJoinFieldTarget')}
+                    >
+                      <option value="">—</option>
+                      {rightFields.map(f => (
+                        <option key={f.name} value={f.name} disabled={!!selectedLeft && !fieldsTypeCompatible(selectedLeft, f)}>
+                          {rightLabel}.{f.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 ) : (
-                  (() => {
-                    const selectedLeft = leftFields.find(f => f.name === c.leftPath);
-                    return (
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <label style={{ ...FIELD_ROW, flex: 1 }}>
-                          <span style={FIELD_LABEL}>{t(locale, 'structureJoinFieldSource')}</span>
-                          <select
-                            value={c.leftPath ?? ''}
-                            onChange={e => dispatch({ type: 'SET_JOIN_FIELD', index: joinIndex, side: 'left', path: e.target.value, condIndex: i })}
-                            style={SELECT_STYLE}
-                          >
-                            <option value="">—</option>
-                            {leftFields.map(f => (
-                              <option key={f.name} value={f.name}>
-                                {f.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label style={{ ...FIELD_ROW, flexShrink: 0, width: 54 }}>
-                          <span style={FIELD_LABEL}>&nbsp;</span>
-                          <select
-                            value={c.operator ?? '='}
-                            onChange={e => dispatch({ type: 'SET_JOIN_OPERATOR', index: joinIndex, operator: e.target.value as ConditionOperator, condIndex: i })}
-                            style={SELECT_STYLE}
-                          >
-                            {OPERATORS.map(op => (
-                              <option key={op} value={op}>
-                                {op}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label style={{ ...FIELD_ROW, flex: 1 }}>
-                          <span style={FIELD_LABEL}>{t(locale, 'structureJoinFieldTarget')}</span>
-                          <select
-                            value={c.rightPath ?? ''}
-                            onChange={e => dispatch({ type: 'SET_JOIN_FIELD', index: joinIndex, side: 'right', path: e.target.value, condIndex: i })}
-                            style={SELECT_STYLE}
-                            title={selectedLeft ? t(locale, 'structureJoinFieldTypeMismatchHint') : undefined}
-                          >
-                            <option value="">—</option>
-                            {rightFields.map(f => (
-                              <option key={f.name} value={f.name} disabled={!!selectedLeft && !fieldsTypeCompatible(selectedLeft, f)}>
-                                {f.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                    );
-                  })()
+                  <div style={{ display: 'flex', gap: 6, paddingRight: 20 }}>
+                    <select
+                      value={c.leftPath ?? ''}
+                      onChange={e => dispatch({ type: 'SET_JOIN_FIELD', index: joinIndex, side: 'left', path: e.target.value, condIndex: i })}
+                      style={{ ...DARK_SELECT, flex: 1, minWidth: 0 }}
+                      title={t(locale, 'structureJoinFieldSource')}
+                    >
+                      <option value="">—</option>
+                      {leftFields.map(f => (
+                        <option key={f.name} value={f.name}>
+                          {leftLabel}.{f.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={c.operator ?? '='}
+                      onChange={e => dispatch({ type: 'SET_JOIN_OPERATOR', index: joinIndex, operator: e.target.value as ConditionOperator, condIndex: i })}
+                      style={{ ...DARK_SELECT, flexShrink: 0, width: 52, textAlign: 'center' }}
+                    >
+                      {OPERATORS.map(op => (
+                        <option key={op} value={op}>
+                          {op}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={c.rightPath ?? ''}
+                      onChange={e => dispatch({ type: 'SET_JOIN_FIELD', index: joinIndex, side: 'right', path: e.target.value, condIndex: i })}
+                      style={{ ...DARK_SELECT, flex: 1, minWidth: 0 }}
+                      title={selectedLeft ? t(locale, 'structureJoinFieldTypeMismatchHint') : t(locale, 'structureJoinFieldTarget')}
+                    >
+                      <option value="">—</option>
+                      {rightFields.map(f => (
+                        <option key={f.name} value={f.name} disabled={!!selectedLeft && !fieldsTypeCompatible(selectedLeft, f)}>
+                          {rightLabel}.{f.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 )}
               </div>
-              {conditions.length > 1 && (
-                <button
-                  type="button"
-                  title={t(locale, 'structureJoinRemoveCondition')}
-                  onClick={() => dispatch({ type: 'REMOVE_JOIN_CONDITION', index: joinIndex, condIndex: i })}
-                  style={{
-                    flexShrink: 0,
-                    marginTop: 2,
-                    border: 'none',
-                    background: 'transparent',
-                    color: TOKENS.textMuted,
-                    cursor: 'pointer',
-                    fontSize: 12,
-                    padding: '2px 4px',
-                  }}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
+            </React.Fragment>
+          );
+        })}
         <button
           type="button"
           onClick={() => dispatch({ type: 'ADD_JOIN_CONDITION', index: joinIndex })}
@@ -349,17 +519,18 @@ function JoinInspector({
           + {t(locale, 'structureJoinAddCondition')}
         </button>
       </div>
-      <div>
-        <div style={{ ...SECTION_LABEL, marginBottom: 8 }}>{t(locale, 'inspectorActionsSection')}</div>
+
+      <div style={{ marginTop: 4, paddingTop: 10, borderTop: `1px solid ${TOKENS.borderSubtle}` }}>
         <button
           type="button"
-          style={REMOVE_BTN}
+          style={DESTRUCTIVE_LINK}
           onClick={() => {
             dispatch({ type: 'REMOVE_JOIN', index: joinIndex });
             onRemoved();
           }}
         >
-          ✕ {t(locale, 'structureRemoveJoin')}
+          <span className="codicon codicon-trash" style={{ fontSize: 13 }} />
+          {t(locale, 'structureRemoveJoin')}
         </button>
       </div>
     </div>
@@ -414,6 +585,7 @@ export function Inspector({
               state={state}
               dispatch={dispatch}
               onRemoved={onClearSelection}
+              width={width}
             />
           )}
           {!selectedTable && !selectedJoin && (
