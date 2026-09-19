@@ -180,7 +180,7 @@ Conditions Workspace territory). Canvas-бейдж (`JoinOverlay`) кольор�
 JoinKindPicker НЕ отримав — той лишається frozen (Phase 5 visual
 freeze), кольорова identity — тільки в панелях налаштування.
 
-## 10. Інші panels (оновлено 2026-09-19: Fields, Conditions і Grouping реалізовано, Sorting/Additional — ще НІ)
+## 10. Інші panels (оновлено 2026-09-19: Fields, Conditions, Grouping і Sorting реалізовано, Additional — ще НІ)
 
 **Fields Workspace (Phase 7) --- реалізовано** (`src/webview-canvas/fields/FieldsWorkspace.tsx`):
 грід ВЖЕ вибраного SELECT-списку (checkbox/#/Вираз/Псевдонім/Тип/Агрегація),
@@ -236,8 +236,30 @@ Live-QA підтвердив: ручний groupField + окремий агре�
 (`СГРУППИРОВАТЬ ПО` містить лише явно згруповане поле, агрегатне поле
 в SELECT не потрапляє в групування).
 
-`WorkspaceNav` вкладки Сортування/Додатково --- і досі Phase 1 placeholder
-(текст "Цей workspace буде реалізовано в наступній фазі"). SDBL preview
+**Sorting Workspace (Phase 10) --- реалізовано** (2026-09-19,
+`src/webview-canvas/sorting/SortingWorkspace.tsx`): список
+`state.order.fields: OrderField[]` (ADD_ORDER_FIELD/REMOVE_ORDER_FIELD/
+SET_ORDER_DIRECTION) + чекбокс "Автоупорядкування" (SET_ORDER_AUTO) ---
+жодних нових reducer actions. Кандидати для "+ Поле" --- ЛИШЕ прості
+(не-expression) поля, що ВЖЕ у SELECT (`state.selectedFields`), той
+самий обсяг, що й Classic `OrderTab.tsx` (`distinctFieldRefs`), а НЕ всі
+поля джерел (як у Grouping/Conditions) --- `OrderField` адресує лише
+(tableId,path)/selectAlias/літеральний `&Параметр`, без довільних
+виразів чи полів поза SELECT. Порожній стан веде на вкладку **Поля**
+(не Структуру, на відміну від інших вкладок) --- саме там джерело
+кандидатів для сортування.
+
+Свідомо НЕ включено: reorder/пріоритет сортування --- `MOVE_ORDER_FIELD`
+НЕ існує в reducer'і (на відміну від Fields' `MOVE_FIELD`), і Classic
+`OrderTab.tsx` теж не має reorder UI (пріоритет --- порядок додавання) ---
+це узгоджено з уже наявною поведінкою, не regression.
+
+Live-QA підтвердив: додавання поля, зміна напрямку (УБЫВ), чекбокс
+автоупорядкування і видалення --- усі коректно відображаються в
+згенерованому SDBL (`УПОРЯДОЧИТЬ ПО ... УБЫВ` / `АВТОУПОРЯДОЧИВАНИЕ`).
+
+`WorkspaceNav` вкладка Додатково --- і досі Phase 1 placeholder (текст
+"Цей workspace буде реалізовано в наступній фазі"). SDBL preview
 (`SdblDock`) у Canvas існує (низ екрана, collapsible), але це той самий
 read-only generated-text dock, що й у Phase 1 shell, не field-level
 cross-highlight (Phase 15, не почато).
@@ -269,10 +291,10 @@ cross-highlight (Phase 15, не почато).
   Canvas parity (Phase 13, окремий implementation gate перед стартом --
   див. Query Scope рішення в roadmap);
 - немає SKD/report builder mode;
-- Fields (Phase 7), Conditions (Phase 8) і Grouping (Phase 9) ---
-  реалізовано, див. §10; Sorting/Additional workspace-и (Phase 10-11)
-  --- placeholder, не почато; HAVING і "групуючі набори" --- свідомо
-  поза scope Phase 9 (див. §10).
+- Fields (Phase 7), Conditions (Phase 8), Grouping (Phase 9) і Sorting
+  (Phase 10) --- реалізовано, див. §10; Additional workspace (Phase 11)
+  --- placeholder, не почато; HAVING, "групуючі набори" і reorder
+  пріоритету сортування --- свідомо поза scope (див. §10).
 
 Ці твердження обов'язково перевірити по актуальному repository перед
 реалізацією.

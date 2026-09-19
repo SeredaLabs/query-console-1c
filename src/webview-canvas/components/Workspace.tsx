@@ -5,6 +5,7 @@ import { t, type MessageKey } from '../i18n';
 import { ConditionsWorkspace } from '../conditions/ConditionsWorkspace';
 import { FieldsWorkspace } from '../fields/FieldsWorkspace';
 import { GroupingWorkspace } from '../grouping/GroupingWorkspace';
+import { SortingWorkspace } from '../sorting/SortingWorkspace';
 import { StructureWorkspace, type StructureSelection } from '../structure/StructureWorkspace';
 import { TOKENS } from '../theme';
 import { WorkspaceNav, type WorkspaceTab } from './WorkspaceNav';
@@ -37,8 +38,8 @@ const BODY_STYLE: React.CSSProperties = {
 
 /**
  * Workspace: nav + вміст активної вкладки. Structure (Phase 3A), Fields
- * (Phase 7), Conditions (Phase 8) і Grouping (Phase 9) мають реальний
- * вміст; Sorting/Additional лишаються Phase 1 заглушкою (Phase 10-11).
+ * (Phase 7), Conditions (Phase 8), Grouping (Phase 9) і Sorting (Phase 10)
+ * мають реальний вміст; Additional лишається Phase 1 заглушкою (Phase 11).
  */
 export function Workspace({
   locale,
@@ -96,7 +97,10 @@ export function Workspace({
       <div style={{ display: active === 'grouping' ? 'flex' : 'none', flex: 1, minWidth: 0, minHeight: 0 }}>
         <GroupingWorkspace locale={locale} state={state} dispatch={dispatch} onGoToStructure={() => onChange('structure')} />
       </div>
-      {active !== 'structure' && active !== 'fields' && active !== 'conditions' && active !== 'grouping' && (
+      <div style={{ display: active === 'sorting' ? 'flex' : 'none', flex: 1, minWidth: 0, minHeight: 0 }}>
+        <SortingWorkspace locale={locale} state={state} dispatch={dispatch} onGoToFields={() => onChange('fields')} />
+      </div>
+      {active !== 'structure' && active !== 'fields' && active !== 'conditions' && active !== 'grouping' && active !== 'sorting' && (
         <div style={BODY_STYLE}>
           <div style={{ textAlign: 'center', color: TOKENS.textMuted, fontSize: 13, maxWidth: 320 }}>
             <div style={{ fontWeight: 600, marginBottom: 4, color: TOKENS.textSecondary }}>
