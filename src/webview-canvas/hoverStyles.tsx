@@ -107,6 +107,22 @@ const CSS = `
 .qcc-field-row:hover .qcc-field-toggle {
   opacity: 1;
 }
+
+/* UNION polish (design review): члени об'єднання мають ІНШУ візуальну мову,
+   ніж пакетні [n] (щоб не плутати два різні виміри навігації) — округлий
+   chip замість дужок-тексту, і видалення ховається до hover chip'а, той
+   самий reveal-on-hover pattern, що вже є в .qcc-card-remove/.qcc-join-remove. */
+.qcc-union-chip {
+  border-radius: 3px;
+  transition: background 120ms;
+}
+.qcc-union-remove {
+  opacity: 0;
+  transition: opacity 120ms;
+}
+.qcc-union-chip:hover .qcc-union-remove {
+  opacity: 1;
+}
 `;
 
 export function HoverStyles(): React.ReactElement {

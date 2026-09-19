@@ -15,6 +15,16 @@ const BAR_STYLE: React.CSSProperties = {
   borderBottom: `1px solid ${TOKENS.border}`,
   background: TOKENS.surface2,
   fontSize: 12,
+  overflow: 'hidden',
+};
+
+const GROUP_LABEL: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
+  color: TOKENS.textSecondary,
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
 };
 
 const NUMBER_BTN: React.CSSProperties = {
@@ -57,10 +67,38 @@ const UNION_REMOVE_BTN: React.CSSProperties = {
   border: 'none',
   background: 'transparent',
   cursor: 'pointer',
-  fontSize: 11,
+  fontSize: 10,
   padding: '0 2px',
   color: TOKENS.textMuted,
   lineHeight: 1,
+};
+
+/**
+ * Design review (2026-09-19, polish pass): члени UNION навмисно виглядають
+ * НЕ так, як пакетні `[n]` (bracket-text) — округлий chip з м'яким фоном на
+ * активному стані відрізняє "SELECT у межах поточного запиту" від "запит
+ * пакета", щоб користувач не плутав два різних виміри навігації.
+ */
+const UNION_CHIP_ACTIVE: React.CSSProperties = {
+  border: 'none',
+  cursor: 'default',
+  fontSize: 11,
+  fontWeight: 600,
+  padding: '1px 6px',
+  borderRadius: 3,
+  background: TOKENS.surfaceSelected,
+  color: TOKENS.accent,
+};
+
+const UNION_CHIP_INACTIVE: React.CSSProperties = {
+  border: 'none',
+  background: 'transparent',
+  cursor: 'pointer',
+  fontSize: 11,
+  fontWeight: 400,
+  padding: '1px 6px',
+  borderRadius: 3,
+  color: TOKENS.textSecondary,
 };
 
 /** Кількість SELECT-чипів, показаних повністю inline, перш ніж стиснути в
@@ -100,7 +138,10 @@ export function PackageNav({
   return (
     <div>
       <div style={BAR_STYLE}>
-        <span style={{ color: TOKENS.textSecondary }}>{t(locale, 'sidebarPackage')}:</span>
+        <span style={GROUP_LABEL} title={t(locale, 'packageConceptTooltip')}>
+          <span className="codicon codicon-package" style={{ fontSize: 12 }} />
+          {t(locale, 'sidebarPackage')}:
+        </span>
         {batch.members.map((_, i) => {
           const active = i === state.activeBatch;
           return (
@@ -268,11 +309,11 @@ function UnionStrip({
           <button
             type="button"
             className="qcc-btn"
-            title={t(locale, 'packageUnionKeywordDistinct') + ' / ' + t(locale, 'packageUnionKeywordAll')}
+            title={queryList[active].distinct ? t(locale, 'packageUnionKeywordDistinctTooltip') : t(locale, 'packageUnionKeywordAllTooltip')}
             onClick={() => dispatch({ type: 'SET_QUERY_DISTINCT', index: active, distinct: !queryList[active].distinct })}
             style={UNION_KEYWORD_BTN}
           >
-            {keywordLabel}
+            {keywordLabel} ▾
           </button>
         )}
         <button
@@ -299,37 +340,32 @@ function UnionStrip({
               <button
                 type="button"
                 className="qcc-btn"
-                title={`${t(locale, 'packageUnionKeywordDistinct')} / ${t(locale, 'packageUnionKeywordAll')}`}
+                title={q.distinct ? t(locale, 'packageUnionKeywordDistinctTooltip') : t(locale, 'packageUnionKeywordAllTooltip')}
                 onClick={() => dispatch({ type: 'SET_QUERY_DISTINCT', index: i, distinct: !q.distinct })}
                 style={UNION_KEYWORD_BTN}
               >
-                {q.distinct ? t(locale, 'packageUnionKeywordDistinct') : t(locale, 'packageUnionKeywordAll')}
+                {q.distinct ? t(locale, 'packageUnionKeywordDistinct') : t(locale, 'packageUnionKeywordAll')} ▾
               </button>
             )}
-            <span style={{ display: 'flex', alignItems: 'center' }}>
+            <span className="qcc-union-chip" style={{ display: 'flex', alignItems: 'center' }}>
               <button
                 type="button"
-                className="qcc-btn"
-                title={q.name}
+                title={active ? q.name : `${t(locale, 'packageUnionGoToPrefix')} ${i + 1}`}
                 onClick={() => {
                   if (!active) dispatch({ type: 'SET_ACTIVE_QUERY', index: i });
                 }}
-                style={{
-                  ...NUMBER_BTN,
-                  color: active ? TOKENS.accent : TOKENS.textSecondary,
-                  fontWeight: active ? 700 : 400,
-                }}
+                style={active ? UNION_CHIP_ACTIVE : UNION_CHIP_INACTIVE}
               >
-                {active ? `[${i + 1}]` : `${i + 1}`}
+                {i + 1}
               </button>
               <button
                 type="button"
-                className="qcc-btn"
+                className="qcc-union-remove"
                 title={t(locale, 'packageUnionRemove')}
                 onClick={() => dispatch({ type: 'REMOVE_QUERY', index: i })}
                 style={UNION_REMOVE_BTN}
               >
-                ✕
+                <span className="codicon codicon-trash" />
               </button>
             </span>
           </React.Fragment>
