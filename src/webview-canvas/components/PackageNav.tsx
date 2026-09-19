@@ -18,6 +18,8 @@ const BAR_STYLE: React.CSSProperties = {
   overflow: 'hidden',
 };
 
+const NAV_DIVIDER: React.CSSProperties = { width: 1, height: 14, background: TOKENS.border, margin: '0 2px', flexShrink: 0 };
+
 const GROUP_LABEL: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
@@ -172,8 +174,9 @@ export function PackageNav({
         >
           +
         </button>
-        <span style={{ width: 1, height: 14, background: TOKENS.border, margin: '0 2px', flexShrink: 0 }} />
+        <span style={NAV_DIVIDER} />
         <span
+          title={activeName}
           style={{
             flex: '0 1 auto',
             minWidth: 0,
@@ -181,11 +184,14 @@ export function PackageNav({
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             color: TOKENS.text,
+            fontWeight: 600,
+            margin: '0 2px',
           }}
         >
           {activeName}
-          {isTempTable && <span style={{ color: TOKENS.textMuted }}> · {t(locale, 'packageIdentityTempTable')}</span>}
+          {isTempTable && <span style={{ color: TOKENS.textMuted, fontWeight: 400 }}> · {t(locale, 'packageIdentityTempTable')}</span>}
         </span>
+        <span style={NAV_DIVIDER} />
         <UnionStrip locale={locale} state={state} dispatch={dispatch} onFirstUnionCreated={() => setShowUnionHint(true)} />
       </div>
       {showUnionHint && (
