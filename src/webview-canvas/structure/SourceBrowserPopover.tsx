@@ -27,6 +27,8 @@ export function SourceBrowserPopover({
   loaded,
   selectedTables,
   onAddTable,
+  tempTables,
+  onAddTempTable,
   anchor,
   onClose,
 }: {
@@ -35,6 +37,8 @@ export function SourceBrowserPopover({
   loaded: boolean;
   selectedTables: SelectedTable[];
   onAddTable: (table: MetaTable) => void;
+  tempTables?: MetaTable[];
+  onAddTempTable?: (table: MetaTable) => void;
   anchor: SourceBrowserAnchor | null;
   onClose: () => void;
 }): React.ReactElement {
@@ -65,6 +69,8 @@ export function SourceBrowserPopover({
           loaded={loaded}
           selectedTables={selectedTables}
           onAddTable={onAddTable}
+          tempTables={tempTables}
+          onAddTempTable={onAddTempTable}
         />
       </div>
     </>

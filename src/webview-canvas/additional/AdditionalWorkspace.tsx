@@ -1,24 +1,31 @@
 import * as React from 'react';
+import type { QueryType } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
-import { t } from '../i18n';
+import { t, type MessageKey } from '../i18n';
 import { CARD, SECTION_LABEL, TOKENS } from '../theme';
 
 /**
  * Phase 11 — Additional Workspace, остання вкладка з New Builder roadmap.
- * Порт ЛИШЕ двох із чотирьох секцій Classic `AdditionalTab.tsx` (explicit
- * scope decision користувача, 2026-09-19):
+ * Порт трьох із чотирьох секцій Classic `AdditionalTab.tsx`:
  * - "Вибірка записів" — ПЕРВЫЕ N/РАЗЛИЧНЫЕ/РАЗРЕШЕННЫЕ
  *   (SET_SELECTION_TOP/SET_SELECTION_DISTINCT/SET_SELECTION_ALLOWED);
  * - "Блокування" — ДЛЯ ИЗМЕНЕНИЯ (SET_LOCK_ENABLED/ADD_LOCK_TABLE/
  *   REMOVE_LOCK_TABLE, `state.lockForUpdate: string[]` адресує таблиці за
  *   `fullName`, НЕ за `id`).
+ * - "Тип запиту" (Phase 13 мінімальний зріз, 2026-09-20) — `QueryType`
+ *   (select/createTemp/appendTemp/dropTemp) + `tempTableName`, ті самі
+ *   `SET_QUERY_TYPE`/`SET_TEMP_TABLE_NAME` actions, що й Classic
+ *   `AdditionalTab.tsx`. Це ЛИШЕ здатність позначити активний
+ *   package/union-член як creator/consumer/dropper тимчасової таблиці —
+ *   subquery-as-source (важча половина Phase 13, з окремими gaps по
+ *   condition-subquery/EXISTS) свідомо НЕ входить у цей зріз.
+ *   `queryType`/`tempTableName` вже коректно зберігаються/відновлюються
+ *   в snapshot-логіці (`snapshots.ts`) і вже читаються `PackageNav`'s
+ *   `isTempTable` badge — ця секція просто дає користувачу спосіб їх
+ *   встановити, жодних нових reducer actions.
  *
  * Свідомо НЕ включено:
- * - "Тип запиту" (`QueryType`: createTemp/appendTemp/dropTemp + тимчасова
- *   таблиця) — це ВЖЕ окремо зарезервовано в roadmap як Phase 13
- *   ("manual temp table / subquery-as-source... окремий implementation
- *   gate перед стартом") — реалізація тут обійшла б це рішення;
  * - "Кеш метаданих" (refresh-button + preserveComments) — Classic-
  *   специфічний host-round-trip механізм (`postToHost` cache-invalidation),
  *   без явного архітектурного еквівалента в New Builder, що вже
@@ -27,6 +34,22 @@ import { CARD, SECTION_LABEL, TOKENS } from '../theme';
  * Немає грід-патерну (на відміну від Fields/Conditions/Grouping/Sorting) —
  * це форма налаштувань, не список record'ів.
  */
+
+const QUERY_TYPES: { value: QueryType; label: MessageKey }[] = [
+  { value: 'select', label: 'additionalWorkspaceQueryTypeSelect' },
+  { value: 'createTemp', label: 'additionalWorkspaceQueryTypeCreateTemp' },
+  { value: 'appendTemp', label: 'additionalWorkspaceQueryTypeAppendTemp' },
+  { value: 'dropTemp', label: 'additionalWorkspaceQueryTypeDropTemp' },
+];
+
+const RADIO_ROW: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  fontSize: 12,
+  color: TOKENS.textSecondary,
+  cursor: 'pointer',
+};
 
 const PANEL_INPUT: React.CSSProperties = {
   fontSize: 12,
@@ -99,6 +122,33 @@ export function AdditionalWorkspace({
             onChange={e => dispatch({ type: 'SET_SELECTION_ALLOWED', allowed: e.target.checked })}
           />
           {t(locale, 'additionalWorkspaceAllowedLabel')}
+        </label>
+      </div>
+
+      <div style={{ ...CARD, padding: 14, display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
+        <span style={SECTION_LABEL}>{t(locale, 'additionalWorkspaceQueryTypeTitle')}</span>
+
+        {QUERY_TYPES.map(qt => (
+          <label key={qt.value} style={RADIO_ROW}>
+            <input
+              type="radio"
+              name="qcc-query-type"
+              checked={state.queryType === qt.value}
+              onChange={() => dispatch({ type: 'SET_QUERY_TYPE', queryType: qt.value })}
+            />
+            {t(locale, qt.label)}
+          </label>
+        ))}
+
+        <label style={{ ...RADIO_ROW, cursor: 'default' }}>
+          <span style={{ opacity: state.queryType === 'select' ? 0.5 : 1 }}>{t(locale, 'additionalWorkspaceTempNameLabel')}:</span>
+          <input
+            type="text"
+            disabled={state.queryType === 'select'}
+            value={state.tempTableName}
+            onChange={e => dispatch({ type: 'SET_TEMP_TABLE_NAME', name: e.target.value })}
+            style={{ ...PANEL_INPUT, flex: 1, minWidth: 0, width: 'auto', opacity: state.queryType === 'select' ? 0.5 : 1 }}
+          />
         </label>
       </div>
 

@@ -261,20 +261,52 @@ Live-QA підтвердив: додавання поля, зміна напря
 **Additional Workspace (Phase 11) --- реалізовано** (2026-09-19,
 `src/webview-canvas/additional/AdditionalWorkspace.tsx`, ОСТАННЯ вкладка
 з roadmap --- усі 6 вкладок `WorkspaceNav` тепер мають реальний вміст).
-Форма налаштувань (не грід-патерн, як інші вкладки) з двох секцій:
+Форма налаштувань (не грід-патерн, як інші вкладки) з трьох секцій:
 - **"Вибірка записів"** --- ПЕРВЫЕ N / РАЗЛИЧНЫЕ / РАЗРЕШЕННЫЕ
   (SET_SELECTION_TOP/SET_SELECTION_DISTINCT/SET_SELECTION_ALLOWED,
   `state.selection: Selection`);
+- **"Тип запиту"** (Phase 12A --- Temp Table UI Foundation, 2026-09-20)
+  --- ДВІ половини, producer + consumer, ОБИДВІ вже повністю підтримані
+  доменом, нуль нових reducer actions:
+  - **producer**: `QueryType` (select/createTemp/appendTemp/dropTemp
+    radio) + `tempTableName` text input, ті самі `SET_QUERY_TYPE`/
+    `SET_TEMP_TABLE_NAME` actions, що й Classic `AdditionalTab.tsx`.
+    `queryType`/`tempTableName` вже коректно зберігались/відновлювались
+    у snapshot-логіці (`snapshots.ts`) і вже читались `PackageNav`'s
+    `isTempTable` badge/`batchMemberName` ще ДО цієї зміни --- секція
+    просто дає користувачу спосіб їх встановити; badge та ім'я
+    ("ВТ_Ім'я · Тимчасова таблиця") запрацювали одразу без жодних змін
+    у `PackageNav.tsx`.
+  - **consumer**: `MetadataTree.tsx` тепер отримує опціональний
+    `tempTables`/`onAddTempTable` --- окрема група "Тимчасові таблиці"
+    (поза `GROUP_KINDS`, без search-фільтрації, той самий підхід, що й
+    Classic `DbTreePanel`'s "tree.tempTables" секція), наповнена
+    `availableTempTables(state)` (вже існуюча функція в
+    `snapshots.ts`, сканує ЗАВЕРШЕНІ попередні package-члени з
+    `queryType==='createTemp'|'appendTemp'`, синтезує `MetaTable` з
+    їхнього SELECT-списку). Клік/double-click диспатчить `ADD_TEMP_TABLE`
+    (НЕ `ADD_TABLE`!) --- критично, бо тільки цей action реєструє
+    синтетичну метадані у `state.syntheticTables`, інакше подальший
+    field-lookup (`allTables(state)`) не знайшов би колонки ВТ. New
+    Builder використовує той самий double-click/"+" патерн, що й для
+    звичайних таблиць --- НЕ drag&drop, яким це зроблено в Classic (свідоме
+    UX-рішення, консистентне з рештою New Builder tree, не проблема
+    паритету).
+  - Live-QA підтвердив повний producer→consumer цикл: `createTemp`
+    query 1 (`ПОМЕСТИТЬ ВТ_Автомобили`) → query 2 бачить ВТ у "Тимчасові
+    таблиці", додає її як джерело, генерує коректний
+    `ВЫБРАТЬ ... ИЗ ВТ_Автомобили КАК ВТ_Автомобили`.
+  - Це НЕ Phase 13 повністю --- subquery-as-source (важча половина, з
+    окремими condition-subquery/EXISTS gaps, див. §11) і "вручну описана
+    тимчасова таблиця" (окремий `SelectedTable.tempTable`-діалог, Classic
+    "Temporary table window") свідомо НЕ входять у цей зріз. Phase 12B
+    (Package 2.0, візуалізація producer→consumer у `PackageNav`) тепер
+    розблокований і має реальні дані для роботи;
 - **"Блокування"** --- ДЛЯ ИЗМЕНЕНИЯ (SET_LOCK_ENABLED/ADD_LOCK_TABLE/
   REMOVE_LOCK_TABLE, `state.lockForUpdate: string[]` адресує таблиці за
   `fullName`, НЕ за `id`; чекбокс-список будується з `state.selectedTables`).
 
-Жодних нових reducer actions. Свідомо НЕ включено (explicit scope
-decision користувача, з 4 секцій Classic `AdditionalTab.tsx`):
-- **"Тип запиту"** (`QueryType`: createTemp/appendTemp/dropTemp +
-  тимчасова таблиця) --- ВЖЕ окремо зарезервовано в roadmap як Phase 13
-  ("manual temp table / subquery-as-source... окремий implementation
-  gate перед стартом") --- реалізація тут обійшла б це рішення;
+Жодних нових reducer actions. Свідомо НЕ включено:
 - **"Кеш метаданих"** (refresh-button + preserveComments) --- Classic-
   специфічний host-round-trip механізм, без архітектурного еквівалента
   в New Builder (client-side `computeBatchTextSafe`, без host cache).

@@ -383,12 +383,32 @@ export function MetadataTree({
   loaded,
   selectedTables,
   onAddTable,
+  tempTables = [],
+  onAddTempTable,
 }: {
   locale: SupportedLocale;
   tables: MetaTable[];
   loaded: boolean;
   selectedTables: SelectedTable[];
   onAddTable: (table: MetaTable) => void;
+  /**
+   * Phase 12A: ВТ, створені попередніми запитами ПОТОЧНОГО пакета
+   * (`availableTempTables(state)`, `src/webview/state/queryStore/snapshots.ts`
+   * — той самий механізм, що вже живить Classic `DbTreePanel`'s "Тимчасові
+   * таблиці" секцію). Окрема група, поза `GROUP_KINDS`/пошуком — той самий
+   * підхід, що й Classic (там пошук на цю групу теж не поширюється, бо
+   * список ВТ пакета завжди короткий).
+   */
+  tempTables?: MetaTable[];
+  /**
+   * Дispatch `ADD_TEMP_TABLE` (НЕ `ADD_TABLE`) — це реєструє синтетичні
+   * метадані ВТ у `state.syntheticTables`, інакше подальший field-lookup
+   * (hover/Fields tab) не знайшов би її колонки через `allTables(state)`.
+   * Classic робить це через drag&drop; тут — той самий double-click/"+"
+   * патерн, що й для звичайних таблиць (без нового drag&drop, за
+   * встановленим принципом New Builder).
+   */
+  onAddTempTable?: (table: MetaTable) => void;
 }): React.ReactElement {
   const [query, setQuery] = React.useState('');
   const [debouncedQuery, setDebouncedQuery] = React.useState('');
@@ -399,6 +419,7 @@ export function MetadataTree({
   const [expandedGroups, setExpandedGroups] = React.useState<Set<TableKind>>(new Set());
   const [expandedTables, setExpandedTables] = React.useState<Set<string>>(new Set());
   const [expandedTsSections, setExpandedTsSections] = React.useState<Set<string>>(new Set());
+  const [tempGroupExpanded, setTempGroupExpanded] = React.useState(true);
 
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 150);
@@ -474,6 +495,39 @@ export function MetadataTree({
         </div>
       </div>
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        {loaded && tempTables.length > 0 && (
+          <div>
+            <div className="qcc-meta-row" style={GROUP_HEADER_STYLE} onClick={() => setTempGroupExpanded(v => !v)}>
+              <Chevron expanded={tempGroupExpanded} />
+              <span className={`codicon codicon-folder${tempGroupExpanded ? '-opened' : ''}`} style={{ fontSize: 14, opacity: 0.75, flexShrink: 0 }} />
+              <span>{t(locale, 'metadataTempTables')}</span>
+            </div>
+            {tempGroupExpanded && tempTables.map(table => {
+              const rt: RenderTable = {
+                table,
+                key: table.fullName,
+                fields: table.fields.map(field => ({ field, key: `${table.fullName}#${field.name}` })),
+                tabularSections: [],
+              };
+              return (
+                <TableRow
+                  key={rt.key}
+                  locale={locale}
+                  rt={rt}
+                  expanded={expandedTables.has(rt.table.fullName)}
+                  onToggle={() => toggleTable(rt.table.fullName)}
+                  addedCount={addedCounts.get(rt.table.fullName) ?? 0}
+                  onAdd={() => onAddTempTable?.(table)}
+                  tsExpanded={() => false}
+                  onToggleTs={() => {}}
+                  tsAddedCount={() => 0}
+                  onAddTs={() => {}}
+                  tokens={[]}
+                />
+              );
+            })}
+          </div>
+        )}
         {!loaded && (
           <div style={{ padding: '12px 8px', color: TOKENS.textMuted, fontSize: 12 }}>{t(locale, 'metadataLoading')}</div>
         )}

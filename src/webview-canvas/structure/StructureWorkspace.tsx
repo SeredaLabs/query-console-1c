@@ -2,7 +2,7 @@ import * as React from 'react';
 import type { ConditionOperator } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
-import { allTables } from '../../webview/state/queryStore';
+import { allTables, availableTempTables } from '../../webview/state/queryStore';
 import { Inspector } from '../components/Inspector';
 import { t } from '../i18n';
 import { TOKENS } from '../theme';
@@ -161,6 +161,9 @@ export function StructureWorkspace({
   // живе сам selection-стан) — тут більше не дублюємо.
 
   const tablesMeta = React.useMemo(() => allTables(state), [state]);
+  // Phase 12A: ВТ, створені попередніми запитами ПОТОЧНОГО пакета — той
+  // самий `availableTempTables`, що вже живить Classic `DbTreePanel`.
+  const tempTablesAvailable = React.useMemo(() => availableTempTables(state), [state]);
 
   const tableRect = React.useCallback(
     (tableId: string): Rect | null => {
@@ -377,6 +380,8 @@ export function StructureWorkspace({
           loaded={metadataLoaded}
           selectedTables={state.selectedTables}
           onAddTable={table => dispatch({ type: 'ADD_TABLE', table })}
+          tempTables={tempTablesAvailable}
+          onAddTempTable={table => dispatch({ type: 'ADD_TEMP_TABLE', name: table.name, fields: table.fields.map(f => ({ name: f.name })) })}
           anchor={sourceAnchor}
           onClose={() => setSourcePopoverOpen(false)}
         />
