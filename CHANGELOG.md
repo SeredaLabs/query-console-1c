@@ -5,6 +5,21 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.73 - 2026-09-20
+
+### Changed
+
+- New Builder: package query chips now support hover-reveal delete, empty
+  states in Fields/Conditions/Grouping/Sorting are vertically centered like
+  the Structure canvas, and "+"/delete actions across PackageNav are now
+  color-differentiated (accent/danger) instead of uniform gray.
+- New Builder: added a UNION field-mapping dialog (rename the shared column
+  alias, reorder columns) ported from Classic's Union/Aliases tab — same
+  positional-correspondence model, no new query semantics.
+- Added a divider and heavier weight around the active query name in
+  PackageNav so it reads as a title rather than blending into the
+  surrounding navigation.
+
 ## 0.1.72 - 2026-09-20
 
 ### Changed
