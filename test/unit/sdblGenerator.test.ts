@@ -83,7 +83,7 @@ describe('generate', () => {
     const model: QueryModel = {
       tables: [
         { id: 't1', fullName: 'ВТ_A' },
-        { id: 't2', fullName: 'ВТ_A', alias: 'ВТ_A2' },
+        { id: 't2', fullName: 'ВТ_A', alias: 'ВТ_A1' },
       ],
       fields: [
         { tableId: 't1', path: 'Код' },
@@ -91,7 +91,7 @@ describe('generate', () => {
       ],
     };
     expect(generate(model)).toBe(
-      'ВЫБРАТЬ\n\tВТ_A.Код КАК Код,\n\tВТ_A2.Наименование КАК Наименование\nИЗ\n\tВТ_A КАК ВТ_A,\n\tВТ_A КАК ВТ_A2'
+      'ВЫБРАТЬ\n\tВТ_A.Код КАК Код,\n\tВТ_A1.Наименование КАК Наименование\nИЗ\n\tВТ_A КАК ВТ_A,\n\tВТ_A КАК ВТ_A1'
     );
   });
 
