@@ -303,9 +303,18 @@ export function ConditionsWorkspace({
                 {conditions.length > 0 && <span style={{ color: TOKENS.textMuted, fontWeight: 400 }}> · {conditions.length}</span>}
               </span>
             </div>
-            <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', padding: '0 10px 10px' }}>
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                minHeight: 0,
+                overflow: 'auto',
+                padding: '0 10px 10px',
+                ...(conditions.length === 0 ? { display: 'flex', alignItems: 'center', justifyContent: 'center' } : null),
+              }}
+            >
               {conditions.length === 0 ? (
-                <div style={{ textAlign: 'center', maxWidth: 280, margin: '24px auto 0' }}>
+                <div style={{ textAlign: 'center', maxWidth: 280 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: TOKENS.textSecondary, marginBottom: 4 }}>
                     {t(locale, 'conditionsWorkspaceEmptyTitle')}
                   </div>

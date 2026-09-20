@@ -520,9 +520,18 @@ export function FieldsWorkspace({
         </span>
       </div>
 
-        <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', padding: '0 10px 10px' }}>
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            minHeight: 0,
+            overflow: 'auto',
+            padding: '0 10px 10px',
+            ...(fields.length === 0 ? { display: 'flex', alignItems: 'center', justifyContent: 'center' } : null),
+          }}
+        >
           {fields.length === 0 ? (
-            <div style={{ textAlign: 'center', maxWidth: 280, margin: '24px auto 0' }}>
+            <div style={{ textAlign: 'center', maxWidth: 280 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: TOKENS.textSecondary, marginBottom: 4 }}>{t(locale, 'fieldsWorkspaceEmptyTitle')}</div>
               <div style={{ fontSize: 12, color: TOKENS.textMuted, marginBottom: 12 }}>{t(locale, 'fieldsWorkspaceEmptySubtitle')}</div>
               {onGoToStructure && (

@@ -3,6 +3,7 @@ import type { SupportedLocale } from '../../shared/locale';
 import { assembleBatch, batchMemberName, type QueryAction, type QueryState } from '../../webview/state/queryStore';
 import { t } from '../i18n';
 import { DIMENSIONS, TOKENS } from '../theme';
+import { UnionMappingPopover } from './UnionMappingPopover';
 
 const BAR_STYLE: React.CSSProperties = {
   height: DIMENSIONS.packageNav,
@@ -39,6 +40,26 @@ const NUMBER_BTN: React.CSSProperties = {
   color: TOKENS.textSecondary,
 };
 
+/**
+ * Design review (2026-09-20, color consolidation): "+"/"✕" були однаково
+ * сірими по всій стрічці — важко відрізнити додавання від видалення на
+ * швидкий погляд. `success`/`chart*` токени зарезервовані під інші
+ * семантики (field-inclusion, JOIN-kind), тому тут — `accent` для "+" (та
+ * сама семантика, що вже читається як "активна дія" в чипах) і `danger` для
+ * видалення (тільки на hover-reveal, щоб не додавати тривожності в стані
+ * спокою).
+ */
+const ADD_BTN: React.CSSProperties = { ...NUMBER_BTN, fontWeight: 700, color: TOKENS.accent };
+const REMOVE_ICON_BTN: React.CSSProperties = {
+  border: 'none',
+  background: 'transparent',
+  cursor: 'pointer',
+  fontSize: 10,
+  padding: '0 2px',
+  color: TOKENS.danger,
+  lineHeight: 1,
+};
+
 const UNION_KEYWORD_BTN: React.CSSProperties = {
   border: 'none',
   background: 'transparent',
@@ -63,16 +84,6 @@ const UNION_LABEL: React.CSSProperties = {
   color: TOKENS.textMuted,
   whiteSpace: 'nowrap',
   flexShrink: 0,
-};
-
-const UNION_REMOVE_BTN: React.CSSProperties = {
-  border: 'none',
-  background: 'transparent',
-  cursor: 'pointer',
-  fontSize: 10,
-  padding: '0 2px',
-  color: TOKENS.textMuted,
-  lineHeight: 1,
 };
 
 /**
@@ -147,22 +158,34 @@ export function PackageNav({
         {batch.members.map((_, i) => {
           const active = i === state.activeBatch;
           return (
-            <button
-              key={i}
-              type="button"
-              className="qcc-btn"
-              title={batchMemberName(state, i)}
-              onClick={() => {
-                if (!active) dispatch({ type: 'SET_ACTIVE_BATCH', index: i });
-              }}
-              style={{
-                ...NUMBER_BTN,
-                color: active ? TOKENS.accent : TOKENS.textSecondary,
-                fontWeight: active ? 700 : 400,
-              }}
-            >
-              {active ? `[${i + 1}]` : `${i + 1}`}
-            </button>
+            <span key={i} className="qcc-union-chip" style={{ display: 'flex', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="qcc-btn"
+                title={batchMemberName(state, i)}
+                onClick={() => {
+                  if (!active) dispatch({ type: 'SET_ACTIVE_BATCH', index: i });
+                }}
+                style={{
+                  ...NUMBER_BTN,
+                  color: active ? TOKENS.accent : TOKENS.textSecondary,
+                  fontWeight: active ? 700 : 400,
+                }}
+              >
+                {active ? `[${i + 1}]` : `${i + 1}`}
+              </button>
+              {batch.members.length > 1 && (
+                <button
+                  type="button"
+                  className="qcc-union-remove"
+                  title={t(locale, 'packageRemove')}
+                  onClick={() => dispatch({ type: 'REMOVE_BATCH_QUERY', index: i })}
+                  style={REMOVE_ICON_BTN}
+                >
+                  <span className="codicon codicon-trash" />
+                </button>
+              )}
+            </span>
           );
         })}
         <button
@@ -170,7 +193,7 @@ export function PackageNav({
           className="qcc-btn"
           title={t(locale, 'packageAddQuery')}
           onClick={() => dispatch({ type: 'ADD_BATCH_QUERY' })}
-          style={{ ...NUMBER_BTN, fontWeight: 600 }}
+          style={ADD_BTN}
         >
           +
         </button>
@@ -275,10 +298,41 @@ function UnionStrip({
     );
   }
 
+  const mappingBtnRef = React.useRef<HTMLButtonElement>(null);
+  const [mappingAnchor, setMappingAnchor] = React.useState<{ top: number; left: number } | null>(null);
+
   const unionLabel = (
-    <span style={UNION_LABEL} title={t(locale, 'packageUnionLabelTooltip')}>
-      <span className="codicon codicon-git-merge" style={{ fontSize: 12 }} />
-      {t(locale, 'packageUnionLabel')}
+    <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+      <span style={UNION_LABEL} title={t(locale, 'packageUnionLabelTooltip')}>
+        <span className="codicon codicon-git-merge" style={{ fontSize: 12 }} />
+        {t(locale, 'packageUnionLabel')}
+      </span>
+      <button
+        ref={mappingBtnRef}
+        type="button"
+        className="qcc-btn"
+        title={t(locale, 'packageUnionMappingButton')}
+        onClick={() => {
+          if (mappingAnchor) {
+            setMappingAnchor(null);
+            return;
+          }
+          const rect = mappingBtnRef.current?.getBoundingClientRect();
+          if (rect) setMappingAnchor({ top: rect.bottom + 4, left: rect.left });
+        }}
+        style={{ ...NUMBER_BTN, padding: '2px 3px' }}
+      >
+        <span className="codicon codicon-list-flat" style={{ fontSize: 12 }} />
+      </button>
+      {mappingAnchor && (
+        <UnionMappingPopover
+          locale={locale}
+          state={state}
+          dispatch={dispatch}
+          anchor={mappingAnchor}
+          onClose={() => setMappingAnchor(null)}
+        />
+      )}
     </span>
   );
 
@@ -327,7 +381,7 @@ function UnionStrip({
           className="qcc-btn"
           title={t(locale, 'packageUnionAdd')}
           onClick={() => dispatch({ type: 'ADD_QUERY' })}
-          style={{ ...NUMBER_BTN, fontWeight: 600 }}
+          style={ADD_BTN}
         >
           +
         </button>
@@ -369,7 +423,7 @@ function UnionStrip({
                 className="qcc-union-remove"
                 title={t(locale, 'packageUnionRemove')}
                 onClick={() => dispatch({ type: 'REMOVE_QUERY', index: i })}
-                style={UNION_REMOVE_BTN}
+                style={REMOVE_ICON_BTN}
               >
                 <span className="codicon codicon-trash" />
               </button>
@@ -382,7 +436,7 @@ function UnionStrip({
         className="qcc-btn"
         title={t(locale, 'packageUnionAdd')}
         onClick={() => dispatch({ type: 'ADD_QUERY' })}
-        style={{ ...NUMBER_BTN, fontWeight: 600 }}
+        style={ADD_BTN}
       >
         +
       </button>
