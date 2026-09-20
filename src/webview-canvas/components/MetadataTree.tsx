@@ -518,13 +518,18 @@ export function MetadataTree({
         <div
           style={{
             flexShrink: 0,
-            padding: '4px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 4,
+            padding: '3px 8px',
             fontSize: 11,
             color: TOKENS.textMuted,
-            textAlign: 'center',
             borderTop: `1px solid ${TOKENS.border}`,
           }}
+          title={t(locale, 'metadataDoubleClickHintTooltip')}
         >
+          <span className="codicon codicon-info" style={{ fontSize: 11 }} />
           {t(locale, 'metadataDoubleClickHint')}
         </div>
       )}

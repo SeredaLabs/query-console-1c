@@ -126,6 +126,19 @@ export function StructureWorkspace({
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, [sourcePopoverOpen, computeSourceAnchor]);
+
+  // Source Browser polish audit (2026-09-20): раніше закривався ЛИШЕ кліком
+  // по backdrop — жодної keyboard-можливості. Escape — мінімальний, безпечний
+  // крок (повна keyboard-навігація по дереву стрілками лишається за межами
+  // цього проходу, перетинається з roadmap Phase 17).
+  React.useEffect(() => {
+    if (!sourcePopoverOpen) return;
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setSourcePopoverOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [sourcePopoverOpen]);
   const [hoveredJoin, setHoveredJoin] = React.useState<number | null>(null);
   const [containerSize, setContainerSize] = React.useState<{ width: number; height: number } | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
