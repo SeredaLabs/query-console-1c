@@ -11,30 +11,31 @@ const ALIAS_RE = /^[A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*$/;
 
 const TH: React.CSSProperties = {
   textAlign: 'left',
-  fontSize: 10.5,
+  fontSize: 11,
   fontWeight: 600,
   letterSpacing: 0.3,
   color: TOKENS.textMuted,
-  padding: '4px 8px',
+  padding: '6px 10px',
   borderBottom: `1px solid ${TOKENS.border}`,
   whiteSpace: 'nowrap',
 };
 
 const TD: React.CSSProperties = {
-  fontSize: 12,
-  padding: '3px 8px',
+  fontSize: 13,
+  padding: '6px 10px',
   borderBottom: `1px solid ${TOKENS.borderSubtle}`,
   whiteSpace: 'nowrap',
 };
 
 const ALIAS_INPUT: React.CSSProperties = {
-  fontSize: 12,
-  padding: '2px 5px',
+  fontSize: 13,
+  padding: '4px 8px',
   border: `1px solid ${TOKENS.border}`,
-  borderRadius: 3,
+  borderRadius: 4,
   background: 'var(--vscode-input-background)',
   color: 'var(--vscode-input-foreground)',
   width: '100%',
+  minWidth: 140,
   boxSizing: 'border-box',
 };
 
@@ -43,8 +44,8 @@ const MOVE_BTN: React.CSSProperties = {
   background: 'transparent',
   cursor: 'pointer',
   color: TOKENS.textSecondary,
-  fontSize: 12,
-  padding: '1px 3px',
+  fontSize: 14,
+  padding: '2px 4px',
 };
 
 /**
@@ -59,25 +60,27 @@ const MOVE_BTN: React.CSSProperties = {
  * На відміну від Classic (окрема вкладка "Об'єднання/Псевдоніми" з обома
  * панелями — списком запитів І списком полів), тут лише права половина
  * (поля/псевдоніми/порядок) — керування самими SELECT-учасниками вже є
- * в компактній UnionStrip над цим popover'ом, дублювати його тут не треба.
+ * в компактній UnionStrip над цим діалогом, дублювати його тут не треба.
  *
- * `PackageNav`'s BAR_STYLE has `overflow: hidden` (responsive fix — clips
- * long content instead of causing a horizontal scrollbar), which would also
- * clip an `absolute`-positioned dropdown anchored inside it. Rendered via
- * `createPortal` into `document.body` with `position: fixed` at the
- * trigger's own bounding rect instead, so it escapes that clip.
+ * Design review (2026-09-20): перша версія була крихітним popover'ом
+ * (420×320, anchored під іконкою) — з реальними довгими назвами полів і
+ * >1 запитом-учасником стовпці/inputs ставали нечитабельними, з'являвся
+ * зайвий горизонтальний скрол. Замінено на центрований модальний діалог
+ * (`min(900px, 90vw)`) — той самий контент, просто достатньо місця для
+ * таблиці; горизонтальний скрол лишається лише як fallback для 5+ запитів.
+ * Рендериться через `createPortal`, бо `PackageNav`'s BAR_STYLE має
+ * `overflow: hidden` (responsive fix) — не проблема для fixed-overlay
+ * модалки, але важливо не загубити цю причину, якщо колись переносити назад.
  */
 export function UnionMappingPopover({
   locale,
   state,
   dispatch,
-  anchor,
   onClose,
 }: {
   locale: SupportedLocale;
   state: QueryState;
   dispatch: React.Dispatch<QueryAction>;
-  anchor: { top: number; left: number };
   onClose: () => void;
 }): React.ReactElement {
   const members = React.useMemo(() => assembleMembers(state), [state]);
@@ -100,20 +103,18 @@ export function UnionMappingPopover({
   }
 
   return createPortal(
-    <>
-      <div style={{ position: 'fixed', inset: 0, zIndex: 1000 }} onClick={onClose} />
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      onClick={onClose}
+    >
       <div
         style={{
-          position: 'fixed',
-          top: anchor.top,
-          left: anchor.left,
-          zIndex: 1001,
-          width: 420,
-          maxHeight: 320,
-          borderRadius: 6,
+          width: 'min(900px, 90vw)',
+          maxHeight: '80vh',
+          borderRadius: 8,
           border: `1px solid ${TOKENS.border}`,
           background: TOKENS.surface1,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
           display: 'flex',
           flexDirection: 'column',
         }}
@@ -121,23 +122,45 @@ export function UnionMappingPopover({
       >
         <div
           style={{
-            fontSize: 11,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 14px',
+            borderBottom: `1px solid ${TOKENS.border}`,
+            flexShrink: 0,
+          }}
+        >
+          <span className="codicon codicon-list-flat" style={{ fontSize: 14, color: TOKENS.textSecondary }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: TOKENS.text, flex: 1 }}>{t(locale, 'packageUnionMappingButton')}</span>
+          <button
+            type="button"
+            className="qcc-btn"
+            title={t(locale, 'unionMappingClose')}
+            onClick={onClose}
+            style={{ border: 'none', background: 'transparent', color: TOKENS.textMuted, cursor: 'pointer', fontSize: 14, padding: '2px 4px' }}
+          >
+            <span className="codicon codicon-close" />
+          </button>
+        </div>
+        <div
+          style={{
+            fontSize: 12,
             color: TOKENS.textMuted,
-            padding: '6px 8px',
+            padding: '8px 14px',
             borderBottom: `1px solid ${TOKENS.border}`,
             flexShrink: 0,
           }}
         >
           {t(locale, 'unionMappingHint')}
         </div>
-        <div style={{ overflow: 'auto', flex: 1 }}>
+        <div style={{ overflow: 'auto', flex: 1, padding: '0 4px' }}>
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>
-                <th style={{ ...TH, width: 24 }} />
-                <th style={TH}>{t(locale, 'unionMappingFieldColumn')}</th>
+                <th style={{ ...TH, width: 40 }} />
+                <th style={{ ...TH, minWidth: 160 }}>{t(locale, 'unionMappingFieldColumn')}</th>
                 {members.map((m, i) => (
-                  <th key={i} style={TH}>{m.name}</th>
+                  <th key={i} style={{ ...TH, minWidth: 160 }}>{m.name}</th>
                 ))}
               </tr>
             </thead>
@@ -154,7 +177,7 @@ export function UnionMappingPopover({
                   const value = draft !== undefined ? draft : col.alias;
                   return (
                     <tr key={col.alias}>
-                      <td style={{ ...TD, padding: '2px 2px' }}>
+                      <td style={{ ...TD, padding: '4px 4px' }}>
                         <span style={{ display: 'flex', gap: 1 }}>
                           <button
                             type="button"
@@ -210,8 +233,8 @@ export function UnionMappingPopover({
       </div>
       {aliasError !== null && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1002 }}
-          onClick={() => setAliasError(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1002 }}
+          onClick={e => { e.stopPropagation(); setAliasError(null); }}
         >
           <div
             style={{
@@ -238,7 +261,7 @@ export function UnionMappingPopover({
           </div>
         </div>
       )}
-    </>,
+    </div>,
     document.body
   );
 }

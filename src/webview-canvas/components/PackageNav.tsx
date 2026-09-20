@@ -298,8 +298,7 @@ function UnionStrip({
     );
   }
 
-  const mappingBtnRef = React.useRef<HTMLButtonElement>(null);
-  const [mappingAnchor, setMappingAnchor] = React.useState<{ top: number; left: number } | null>(null);
+  const [showMapping, setShowMapping] = React.useState(false);
 
   const unionLabel = (
     <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
@@ -308,30 +307,16 @@ function UnionStrip({
         {t(locale, 'packageUnionLabel')}
       </span>
       <button
-        ref={mappingBtnRef}
         type="button"
         className="qcc-btn"
         title={t(locale, 'packageUnionMappingButton')}
-        onClick={() => {
-          if (mappingAnchor) {
-            setMappingAnchor(null);
-            return;
-          }
-          const rect = mappingBtnRef.current?.getBoundingClientRect();
-          if (rect) setMappingAnchor({ top: rect.bottom + 4, left: rect.left });
-        }}
+        onClick={() => setShowMapping(true)}
         style={{ ...NUMBER_BTN, padding: '2px 3px' }}
       >
         <span className="codicon codicon-list-flat" style={{ fontSize: 12 }} />
       </button>
-      {mappingAnchor && (
-        <UnionMappingPopover
-          locale={locale}
-          state={state}
-          dispatch={dispatch}
-          anchor={mappingAnchor}
-          onClose={() => setMappingAnchor(null)}
-        />
+      {showMapping && (
+        <UnionMappingPopover locale={locale} state={state} dispatch={dispatch} onClose={() => setShowMapping(false)} />
       )}
     </span>
   );
