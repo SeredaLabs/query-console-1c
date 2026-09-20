@@ -151,6 +151,7 @@
   "additional.appendTemp": "Append to temporary table",
   "additional.dropTemp": "Drop temporary table",
   "additional.tempName": "Temporary table name",
+  "additional.dropTempDisabledHint": "Not available while this query is a union (УНИЧТОЖИТЬ is a standalone statement, not a SELECT arm).",
   "additional.parameters": "Parameters",
   "additional.records": "Record selection",
   "additional.lockForUpdate": "Lock retrieved data for subsequent changes",

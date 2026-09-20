@@ -12,6 +12,8 @@ import {
   batchMemberInfo,
   assembleBatch,
   metadataCatalogRef,
+  compoundQueryType,
+  compoundTempTableName,
 } from '../../src/webview/state/queryStore';
 import { deriveUnionColumns } from '../../src/core/query/unionModel';
 import { parseBatch } from '../../src/core/query/sdblParser';
@@ -618,14 +620,21 @@ describe('queryStore — union document layer (multiple sub-queries)', () => {
   });
 
   describe('existing actions still operate on the active query', () => {
-    it('ADD_QUERY then editing affects only the new active query', () => {
+    it('ADD_QUERY then most edits (e.g. selected fields) affect only the new active query', () => {
       let s = withField(initialState(), 'Справочник.Валюты', 'Код'); // 0
       s = reducer(s, { type: 'ADD_QUERY' }); // 1 active, empty
-      s = reducer(s, { type: 'SET_QUERY_TYPE', queryType: 'createTemp' });
-      expect(s.queryType).toBe('createTemp');
-      // query 0 snapshot retains its own (default) queryType
-      expect(s.savedQueries[0]!.queryType).toBe('select');
+      s = withField(s, 'Справочник.Валюты', 'Наименование');
+      expect(s.selectedFields).toHaveLength(1);
+      // query 0 snapshot retains its own field, untouched.
+      expect(s.savedQueries[0]!.selectedFields).toHaveLength(1);
     });
+
+    // NOTE: SET_QUERY_TYPE/SET_TEMP_TABLE_NAME are the one exception — see the
+    // "UNION + temp-table compound-carrier invariant" describe block below.
+    // They route to member 0 regardless of the active member, because
+    // ПОМЕСТИТЬ/ДОБАВИТЬ has exactly one grammatical slot in 1C SDBL (audit
+    // 2026-09-20) — this used to affect only the "active query" like every
+    // other setter, which was the bug that audit found and fixed.
   });
 
   describe('REMOVE_TABLE cascades into grouping/conditions/lockForUpdate', () => {
@@ -759,6 +768,89 @@ describe('queryStore — union document layer (multiple sub-queries)', () => {
       // conditions НЕ тронуты при удалении поля.
       expect(s.conditions).toEqual([{ custom: false, tableId: t1, path: 'Код', operator: '=', param: '&Код' }]);
     });
+  });
+});
+
+describe('queryStore — UNION + temp-table compound-carrier invariant (audit 2026-09-20)', () => {
+  it('SET_QUERY_TYPE on member 0 (single query) sets live state, as before', () => {
+    const s = reducer(initialState(), { type: 'SET_QUERY_TYPE', queryType: 'createTemp' });
+    expect(s.queryType).toBe('createTemp');
+    expect(compoundQueryType(s)).toBe('createTemp');
+  });
+
+  it('SET_QUERY_TYPE while a non-zero member is active routes the write to member 0, not the live state', () => {
+    let s = reducer(initialState(), { type: 'ADD_QUERY' }); // now 2 members, active = 1
+    expect(s.activeQuery).toBe(1);
+    s = reducer(s, { type: 'SET_QUERY_TYPE', queryType: 'createTemp' });
+    // Live (member 1) state stays 'select' — the write went to member 0's saved slot.
+    expect(s.queryType).toBe('select');
+    expect(s.savedQueries[0]?.queryType).toBe('createTemp');
+    // The compound accessor reads through to member 0 regardless of the active member.
+    expect(compoundQueryType(s)).toBe('createTemp');
+  });
+
+  it('SET_TEMP_TABLE_NAME while a non-zero member is active routes the write to member 0', () => {
+    let s = reducer(initialState(), { type: 'ADD_QUERY' });
+    s = reducer(s, { type: 'SET_TEMP_TABLE_NAME', name: 'ВТ_Test' });
+    expect(s.tempTableName).toBe('');
+    expect(s.savedQueries[0]?.tempTableName).toBe('ВТ_Test');
+    expect(compoundTempTableName(s)).toBe('ВТ_Test');
+  });
+
+  it('SET_QUERY_TYPE(dropTemp) is a no-op while a union already exists', () => {
+    let s = reducer(initialState(), { type: 'ADD_QUERY' });
+    const before = s;
+    s = reducer(s, { type: 'SET_QUERY_TYPE', queryType: 'dropTemp' });
+    expect(s).toBe(before);
+  });
+
+  it('ADD_QUERY is a no-op when the current (sole) query is dropTemp', () => {
+    let s = reducer(initialState(), { type: 'SET_QUERY_TYPE', queryType: 'dropTemp' });
+    const before = s;
+    s = reducer(s, { type: 'ADD_QUERY' });
+    expect(s).toBe(before);
+    expect(s.queryList.length).toBe(1);
+  });
+
+  it('REMOVE_QUERY(0) migrates the carrier to the new member 0 when removing the ACTIVE member 0', () => {
+    let s = reducer(initialState(), { type: 'SET_QUERY_TYPE', queryType: 'createTemp' });
+    s = reducer(s, { type: 'SET_TEMP_TABLE_NAME', name: 'ВТ_Carrier' });
+    s = reducer(s, { type: 'ADD_QUERY' }); // member 1 active, member 0 saved w/ carrier
+    s = reducer(s, { type: 'SET_ACTIVE_QUERY', index: 0 }); // back to member 0, still carrier
+    s = reducer(s, { type: 'REMOVE_QUERY', index: 0 }); // remove the active carrier
+    expect(s.queryList.length).toBe(1);
+    expect(s.activeQuery).toBe(0);
+    // The surviving (former member 1) query inherits the carrier role live.
+    expect(s.queryType).toBe('createTemp');
+    expect(s.tempTableName).toBe('ВТ_Carrier');
+  });
+
+  it('REMOVE_QUERY(0) migrates the carrier onto the new (saved) member 0 when member 0 is inactive and the new active member is not index 0', () => {
+    let s = reducer(initialState(), { type: 'SET_QUERY_TYPE', queryType: 'createTemp' });
+    s = reducer(s, { type: 'SET_TEMP_TABLE_NAME', name: 'ВТ_Carrier' });
+    s = reducer(s, { type: 'ADD_QUERY' }); // member 1 active (member 0 saved, carrier)
+    s = reducer(s, { type: 'ADD_QUERY' }); // member 2 active (member 0 still saved, carrier)
+    expect(s.activeQuery).toBe(2);
+    s = reducer(s, { type: 'REMOVE_QUERY', index: 0 }); // remove inactive carrier member 0
+    expect(s.queryList.length).toBe(2);
+    expect(s.activeQuery).toBe(1); // shifted down by one
+    // Live state (member 2, now index 1) must NOT have picked up the carrier.
+    expect(s.queryType).toBe('select');
+    // New member 0 (former member 1) inherits the carrier in its saved slot.
+    expect(s.savedQueries[0]?.queryType).toBe('createTemp');
+    expect(s.savedQueries[0]?.tempTableName).toBe('ВТ_Carrier');
+    expect(compoundQueryType(s)).toBe('createTemp');
+  });
+
+  it('REMOVE_QUERY(0) migrates the carrier directly onto the live state when the new member 0 becomes active', () => {
+    let s = reducer(initialState(), { type: 'SET_QUERY_TYPE', queryType: 'createTemp' });
+    s = reducer(s, { type: 'SET_TEMP_TABLE_NAME', name: 'ВТ_Carrier' });
+    s = reducer(s, { type: 'ADD_QUERY' }); // member 1 active
+    s = reducer(s, { type: 'REMOVE_QUERY', index: 0 }); // remove inactive carrier; member 1 shifts to index 0 and stays active
+    expect(s.queryList.length).toBe(1);
+    expect(s.activeQuery).toBe(0);
+    expect(s.queryType).toBe('createTemp');
+    expect(s.tempTableName).toBe('ВТ_Carrier');
   });
 });
 

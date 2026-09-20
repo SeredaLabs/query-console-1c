@@ -1619,7 +1619,19 @@ function reflowCharacteristics(text: string): string {
 function buildQueryBlock(
   model: QueryModel,
   fieldLines: string[],
-  aliases: Map<string, string>
+  aliases: Map<string, string>,
+  // UNION + temp-table semantic audit (2026-09-20): ПОМЕСТИТЬ/ДОБАВИТЬ has
+  // exactly one grammatical slot in 1C SDBL — immediately after the FIRST
+  // query's field list, before ИЗ. ОБЪЕДИНИТЬ is a later clause of that SAME
+  // statement, not a per-arm modifier. Defaults to true for the single-query
+  // `generate()` caller (trivially its own only/first member); union callers
+  // (`buildUnionBlocksScalar`/`WithTabSection`) pass `i === 0` explicitly so a
+  // non-first member's `queryType` can never leak a `ПОМЕСТИТЬ`/`ДОБАВИТЬ`
+  // line into the middle of a compound statement — defense in depth on top of
+  // the reducer-side invariant (SET_QUERY_TYPE/SET_TEMP_TABLE_NAME route to
+  // member 0), since this also protects hand-edited/round-tripped SDBL text
+  // that never went through the reducer at all.
+  isFirst: boolean = true
 ): string {
   // Фаза 8.1 (шаг 5) — восстановление комментариев запроса. Без данных о
   // комментариях все вставки пусты → вывод байт-в-байт прежний.
@@ -1656,11 +1668,11 @@ function buildQueryBlock(
   // ИМЕЮЩИЕ — сразу за группировкой, тоже с предшествующей пустой строкой.
   const havingLines = renderHaving(model.having, aliases);
 
-  // ПОМЕСТИТЬ/ДОБАВИТЬ <ВТ> между списком полей и ИЗ.
+  // ПОМЕСТИТЬ/ДОБАВИТЬ <ВТ> между списком полей и ИЗ — лише для першого учасника (isFirst).
   const placeLines: string[] =
-    model.queryType === 'createTemp' && model.tempTableName
+    isFirst && model.queryType === 'createTemp' && model.tempTableName
       ? ['ПОМЕСТИТЬ ' + model.tempTableName]
-      : model.queryType === 'appendTemp' && model.tempTableName
+      : isFirst && model.queryType === 'appendTemp' && model.tempTableName
         ? ['ДОБАВИТЬ ' + model.tempTableName]
         : [];
 
@@ -2462,7 +2474,7 @@ function buildUnionBlocksScalar(members: UnionMember[]): string[] {
       return emitAlias ? `\t${expr} КАК ${col.alias}` : `\t${expr}`;
     });
     const aliases = resolveAliases(m.model.tables);
-    return buildQueryBlock(m.model, fieldLines, aliases);
+    return buildQueryBlock(m.model, fieldLines, aliases, i === 0);
   });
 }
 
@@ -2496,7 +2508,7 @@ function buildUnionBlocksWithTabSection(members: UnionMember[]): string[] {
       const emitAlias = !suppressAutoAlias || explicitAlias;
       fieldLines.push(emitAlias ? `\t${expr} КАК ${alias}` : `\t${expr}`);
     }
-    return buildQueryBlock(m.model, fieldLines, aliases);
+    return buildQueryBlock(m.model, fieldLines, aliases, i === 0);
   });
 }
 
@@ -2531,8 +2543,10 @@ export function generateDocument(doc: QueryDocument): string {
 
   // Модификаторы УПОРЯДОЧИТЬ ПО / ИТОГИ ПО / ИНДЕКСИРОВАТЬ ПО относятся ко ВСЕМУ
   // объединению и записываются после последнего участника. ИНДЕКСИРОВАТЬ ПО валидно
-  // лишь для `ПОМЕСТИТЬ`-объединения, чей маркер createTemp несёт первый участник, —
-  // поэтому индекс рендерим в контексте createTemp-участника (фаза 6.12).
+  // лишь для `ПОМЕСТИТЬ`-объединения; маркер createTemp физически несёт ТОЛЬКО
+  // первый участник (audit 2026-09-20 — ПОМЕСТИТЬ/ДОБАВИТЬ имеет ровно один
+  // грамматичний слот, buildQueryBlock тепер сам це захищає через `isFirst`) —
+  // тому дивимось саме на `members[0]`, а не шукаємо будь-якого учасника.
   // Ссылки секций резолвятся парсером по ПЕРВОМУ участнику (его псевдонимы выборки
   // и источники, фаза 6.15.4) — рендер использует его же поля/таблицы.
   const last = members[members.length - 1].model;
@@ -2542,7 +2556,7 @@ export function generateDocument(doc: QueryDocument): string {
   const totalsLines = renderTotals(last.totals, first);
   if (totalsLines.length > 0) out += '\n' + totalsLines.join('\n');
   let indexEmitted = false;
-  const tempCarrier = members.find(m => m.model.queryType === 'createTemp')?.model;
+  const tempCarrier = first.queryType === 'createTemp' ? first : undefined;
   if (last.indexing && tempCarrier) {
     const indexLines = renderIndex(last.indexing, { ...tempCarrier, fields: first.fields, tables: first.tables });
     if (indexLines.length > 0) { out += '\n\n' + indexLines.join('\n'); indexEmitted = true; }

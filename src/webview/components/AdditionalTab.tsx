@@ -10,6 +10,16 @@ interface Props {
   selection: Selection;
   queryType: QueryType;
   tempTableName: string;
+  /**
+   * UNION + temp-table semantic audit (2026-09-20): `queryType`/`tempTableName`
+   * belong to the WHOLE compound query (ПОМЕСТИТЬ/ДОБАВИТЬ has exactly one
+   * grammatical slot), not to whichever union member is active — `queryType`/
+   * `tempTableName` above are already read through `compoundQueryType`/
+   * `compoundTempTableName` regardless of the active member. `unionActive`
+   * only gates the `dropTemp` option, which is mutually exclusive with a
+   * union (УНИЧТОЖИТЬ is a standalone statement, not a SELECT arm).
+   */
+  unionActive: boolean;
   lockForUpdate: string[];
   lockEnabled: boolean;
   onSetTop: (top: number | undefined) => void;
@@ -47,7 +57,7 @@ function objectName(fullName: string): string {
 
 export function AdditionalTab(props: Props): React.ReactElement {
   const {
-    selectedTables, selection, queryType, tempTableName, lockForUpdate, lockEnabled,
+    selectedTables, selection, queryType, tempTableName, unionActive, lockForUpdate, lockEnabled,
     onSetTop, onSetDistinct, onSetAllowed, onSetQueryType, onSetTempTableName,
     onSetLockEnabled, onAddLockTable, onRemoveLockTable,
     refreshState, onRefreshCache, preserveComments, onSetPreserveComments,
@@ -126,17 +136,21 @@ export function AdditionalTab(props: Props): React.ReactElement {
       {/* Тип запроса */}
       <fieldset style={FIELDSET}>
         <legend style={LEGEND}>{t('additional.queryType')}</legend>
-        {QUERY_TYPES.map(qt => (
-          <label key={qt.value} style={RADIO_LABEL}>
-            <input
-              type="radio"
-              name="query-type"
-              checked={queryType === qt.value}
-              onChange={() => onSetQueryType(qt.value)}
-            />
-            {t(qt.label)}
-          </label>
-        ))}
+        {QUERY_TYPES.map(qt => {
+          const disabled = qt.value === 'dropTemp' && unionActive;
+          return (
+            <label key={qt.value} style={{ ...RADIO_LABEL, opacity: disabled ? 0.5 : 1 }} title={disabled ? t('additional.dropTempDisabledHint') : undefined}>
+              <input
+                type="radio"
+                name="query-type"
+                checked={queryType === qt.value}
+                disabled={disabled}
+                onChange={() => onSetQueryType(qt.value)}
+              />
+              {t(qt.label)}
+            </label>
+          );
+        })}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
           <span style={{ fontSize: 13, opacity: tempNameEnabled ? 1 : 0.5 }}>{t('additional.tempName')}:</span>
           <input

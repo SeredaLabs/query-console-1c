@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { QueryType } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
+import { compoundQueryType, compoundTempTableName } from '../../webview/state/queryStore';
 import { t, type MessageKey } from '../i18n';
 import { CARD, SECTION_LABEL, TOKENS } from '../theme';
 
@@ -24,6 +25,16 @@ import { CARD, SECTION_LABEL, TOKENS } from '../theme';
  *   в snapshot-логіці (`snapshots.ts`) і вже читаються `PackageNav`'s
  *   `isTempTable` badge — ця секція просто дає користувачу спосіб їх
  *   встановити, жодних нових reducer actions.
+ *
+ * UNION + temp-table semantic audit (2026-09-20): `ПОМЕСТИТЬ`/`ДОБАВИТЬ` має
+ * рівно один граматичний слот у 1С SDBL (одразу після списку полів ПЕРШОГО
+ * учасника; `ОБЪЕДИНИТЬ` — пізніша секція ТОГО САМОГО оператора) — тому
+ * queryType/tempTableName належать COMPOUND-запиту в цілому, а не тому
+ * union-учаснику, який зараз активний. Значення тут читаються через
+ * `compoundQueryType`/`compoundTempTableName` (завжди коректні незалежно
+ * від активного учасника); reducer сам маршрутизує запис у member 0.
+ * `dropTemp` вимкнено, поки існує об'єднання (`queryList.length > 1`) —
+ * УНИЧТОЖИТЬ самостійний оператор, несумісний із SELECT-arm.
  *
  * Свідомо НЕ включено:
  * - "Кеш метаданих" (refresh-button + preserveComments) — Classic-
@@ -80,6 +91,9 @@ export function AdditionalWorkspace({
   dispatch: React.Dispatch<QueryAction>;
 }): React.ReactElement {
   const hasTop = state.selection.top !== undefined;
+  const queryType = compoundQueryType(state);
+  const tempTableName = compoundTempTableName(state);
+  const unionActive = state.queryList.length > 1;
 
   return (
     <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -128,26 +142,30 @@ export function AdditionalWorkspace({
       <div style={{ ...CARD, padding: 14, display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
         <span style={SECTION_LABEL}>{t(locale, 'additionalWorkspaceQueryTypeTitle')}</span>
 
-        {QUERY_TYPES.map(qt => (
-          <label key={qt.value} style={RADIO_ROW}>
-            <input
-              type="radio"
-              name="qcc-query-type"
-              checked={state.queryType === qt.value}
-              onChange={() => dispatch({ type: 'SET_QUERY_TYPE', queryType: qt.value })}
-            />
-            {t(locale, qt.label)}
-          </label>
-        ))}
+        {QUERY_TYPES.map(qt => {
+          const disabled = qt.value === 'dropTemp' && unionActive;
+          return (
+            <label key={qt.value} style={{ ...RADIO_ROW, opacity: disabled ? 0.5 : 1 }} title={disabled ? t(locale, 'additionalWorkspaceDropTempDisabledHint') : undefined}>
+              <input
+                type="radio"
+                name="qcc-query-type"
+                checked={queryType === qt.value}
+                disabled={disabled}
+                onChange={() => dispatch({ type: 'SET_QUERY_TYPE', queryType: qt.value })}
+              />
+              {t(locale, qt.label)}
+            </label>
+          );
+        })}
 
         <label style={{ ...RADIO_ROW, cursor: 'default' }}>
-          <span style={{ opacity: state.queryType === 'select' ? 0.5 : 1 }}>{t(locale, 'additionalWorkspaceTempNameLabel')}:</span>
+          <span style={{ opacity: queryType === 'select' ? 0.5 : 1 }}>{t(locale, 'additionalWorkspaceTempNameLabel')}:</span>
           <input
             type="text"
-            disabled={state.queryType === 'select'}
-            value={state.tempTableName}
+            disabled={queryType === 'select'}
+            value={tempTableName}
             onChange={e => dispatch({ type: 'SET_TEMP_TABLE_NAME', name: e.target.value })}
-            style={{ ...PANEL_INPUT, flex: 1, minWidth: 0, width: 'auto', opacity: state.queryType === 'select' ? 0.5 : 1 }}
+            style={{ ...PANEL_INPUT, flex: 1, minWidth: 0, width: 'auto', opacity: queryType === 'select' ? 0.5 : 1 }}
           />
         </label>
       </div>

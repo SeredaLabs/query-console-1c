@@ -874,6 +874,33 @@ describe('generate — дополнительно (фаза 5.3)', () => {
       expect(generateDocument(doc)).toBe(expected);
       await assertValidSdbl(generateDocument(doc));
     });
+
+    // UNION + temp-table semantic audit (2026-09-20): ПОМЕСТИТЬ/ДОБАВИТЬ has
+    // exactly one grammatical slot (right after the FIRST member's field
+    // list, before ОБЪЕДИНИТЬ — docs/development/query-model.md). These lock
+    // in the correct placement and the generator's own defense against a
+    // non-first member's queryType leaking into the output.
+    it('createTemp у member 0 → один ПОМЕСТИТЬ перед ОБЪЕДИНИТЬ (валідне SDBL)', async () => {
+      const m0 = valuteMember();
+      m0.model.queryType = 'createTemp';
+      m0.model.tempTableName = 'ВТ_Валюты';
+      const doc: QueryDocument = { members: [m0, variantMember()] };
+      const text = generateDocument(doc);
+      expect(text).toContain('ПОМЕСТИТЬ ВТ_Валюты');
+      // Рівно один ПОМЕСТИТЬ, і він СТОЇТЬ ПЕРЕД ОБЪЕДИНИТЬ, а не після.
+      expect(text.match(/ПОМЕСТИТЬ/g)?.length).toBe(1);
+      expect(text.indexOf('ПОМЕСТИТЬ')).toBeLessThan(text.indexOf('ОБЪЕДИНИТЬ'));
+      await assertValidSdbl(text);
+    });
+
+    it('createTemp НЕ на member 0 (сконструйовано напряму, в обхід reducer) → generator НЕ друкує ПОМЕСТИТЬ', () => {
+      const m1 = variantMember();
+      m1.model.queryType = 'createTemp';
+      m1.model.tempTableName = 'ВТ_Варіанти';
+      const doc: QueryDocument = { members: [valuteMember(), m1] };
+      const text = generateDocument(doc);
+      expect(text).not.toContain('ПОМЕСТИТЬ');
+    });
   });
 });
 

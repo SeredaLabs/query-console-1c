@@ -12,6 +12,8 @@ import {
   batchMemberInfo,
   batchMemberName,
   buildModelFromFlat,
+  compoundQueryType,
+  compoundTempTableName,
   docToSnapshot,
   emptyBuilder,
   modelToFlat,
@@ -32,6 +34,8 @@ export {
   batchMemberInfo,
   batchMemberName,
   buildModelFromFlat,
+  compoundQueryType,
+  compoundTempTableName,
   docToSnapshot,
   modelToFlat,
   restoreBatch,
@@ -1346,7 +1350,28 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
     case 'SET_SELECTION_ALLOWED':
       return { ...state, selection: { ...state.selection, allowed: action.allowed } };
 
-    case 'SET_QUERY_TYPE':
+    case 'SET_QUERY_TYPE': {
+      // UNION + temp-table semantic audit (2026-09-20): ПОМЕСТИТЬ/ДОБАВИТЬ has
+      // exactly one grammatical slot (member 0) — queryType is a property of the
+      // COMPOUND query, not of whichever union member is currently active. Editing
+      // from a non-zero active member routes the write to member 0's saved slot
+      // instead of the live flat state, so the user never sees an editor that
+      // silently no-ops depending on which SELECT they happen to be looking at.
+      // dropTemp is mutually exclusive with a union (УНИЧТОЖИТЬ is a standalone
+      // statement, not a SELECT arm) — rejected while a union already exists.
+      if (action.queryType === 'dropTemp' && state.queryList.length > 1) return state;
+      if (state.activeQuery !== 0) {
+        const saved0 = state.savedQueries[0];
+        if (!saved0) return state; // defensive: member 0 is always saved once inactive
+        const savedQueries = state.savedQueries.slice();
+        savedQueries[0] = {
+          ...saved0,
+          queryType: action.queryType,
+          comments: undefined,
+          selectedFields: stripFieldComments(saved0.selectedFields),
+        };
+        return { ...state, savedQueries };
+      }
       // Фаза 8.1 — смена типа контейнера разрывает привязку его комментариев
       // (уровня запроса и полей), поэтому они сбрасываются.
       return {
@@ -1355,8 +1380,22 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
         queryComments: undefined,
         selectedFields: stripFieldComments(state.selectedFields),
       };
+    }
 
-    case 'SET_TEMP_TABLE_NAME':
+    case 'SET_TEMP_TABLE_NAME': {
+      // Той самий compound-carrier маршрутинг, що й SET_QUERY_TYPE вище.
+      if (state.activeQuery !== 0) {
+        const saved0 = state.savedQueries[0];
+        if (!saved0) return state;
+        const savedQueries = state.savedQueries.slice();
+        savedQueries[0] = {
+          ...saved0,
+          tempTableName: action.name,
+          comments: undefined,
+          selectedFields: stripFieldComments(saved0.selectedFields),
+        };
+        return { ...state, savedQueries };
+      }
       // Фаза 8.1 — комментарии привязаны к контейнеру (имени ВТ); смена имени их сбрасывает.
       return {
         ...state,
@@ -1364,6 +1403,7 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
         queryComments: undefined,
         selectedFields: stripFieldComments(state.selectedFields),
       };
+    }
 
     case 'SET_LOCK_ENABLED':
       return {
@@ -1381,6 +1421,11 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
       return { ...state, lockForUpdate: state.lockForUpdate.filter(n => n !== action.fullName) };
 
     case 'ADD_QUERY': {
+      // dropTemp XOR union (audit 2026-09-20): УНИЧТОЖИТЬ — самостоятельный
+      // оператор, не SELECT-arm; не даємо почати об'єднання, поки поточний
+      // (єдиний) запит — dropTemp, замість того щоб тихо створювати стан,
+      // який генератор потім не зможе коректно відрендерити.
+      if (state.queryType === 'dropTemp') return state;
       // Сохранить активный запрос в его слот, добавить новый пустой запрос и сделать его активным.
       const savedQueries = [...state.savedQueries];
       savedQueries[state.activeQuery] = snapshotActive(state);
@@ -1418,6 +1463,18 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
       if (state.queryList.length === 1) return state; // нельзя удалить последний
       if (index < 0 || index >= state.queryList.length) return state;
 
+      // UNION + temp-table semantic audit (2026-09-20): member 0 фізично несе
+      // queryType/tempTableName для ВСЬОГО compound-запиту. Видалення member 0
+      // НЕ повинно тихо губити createTemp/appendTemp намір користувача — carrier
+      // мігрує на новий member 0 (те, що раніше було member 1), а не скидається.
+      const carrier = index === 0
+        ? (state.activeQuery === 0
+            ? { queryType: state.queryType, tempTableName: state.tempTableName }
+            : state.savedQueries[0]
+              ? { queryType: state.savedQueries[0].queryType, tempTableName: state.savedQueries[0].tempTableName }
+              : null)
+        : null;
+
       const queryList = state.queryList.filter((_, i) => i !== index);
       const savedQueries = state.savedQueries.filter((_, i) => i !== index);
 
@@ -1432,11 +1489,21 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
           savedQueries,
           activeQuery: newActive,
           ...restoreSaved(state, target),
+          ...(carrier && newActive === 0 ? carrier : null),
         };
       }
 
       // Удаляем неактивный → активный остаётся live, поправить индекс при сдвиге.
       const activeQuery = index < state.activeQuery ? state.activeQuery - 1 : state.activeQuery;
+      if (carrier) {
+        if (activeQuery === 0) {
+          // Новий member 0 — саме активний (live) слот.
+          return { ...state, queryList, savedQueries, activeQuery, queryType: carrier.queryType, tempTableName: carrier.tempTableName };
+        }
+        if (savedQueries[0]) {
+          savedQueries[0] = { ...savedQueries[0], queryType: carrier.queryType, tempTableName: carrier.tempTableName };
+        }
+      }
       return { ...state, queryList, savedQueries, activeQuery };
     }
 

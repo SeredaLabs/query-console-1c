@@ -27,7 +27,7 @@ import type { MetaField, MetaTable } from '../../core/metadata/types';
 import type { RefId } from '../../shared/messages';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import type { QueryState, QueryAction } from '../state/queryStore';
-import { assembleMembers, batchMemberInfo, initialState, reducer, tempTableDialogInitial, availableTempTables, allTables, metadataCatalogRef } from '../state/queryStore';
+import { assembleMembers, batchMemberInfo, initialState, reducer, tempTableDialogInitial, availableTempTables, allTables, metadataCatalogRef, compoundQueryType, compoundTempTableName } from '../state/queryStore';
 import { SideTabsRail } from './SideTabsRail';
 import { computeBatchTextSafe } from '../computeBatchText';
 import { deriveUnionColumns } from '../../core/query/unionModel';
@@ -488,8 +488,9 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
         <AdditionalTab
           selectedTables={state.selectedTables}
           selection={state.selection}
-          queryType={state.queryType}
-          tempTableName={state.tempTableName}
+          queryType={compoundQueryType(state)}
+          tempTableName={compoundTempTableName(state)}
+          unionActive={state.queryList.length > 1}
           lockForUpdate={state.lockForUpdate}
           lockEnabled={state.lockEnabled}
           onSetTop={top => dispatch({ type: 'SET_SELECTION_TOP', top })}

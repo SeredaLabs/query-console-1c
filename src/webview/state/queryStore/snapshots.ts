@@ -165,6 +165,28 @@ export function batchMemberName(state: QueryState, i: number): string {
 }
 
 /**
+ * UNION + temp-table semantic audit (2026-09-20): `ПОМЕСТИТЬ`/`ДОБАВИТЬ` has
+ * exactly ONE grammatical slot in 1C SDBL (immediately after the field list,
+ * before `ИЗ`; `ОБЪЕДИНИТЬ` is a LATER clause of that same statement — see
+ * `docs/development/query-model.md`). `queryType`/`tempTableName` therefore
+ * belong to the compound query/UNION document as a whole, not to whichever
+ * member happens to be active. Member 0 is the physical storage location
+ * (an implementation detail — it's the only member the generator is allowed
+ * to render `ПОМЕСТИТЬ`/`ДОБАВИТЬ` from), but UI/reducer callers should read
+ * through these accessors rather than `state.queryType`/`state.tempTableName`
+ * directly, so the "member 0 carries it" detail doesn't leak into call sites.
+ */
+export function compoundQueryType(state: QueryState): QueryType {
+  if (state.activeQuery === 0) return state.queryType;
+  return state.savedQueries[0]?.queryType ?? 'select';
+}
+
+export function compoundTempTableName(state: QueryState): string {
+  if (state.activeQuery === 0) return state.tempTableName;
+  return state.savedQueries[0]?.tempTableName ?? '';
+}
+
+/**
  * Доступные временные таблицы для активного запроса пакета: только созданные
  * `ПОМЕСТИТЬ`/`ДОБАВИТЬ` в предыдущих запросах. ВТ не доступна своему создателю.
  */

@@ -299,9 +299,46 @@ Live-QA підтвердив: додавання поля, зміна напря
   - Це НЕ Phase 13 повністю --- subquery-as-source (важча половина, з
     окремими condition-subquery/EXISTS gaps, див. §11) і "вручну описана
     тимчасова таблиця" (окремий `SelectedTable.tempTable`-діалог, Classic
-    "Temporary table window") свідомо НЕ входять у цей зріз. Phase 12B
-    (Package 2.0, візуалізація producer→consumer у `PackageNav`) тепер
-    розблокований і має реальні дані для роботи;
+    "Temporary table window") свідомо НЕ входять у цей зріз.
+
+**UNION + temp-table compound-carrier invariant (fix-фаза, 2026-09-20, ПЕРЕД Phase 12B)** ---
+під час дизайну Phase 12B (візуалізація producer→consumer у `PackageNav`)
+виявлено й виправлено pre-existing (ще з Classic) semantic bug: `queryType`/
+`tempTableName` зберігались НЕЗАЛЕЖНО в кожному union-члені (`SavedQuery`
+per-slot), хоча `ПОМЕСТИТЬ`/`ДОБАВИТЬ` має РІВНО один граматичний слот у 1С
+SDBL (одразу після списку полів ПЕРШОГО учасника; `ОБЪЕДИНИТЬ` --- пізніша
+секція ТОГО САМОГО оператора, `docs/development/query-model.md`). Reducer
+дозволяв побудувати невалідні стани (createTemp на не-першому union-члені,
+кілька createTemp, dropTemp усередині union), а генератор (`buildQueryBlock`)
+рендерив `queryType` з БУДЬ-ЯКОГО учасника без перевірки позиції.
+Виправлено (без нового domain-абстракції, тільки нормалізація існуючого):
+- `compoundQueryType(state)`/`compoundTempTableName(state)` (нові selector'и
+  в `snapshots.ts`) --- читають через member 0 незалежно від активного
+  учасника; `AdditionalTab.tsx`/`AdditionalWorkspace.tsx` тепер показують
+  ЦЕЙ compound-стан, а не `state.queryType` активного слоту напряму.
+- `SET_QUERY_TYPE`/`SET_TEMP_TABLE_NAME` маршрутизують запис у member 0's
+  saved slot, коли активний учасник ≠ 0 (а НЕ no-op/disable --- це дало б
+  дивний UX "чому я не можу редагувати Тип запиту, дивлячись на SELECT 2").
+- `dropTemp` заблоковано (no-op), поки `queryList.length > 1`; `ADD_QUERY`
+  заблоковано (no-op), поки поточний (єдиний) запит --- `dropTemp` (dropTemp
+  XOR union --- УНИЧТОЖИТЬ самостійний оператор, несумісний з SELECT-arm).
+- `REMOVE_QUERY(0)` мігрує carrier (queryType/tempTableName) на НОВИЙ
+  member 0 замість тихої втрати наміру користувача.
+- `buildQueryBlock` (generator) отримав `isFirst` параметр --- захист in
+  depth: навіть якщо хтось напряму сконструює модель з createTemp на
+  не-першому учаснику (round-trip хендредагованого SDBL, не через reducer),
+  `ПОМЕСТИТЬ`/`ДОБАВИТЬ` НЕ потрапить у вивід поза першим блоком.
+- Нормалізація existing saved state (invalid non-zero-member queryType при
+  restore) СВІДОМО відкладена --- потребує окремого рішення про
+  deterministic-vs-ambiguous carrier resolution, не destructive reset.
+- 10 нових тестів (`queryStore.test.ts`, `sdblGenerator.test.ts`) --- усі
+  invariant-стани з аудиту (routing, dropTemp block, REMOVE_QUERY migration
+  у трьох гілках, generator position-defense).
+
+Phase 12B (Package 2.0, візуалізація producer→consumer у `PackageNav`) тепер
+розблокований на коректному фундаменті --- continuity стане тривіальним
+derived UI (читає `compoundQueryType`/`availableTempTables`), а не набором
+винятків навколо суперечливого per-member стану.
 - **"Блокування"** --- ДЛЯ ИЗМЕНЕНИЯ (SET_LOCK_ENABLED/ADD_LOCK_TABLE/
   REMOVE_LOCK_TABLE, `state.lockForUpdate: string[]` адресує таблиці за
   `fullName`, НЕ за `id`; чекбокс-список будується з `state.selectedTables`).

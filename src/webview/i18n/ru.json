@@ -151,6 +151,7 @@
   "additional.appendTemp": "Добавление во временную таблицу",
   "additional.dropTemp": "Уничтожение временной таблицы",
   "additional.tempName": "Имя временной таблицы",
+  "additional.dropTempDisabledHint": "Недоступно, пока этот запрос является объединением (УНИЧТОЖИТЬ — самостоятельный оператор, не SELECT-участник).",
   "additional.parameters": "Параметры",
   "additional.records": "Выборка записей",
   "additional.lockForUpdate": "Блокировать получаемые данные для последующего изменения",
