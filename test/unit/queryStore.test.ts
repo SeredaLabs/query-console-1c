@@ -14,7 +14,9 @@ import {
   metadataCatalogRef,
   compoundQueryType,
   compoundTempTableName,
+  derivePackageTempTableContinuity,
 } from '../../src/webview/state/queryStore';
+import type { QueryState } from '../../src/webview/state/queryStore';
 import { deriveUnionColumns } from '../../src/core/query/unionModel';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { generateBatch } from '../../src/core/query/sdblGenerator';
@@ -851,6 +853,121 @@ describe('queryStore — UNION + temp-table compound-carrier invariant (audit 20
     expect(s.activeQuery).toBe(0);
     expect(s.queryType).toBe('createTemp');
     expect(s.tempTableName).toBe('ВТ_Carrier');
+  });
+});
+
+describe('derivePackageTempTableContinuity (Phase 12B)', () => {
+  const vt = (name: string): MetaTable => ({ kind: 'ВременнаяТаблица', name, fullName: name, fields: [] });
+
+  function withField(state: QueryState, full = 'Справочник.Валюты', path = 'Код'): QueryState {
+    return reducer(state, { type: 'ADD_FIELD_WITH_TABLE', tableFullName: full, fieldPath: path });
+  }
+
+  function makeProducer(state: QueryState, name: string, append = false): QueryState {
+    let s = reducer(state, { type: 'SET_QUERY_TYPE', queryType: append ? 'appendTemp' : 'createTemp' });
+    s = reducer(s, { type: 'SET_TEMP_TABLE_NAME', name });
+    return s;
+  }
+
+  it('no temp tables anywhere → empty map', () => {
+    let s = withField(initialState(), 'Справочник.Валюты', 'Код');
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = withField(s, 'Документ.СчетНаОплату', 'Дата');
+    expect(derivePackageTempTableContinuity(s).size).toBe(0);
+  });
+
+  it('createTemp → one later consumer', () => {
+    let s = makeProducer(initialState(), 'ВТ_A'); // package 0: creates ВТ_A
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' }); // package 1
+    s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') }); // package 1 consumes ВТ_A
+    const cont = derivePackageTempTableContinuity(s);
+    expect(cont.get(0)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [1] }]);
+    expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'consumes', relatedMembers: [0] }]);
+  });
+
+  it('createTemp → multiple later consumers', () => {
+    let s = makeProducer(initialState(), 'ВТ_A');
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') }); // package 1 consumes
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') }); // package 2 consumes
+    const cont = derivePackageTempTableContinuity(s);
+    expect(cont.get(0)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [1, 2] }]);
+    expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'consumes', relatedMembers: [0] }]);
+    expect(cont.get(2)).toEqual([{ tempTableName: 'ВТ_A', role: 'consumes', relatedMembers: [0] }]);
+  });
+
+  it('one consumer using several temp tables', () => {
+    let s = makeProducer(initialState(), 'ВТ_A');
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = makeProducer(s, 'ВТ_B');
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') });
+    s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_B') });
+    const cont = derivePackageTempTableContinuity(s);
+    expect(cont.get(2)).toEqual([
+      { tempTableName: 'ВТ_A', role: 'consumes', relatedMembers: [0] },
+      { tempTableName: 'ВТ_B', role: 'consumes', relatedMembers: [1] },
+    ]);
+  });
+
+  it('consumer resolved from a non-first UNION member', () => {
+    let s = makeProducer(initialState(), 'ВТ_A');
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' }); // package 1, union member 0
+    s = reducer(s, { type: 'ADD_QUERY' }); // union member 1 (active) — no ВТ_A here
+    s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') }); // added to union member 1
+    const cont = derivePackageTempTableContinuity(s);
+    expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'consumes', relatedMembers: [0] }]);
+  });
+
+  it('producer package query itself contains a UNION — carrier still read from its member 0', () => {
+    let s = makeProducer(initialState(), 'ВТ_A'); // package 0, union member 0 = carrier
+    s = reducer(s, { type: 'ADD_QUERY' }); // package 0 gets a second union member
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') });
+    const cont = derivePackageTempTableContinuity(s);
+    expect(cont.get(0)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [1] }]);
+  });
+
+  it('temp table created but never consumed → producer marker with empty relatedMembers', () => {
+    let s = makeProducer(initialState(), 'ВТ_A');
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' }); // no reference to ВТ_A anywhere
+    const cont = derivePackageTempTableContinuity(s);
+    expect(cont.get(0)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [] }]);
+    expect(cont.get(1)).toBeUndefined();
+  });
+
+  it('respects package ordering — a query cannot consume a temp table produced LATER in the package', () => {
+    let s = reducer(initialState(), { type: 'ADD_TABLE', table: vt('ВТ_A') }); // package 0 references ВТ_A before anyone creates it
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = makeProducer(s, 'ВТ_A'); // package 1 creates it (too late for package 0)
+    const cont = derivePackageTempTableContinuity(s);
+    expect(cont.get(0)).toBeUndefined(); // package 0's reference does NOT resolve
+    expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [] }]);
+  });
+
+  it('appendTemp to an already-created name: the appender gets its own marker but no attributed consumers; later consumers still resolve to the ORIGINAL creator', () => {
+    let s = makeProducer(initialState(), 'ВТ_A'); // package 0: creates
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = makeProducer(s, 'ВТ_A', true); // package 1: appends to the SAME name
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') }); // package 2 consumes
+    const cont = derivePackageTempTableContinuity(s);
+    expect(cont.get(0)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [2] }]);
+    expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'appends', relatedMembers: [] }]);
+    expect(cont.get(2)).toEqual([{ tempTableName: 'ВТ_A', role: 'consumes', relatedMembers: [0] }]);
+  });
+
+  it('repeated temp-table name in two unrelated later chains still resolves consumers to the single first-defining origin', () => {
+    let s = makeProducer(initialState(), 'ВТ_A');
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') }); // consumer A
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') }); // consumer B, same origin
+    const cont = derivePackageTempTableContinuity(s);
+    expect(cont.get(0)?.[0].relatedMembers).toEqual([1, 2]);
+    expect(cont.get(1)?.[0].relatedMembers).toEqual([0]);
+    expect(cont.get(2)?.[0].relatedMembers).toEqual([0]);
   });
 });
 

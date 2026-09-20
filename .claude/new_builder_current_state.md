@@ -300,6 +300,22 @@ Live-QA підтвердив: додавання поля, зміна напря
     окремими condition-subquery/EXISTS gaps, див. §11) і "вручну описана
     тимчасова таблиця" (окремий `SelectedTable.tempTable`-діалог, Classic
     "Temporary table window") свідомо НЕ входять у цей зріз.
+- **"Блокування"** --- ДЛЯ ИЗМЕНЕНИЯ (SET_LOCK_ENABLED/ADD_LOCK_TABLE/
+  REMOVE_LOCK_TABLE, `state.lockForUpdate: string[]` адресує таблиці за
+  `fullName`, НЕ за `id`; чекбокс-список будується з `state.selectedTables`).
+
+Жодних нових reducer actions. Свідомо НЕ включено:
+- **"Кеш метаданих"** (refresh-button + preserveComments) --- Classic-
+  специфічний host-round-trip механізм, без архітектурного еквівалента
+  в New Builder (client-side `computeBatchTextSafe`, без host cache).
+
+Live-QA підтвердив точний порядок ключових слів генератора (`selectionModifiers()`:
+РАЗРЕШЕННЫЕ → РАЗЛИЧНЫЕ → ПЕРВЫЕ N) і коректний `ДЛЯ ИЗМЕНЕНИЯ
+<Таблиця>` при виборі джерела для блокування.
+
+SDBL preview (`SdblDock`) у Canvas існує (низ екрана, collapsible), але
+це той самий read-only generated-text dock, що й у Phase 1 shell, не
+field-level cross-highlight (Phase 15, не почато).
 
 **UNION + temp-table compound-carrier invariant (fix-фаза, 2026-09-20, ПЕРЕД Phase 12B)** ---
 під час дизайну Phase 12B (візуалізація producer→consumer у `PackageNav`)
@@ -335,26 +351,68 @@ SDBL (одразу після списку полів ПЕРШОГО учасн�
   invariant-стани з аудиту (routing, dropTemp block, REMOVE_QUERY migration
   у трьох гілках, generator position-defense).
 
-Phase 12B (Package 2.0, візуалізація producer→consumer у `PackageNav`) тепер
-розблокований на коректному фундаменті --- continuity стане тривіальним
-derived UI (читає `compoundQueryType`/`availableTempTables`), а не набором
-винятків навколо суперечливого per-member стану.
-- **"Блокування"** --- ДЛЯ ИЗМЕНЕНИЯ (SET_LOCK_ENABLED/ADD_LOCK_TABLE/
-  REMOVE_LOCK_TABLE, `state.lockForUpdate: string[]` адресує таблиці за
-  `fullName`, НЕ за `id`; чекбокс-список будується з `state.selectedTables`).
+**Phase 12B --- Package Temp-Table Continuity --- реалізовано** (2026-09-20,
+`src/webview-canvas/components/PackageNav.tsx` + новий похідний селектор
+`derivePackageTempTableContinuity` у `snapshots.ts`). Візуалізує вже-існуючий
+producer→consumer зв'язок (createTemp/appendTemp → FROM тієї ж ВТ у
+пізнішому package-члені) БЕЗ жодного нового domain-стану чи графа залежностей.
 
-Жодних нових reducer actions. Свідомо НЕ включено:
-- **"Кеш метаданих"** (refresh-button + preserveComments) --- Classic-
-  специфічний host-round-trip механізм, без архітектурного еквівалента
-  в New Builder (client-side `computeBatchTextSafe`, без host cache).
+Алгоритм (`derivePackageTempTableContinuity(state): Map<memberIndex, PackageTempTableRelation[]>`):
+1. Проходить `assembleBatch(state).members`; для кожного package-члена читає
+   compound carrier (`members[i].members[0].model.queryType`/`tempTableName`
+   --- той самий member-0-invariant, що вже зафіксований аудитом) --- якщо
+   `createTemp`/`appendTemp` з іменем, реєструє producer-роль для цього
+   члена; `origin`-мапа (`ім'я → перший package-член, що його визначив`)
+   дедуплікує ПОВТОРЮВАНІ імена ТОЧНО так само, як уже робить
+   `availableTempTables`'s `seenNames` (first-wins, жодної нової семантики).
+2. Проходить УСІ union-члени (не лише member 0!) кожного package-запиту,
+   шукаючи `SelectedTable.fullName`, що збігається з раніше зареєстрованим
+   ім'ям ВТ, ЯКЩО producer йде РАНІШЕ в пакеті (`originIndex < i`, package
+   ordering enforced). Знайдений збіг --- consumer-роль для цього члена,
+   із посиланням на producer-член.
+3. Повертає на член: 0-N ролей (`creates`/`appends`/`consumes`), кожна --- з
+   `relatedMembers` (для producer --- consumers; для consumer --- рівно один
+   producer). Порожня Map, коли в пакеті немає жодної ВТ.
 
-Live-QA підтвердив точний порядок ключових слів генератора (`selectionModifiers()`:
-РАЗРЕШЕННЫЕ → РАЗЛИЧНЫЕ → ПЕРВЫЕ N) і коректний `ДЛЯ ИЗМЕНЕНИЯ
-<Таблиця>` при виборі джерела для блокування.
+Свідоме рішення по appendTemp/повторюваних іменах (не вигадана семантика):
+member, що робить `appendTemp` до ВЖЕ існуючого імені, отримує ВЛАСНИЙ
+маркер (`role: 'appends'`), але НЕ отримує "consumedBy" --- домен не дає
+способу відрізнити, чиї саме рядки (creator чи appender) прочитав
+конкретний пізніший споживач, тож усі споживачі завжди резолвяться на
+ПЕРШОГО (origin) виробника --- вигадувати точніший розподіл означало б
+implicit-семантику, якої `availableTempTables` сама не підтверджує.
 
-SDBL preview (`SdblDock`) у Canvas існує (низ екрана, collapsible), але
-це той самий read-only generated-text dock, що й у Phase 1 shell, не
-field-level cross-highlight (Phase 15, не почато).
+PackageNav UI (A+B hybrid, погоджений заздалегідь): один codicon-database
+маркер на package-чіпі (не printить ім'я ВТ у самому чіпі; порожньо, коли
+`continuity.size===0` --- рядок лишається настільки ж компактним, як і
+сьогодні). Tooltip (native `title`, багаторядковий) пояснює роль --- "Створює
+ВТ_X\n\nВикористовується: Запит 2" / "Використовує ВТ_X\n\nСтворено: Запит
+1" / мульти-ВТ список. Hover ТА keyboard focus (`tabIndex=0`, `onFocus`)
+на маркері підсвічують пов'язані package-чіпи accent-кольором
+(`boxShadow: inset 0 -2px 0 accent`) --- той самий "субтільний, не яскравий"
+принцип, що й focus/dimming на канві; жодних permanent ліній/стрілок/нового
+рядка. Активний package-чіп (`[n]`, bold+accent color) лишається візуально
+сильнішим за hover-highlight (різні механізми: колір тексту vs
+box-shadow-підкреслення).
+
+Live-QA підтвердив: порожній пакет --- нуль зайвого UI; 2-member
+producer→consumer --- обидва маркери й tooltip коректні; keyboard-focus
+highlight підсвічує саме пов'язаний чіп (перевірено програмно, мишача
+`hover` через MCP browser tool не транслюється 1:1 у координати цього
+конкретного елемента --- відомий tooling-нюанс, не баг застосунку); 1024px
+і 768px --- без horizontal overflow, без layout jump.
+
+Не видалено (навмисно, per explicit scope): активного-запиту суфікс
+"ВТ_X · Тимчасова таблиця" лишається --- ВІЗУАЛЬНО частково дублює новий
+маркер+tooltip для АКТИВНОГО producer-чіпа, але це не автоматично
+видалено в цій фазі (окреме рішення користувача, не наша call).
+
+10 нових тестів (`derivePackageTempTableContinuity` describe у
+`queryStore.test.ts`) --- усі сценарії з ТЗ: один/декілька consumers, один
+consumer декількох ВТ, consumer у не-першому UNION-члені, producer із
+власним UNION, unused ВТ, package ordering, appendTemp-до-тієї-самої-назви,
+повторювані імена. UI-рівень покритий лише через live-QA (не React
+component tests) --- відповідає explicit "Add UI tests only where useful".
 
 ## 11. Відомі обмеження / gaps (оновлено 2026-09-18)
 

@@ -217,6 +217,95 @@ export function availableTempTables(state: QueryState): MetaTable[] {
   return out;
 }
 
+/** Одна темп-таблична роль package-запиту в межах Phase 12B continuity. */
+export interface PackageTempTableRelation {
+  tempTableName: string;
+  role: 'creates' | 'appends' | 'consumes';
+  /**
+   * Для `creates`/`appends` — package-члени (індекси в порядку пакета), що
+   * СПОЖИВАЮТЬ саме ЦЮ таблицю (можуть бути порожні — ВТ, яку ніхто не
+   * використовує, це не помилка). Для `consumes` — рівно один елемент,
+   * package-член, що є origin-виробником (див. нижче чому саме один).
+   */
+  relatedMembers: number[];
+}
+
+/**
+ * Phase 12B — похідна (не-збережена, не-domain) модель temp-table continuity
+ * для `PackageNav`: для кожного package-члену — список його ролей щодо
+ * тимчасових таблиць пакета. Порожній масив/відсутність запису → член не
+ * бере участі, PackageNav не показує жодного маркера.
+ *
+ * Правила НАВМИСНО ті самі, що вже реалізує `availableTempTables` вище —
+ * жодної нової семантики не вигадано:
+ * - "producer" (creates/appends) читається через compound carrier
+ *   (`members[i].members[0].model.queryType`/`tempTableName` — той самий
+ *   member-0-як-carrier інваріант, що вже зафіксований в
+ *   `compoundQueryType`/reducer/generator, audit 2026-09-20);
+ * - при ПОВТОРЮВАНІЙ назві ВТ (напр. member 1 createTemp ВТ_X, member 2
+ *   appendTemp ВТ_X) "origin" для будь-якого пізнішого споживача — ЗАВЖДИ
+ *   ПЕРШИЙ package-член, що визначив цю назву (`origin`-мапа, first-wins) —
+ *   ТОЧНО той самий dedup, що й `availableTempTables`'s `seenNames`. Member
+ *   2 (append) отримує власний маркер ("додає до ВТ_X"), але НЕ отримує
+ *   "consumedBy" — домен не дає способу відрізнити, чиї саме рядки (member
+ *   1 create чи member 2 append) прочитав конкретний споживач, тож
+ *   приписувати йому конкретних consumers означало б вигадувати зв'язок,
+ *   якого поточна модель не підтверджує (див. audit STOP-умову).
+ * - споживання шукається по ВСІХ UNION-членах package-запиту (не лише
+ *   member 0) — "temp table used only by UNION member 2/3" явно в scope;
+ * - package ordering: споживач НЕ резолвиться на producer, що йде ПІЗНІШЕ
+ *   в пакеті (`originIndex < i`), той самий порядок, що вже застосовує
+ *   `availableTempTables` (`i < state.activeBatch`).
+ */
+export function derivePackageTempTableContinuity(state: QueryState): Map<number, PackageTempTableRelation[]> {
+  const batch = assembleBatch(state);
+  const members = batch.members;
+  const result = new Map<number, PackageTempTableRelation[]>();
+
+  const origin = new Map<string, number>();
+  const producerInfo = new Map<number, { name: string; role: 'creates' | 'appends' }>();
+  for (let i = 0; i < members.length; i++) {
+    const carrier = members[i].members[0]?.model;
+    if (!carrier || !carrier.tempTableName) continue;
+    if (carrier.queryType !== 'createTemp' && carrier.queryType !== 'appendTemp') continue;
+    producerInfo.set(i, { name: carrier.tempTableName, role: carrier.queryType === 'createTemp' ? 'creates' : 'appends' });
+    const upper = carrier.tempTableName.toUpperCase();
+    if (!origin.has(upper)) origin.set(upper, i);
+  }
+
+  const consumersByOrigin = new Map<number, Set<number>>();
+  const consumedByMember = new Map<number, { name: string; producedBy: number }[]>();
+  for (let i = 0; i < members.length; i++) {
+    const seenForThisMember = new Set<string>();
+    for (const um of members[i].members) {
+      for (const tbl of um.model.tables) {
+        const upper = tbl.fullName.toUpperCase();
+        const originIndex = origin.get(upper);
+        if (originIndex === undefined || originIndex >= i || seenForThisMember.has(upper)) continue;
+        seenForThisMember.add(upper);
+        if (!consumersByOrigin.has(originIndex)) consumersByOrigin.set(originIndex, new Set());
+        consumersByOrigin.get(originIndex)!.add(i);
+        const canonicalName = producerInfo.get(originIndex)!.name;
+        (consumedByMember.get(i) ?? consumedByMember.set(i, []).get(i)!).push({ name: canonicalName, producedBy: originIndex });
+      }
+    }
+  }
+
+  for (let i = 0; i < members.length; i++) {
+    const relations: PackageTempTableRelation[] = [];
+    const prod = producerInfo.get(i);
+    if (prod) {
+      const consumers = Array.from(consumersByOrigin.get(i) ?? []).sort((a, b) => a - b);
+      relations.push({ tempTableName: prod.name, role: prod.role, relatedMembers: consumers });
+    }
+    for (const c of consumedByMember.get(i) ?? []) {
+      relations.push({ tempTableName: c.name, role: 'consumes', relatedMembers: [c.producedBy] });
+    }
+    if (relations.length > 0) result.set(i, relations);
+  }
+  return result;
+}
+
 /** Собрать пакет: активный документ из live-состояния, остальные из снимков. */
 export function assembleBatch(state: QueryState): BatchDocument {
   return {

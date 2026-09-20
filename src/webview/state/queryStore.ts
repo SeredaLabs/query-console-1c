@@ -14,6 +14,7 @@ import {
   buildModelFromFlat,
   compoundQueryType,
   compoundTempTableName,
+  derivePackageTempTableContinuity,
   docToSnapshot,
   emptyBuilder,
   modelToFlat,
@@ -25,6 +26,7 @@ import {
   stripFieldComments,
   tempTableDialogInitial,
   type BatchMemberInfo,
+  type PackageTempTableRelation,
 } from './queryStore/snapshots';
 
 export {
@@ -36,6 +38,7 @@ export {
   buildModelFromFlat,
   compoundQueryType,
   compoundTempTableName,
+  derivePackageTempTableContinuity,
   docToSnapshot,
   modelToFlat,
   restoreBatch,
@@ -45,6 +48,7 @@ export {
   stripBatchComments,
   tempTableDialogInitial,
 };
+export type { PackageTempTableRelation };
 export type { BatchMemberInfo };
 
 /** Метаданные одного запроса-участника объединения. */

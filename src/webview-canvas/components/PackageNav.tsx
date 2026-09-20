@@ -1,9 +1,54 @@
 import * as React from 'react';
 import type { SupportedLocale } from '../../shared/locale';
-import { assembleBatch, batchMemberName, type QueryAction, type QueryState } from '../../webview/state/queryStore';
+import {
+  assembleBatch,
+  batchMemberName,
+  derivePackageTempTableContinuity,
+  type PackageTempTableRelation,
+  type QueryAction,
+  type QueryState,
+} from '../../webview/state/queryStore';
 import { t } from '../i18n';
 import { DIMENSIONS, TOKENS } from '../theme';
 import { UnionMappingPopover } from './UnionMappingPopover';
+
+/**
+ * Phase 12B: будує текст tooltip'а маркера тимчасової таблиці з
+ * `PackageTempTableRelation[]` (одного package-члена) — без жодної логіки
+ * резолюції зв'язків тут, лише форматування вже готових даних
+ * (`derivePackageTempTableContinuity`, `snapshots.ts`).
+ */
+function tempTableTooltip(locale: SupportedLocale, relations: PackageTempTableRelation[]): string {
+  const queryLabel = (i: number) => `${t(locale, 'packageTempTableQueryLabel')} ${i + 1}`;
+  const producer = relations.find(r => r.role !== 'consumes');
+  const consumes = relations.filter(r => r.role === 'consumes');
+  const blocks: string[] = [];
+
+  if (producer) {
+    const verb = producer.role === 'creates' ? t(locale, 'packageTempTableCreatesPrefix') : t(locale, 'packageTempTableAppendsPrefix');
+    let block = `${verb} ${producer.tempTableName}`;
+    if (producer.relatedMembers.length > 0) {
+      block += `\n\n${t(locale, 'packageTempTableUsedByPrefix')} ${producer.relatedMembers.map(queryLabel).join(', ')}`;
+    }
+    blocks.push(block);
+  }
+
+  if (consumes.length === 1) {
+    blocks.push(`${t(locale, 'packageTempTableConsumesPrefix')} ${consumes[0].tempTableName}\n\n${t(locale, 'packageTempTableCreatedFromPrefix')} ${queryLabel(consumes[0].relatedMembers[0])}`);
+  } else if (consumes.length > 1) {
+    const lines = consumes.map(r => `${r.tempTableName} — ${queryLabel(r.relatedMembers[0])}`);
+    blocks.push(`${t(locale, 'packageTempTableConsumesHeaderPrefix')}\n${lines.join('\n')}`);
+  }
+
+  return blocks.join('\n\n');
+}
+
+/** Усі package-члени, пов'язані з тим самим набором тимчасових таблиць, що й `relations` — для hover/focus highlight. */
+function relatedMemberIndices(memberIndex: number, relations: PackageTempTableRelation[]): Set<number> {
+  const out = new Set<number>();
+  for (const r of relations) for (const m of r.relatedMembers) if (m !== memberIndex) out.add(m);
+  return out;
+}
 
 const BAR_STYLE: React.CSSProperties = {
   height: DIMENSIONS.packageNav,
@@ -140,6 +185,12 @@ export function PackageNav({
   const activeName = batchMemberName(state, state.activeBatch);
   const isTempTable = activeModel?.queryType === 'createTemp' || activeModel?.queryType === 'appendTemp';
 
+  // Phase 12B: похідна (не-domain) temp-table continuity — лише читання, жодних
+  // нових reducer actions. Порожня Map, коли в пакеті немає жодної тимчасової
+  // таблиці — PackageNav лишається настільки ж компактним, як і сьогодні.
+  const continuity = React.useMemo(() => derivePackageTempTableContinuity(state), [state]);
+  const [highlightedMembers, setHighlightedMembers] = React.useState<Set<number> | null>(null);
+
   // Design review (2026-09-19): одноразова контекстна підказка — з'являється
   // ЛИШЕ в момент створення першого union-члена (не при кожному відкритті),
   // ховається по dismiss або якщо union знову звели до 1 SELECT.
@@ -157,8 +208,19 @@ export function PackageNav({
         </span>
         {batch.members.map((_, i) => {
           const active = i === state.activeBatch;
+          const relations = continuity.get(i);
+          const highlighted = highlightedMembers?.has(i) ?? false;
           return (
-            <span key={i} className="qcc-union-chip" style={{ display: 'flex', alignItems: 'center' }}>
+            <span
+              key={i}
+              className="qcc-union-chip"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: 3,
+                boxShadow: highlighted ? `inset 0 -2px 0 0 ${TOKENS.accent}` : undefined,
+              }}
+            >
               <button
                 type="button"
                 className="qcc-btn"
@@ -174,6 +236,18 @@ export function PackageNav({
               >
                 {active ? `[${i + 1}]` : `${i + 1}`}
               </button>
+              {relations && (
+                <span
+                  tabIndex={0}
+                  className="codicon codicon-database"
+                  title={tempTableTooltip(locale, relations)}
+                  onMouseEnter={() => setHighlightedMembers(relatedMemberIndices(i, relations))}
+                  onMouseLeave={() => setHighlightedMembers(null)}
+                  onFocus={() => setHighlightedMembers(relatedMemberIndices(i, relations))}
+                  onBlur={() => setHighlightedMembers(null)}
+                  style={{ fontSize: 10, color: TOKENS.textMuted, cursor: 'default', padding: '0 1px', outline: 'none' }}
+                />
+              )}
               {batch.members.length > 1 && (
                 <button
                   type="button"
