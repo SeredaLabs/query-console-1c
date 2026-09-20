@@ -5,6 +5,18 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.72 - 2026-09-20
+
+### Changed
+
+- New Builder: polished the Package/UNION navigation strip — the union
+  members now use a distinct rounded-chip visual language instead of
+  looking identical to the package's `[n]` navigation, per-member delete
+  is hidden until hover instead of a permanent `✕`, the UNION/UNION ALL
+  operator got a chevron and an explanatory tooltip, and the active query
+  name got a divider and heavier weight to separate it from the
+  surrounding navigation. No change to generated SDBL or query semantics.
+
 ## 0.1.71 - 2026-09-18
 
 ### Added
