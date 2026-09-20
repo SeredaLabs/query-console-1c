@@ -414,6 +414,128 @@ consumer декількох ВТ, consumer у не-першому UNION-член
 повторювані імена. UI-рівень покритий лише через live-QA (не React
 component tests) --- відповідає explicit "Add UI tests only where useful".
 
+**Phase 12 --- фінальний стан, ЗАФІКСОВАНО (2026-09-20).** Після Phase 12A/12B
+пройшло ще три доопрацьовувальні fix-паси (той самий audit-cycle, що й
+compound-carrier вище, без нового roadmap-номера кожному) --- разом вони
+закривають ВЕСЬ semantic/lifecycle шар temp-таблиць, спільний для Classic і
+New Builder, ПЕРЕД стартом PackageNav quick-actions:
+
+- **`appendTemp` continuity (contributor chain)** --- `derivePackageTempTableContinuity`
+  для consumer-ролі повертає `relatedMembers` = ВСІ contributors (creator +
+  усі appenders) lifetime'у, що його читає consumer, а не лише перший
+  creator (виправлення `.filter(c => c < i)` після падіння pre-existing
+  тесту --- consumer МІЖ creator і пізнішим appender інакше помилково
+  зв'язувався з appender, якого ще не було на позиції consumer'а). Створено
+  document-level `compoundCarrierOf(doc: QueryDocument)` (`unionModel.ts`)
+  --- єдине джерело істини для "member-0 несе carrier", щоб деталь
+  реалізації не витікала в кожен виклик окремо.
+- **`8.3.25+` badge** --- `appendTemp` ("Додавання до тимчасової таблиці")
+  позначено версійним badge (не warning-колір, tooltip з поясненням) в
+  ОБОХ Additional-панелях (Classic `AdditionalTab.tsx` + New Builder
+  `AdditionalWorkspace.tsx`) --- суто інформаційний UI-нюанс, без нової
+  domain-семантики чи reducer-обмеження за версією.
+- **`dropTemp` lifecycle-awareness** --- `availableTempTables`/
+  `derivePackageTempTableContinuity` РАНІШЕ повністю ігнорували
+  `dropTemp` (ВТ лишалась "вічно доступною" після створення). Введено
+  єдиний спільний state-machine `deriveTempTableLifetimes(members):
+  Map<name, TempTableLifetime[]>` (`snapshots.ts`) --- `TempTableLifetime
+  = {name, createIndex, appendIndices, dropIndex, fields}`; КОЖЕН
+  `createTemp` тієї самої назви ЗАВЖДИ відкриває НОВИЙ, незалежний
+  lifetime (навіть поверх ще не закритого попереднього --- "останній
+  виграє" fallback для того, що в реальному 1С уже runtime-помилка, без
+  вигаданої "чистої" семантики для invalid стану). `dropTemp` --- ТЕПЕР
+  повноцінна continuity-роль (`role: 'drops'`), той самий codicon-database
+  маркер (роль --- лише в tooltip, жодної нової іконки/кольору за explicit
+  рішенням користувача). `availableTempTables` після `dropIndex` більше НЕ
+  показує ВТ доступною для наступних членів пакета.
+- **Position-aware metadata resolution ("Option B")** --- виявлена й
+  виправлена суміжна вада: `ADD_TEMP_TABLE`'s `uniqueSourceName()`
+  трактував КОЖНЕ повторне додавання package-похідної ВТ як колізію імен і
+  перейменовував її (`ВТ_A` → `ВТ_A2`), бо `state.syntheticTables` --- це
+  ГЛОБАЛЬНИЙ, ніколи не очищуваний реєстр (правильний для свого вузького
+  призначення --- ручні/ad hoc синтетичні джерела --- але помилково
+  застосовувався і до package-похідних ВТ). Порівняно два варіанти
+  виправлення (документовано в аудиті цієї фази): "A" --- глобальний
+  replace-in-syntheticTables (мав відомий "stale resolution при
+  navigate-back" ґандж, ВІДХИЛЕНО explicit рішенням користувача) проти "B"
+  --- position-aware resolution через уже наявний `deriveTempTableLifetimes`
+  (обрано, малий локальний фікс, БЕЗ нового persisted стану). Реалізовано:
+  - `allTables(state)` тепер компонує ТРИ ДЖЕРЕЛА в явному пріоритеті:
+    `[...availableTempTables(state), ...metadataCatalogRef.current,
+    ...state.syntheticTables]` --- package-похідне ЗАВЖДИ перше (`.find()`
+    бере його раніше за будь-який stale manual-запис з тим самим іменем).
+    Пріоритет зафіксований регресійним тестом (порядок масивів --- тепер
+    семантично важливий, а не випадковий).
+  - `ADD_TEMP_TABLE` розгалужується через новий `isPackageTempTableName(state,
+    fullName)` (`snapshots.ts`, перевіряє належність до ПОТОЧНО відкритого
+    package lifetime): package-похідна ВТ --- НЕ реєструється в
+    `syntheticTables` взагалі (fullName лишається БЕЗ змін, лише alias
+    дизамбігується --- ТОЧНО той самий `base+1`-паттерн, що вже й
+    `ADD_TABLE` для self-join звичайних джерел); manual/ad hoc ВТ --- стара
+    поведінка (uniqueSourceName + syntheticTables) без жодної зміни.
+  - `UPDATE_TEMP_TABLE` --- захисний guard (`isPackageTempTableName` → no-op,
+    referentially-equal state): package-похідну структуру НЕ можна
+    відредагувати вручну (вона й так резолвиться щоразу заново з
+    lifetime-джерела), лише manual/ad hoc ВТ лишається editable.
+  - UI-афорданс "Редагування структури ВТ" (Classic `TablesPanel.tsx`
+    Edit-кнопка) --- прихований для package-похідних ВТ через похідний
+    `focusedIsPackageTempTable` (обчислюється в `ConstructorView.tsx` з
+    `isPackageTempTableName`), БЕЗ нового прапорця на `SelectedTable`.
+  - Regression-тести (`queryStore.test.ts`, новий describe "allTables /
+    ADD_TEMP_TABLE / UPDATE_TEMP_TABLE --- Option B") фіксують: незалежні
+    lifetime'и (той самий `fullName` двічі, РІЗНІ схеми, навігація вперед
+    і назад --- без leak в жоден бік), self-join (fullName ідентичний,
+    alias дизамбігований --- `ВТ_A`/`ВТ_A1`, НЕ `ВТ_A2`), append-ланцюг
+    (create→append→consume --- одна логічна ідентичність), manual ВТ
+    (незмінна поведінка), UPDATE-guard (referential no-op), name-collision
+    пріоритет (package-похідне виграє над stale manual). Генератор-рівневий
+    self-join тест (`sdblGenerator.test.ts`) підтверджує коректний SDBL:
+    `ИЗ ВТ_A КАК ВТ_A, ВТ_A КАК ВТ_A1`.
+  - **Live-QA (2026-09-20, після повної перезбірки) підтвердив ОБИДВА
+    критичні сценарії руками, не лише тестами:** (1) `createTemp
+    ВТ_A(Наименование) → consume → dropTemp → createTemp ВТ_A(Дата) →
+    consume` --- друге споживання бачить `Дата` (не leak з першого
+    lifetime), навігація НАЗАД до першого consumer після цього все ще
+    показує `Наименование` (не leak з другого) --- нуль `ВТ_A2`-style
+    перейменувань упродовж усього сценарію; (2) package-похідна ВТ додана
+    ДВІЧІ в один запит (self-join) --- обидві картки мають identical
+    `fullName: ВТ_A`, aliases `ВТ_A`/`ВТ_A1`, згенерований SDBL підтверджує
+    `ИЗ ВТ_A КАК ВТ_A, ВТ_A КАК ВТ_A1`.
+
+**Архітектурне розмежування трьох джерел метаданих (закріплено Option B,
+критично для будь-якої майбутньої роботи з `allTables`/`ADD_TEMP_TABLE`/
+`ADD_TABLE`):**
+
+```
+metadata catalog (metadataCatalogRef.current)
+    реальні метадані конфігурації 1С (глобальні, статичні, read-only)
+
+syntheticTables (state.syntheticTables)
+    ручні/ad hoc синтетичні метадані (подзапити, вручну описані ВТ) ---
+    ГЛОБАЛЬНЕ поле QueryState, НІКОЛИ не очищується при перемиканні
+    запиту/пакета; коректне ЛИШЕ для свого вузького призначення
+
+package temp tables (availableTempTables(state))
+    похідні від ПОЗИЦІЇ в пакеті + temp-table lifetime
+    (deriveTempTableLifetimes) --- НІКОЛИ не персистяться як окремий
+    стан; той самий `fullName` в РІЗНИХ package-позиціях може резолвитись
+    у РІЗНІ схеми (окремі lifetimes) --- це очікувана, тестами зафіксована
+    поведінка, а не bug
+
+SelectedTable (state.selectedTables)
+    інстанс джерела в КОНКРЕТНОМУ запиті (id, fullName, alias?) ---
+    fullName ЗАВЖДИ ідентичність (не змінюється для self-join)
+
+alias (defaultTableAlias(t) / t.alias)
+    ЄДИНИЙ механізм дизамбігуації кількох інстансів того самого fullName
+    в одному запиті (self-join) --- НІКОЛИ не fullName/identity
+```
+
+Classic і New Builder ділять ЦІЛКОМ ці семантики (жоден з трьох fix-пасів
+цієї фази не торкнувся domain-шару окремо для одного з двох UI) ---
+`isPackageTempTableName`/`allTables`/`compoundCarrierOf` викликаються з
+обох `src/webview/` і `src/webview-canvas/` без розбіжностей.
+
 ## 11. Відомі обмеження / gaps (оновлено 2026-09-18)
 
 - немає query execution/results/row forecast --- і не повинно бути;

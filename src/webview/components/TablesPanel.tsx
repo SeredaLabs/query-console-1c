@@ -32,6 +32,9 @@ interface Props {
   /** 7.8.14/7.8.15: «Редактирование» — открыть окно ВТ / вложенный конструктор для
    * выделенного источника (активна только для ВТ/подзапроса). */
   onEditTable: (tableId: string) => void;
+  /** Metadata-resolution audit (2026-09-20): сфокусована ВТ — package-derived
+   * (доступна на поточній позиції з `availableTempTables`), а не manual/ad hoc. */
+  focusedIsPackageTempTable: boolean;
 }
 
 function dragStartField(tableFullName: string, e: React.DragEvent, fieldPath: string) {
@@ -39,7 +42,7 @@ function dragStartField(tableFullName: string, e: React.DragEvent, fieldPath: st
   e.dataTransfer.effectAllowed = 'copy';
 }
 
-export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId, expandedRefs, onAddTable, onRemoveTable, onFocusTable, onExpandRef, onOpenVirtualParams, onAddSubquery, onAddTempTable, onAddTempTableSource, onActivateTable, onEditTable }: Props): React.ReactElement {
+export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId, expandedRefs, onAddTable, onRemoveTable, onFocusTable, onExpandRef, onOpenVirtualParams, onAddSubquery, onAddTempTable, onAddTempTableSource, onActivateTable, onEditTable, focusedIsPackageTempTable }: Props): React.ReactElement {
   const [expandedTableIds, setExpandedTableIds] = React.useState<Set<string>>(new Set());
   const [expandedTsSections, setExpandedTsSections] = React.useState<Set<string>>(new Set());
   const [isDragOver, setIsDragOver] = React.useState(false);
@@ -95,7 +98,11 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
   const focusedMeta = focusedTable ? metaTables.find(m => m.fullName === focusedTable.fullName) : undefined;
   const focusedIsVirtual = !!focusedMeta?.virtual;
   // 7.8.14/7.8.15: «Редактирование» активно только для ВТ/подзапроса.
-  const focusedIsEditable = !!focusedTable && (!!focusedTable.subquery || !!focusedTable.tempTable);
+  // Metadata-resolution audit (2026-09-20): package-derived ВТ (структура
+  // походить від реального createTemp/appendTemp десь у пакеті) НЕ підпадає
+  // під ручний редактор структури — лише manual/ad hoc ВТ. Похідне за
+  // `focusedIsPackageTempTable` (без нового прапорця на SelectedTable).
+  const focusedIsEditable = !!focusedTable && (!!focusedTable.subquery || (!!focusedTable.tempTable && !focusedIsPackageTempTable));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

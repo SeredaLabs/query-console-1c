@@ -1,6 +1,6 @@
-import type { MetaTable } from '../../../core/metadata/types';
+import type { MetaField, MetaTable } from '../../../core/metadata/types';
 import type { Grouping, Indexing, Order, QueryModel, QueryType, ReportBuilder, SelectedField, Totals } from '../../../core/query/queryModel';
-import { fieldAlias, type QueryDocument, type UnionMember } from '../../../core/query/unionModel';
+import { compoundCarrierOf, fieldAlias, type QueryDocument, type UnionMember } from '../../../core/query/unionModel';
 import type { BatchDocument } from '../../../core/query/batchModel';
 import type { BatchSnapshot, QueryState, SavedQuery } from '../queryStore';
 
@@ -187,119 +187,262 @@ export function compoundTempTableName(state: QueryState): string {
 }
 
 /**
- * Доступные временные таблицы для активного запроса пакета: только созданные
- * `ПОМЕСТИТЬ`/`ДОБАВИТЬ` в предыдущих запросах. ВТ не доступна своему создателю.
+ * Одне "життя" тимчасової таблиці в межах пакета: відкривається `createTemp`,
+ * накопичує `appendTemp`, і може закриватися `dropTemp`. Ціле ім'я (упер-кейс)
+ * може мати КІЛЬКА lifetimes по черзі (create → drop → create знову) —
+ * кожен `createTemp` завжди починає НОВИЙ lifetime, незалежно від того, чи
+ * попередній був закритий дропом (це відповідає реальній 1С-семантиці:
+ * ПОМЕСТИТЬ завжди створює таблицю заново).
+ */
+interface TempTableLifetime {
+  name: string; // канонічне ім'я, як його написав create (case, як є)
+  createIndex: number;
+  appendIndices: number[];
+  dropIndex: number | null;
+  fields: MetaField[]; // колонки з CREATE-учасника (ДОБАВИТЬ не змінює структуру)
+}
+
+/**
+ * UNION + temp-table lifecycle audit (2026-09-20): спільний внутрішній stateу
+ * machine, яким тепер користуються І `availableTempTables`, І
+ * `derivePackageTempTableContinuity` — щоб не мати дві subtly different
+ * реалізації одного й того самого поняття "коли ВТ доступна". Виводить усі
+ * lifetimes ПО ВСЬОМУ пакету за один прохід у порядку пакета:
+ * - `createTemp X` --- ЗАВЖДИ відкриває НОВИЙ lifetime для X (навіть якщо
+ *   попередній ще не закритий дропом --- це вже помилковий пакет із погляду
+ *   1С (runtime error "ВТ вже існує"), ми не намагаємось вигадати для нього
+ *   особливу семантику, лише не падаємо: новий lifetime просто затінює
+ *   попередній для всіх позицій ПІСЛЯ другого create, що є найбезпечнішим
+ *   "останній виграє" резолвом, а не крашем чи мовчазним ігноруванням);
+ * - `appendTemp X` --- додається до lifetime X, що є ВІДКРИТИМ на цій
+ *   позиції (за версією `openLifetimeAt` нижче); якщо жодного відкритого
+ *   lifetime немає (`ДОБАВИТЬ` без попереднього `ПОМЕСТИТЬ` в цьому пакеті)
+ *   --- запис про сам append-член все одно повертається викликачами (це факт
+ *   про сам член), але без прив'язки до жодного lifetime;
+ * - `dropTemp X` --- закриває ВІДКРИТИЙ на цій позиції lifetime X; якщо
+ *   такого немає (`УНИЧТОЖИТЬ` без існуючої ВТ) --- так само, немає
+ *   прив'язки, але сам факт "цей член дропає X" не губиться.
+ * Ці два "no active lifetime" випадки НЕ отримали вигаданої семантики
+ * (свідомо, за прямою вказівкою) --- лише не крашать і не тихо ігнорують сам
+ * факт ролі члена.
+ */
+function deriveTempTableLifetimes(members: QueryDocument[]): Map<string, TempTableLifetime[]> {
+  const byName = new Map<string, TempTableLifetime[]>();
+
+  function openLifetimeAt(upper: string, atIndex: number): TempTableLifetime | undefined {
+    const list = byName.get(upper);
+    if (!list) return undefined;
+    // Останній (найновіший) lifetime, що вже відкрився ДО atIndex і ще не
+    // закритий ДО atIndex (dropIndex null, або dropIndex >= atIndex --- дроп
+    // ще не "стався" з точки зору позиції atIndex).
+    for (let k = list.length - 1; k >= 0; k--) {
+      const lt = list[k];
+      if (lt.createIndex < atIndex && (lt.dropIndex === null || lt.dropIndex >= atIndex)) return lt;
+    }
+    return undefined;
+  }
+
+  for (let i = 0; i < members.length; i++) {
+    const carrier = compoundCarrierOf(members[i]);
+    if (!carrier.tempTableName) continue;
+    const upper = carrier.tempTableName.toUpperCase();
+
+    if (carrier.queryType === 'createTemp') {
+      const model = members[i].members[0]?.model;
+      const cols: string[] = [];
+      const seenCols = new Set<string>();
+      for (const f of model?.fields ?? []) {
+        const a = fieldAlias(f, model!);
+        if (!a || a === '*') continue;
+        let alias = a;
+        let n = 0;
+        while (seenCols.has(alias.toUpperCase())) alias = `${a}${++n}`;
+        seenCols.add(alias.toUpperCase());
+        cols.push(alias);
+      }
+      const lifetime: TempTableLifetime = {
+        name: carrier.tempTableName,
+        createIndex: i,
+        appendIndices: [],
+        dropIndex: null,
+        fields: cols.map(c => ({ name: c, kind: 'attribute', types: [] })),
+      };
+      (byName.get(upper) ?? byName.set(upper, []).get(upper)!).push(lifetime);
+    } else if (carrier.queryType === 'appendTemp') {
+      openLifetimeAt(upper, i)?.appendIndices.push(i);
+    } else if (carrier.queryType === 'dropTemp') {
+      const lt = openLifetimeAt(upper, i);
+      if (lt) lt.dropIndex = i;
+    }
+  }
+
+  return byName;
+}
+
+/**
+ * Доступные временные таблицы для активного запроса пакета: только те, чей
+ * lifetime ОТКРЫТ на позиции активного запроса (создан раньше, и если был
+ * `dropTemp` --- ещё не к этому моменту). ВТ не доступна своему создателю.
+ * Колонки берутся из ТЕКУЩЕГО (открытого) lifetime, а не из первого
+ * когда-либо встреченного create с этим именем (было исправлено в рамках
+ * lifecycle audit 2026-09-20 --- см. `deriveTempTableLifetimes`).
  */
 export function availableTempTables(state: QueryState): MetaTable[] {
+  const batch = assembleBatch(state);
+  const lifetimes = deriveTempTableLifetimes(batch.members);
   const out: MetaTable[] = [];
-  const seenNames = new Set<string>();
-  for (let i = 0; i < state.activeBatch; i++) {
-    const snap = state.batchSaved[i];
-    if (!snap) continue;
-    const model = buildModelFromFlat(snap.savedQueries[0]);
-    if (model.queryType !== 'createTemp' && model.queryType !== 'appendTemp') continue;
-    const name = model.tempTableName;
-    if (!name || seenNames.has(name.toUpperCase())) continue;
-    seenNames.add(name.toUpperCase());
-    const cols: string[] = [];
-    const seenCols = new Set<string>();
-    for (const f of model.fields) {
-      const a = fieldAlias(f, model);
-      if (!a || a === '*') continue;
-      let alias = a;
-      let n = 0;
-      while (seenCols.has(alias.toUpperCase())) alias = `${a}${++n}`;
-      seenCols.add(alias.toUpperCase());
-      cols.push(alias);
+  for (const list of lifetimes.values()) {
+    for (let k = list.length - 1; k >= 0; k--) {
+      const lt = list[k];
+      if (lt.createIndex < state.activeBatch && (lt.dropIndex === null || lt.dropIndex >= state.activeBatch)) {
+        out.push({ kind: 'ВременнаяТаблица', name: lt.name, fullName: lt.name, fields: lt.fields });
+        break; // лише найновіший відкритий lifetime для цього імені.
+      }
     }
-    out.push({ kind: 'ВременнаяТаблица', name, fullName: name, fields: cols.map(c => ({ name: c, kind: 'attribute', types: [] })) });
   }
   return out;
+}
+
+/**
+ * Option B (metadata-resolution audit, 2026-09-20): чи є `fullName`
+ * package-derived тимчасовою таблицею, ДОСТУПНОЮ на поточній позиції
+ * (`state.activeBatch`) --- тобто ЧИТАЄТЬСЯ позиційно з реального
+ * `createTemp`/`appendTemp` десь у пакеті, а НЕ manual/ad hoc записом у
+ * `state.syntheticTables`. Використовується, щоб:
+ * - `ADD_TEMP_TABLE` НЕ реєстрував ще один synthetic-запис і НЕ
+ *   перейменовував `fullName` для вже відомої package-ВТ (self-join
+ *   лишається можливим тим самим шляхом, що й `ADD_TABLE`);
+ * - `UPDATE_TEMP_TABLE` не міг перезаписати структуру, якою насправді
+ *   керує producer-lifetime, а не ручний редактор;
+ * - UI ховав афорданс "редагувати структуру ВТ вручну" для такого джерела
+ *   (структура ВТ похідна від реального `createTemp`, а не описується
+ *   користувачем).
+ */
+export function isPackageTempTableName(state: QueryState, fullName: string): boolean {
+  const upper = fullName.toUpperCase();
+  return availableTempTables(state).some(t => t.fullName.toUpperCase() === upper);
 }
 
 /** Одна темп-таблична роль package-запиту в межах Phase 12B continuity. */
 export interface PackageTempTableRelation {
   tempTableName: string;
-  role: 'creates' | 'appends' | 'consumes';
+  role: 'creates' | 'appends' | 'consumes' | 'drops';
   /**
-   * Для `creates`/`appends` — package-члени (індекси в порядку пакета), що
-   * СПОЖИВАЮТЬ саме ЦЮ таблицю (можуть бути порожні — ВТ, яку ніхто не
-   * використовує, це не помилка). Для `consumes` — рівно один елемент,
-   * package-член, що є origin-виробником (див. нижче чому саме один).
+   * Значення залежить від `role`:
+   * - `creates`/`appends` --- package-члени, що СПОЖИВАЮТЬ саме ЦЕЙ lifetime
+   *   (може бути порожньо --- ВТ, яку ніхто не використовує, це не помилка);
+   * - `consumes` --- усі contributors (create+append) lifetime, з якого
+   *   читає цей член (може бути декілька --- contributor chain);
+   * - `drops` --- усі contributors (create+append) lifetime, який ЦЕЙ член
+   *   закриває.
    */
   relatedMembers: number[];
+  /**
+   * Лише для `creates`/`appends`: індекс члена, що ЗАКРИВАЄ lifetime, до
+   * якого належить ЦЕЙ contributor (якщо lifetime вже закритий дропом).
+   * Окреме поле, а НЕ частина `relatedMembers` --- інакше тултип "Використовується:"
+   * помилково перелічив би dropTemp-член як "споживача".
+   */
+  droppedBy?: number;
 }
 
 /**
- * Phase 12B — похідна (не-збережена, не-domain) модель temp-table continuity
- * для `PackageNav`: для кожного package-члену — список його ролей щодо
- * тимчасових таблиць пакета. Порожній масив/відсутність запису → член не
+ * Phase 12B --- похідна (не-збережена, не-domain) модель temp-table continuity
+ * для `PackageNav`: для кожного package-члену --- список його ролей щодо
+ * тимчасових таблиць пакета. Порожній масив/відсутність запису --- член не
  * бере участі, PackageNav не показує жодного маркера.
  *
- * Правила НАВМИСНО ті самі, що вже реалізує `availableTempTables` вище —
- * жодної нової семантики не вигадано:
- * - "producer" (creates/appends) читається через compound carrier
- *   (`members[i].members[0].model.queryType`/`tempTableName` — той самий
- *   member-0-як-carrier інваріант, що вже зафіксований в
- *   `compoundQueryType`/reducer/generator, audit 2026-09-20);
- * - при ПОВТОРЮВАНІЙ назві ВТ (напр. member 1 createTemp ВТ_X, member 2
- *   appendTemp ВТ_X) "origin" для будь-якого пізнішого споживача — ЗАВЖДИ
- *   ПЕРШИЙ package-член, що визначив цю назву (`origin`-мапа, first-wins) —
- *   ТОЧНО той самий dedup, що й `availableTempTables`'s `seenNames`. Member
- *   2 (append) отримує власний маркер ("додає до ВТ_X"), але НЕ отримує
- *   "consumedBy" — домен не дає способу відрізнити, чиї саме рядки (member
- *   1 create чи member 2 append) прочитав конкретний споживач, тож
- *   приписувати йому конкретних consumers означало б вигадувати зв'язок,
- *   якого поточна модель не підтверджує (див. audit STOP-умову).
- * - споживання шукається по ВСІХ UNION-членах package-запиту (не лише
- *   member 0) — "temp table used only by UNION member 2/3" явно в scope;
- * - package ordering: споживач НЕ резолвиться на producer, що йде ПІЗНІШЕ
- *   в пакеті (`originIndex < i`), той самий порядок, що вже застосовує
- *   `availableTempTables` (`i < state.activeBatch`).
+ * Lifecycle audit (2026-09-20): і producer/consumer-резолюція, і сам dropTemp
+ * тепер ідуть через СПІЛЬНИЙ `deriveTempTableLifetimes` (як і
+ * `availableTempTables` вище) --- НЕ дві subtly different реалізації одного
+ * поняття. `dropTemp` тепер теж отримує роль (`role: 'drops'`) і власний
+ * маркер у PackageNav --- раніше він взагалі не був видимий у continuity.
+ *
+ * Contributor chain (як і раніше, тепер прив'язана до lifetime, а не до
+ * "усіх creates/appends з таким іменем коли-небудь"): consumer, що йде
+ * ПІСЛЯ ланцюжка `create → append → append → ...` для ВІДКРИТОГО на його
+ * позиції lifetime, пов'язаний з УСІМА contributors цього lifetime.
+ * Приклад повного циклу:
+ * ```
+ * Q1 create ВТ_A ─┐
+ *                 ├─ Q3 consumes ВТ_A  (relatedMembers: [Q1, Q2])
+ * Q2 append ВТ_A ─┘
+ * Q4 drops ВТ_A      (relatedMembers: [Q1, Q2]; Q1/Q2 отримують droppedBy: Q4)
+ * Q5 create ВТ_A     (новий, незалежний lifetime)
+ * Q6 consumes ВТ_A   (relatedMembers: [Q5] --- НЕ [Q1, Q2])
+ * ```
+ * Інші правила без змін: споживання шукається по ВСІХ UNION-членах
+ * package-запиту (не лише member 0); package ordering (lifetime має бути
+ * відкритий САМЕ на позиції члена, що його читає/дропає).
  */
 export function derivePackageTempTableContinuity(state: QueryState): Map<number, PackageTempTableRelation[]> {
   const batch = assembleBatch(state);
   const members = batch.members;
+  const lifetimes = deriveTempTableLifetimes(members);
   const result = new Map<number, PackageTempTableRelation[]>();
 
-  const origin = new Map<string, number>();
-  const producerInfo = new Map<number, { name: string; role: 'creates' | 'appends' }>();
-  for (let i = 0; i < members.length; i++) {
-    const carrier = members[i].members[0]?.model;
-    if (!carrier || !carrier.tempTableName) continue;
-    if (carrier.queryType !== 'createTemp' && carrier.queryType !== 'appendTemp') continue;
-    producerInfo.set(i, { name: carrier.tempTableName, role: carrier.queryType === 'createTemp' ? 'creates' : 'appends' });
-    const upper = carrier.tempTableName.toUpperCase();
-    if (!origin.has(upper)) origin.set(upper, i);
+  // Зворотні індекси: member -> роль (create/append/drop) + який lifetime.
+  const memberRole = new Map<number, { role: 'creates' | 'appends' | 'drops'; lifetime: TempTableLifetime }>();
+  for (const list of lifetimes.values()) {
+    for (const lt of list) {
+      memberRole.set(lt.createIndex, { role: 'creates', lifetime: lt });
+      for (const a of lt.appendIndices) memberRole.set(a, { role: 'appends', lifetime: lt });
+      if (lt.dropIndex !== null) memberRole.set(lt.dropIndex, { role: 'drops', lifetime: lt });
+    }
   }
 
-  const consumersByOrigin = new Map<number, Set<number>>();
-  const consumedByMember = new Map<number, { name: string; producedBy: number }[]>();
+  function contributorsOf(lt: TempTableLifetime): number[] {
+    return [lt.createIndex, ...lt.appendIndices].sort((a, b) => a - b);
+  }
+
+  const consumersByContributor = new Map<number, Set<number>>();
+  const consumedByMember = new Map<number, { name: string; producedBy: number[] }[]>();
   for (let i = 0; i < members.length; i++) {
     const seenForThisMember = new Set<string>();
     for (const um of members[i].members) {
       for (const tbl of um.model.tables) {
         const upper = tbl.fullName.toUpperCase();
-        const originIndex = origin.get(upper);
-        if (originIndex === undefined || originIndex >= i || seenForThisMember.has(upper)) continue;
+        if (seenForThisMember.has(upper)) continue;
+        const list = lifetimes.get(upper);
+        if (!list) continue;
+        let openLt: TempTableLifetime | undefined;
+        for (let k = list.length - 1; k >= 0; k--) {
+          const lt = list[k];
+          if (lt.createIndex < i && (lt.dropIndex === null || lt.dropIndex >= i)) { openLt = lt; break; }
+        }
+        if (!openLt) continue;
         seenForThisMember.add(upper);
-        if (!consumersByOrigin.has(originIndex)) consumersByOrigin.set(originIndex, new Set());
-        consumersByOrigin.get(originIndex)!.add(i);
-        const canonicalName = producerInfo.get(originIndex)!.name;
-        (consumedByMember.get(i) ?? consumedByMember.set(i, []).get(i)!).push({ name: canonicalName, producedBy: originIndex });
+        // `deriveTempTableLifetimes` будує lifetime цілком (з УСІМА appends,
+        // включно з тими, що йдуть ПІСЛЯ позиції i) за один прохід ДО цього
+        // циклу — тому тут явно відсікаємо contributors, що ще не сталися
+        // на позиції i (package ordering для самого contributor chain, а не
+        // лише для "чи lifetime відкритий").
+        const contributors = contributorsOf(openLt).filter(c => c < i);
+        (consumedByMember.get(i) ?? consumedByMember.set(i, []).get(i)!).push({ name: openLt.name, producedBy: contributors });
+        for (const c of contributors) {
+          if (!consumersByContributor.has(c)) consumersByContributor.set(c, new Set());
+          consumersByContributor.get(c)!.add(i);
+        }
       }
     }
   }
 
   for (let i = 0; i < members.length; i++) {
     const relations: PackageTempTableRelation[] = [];
-    const prod = producerInfo.get(i);
-    if (prod) {
-      const consumers = Array.from(consumersByOrigin.get(i) ?? []).sort((a, b) => a - b);
-      relations.push({ tempTableName: prod.name, role: prod.role, relatedMembers: consumers });
+    const own = memberRole.get(i);
+    if (own && (own.role === 'creates' || own.role === 'appends')) {
+      const consumers = Array.from(consumersByContributor.get(i) ?? []).sort((a, b) => a - b);
+      relations.push({
+        tempTableName: own.lifetime.name,
+        role: own.role,
+        relatedMembers: consumers,
+        droppedBy: own.lifetime.dropIndex ?? undefined,
+      });
+    } else if (own && own.role === 'drops') {
+      relations.push({ tempTableName: own.lifetime.name, role: 'drops', relatedMembers: contributorsOf(own.lifetime) });
     }
     for (const c of consumedByMember.get(i) ?? []) {
-      relations.push({ tempTableName: c.name, role: 'consumes', relatedMembers: [c.producedBy] });
+      relations.push({ tempTableName: c.name, role: 'consumes', relatedMembers: c.producedBy });
     }
     if (relations.length > 0) result.set(i, relations);
   }

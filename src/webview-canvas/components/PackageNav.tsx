@@ -20,7 +20,8 @@ import { UnionMappingPopover } from './UnionMappingPopover';
  */
 function tempTableTooltip(locale: SupportedLocale, relations: PackageTempTableRelation[]): string {
   const queryLabel = (i: number) => `${t(locale, 'packageTempTableQueryLabel')} ${i + 1}`;
-  const producer = relations.find(r => r.role !== 'consumes');
+  const producer = relations.find(r => r.role === 'creates' || r.role === 'appends');
+  const drops = relations.find(r => r.role === 'drops');
   const consumes = relations.filter(r => r.role === 'consumes');
   const blocks: string[] = [];
 
@@ -30,13 +31,32 @@ function tempTableTooltip(locale: SupportedLocale, relations: PackageTempTableRe
     if (producer.relatedMembers.length > 0) {
       block += `\n\n${t(locale, 'packageTempTableUsedByPrefix')} ${producer.relatedMembers.map(queryLabel).join(', ')}`;
     }
+    if (producer.droppedBy !== undefined) {
+      block += `\n\n${t(locale, 'packageTempTableDestroyedAtPrefix')} ${queryLabel(producer.droppedBy)}`;
+    }
+    blocks.push(block);
+  }
+
+  if (drops) {
+    // contributorsOf(lifetime) завжди [createIndex, ...appendIndices] — 0-й
+    // елемент гарантовано create (він хронологічно раніший за будь-який
+    // append того самого lifetime), решта — appends, у порядку пакета.
+    let block = `${t(locale, 'packageTempTableDropsPrefix')} ${drops.tempTableName}`;
+    if (drops.relatedMembers.length > 0) {
+      const [creator, ...appenders] = drops.relatedMembers;
+      block += `\n\n${t(locale, 'packageTempTableCreatedFromPrefix')} ${queryLabel(creator)}`;
+      if (appenders.length > 0) {
+        block += `\n${t(locale, 'packageTempTableAppendedFromPrefix')} ${appenders.map(queryLabel).join(', ')}`;
+      }
+    }
     blocks.push(block);
   }
 
   if (consumes.length === 1) {
-    blocks.push(`${t(locale, 'packageTempTableConsumesPrefix')} ${consumes[0].tempTableName}\n\n${t(locale, 'packageTempTableCreatedFromPrefix')} ${queryLabel(consumes[0].relatedMembers[0])}`);
+    const from = consumes[0].relatedMembers.map(queryLabel).join(', ');
+    blocks.push(`${t(locale, 'packageTempTableConsumesPrefix')} ${consumes[0].tempTableName}\n\n${t(locale, 'packageTempTableCreatedFromPrefix')} ${from}`);
   } else if (consumes.length > 1) {
-    const lines = consumes.map(r => `${r.tempTableName} — ${queryLabel(r.relatedMembers[0])}`);
+    const lines = consumes.map(r => `${r.tempTableName} — ${r.relatedMembers.map(queryLabel).join(', ')}`);
     blocks.push(`${t(locale, 'packageTempTableConsumesHeaderPrefix')}\n${lines.join('\n')}`);
   }
 
@@ -46,7 +66,10 @@ function tempTableTooltip(locale: SupportedLocale, relations: PackageTempTableRe
 /** Усі package-члени, пов'язані з тим самим набором тимчасових таблиць, що й `relations` — для hover/focus highlight. */
 function relatedMemberIndices(memberIndex: number, relations: PackageTempTableRelation[]): Set<number> {
   const out = new Set<number>();
-  for (const r of relations) for (const m of r.relatedMembers) if (m !== memberIndex) out.add(m);
+  for (const r of relations) {
+    for (const m of r.relatedMembers) if (m !== memberIndex) out.add(m);
+    if (r.droppedBy !== undefined && r.droppedBy !== memberIndex) out.add(r.droppedBy);
+  }
   return out;
 }
 

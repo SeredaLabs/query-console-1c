@@ -152,6 +152,8 @@
   "additional.dropTemp": "Видалення тимчасової таблиці",
   "additional.tempName": "Ім’я тимчасової таблиці",
   "additional.dropTempDisabledHint": "Недоступно, поки цей запит є об'єднанням (УНИЧТОЖИТЬ — самостійний оператор, не SELECT-учасник).",
+  "additional.appendTempVersionBadge": "8.3.25+",
+  "additional.appendTempVersionTooltip": "Доступно з 1С:Підприємство 8.3.25. ДОБАВИТЬ дозволяє додати результат запиту до вже створеної тимчасової таблиці.",
   "additional.parameters": "Параметри",
   "additional.records": "Вибірка записів",
   "additional.lockForUpdate": "Блокувати отримані дані для подальшої зміни",

@@ -75,6 +75,26 @@ describe('generate', () => {
     );
   });
 
+  it('temp-table self-join: same fullName twice, distinct aliases — physical identity vs alias (metadata-resolution audit 2026-09-20)', () => {
+    // Mirrors what ADD_TEMP_TABLE now produces for a package-derived ВТ added
+    // twice: both SelectedTable entries keep fullName === 'ВТ_A' (table
+    // identity is never renamed), only the alias is disambiguated — same
+    // base+k strategy ADD_TABLE already used for ordinary tables.
+    const model: QueryModel = {
+      tables: [
+        { id: 't1', fullName: 'ВТ_A' },
+        { id: 't2', fullName: 'ВТ_A', alias: 'ВТ_A2' },
+      ],
+      fields: [
+        { tableId: 't1', path: 'Код' },
+        { tableId: 't2', path: 'Наименование' },
+      ],
+    };
+    expect(generate(model)).toBe(
+      'ВЫБРАТЬ\n\tВТ_A.Код КАК Код,\n\tВТ_A2.Наименование КАК Наименование\nИЗ\n\tВТ_A КАК ВТ_A,\n\tВТ_A КАК ВТ_A2'
+    );
+  });
+
   it('uses explicit alias when provided', () => {
     const model: QueryModel = {
       tables: [{ id: 't1', fullName: 'Справочник.Валюты', alias: 'Вал' }],

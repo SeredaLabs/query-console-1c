@@ -15,9 +15,12 @@ import {
   compoundQueryType,
   compoundTempTableName,
   derivePackageTempTableContinuity,
+  availableTempTables,
+  allTables,
 } from '../../src/webview/state/queryStore';
 import type { QueryState } from '../../src/webview/state/queryStore';
 import { deriveUnionColumns } from '../../src/core/query/unionModel';
+import { defaultTableAlias } from '../../src/core/query/queryModel';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { generateBatch } from '../../src/core/query/sdblGenerator';
 import type { MetaTable } from '../../src/core/metadata/types';
@@ -946,7 +949,9 @@ describe('derivePackageTempTableContinuity (Phase 12B)', () => {
     expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [] }]);
   });
 
-  it('appendTemp to an already-created name: the appender gets its own marker but no attributed consumers; later consumers still resolve to the ORIGINAL creator', () => {
+  it('appendTemp to an already-created name: creator AND appender are both contributors to a later consumer (contributor chain)', () => {
+    // ПОМЕСТИТЬ/ДОБАВИТЬ mutate the SAME temp-table object at package-execution
+    // time — a consumer after both sees rows from both, so both are related.
     let s = makeProducer(initialState(), 'ВТ_A'); // package 0: creates
     s = reducer(s, { type: 'ADD_BATCH_QUERY' });
     s = makeProducer(s, 'ВТ_A', true); // package 1: appends to the SAME name
@@ -954,8 +959,20 @@ describe('derivePackageTempTableContinuity (Phase 12B)', () => {
     s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') }); // package 2 consumes
     const cont = derivePackageTempTableContinuity(s);
     expect(cont.get(0)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [2] }]);
-    expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'appends', relatedMembers: [] }]);
-    expect(cont.get(2)).toEqual([{ tempTableName: 'ВТ_A', role: 'consumes', relatedMembers: [0] }]);
+    expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'appends', relatedMembers: [2] }]);
+    expect(cont.get(2)).toEqual([{ tempTableName: 'ВТ_A', role: 'consumes', relatedMembers: [0, 1] }]);
+  });
+
+  it('a consumer BETWEEN a creator and a later appender is related only to the creator (append has not happened yet)', () => {
+    let s = makeProducer(initialState(), 'ВТ_A'); // package 0: creates
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') }); // package 1 consumes (before the append)
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = makeProducer(s, 'ВТ_A', true); // package 2: appends (too late for package 1)
+    const cont = derivePackageTempTableContinuity(s);
+    expect(cont.get(0)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [1] }]);
+    expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'consumes', relatedMembers: [0] }]);
+    expect(cont.get(2)).toEqual([{ tempTableName: 'ВТ_A', role: 'appends', relatedMembers: [] }]);
   });
 
   it('repeated temp-table name in two unrelated later chains still resolves consumers to the single first-defining origin', () => {
@@ -968,6 +985,258 @@ describe('derivePackageTempTableContinuity (Phase 12B)', () => {
     expect(cont.get(0)?.[0].relatedMembers).toEqual([1, 2]);
     expect(cont.get(1)?.[0].relatedMembers).toEqual([0]);
     expect(cont.get(2)?.[0].relatedMembers).toEqual([0]);
+  });
+
+  // Lifecycle audit (2026-09-20): dropTemp closes a lifetime; a later CREATE
+  // of the same name always opens a brand-new, independent one.
+  describe('lifecycle (dropTemp)', () => {
+    function makeDropper(state: QueryState, name: string): QueryState {
+      let s = reducer(state, { type: 'SET_QUERY_TYPE', queryType: 'dropTemp' });
+      s = reducer(s, { type: 'SET_TEMP_TABLE_NAME', name });
+      return s;
+    }
+
+    it('create → consume → drop: consumer before the drop still resolves; the drop gets its own "drops" role', () => {
+      let s = makeProducer(initialState(), 'ВТ_A'); // 0: creates
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+      s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') }); // 1: consumes
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+      s = makeDropper(s, 'ВТ_A'); // 2: drops
+      const cont = derivePackageTempTableContinuity(s);
+      expect(cont.get(0)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [1], droppedBy: 2 }]);
+      expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'consumes', relatedMembers: [0] }]);
+      expect(cont.get(2)).toEqual([{ tempTableName: 'ВТ_A', role: 'drops', relatedMembers: [0] }]);
+    });
+
+    it('create → drop → later consumer does NOT resolve', () => {
+      let s = makeProducer(initialState(), 'ВТ_A'); // 0: creates
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+      s = makeDropper(s, 'ВТ_A'); // 1: drops
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+      s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') }); // 2: references ВТ_A — too late
+      const cont = derivePackageTempTableContinuity(s);
+      expect(cont.get(0)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [], droppedBy: 1 }]);
+      expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'drops', relatedMembers: [0] }]);
+      expect(cont.get(2)).toBeUndefined(); // reference does not resolve to anything
+    });
+
+    it('create → append → consume → drop: the drop relates to BOTH the creator and the appender', () => {
+      let s = makeProducer(initialState(), 'ВТ_A'); // 0: creates
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+      s = makeProducer(s, 'ВТ_A', true); // 1: appends
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+      s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') }); // 2: consumes
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+      s = makeDropper(s, 'ВТ_A'); // 3: drops
+      const cont = derivePackageTempTableContinuity(s);
+      expect(cont.get(0)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [2], droppedBy: 3 }]);
+      expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'appends', relatedMembers: [2], droppedBy: 3 }]);
+      expect(cont.get(2)).toEqual([{ tempTableName: 'ВТ_A', role: 'consumes', relatedMembers: [0, 1] }]);
+      expect(cont.get(3)).toEqual([{ tempTableName: 'ВТ_A', role: 'drops', relatedMembers: [0, 1] }]);
+    });
+
+    it('create → drop → create → consume resolves ONLY to the second (independent) lifetime', () => {
+      let s = makeProducer(initialState(), 'ВТ_A'); // 0: creates (lifetime #1)
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+      s = makeDropper(s, 'ВТ_A'); // 1: drops lifetime #1
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+      s = makeProducer(s, 'ВТ_A'); // 2: creates lifetime #2, independent
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+      s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') }); // 3: consumes
+      const cont = derivePackageTempTableContinuity(s);
+      expect(cont.get(0)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [], droppedBy: 1 }]);
+      expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'drops', relatedMembers: [0] }]);
+      expect(cont.get(2)).toEqual([{ tempTableName: 'ВТ_A', role: 'creates', relatedMembers: [3] }]);
+      expect(cont.get(3)).toEqual([{ tempTableName: 'ВТ_A', role: 'consumes', relatedMembers: [2] }]); // NOT [0]
+    });
+
+    it('consumer in a UNION member BEFORE the drop resolves; a UNION member AFTER the drop does not', () => {
+      let s = makeProducer(initialState(), 'ВТ_A'); // 0: creates
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' }); // 1: union member 0
+      s = reducer(s, { type: 'ADD_QUERY' }); // 1: union member 1 (active) — consumes here
+      s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') });
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+      s = makeDropper(s, 'ВТ_A'); // 2: drops
+      s = reducer(s, { type: 'ADD_BATCH_QUERY' }); // 3: union member 0
+      s = reducer(s, { type: 'ADD_QUERY' }); // 3: union member 1 (active) — references too late
+      s = reducer(s, { type: 'ADD_TABLE', table: vt('ВТ_A') });
+      const cont = derivePackageTempTableContinuity(s);
+      expect(cont.get(1)).toEqual([{ tempTableName: 'ВТ_A', role: 'consumes', relatedMembers: [0] }]);
+      expect(cont.get(3)).toBeUndefined();
+    });
+
+    it('DROP with no active lifetime (no matching prior create) is not crashed on and gets no relation', () => {
+      const s = makeDropper(initialState(), 'ВТ_A'); // sole package member, drops a never-created name
+      const cont = derivePackageTempTableContinuity(s);
+      expect(cont.get(0)).toBeUndefined();
+    });
+
+    it('APPEND with no active lifetime (no matching prior create) is not crashed on and gets no relation', () => {
+      const s = makeProducer(initialState(), 'ВТ_A', true); // sole package member, appendTemp with nothing to append to
+      const cont = derivePackageTempTableContinuity(s);
+      expect(cont.get(0)).toBeUndefined();
+    });
+  });
+});
+
+describe('availableTempTables (Phase 12B lifecycle)', () => {
+  function withField(state: QueryState, full = 'Справочник.Валюты', path = 'Код'): QueryState {
+    return reducer(state, { type: 'ADD_FIELD_WITH_TABLE', tableFullName: full, fieldPath: path });
+  }
+
+  function makeProducer(state: QueryState, name: string, append = false): QueryState {
+    let s = reducer(state, { type: 'SET_QUERY_TYPE', queryType: append ? 'appendTemp' : 'createTemp' });
+    s = reducer(s, { type: 'SET_TEMP_TABLE_NAME', name });
+    return s;
+  }
+
+  function makeDropper(state: QueryState, name: string): QueryState {
+    let s = reducer(state, { type: 'SET_QUERY_TYPE', queryType: 'dropTemp' });
+    s = reducer(s, { type: 'SET_TEMP_TABLE_NAME', name });
+    return s;
+  }
+
+  it('create → drop → unavailable to a member after the drop', () => {
+    let s = makeProducer(initialState(), 'ВТ_A'); // 0: creates
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = makeDropper(s, 'ВТ_A'); // 1: drops
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' }); // 2: active
+    expect(availableTempTables(s)).toEqual([]);
+  });
+
+  it('create → drop → create → available from the second create, with its own columns', () => {
+    let s = withField(makeProducer(initialState(), 'ВТ_A'), 'Справочник.Валюты', 'Код'); // 0: creates, column "Код"
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = makeDropper(s, 'ВТ_A'); // 1: drops
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = withField(makeProducer(s, 'ВТ_A'), 'Документ.СчетНаОплату', 'Дата'); // 2: creates again, column "Дата"
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' }); // 3: active
+    const avail = availableTempTables(s);
+    expect(avail).toHaveLength(1);
+    expect(avail[0].fields.map(f => f.name)).toEqual(['Дата']); // current (2nd) lifetime's columns, not the 1st's
+  });
+
+  it('available to a consumer positioned BEFORE the drop', () => {
+    let s = makeProducer(initialState(), 'ВТ_A'); // 0: creates
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' }); // 1: active, before any drop
+    expect(availableTempTables(s).map(t => t.fullName)).toEqual(['ВТ_A']);
+  });
+});
+
+// Metadata-resolution audit (2026-09-20, Option B): package-derived temp
+// tables must resolve position-aware metadata through `allTables()` without
+// ever renaming their logical `fullName`, while manual/ad hoc temp tables
+// keep the pre-existing `syntheticTables` + `uniqueSourceName` behavior.
+describe('allTables / ADD_TEMP_TABLE / UPDATE_TEMP_TABLE — Option B position-aware resolution', () => {
+  function makeProducer(state: QueryState, name: string, append = false): QueryState {
+    let s = reducer(state, { type: 'SET_QUERY_TYPE', queryType: append ? 'appendTemp' : 'createTemp' });
+    s = reducer(s, { type: 'SET_TEMP_TABLE_NAME', name });
+    return s;
+  }
+
+  function makeDropper(state: QueryState, name: string): QueryState {
+    let s = reducer(state, { type: 'SET_QUERY_TYPE', queryType: 'dropTemp' });
+    s = reducer(s, { type: 'SET_TEMP_TABLE_NAME', name });
+    return s;
+  }
+
+  function withField(state: QueryState, full: string, path: string): QueryState {
+    return reducer(state, { type: 'ADD_FIELD_WITH_TABLE', tableFullName: full, fieldPath: path });
+  }
+
+  it('independent lifetimes: allTables() resolves the correct schema while editing each position, both keep fullName ВТ_A', () => {
+    let s = withField(makeProducer(initialState(), 'ВТ_A'), 'Справочник.Валюты', 'Код'); // 0: creates {Код}
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = reducer(s, { type: 'ADD_TEMP_TABLE', name: 'ВТ_A', fields: [] }); // 1: consumes lifetime #1
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = makeDropper(s, 'ВТ_A'); // 2: drops
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = withField(makeProducer(s, 'ВТ_A'), 'Документ.СчетНаОплату', 'Дата'); // 3: creates {Дата}
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = reducer(s, { type: 'ADD_TEMP_TABLE', name: 'ВТ_A', fields: [] }); // 4: consumes lifetime #2
+
+    // While editing member 4 (lifetime #2's consumer) — live state right now.
+    const meta4 = allTables(s).find(t => t.fullName === 'ВТ_A');
+    expect(meta4?.fields.map(f => f.name)).toEqual(['Дата']);
+    expect(s.selectedTables[0].fullName).toBe('ВТ_A'); // never renamed
+
+    // Navigate to member 1 (lifetime #1's consumer) — its OWN saved fullName
+    // is still exactly 'ВТ_A' (never renamed at add-time either).
+    s = reducer(s, { type: 'SET_ACTIVE_BATCH', index: 1 });
+    expect(s.selectedTables.find(t => t.tempTable)?.fullName).toBe('ВТ_A');
+    const meta1 = allTables(s).find(t => t.fullName === 'ВТ_A');
+    expect(meta1?.fields.map(f => f.name)).toEqual(['Код']); // lifetime #1's own schema, not lifetime #2's
+  });
+
+  it('self-join: adding the same package-derived ВТ_A twice keeps fullName identical, disambiguates only the alias', () => {
+    let s = makeProducer(initialState(), 'ВТ_A'); // 0: creates
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = reducer(s, { type: 'ADD_TEMP_TABLE', name: 'ВТ_A', fields: [] }); // 1: first occurrence
+    s = reducer(s, { type: 'ADD_TEMP_TABLE', name: 'ВТ_A', fields: [] }); // 1: second occurrence (self-join)
+    const temps = s.selectedTables.filter(t => t.tempTable);
+    expect(temps).toHaveLength(2);
+    expect(temps[0].fullName).toBe('ВТ_A');
+    expect(temps[1].fullName).toBe('ВТ_A'); // NEVER a renamed identity (e.g. "ВТ_A2") — that would be conflating identity with source-instance uniqueness
+    // Aliases disambiguated the exact same base+k strategy ADD_TABLE already
+    // uses for ordinary tables (k starts at 1 — see queryStore.ts:610-611).
+    expect(defaultTableAlias(temps[0])).toBe('ВТ_A');
+    expect(defaultTableAlias(temps[1])).toBe('ВТ_A1');
+    // No stray synthetic registration was created for a package-derived add.
+    expect(s.syntheticTables).toEqual([]);
+  });
+
+  it('append: create → append → consume remains ONE logical identity, no extra synthetic entry', () => {
+    let s = makeProducer(initialState(), 'ВТ_A'); // 0: creates
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = makeProducer(s, 'ВТ_A', true); // 1: appends
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = reducer(s, { type: 'ADD_TEMP_TABLE', name: 'ВТ_A', fields: [] }); // 2: consumes
+    expect(s.selectedTables[0].fullName).toBe('ВТ_A');
+    expect(s.syntheticTables).toEqual([]);
+  });
+
+  it('manual/ad hoc temp table: unchanged behavior — uniqueSourceName + syntheticTables registration', () => {
+    // 'ВТ_Ручна' is not a package-derived name anywhere in this batch.
+    let s = reducer(initialState(), { type: 'ADD_TEMP_TABLE', name: 'ВТ_Ручна', fields: [{ name: 'Колонка' }] });
+    expect(s.selectedTables[0].fullName).toBe('ВТ_Ручна');
+    expect(s.syntheticTables).toHaveLength(1);
+    expect(s.syntheticTables[0].fullName).toBe('ВТ_Ручна');
+    // Adding the SAME manual name again still renames (this is the correct,
+    // preserved behavior for two independently-typed ad hoc definitions).
+    s = reducer(s, { type: 'ADD_TEMP_TABLE', name: 'ВТ_Ручна', fields: [{ name: 'ІншаКолонка' }] });
+    expect(s.selectedTables[1].fullName).toBe('ВТ_Ручна2');
+  });
+
+  it('manual UPDATE_TEMP_TABLE still works for a manual temp table', () => {
+    let s = reducer(initialState(), { type: 'ADD_TEMP_TABLE', name: 'ВТ_Ручна', fields: [{ name: 'Колонка' }] });
+    const id = s.selectedTables[0].id;
+    s = reducer(s, { type: 'UPDATE_TEMP_TABLE', tableId: id, name: 'ВТ_Ручна', fields: [{ name: 'НоваКолонка' }] });
+    expect(s.syntheticTables[0].fields.map(f => f.name)).toEqual(['НоваКолонка']);
+  });
+
+  it('UPDATE_TEMP_TABLE is a no-op (defensive guard) for a package-derived temp table', () => {
+    let s = makeProducer(initialState(), 'ВТ_A'); // 0: creates
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = reducer(s, { type: 'ADD_TEMP_TABLE', name: 'ВТ_A', fields: [] }); // 1: consumes
+    const id = s.selectedTables[0].id;
+    const before = s;
+    s = reducer(s, { type: 'UPDATE_TEMP_TABLE', tableId: id, name: 'ВТ_A', fields: [{ name: 'Зламано' }] });
+    expect(s).toBe(before); // no-op: package-derived schema is owned by its producer lifetime
+    expect(s.syntheticTables).toEqual([]);
+  });
+
+  it('name collision: a package-derived ВТ_A takes precedence over a stale manual synthetic ВТ_A with the same name', () => {
+    // Simulate a stale manual entry (e.g. left over from before this fix, or
+    // a coincidentally-identical manual name) coexisting with a real,
+    // currently-open package lifetime of the same name.
+    let s = reducer(initialState(), { type: 'ADD_TEMP_TABLE', name: 'ВТ_A', fields: [{ name: 'СтараКолонка' }] }); // manual, registers syntheticTables['ВТ_A']
+    expect(s.syntheticTables).toHaveLength(1);
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' });
+    s = withField(makeProducer(s, 'ВТ_A'), 'Справочник.Валюты', 'Код'); // 1: REAL package createTemp ВТ_A {Код}
+    s = reducer(s, { type: 'ADD_BATCH_QUERY' }); // 2: active, ВТ_A available from package position
+    const meta = allTables(s).find(t => t.fullName === 'ВТ_A');
+    // Package-derived definition wins over the stale manual one.
+    expect(meta?.fields.map(f => f.name)).toEqual(['Код']);
   });
 });
 

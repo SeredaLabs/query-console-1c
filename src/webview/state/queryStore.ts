@@ -17,6 +17,7 @@ import {
   derivePackageTempTableContinuity,
   docToSnapshot,
   emptyBuilder,
+  isPackageTempTableName,
   modelToFlat,
   restoreBatch,
   restoreSaved,
@@ -40,6 +41,7 @@ export {
   compoundTempTableName,
   derivePackageTempTableContinuity,
   docToSnapshot,
+  isPackageTempTableName,
   modelToFlat,
   restoreBatch,
   restoreSaved,
@@ -283,11 +285,24 @@ export type QueryAction =
 export interface MetadataCatalogRef { current: MetaTable[] }
 export const metadataCatalogRef: MetadataCatalogRef = { current: [] };
 
-/** Реальные метаданные хоста + синтетические источники запроса вместе — то,
- * что раньше было единым `state.tables`. Читатели (ConstructorView и т. п.)
- * зовут это вместо прямого чтения поля состояния. */
+/**
+ * Реальные метаданные хоста + package-derived временные таблицы (позиционно,
+ * см. `availableTempTables`) + ручные/ad hoc синтетические источники —
+ * то, что раньше было единым `state.tables`. Читатели (ConstructorView и т. п.)
+ * зовут это вместо прямого чтения поля состояния.
+ *
+ * Metadata-resolution audit (2026-09-20, Option B): package-derived записи
+ * йдуть ПЕРШИМИ — якщо `state.syntheticTables` містить застарілий ручний
+ * запис з тим самим `fullName` (напр. лишився від СТАРОЇ поведінки
+ * `ADD_TEMP_TABLE` до цього фіксу), `.find()`-споживачі (усі виклики нижче
+ * по коду — Inspector/Fields/Conditions/Grouping/ConstructorView) все одно
+ * отримають АКТУАЛЬНЕ, позиційно правильне визначення, а не застарілий
+ * synthetic-запис. Реальні метадані (крапка в fullName) і package-ВТ
+ * (без крапки, звичайний SDBL-ідентифікатор) структурно не можуть
+ * колізувати за чинними правилами іменування 1С.
+ */
 export function allTables(state: QueryState): MetaTable[] {
-  return [...metadataCatalogRef.current, ...state.syntheticTables];
+  return [...availableTempTables(state), ...metadataCatalogRef.current, ...state.syntheticTables];
 }
 
 export function initialState(): QueryState {
@@ -803,12 +818,39 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
     case 'ADD_TEMP_TABLE': {
       const name = action.name.trim();
       if (!name) return state;
+      const id = `t${++_tableCounter}`;
+
+      // Metadata-resolution audit (2026-09-20, Option B): `name` — точна
+      // package-derived ВТ (доступна на поточній позиції)? Тоді це НЕ
+      // manual/ad hoc визначення — identity зберігається як є (fullName
+      // ЗАЛИШАЄТЬСЯ `name`, `uniqueSourceName`/`syntheticTables` тут НЕ
+      // застосовні: unique-по-fullName захищає ідентичність metadata-
+      // визначення, а не унікальність source-instance; self-join
+      // (два SelectedTable з однаковим fullName) для package-ВТ дозволений
+      // так само, як і для звичайних таблиць через ADD_TABLE — лише псевдонім
+      // дизамбігується, тим самим base+k підходом).
+      if (isPackageTempTableName(state, name)) {
+        const newTable: SelectedTable = { id, fullName: name, tempTable: true };
+        const base = defaultTableAlias({ id: '', fullName: name });
+        const taken = new Set(state.selectedTables.map(t => defaultTableAlias(t)));
+        if (taken.has(base)) {
+          let k = 1;
+          while (taken.has(base + k)) k++;
+          newTable.alias = base + k;
+        }
+        return {
+          ...state,
+          selectedTables: [...state.selectedTables, newTable],
+          focusedSelectedTableId: id,
+        };
+      }
+
+      // Manual/ad hoc temp table — поведінка НЕ змінена.
       const fullName = uniqueSourceName(state, name);
       const fields: MetaField[] = action.fields
         .filter(f => f.name.trim())
         .map(f => ({ name: f.name.trim(), kind: 'attribute', types: [] }));
       const meta = syntheticSourceTable(fullName, fields);
-      const id = `t${++_tableCounter}`;
       return {
         ...state,
         syntheticTables: [...state.syntheticTables, meta],
@@ -820,6 +862,13 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
     case 'UPDATE_TEMP_TABLE': {
       const sel = state.selectedTables.find(t => t.id === action.tableId);
       if (!sel || !sel.tempTable) return state;
+      // Package-derived ВТ належить своєму producer-lifetime — ручний
+      // редактор структури не може її перезаписати (Option B audit,
+      // 2026-09-20). Захисний no-op, а не UI-only заборона: навіть якщо
+      // якийсь застарілий UI-шлях все ж викличе цей action, він не зможе
+      // "отруїти" `syntheticTables` записом, що затінив би позиційну
+      // резолюцію для ІНШИХ package-членів з тим самим ім'ям.
+      if (isPackageTempTableName(state, sel.fullName)) return state;
       const oldFullName = sel.fullName;
       const trimmed = action.name.trim();
       // Уникальность нового имени — исключая саму обновляемую таблицу (не сталкиваться с собой).

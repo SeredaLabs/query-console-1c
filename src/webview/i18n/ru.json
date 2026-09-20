@@ -152,6 +152,8 @@
   "additional.dropTemp": "Уничтожение временной таблицы",
   "additional.tempName": "Имя временной таблицы",
   "additional.dropTempDisabledHint": "Недоступно, пока этот запрос является объединением (УНИЧТОЖИТЬ — самостоятельный оператор, не SELECT-участник).",
+  "additional.appendTempVersionBadge": "8.3.25+",
+  "additional.appendTempVersionTooltip": "Доступно с 1С:Предприятие 8.3.25. ДОБАВИТЬ позволяет добавить результат запроса в уже созданную временную таблицу.",
   "additional.parameters": "Параметры",
   "additional.records": "Выборка записей",
   "additional.lockForUpdate": "Блокировать получаемые данные для последующего изменения",

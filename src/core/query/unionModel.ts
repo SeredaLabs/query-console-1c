@@ -30,6 +30,24 @@ export interface QueryDocument {
 }
 
 /**
+ * UNION + temp-table semantic audit (2026-09-20): `queryType`/`tempTableName`
+ * belong to the COMPOUND query (the whole `QueryDocument`), not to any one
+ * union member — `ПОМЕСТИТЬ`/`ДОБАВИТЬ` has exactly one grammatical slot,
+ * physically carried by member 0. Callers (e.g. Phase 12B's package
+ * temp-table continuity) should read through this accessor instead of
+ * indexing `doc.members[0]` directly, so the "member 0 is the carrier"
+ * detail stays in one place. Mirrors `compoundQueryType`/
+ * `compoundTempTableName` in `webview/state/queryStore/snapshots.ts`, which
+ * do the same thing for the live/active `QueryState` (a distinction that
+ * doesn't apply here — `doc` is already a fully assembled document, e.g.
+ * from `assembleBatch`/`assembleMembers`).
+ */
+export function compoundCarrierOf(doc: QueryDocument): { queryType: QueryModel['queryType']; tempTableName: string } {
+  const m0 = doc.members[0]?.model;
+  return { queryType: m0?.queryType ?? 'select', tempTableName: m0?.tempTableName ?? '' };
+}
+
+/**
  * Псевдоним поля для целей объединения/совпадения: явный `alias`, иначе
  * синтезированный конструктором (склейка сегментов у квалифицированного поля,
  * последний сегмент у голого — см. synthesizedFieldAlias); для произвольного

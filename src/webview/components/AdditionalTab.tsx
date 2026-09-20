@@ -37,6 +37,25 @@ interface Props {
   onSetPreserveComments?: (value: boolean) => void;
 }
 
+/**
+ * Design polish (2026-09-20, узгоджено з New Builder `AdditionalWorkspace.tsx`):
+ * невеликий muted badge для платформо-версійної вимоги (`ДОБАВИТЬ` valid лише
+ * з 1С:Підприємство 8.3.25+) — суто інформаційний, не блокує опцію на старіших
+ * версіях (платформа середовища тут невідома і не перевіряється). Neutral/muted,
+ * без warning-жовтого чи "NEW" — другорядний елемент, не конкурує з label.
+ */
+const VERSION_BADGE: React.CSSProperties = {
+  fontSize: 10,
+  lineHeight: '14px',
+  padding: '0 4px',
+  borderRadius: 3,
+  border: '1px solid var(--qc-border)',
+  color: 'var(--vscode-descriptionForeground, #aaa)',
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
+  cursor: 'default',
+};
+
 const dropZone: React.CSSProperties = {
   flex: 1,
   overflowY: 'auto',
@@ -148,6 +167,11 @@ export function AdditionalTab(props: Props): React.ReactElement {
                 onChange={() => onSetQueryType(qt.value)}
               />
               {t(qt.label)}
+              {qt.value === 'appendTemp' && (
+                <span style={VERSION_BADGE} title={t('additional.appendTempVersionTooltip')}>
+                  {t('additional.appendTempVersionBadge')}
+                </span>
+              )}
             </label>
           );
         })}

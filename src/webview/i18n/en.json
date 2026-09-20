@@ -152,6 +152,8 @@
   "additional.dropTemp": "Drop temporary table",
   "additional.tempName": "Temporary table name",
   "additional.dropTempDisabledHint": "Not available while this query is a union (УНИЧТОЖИТЬ is a standalone statement, not a SELECT arm).",
+  "additional.appendTempVersionBadge": "8.3.25+",
+  "additional.appendTempVersionTooltip": "Available since 1C:Enterprise 8.3.25. ДОБАВИТЬ appends the query result to an already-created temporary table.",
   "additional.parameters": "Parameters",
   "additional.records": "Record selection",
   "additional.lockForUpdate": "Lock retrieved data for subsequent changes",

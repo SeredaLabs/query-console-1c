@@ -62,6 +62,26 @@ const RADIO_ROW: React.CSSProperties = {
   cursor: 'pointer',
 };
 
+/**
+ * Design polish (2026-09-20): невеликий muted badge для позначення
+ * платформо-версійної вимоги (`ДОБАВИТЬ` valid лише з 1С:Підприємство
+ * 8.3.25+) — суто інформаційний, не блокує/не ховає опцію на старіших
+ * версіях (платформу цього середовища ми не знаємо і не перевіряємо).
+ * Neutral/muted (НЕ warning-жовтий), без "NEW" — другорядний елемент,
+ * що не конкурує з текстом radio-label.
+ */
+const VERSION_BADGE: React.CSSProperties = {
+  fontSize: 10,
+  lineHeight: '14px',
+  padding: '0 4px',
+  borderRadius: 3,
+  border: `1px solid ${TOKENS.border}`,
+  color: TOKENS.textMuted,
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
+  cursor: 'default',
+};
+
 const PANEL_INPUT: React.CSSProperties = {
   fontSize: 12,
   padding: '4px 7px',
@@ -154,6 +174,11 @@ export function AdditionalWorkspace({
                 onChange={() => dispatch({ type: 'SET_QUERY_TYPE', queryType: qt.value })}
               />
               {t(locale, qt.label)}
+              {qt.value === 'appendTemp' && (
+                <span style={VERSION_BADGE} title={t(locale, 'additionalWorkspaceAppendTempVersionTooltip')}>
+                  {t(locale, 'additionalWorkspaceAppendTempVersionBadge')}
+                </span>
+              )}
             </label>
           );
         })}

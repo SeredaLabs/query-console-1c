@@ -27,7 +27,7 @@ import type { MetaField, MetaTable } from '../../core/metadata/types';
 import type { RefId } from '../../shared/messages';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import type { QueryState, QueryAction } from '../state/queryStore';
-import { assembleMembers, batchMemberInfo, initialState, reducer, tempTableDialogInitial, availableTempTables, allTables, metadataCatalogRef, compoundQueryType, compoundTempTableName } from '../state/queryStore';
+import { assembleMembers, batchMemberInfo, initialState, reducer, tempTableDialogInitial, availableTempTables, allTables, metadataCatalogRef, compoundQueryType, compoundTempTableName, isPackageTempTableName } from '../state/queryStore';
 import { SideTabsRail } from './SideTabsRail';
 import { computeBatchTextSafe } from '../computeBatchText';
 import { deriveUnionColumns } from '../../core/query/unionModel';
@@ -353,6 +353,10 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
               if (sel?.subquery) setSubqueryEditor({ tableId: id, initialDoc: sel.subquery });
               else if (sel?.tempTable) setTempTableDialog({ tableId: id });
             }}
+            focusedIsPackageTempTable={(() => {
+              const sel = state.selectedTables.find(t => t.id === state.focusedSelectedTableId);
+              return !!sel?.tempTable && isPackageTempTableName(state, sel.fullName);
+            })()}
           />
         </div>
         <ResizeHandle onResize={d => setTablesPanelWidth(w => Math.max(160, w + d))} />
