@@ -8,9 +8,9 @@ import type { SupportedLocale } from '../shared/locale';
  */
 const DICT = {
   en: {
-    title: '1C Query Builder',
+    title: '1C: Query Constructor',
     untitledQuery: 'Untitled query',
-    switchToClassic: '⇄ Classic',
+    switchToClassic: 'Classic',
     cancel: 'Cancel',
     save: 'Save',
     notYetAvailable: 'Available once Structure/Fields are implemented',
@@ -240,9 +240,9 @@ const DICT = {
     inspectorSubqueryBadge: 'Subquery source',
   },
   uk: {
-    title: '1C Query Builder',
+    title: '1C: Конструктор запитів',
     untitledQuery: 'Без назви',
-    switchToClassic: '⇄ Класичний',
+    switchToClassic: 'Класичний',
     cancel: 'Скасувати',
     save: 'Зберегти',
     notYetAvailable: 'Стане доступним після реалізації Structure/Fields',
@@ -472,9 +472,9 @@ const DICT = {
     inspectorSubqueryBadge: 'Джерело-підзапит',
   },
   ru: {
-    title: '1C Query Builder',
+    title: '1C: Конструктор запросов',
     untitledQuery: 'Без имени',
-    switchToClassic: '⇄ Классический',
+    switchToClassic: 'Классический',
     cancel: 'Отмена',
     save: 'Сохранить',
     notYetAvailable: 'Станет доступным после реализации Structure/Fields',

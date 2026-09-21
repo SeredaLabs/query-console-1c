@@ -74,7 +74,7 @@
   "tree.documentJournals": "Журнали документів",
   "tree.filterCriteria": "Критерії відбору",
   "tree.constants": "Константи",
-  "tree.enums": "Переліки",
+  "tree.enums": "Перелічення",
   "tables.remove": "Прибрати таблицю",
   "tables.virtualParams": "Параметри віртуальної таблиці",
   "tables.createSubquery": "Створити вкладений запит (ВЗ)",

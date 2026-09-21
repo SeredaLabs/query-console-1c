@@ -203,20 +203,19 @@ const CONTROL_BOX: React.CSSProperties = {
 };
 
 /**
- * Один переюзаний presentation-primitive для "номер/SELECT-чипа" (§11: "one
- * tiny presentation primitive... reuse for BOTH Package members and UNION
- * SELECT members" — жодного нового domain-стану, лише спільний рендер).
- * Delete-affordance (`codicon-close`) --- ЗАВЖДИ в DOM з `opacity:0`, тому
- * hover/focus НІКОЛИ не змінює ширину чипа/не зсуває сусідів (explicit
- * test scenario §13: "positions of 7 and 8 MUST NOT change").
+ * Final delete UX decision (2026-09-21, round 3): member chips (Package
+ * numbers, UNION SELECT chips) --- pure navigation, NO delete affordance
+ * of their own, hover or otherwise (explicit: "Remove all hover/inline
+ * delete affordances from Package member chips and UNION SELECT chips").
+ * Deleting is now a single, separate, always-visible `×` control next to
+ * `+` (see `NavDeleteButton`) --- one predictable place per section,
+ * instead of hunting for a hover-reveal target on a specific chip.
  */
 function NavMemberChip({
   label,
   title,
   active,
   onSelect,
-  onRemove,
-  removeTitle,
   divider,
   dot,
 }: {
@@ -224,14 +223,11 @@ function NavMemberChip({
   title?: string;
   active: boolean;
   onSelect: () => void;
-  onRemove?: () => void;
-  removeTitle?: string;
   divider: boolean;
   dot?: React.ReactNode;
 }): React.ReactElement {
   return (
     <span
-      className="qcc-nav-chip"
       style={{
         position: 'relative',
         display: 'inline-flex',
@@ -260,50 +256,10 @@ function NavMemberChip({
       >
         {label}
       </button>
-      {/* Bug fix (2026-09-21, round 2 visual QA): раніше reserved-простір
-          для × був padding-right НА самій number-кнопці, тож геометричний
-          центр кнопки (куди клікають автоматизовані інструменти й trackpad
-          "клік по центру") опинявся впритул до invisible close-зони —
-          flaky клік іноді "потрапляв" у видалення замість вибору. Тепер
-          reserved-простір --- окремий непроклікуваний spacer ПІСЛЯ кнопки
-          (у звичайному flow), а не її власний padding: кнопка залишається
-          вузькою навколо тексту, close сидить лише над spacer'ом. */}
-      {onRemove && <span aria-hidden style={{ width: 13, flexShrink: 0 }} />}
       {dot && (
         <span style={{ position: 'absolute', top: 1, right: 1, pointerEvents: 'none' }}>
           {dot}
         </span>
-      )}
-      {onRemove && (
-        <button
-          type="button"
-          className="qcc-nav-chip-close"
-          title={removeTitle}
-          onClick={e => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          style={{
-            position: 'absolute',
-            right: 2,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            border: 'none',
-            background: TOKENS.surface2,
-            color: TOKENS.danger,
-            borderRadius: 3,
-            width: 15,
-            height: 15,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 0,
-            cursor: 'pointer',
-            outline: 'none',
-          }}
-        >
-          <span className="codicon codicon-close" style={{ fontSize: 9 }} />
-        </button>
       )}
     </span>
   );
@@ -332,6 +288,37 @@ function NavAddButton({ title, onClick }: { title: string; onClick: () => void }
       }}
     >
       +
+    </button>
+  );
+}
+
+/**
+ * Final delete UX decision (2026-09-21, round 3): дзеркальний square
+ * control до `NavAddButton`, завжди поруч із `+`, той самий `CONTROL_BOX`
+ * grammar — `[navigation] [+] [×]` в БУДЬ-ЯКОМУ режимі (wide/compact),
+ * той самий pattern для Package і UNION. `×` завжди `TOKENS.danger`
+ * (не лише на hover), фон --- лише subtle danger-tint на hover/focus
+ * (`.qcc-nav-delete` у hoverStyles.tsx), без permanent-заливки в стані
+ * спокою.
+ */
+function NavDeleteButton({ title, onClick }: { title: string; onClick: () => void }): React.ReactElement {
+  return (
+    <button
+      type="button"
+      className="qcc-nav-delete"
+      title={title}
+      onClick={onClick}
+      style={{
+        ...CONTROL_BOX,
+        width: CONTROL_HEIGHT,
+        justifyContent: 'center',
+        cursor: 'pointer',
+        color: TOKENS.danger,
+        fontSize: 12,
+        padding: 0,
+      }}
+    >
+      <span className="codicon codicon-close" />
     </button>
   );
 }
@@ -670,6 +657,19 @@ function PackageSwitcher({
     );
   }
 
+  // Final delete UX decision (2026-09-21, round 3): один спільний
+  // `NavDeleteButton` поруч із `+`, той самий у wide/compact --- завжди
+  // видаляє АКТИВНОГО package-члена (REMOVE_BATCH_QUERY), не якийсь
+  // конкретний hover-чип. Показується разом з `showAdd` (тобто ховається
+  // на narrow --- там та сама дія доступна через спільне kebab-меню, щоб
+  // не дублювати механізм).
+  const deleteButton = showAdd && batchCount > 1 && (
+    <NavDeleteButton
+      title={`${t(locale, 'packageRemove')} ${t(locale, 'packageTempTableQueryLabel').toLowerCase()} ${active + 1}`}
+      onClick={() => dispatch({ type: 'REMOVE_BATCH_QUERY', index: active })}
+    />
+  );
+
   if (!compact) {
     return (
       <>
@@ -685,8 +685,6 @@ function PackageSwitcher({
                   title={batchMemberName(state, i)}
                   active={isActive}
                   onSelect={() => dispatch({ type: 'SET_ACTIVE_BATCH', index: i })}
-                  onRemove={batchCount > 1 ? () => dispatch({ type: 'REMOVE_BATCH_QUERY', index: i }) : undefined}
-                  removeTitle={`${t(locale, 'packageRemove')} ${i + 1}`}
                   divider={i < batchCount - 1}
                   dot={memberDot(i, relations, false)}
                 />
@@ -695,6 +693,7 @@ function PackageSwitcher({
           })}
         </span>
         {showAdd && <NavAddButton title={t(locale, 'packageAddQuery')} onClick={() => dispatch({ type: 'ADD_BATCH_QUERY' })} />}
+        {deleteButton}
       </>
     );
   }
@@ -703,7 +702,7 @@ function PackageSwitcher({
   const highlighted = highlightedMembers !== null && highlightedMembers.size > 0;
   return (
     <>
-      <span className="qcc-nav-chip" style={{ ...CONTROL_BOX, position: 'relative', gap: 2, padding: batchCount > 1 ? '0 15px 0 2px' : '0 2px', boxShadow: highlighted ? `inset 0 -2px 0 0 ${TOKENS.accent}` : undefined }}>
+      <span style={{ ...CONTROL_BOX, position: 'relative', gap: 2, padding: '0 2px', boxShadow: highlighted ? `inset 0 -2px 0 0 ${TOKENS.accent}` : undefined }}>
         <button
           type="button"
           className="qcc-btn"
@@ -728,19 +727,9 @@ function PackageSwitcher({
           ›
         </button>
         {memberDot(active, relations, true)}
-        {batchCount > 1 && (
-          <button
-            type="button"
-            className="qcc-nav-chip-close"
-            title={`${t(locale, 'packageRemove')} ${active + 1}`}
-            onClick={() => dispatch({ type: 'REMOVE_BATCH_QUERY', index: active })}
-            style={{ border: 'none', background: 'transparent', color: TOKENS.danger, cursor: 'pointer', fontSize: 11, padding: '0 4px', height: '100%', display: 'flex', alignItems: 'center' }}
-          >
-            <span className="codicon codicon-close" />
-          </button>
-        )}
       </span>
       {showAdd && <NavAddButton title={t(locale, 'packageAddQuery')} onClick={() => dispatch({ type: 'ADD_BATCH_QUERY' })} />}
+      {deleteButton}
     </>
   );
 }
@@ -923,13 +912,26 @@ function UnionStrip({
     </span>
   );
 
+  // Final delete UX decision (2026-09-21, round 3): один спільний
+  // `NavDeleteButton` поруч із `+`, той самий у wide/compact --- завжди
+  // видаляє АКТИВНИЙ SELECT (REMOVE_QUERY), не якийсь конкретний
+  // hover-чип. Ховається разом з `showAdd` на narrow (там та сама дія --
+  // спільне kebab-меню).
+  const activeIndex = state.activeQuery;
+  const deleteButton = showAdd && (
+    <NavDeleteButton
+      title={`${t(locale, 'packageRemove')} ${t(locale, 'packageUnionSelectLabel')} ${activeIndex + 1}`}
+      onClick={() => dispatch({ type: 'REMOVE_QUERY', index: activeIndex })}
+    />
+  );
+
   if (compact) {
     const active = state.activeQuery;
     const keywordLabel = active > 0 ? (queryList[active].distinct ? t(locale, 'packageUnionKeywordDistinct') : t(locale, 'packageUnionKeywordAll')) : null;
     return (
       <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
         {unionLabel}
-        <span className="qcc-nav-chip" style={{ ...CONTROL_BOX, position: 'relative', gap: 2, padding: '0 15px 0 2px' }}>
+        <span style={{ ...CONTROL_BOX, gap: 2, padding: '0 2px' }}>
           <button
             type="button"
             className="qcc-btn"
@@ -953,21 +955,6 @@ function UnionStrip({
           >
             ›
           </button>
-          {/* Visual polish (2026-09-21, round 2): compact UNION раніше НЕ мав
-              жодного способу видалити active SELECT (§8 explicit critical
-              gap) --- той самий inline hover-`×` grammar, що вже працює для
-              compact Package (§6), НЕ окремий overflow-запис, бо на
-              medium-width тут немає спільного kebab-меню взагалі (те з'являється
-              лише на narrow). REMOVE_QUERY, жодної нової дії. */}
-          <button
-            type="button"
-            className="qcc-nav-chip-close"
-            title={t(locale, 'packageUnionRemove')}
-            onClick={() => dispatch({ type: 'REMOVE_QUERY', index: active })}
-            style={{ position: 'absolute', right: 2, top: '50%', transform: 'translateY(-50%)', border: 'none', background: TOKENS.surface2, color: TOKENS.danger, borderRadius: 3, width: 15, height: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer', outline: 'none' }}
-          >
-            <span className="codicon codicon-close" style={{ fontSize: 9 }} />
-          </button>
         </span>
         {!narrow && keywordLabel && (
           <button
@@ -981,6 +968,7 @@ function UnionStrip({
           </button>
         )}
         {showAdd && <NavAddButton title={t(locale, 'packageUnionAdd')} onClick={() => dispatch({ type: 'ADD_QUERY' })} />}
+        {deleteButton}
       </span>
     );
   }
@@ -1015,8 +1003,6 @@ function UnionStrip({
                 title={active ? q.name : `${t(locale, 'packageUnionGoToPrefix')} ${i + 1}`}
                 active={active}
                 onSelect={() => dispatch({ type: 'SET_ACTIVE_QUERY', index: i })}
-                onRemove={() => dispatch({ type: 'REMOVE_QUERY', index: i })}
-                removeTitle={t(locale, 'packageUnionRemove')}
                 divider={false}
               />
             </span>
@@ -1024,6 +1010,7 @@ function UnionStrip({
         );
       })}
       {showAdd && <NavAddButton title={t(locale, 'packageUnionAdd')} onClick={() => dispatch({ type: 'ADD_QUERY' })} />}
+      {deleteButton}
     </span>
   );
 }

@@ -108,43 +108,16 @@ const CSS = `
   opacity: 1;
 }
 
-/* UNION polish (design review): члени об'єднання мають ІНШУ візуальну мову,
-   ніж пакетні [n] (щоб не плутати два різні виміри навігації) — округлий
-   chip замість дужок-тексту, і видалення ховається до hover chip'а, той
-   самий reveal-on-hover pattern, що вже є в .qcc-card-remove/.qcc-join-remove. */
-.qcc-union-chip {
-  border-radius: 3px;
-  transition: background 120ms;
-}
-.qcc-union-remove {
-  opacity: 0;
-  transition: opacity 120ms;
-}
-.qcc-union-chip:hover .qcc-union-remove {
-  opacity: 1;
-}
-
-/* PackageNav redesign (2026-09-21): NavMemberChip's delete affordance --
-   ALWAYS present in the DOM (never conditionally mounted) so hover/focus
-   never changes the chip's width and never shifts sibling numbers. Same
-   reveal-on-hover technique as .qcc-union-remove above, new class because
-   the container here is the chip itself (.qcc-nav-chip), not a shared
-   wrapper spanning multiple chips. */
-.qcc-nav-chip-close {
-  opacity: 0;
-  /* Bug fix (2026-09-21, round 2 visual QA): opacity:0 alone does NOT
-     remove an element from hit-testing --- the invisible close button was
-     silently intercepting clicks meant for the chip's own select button
-     underneath/beside it (found live: clicking a package number kept
-     deleting it instead of selecting it). pointer-events: none at rest,
-     re-enabled only once actually revealed. */
-  pointer-events: none;
-  transition: opacity 120ms;
-}
-.qcc-nav-chip:hover .qcc-nav-chip-close,
-.qcc-nav-chip-close:focus {
-  opacity: 1;
-  pointer-events: auto;
+/* Final delete UX decision (2026-09-21, round 3): Package/UNION member
+   chips are navigation-only now — no hover/inline delete affordance on
+   the chips themselves (that's what .qcc-union-chip/.qcc-union-remove/
+   .qcc-nav-chip-close used to be, all removed as dead weight). Deleting
+   is a single always-visible "×" control (NavDeleteButton) next to "+".
+   It's always TOKENS.danger-colored, but only gets a background tint on
+   hover/focus — no permanent red fill at rest. */
+.qcc-nav-delete:hover:not(:disabled),
+.qcc-nav-delete:focus {
+  background: color-mix(in srgb, var(--vscode-errorForeground) 15%, transparent);
 }
 `;
 
