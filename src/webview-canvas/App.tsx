@@ -1,7 +1,9 @@
 import * as React from 'react';
+import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
+import { tryOpenBatch } from '../core/query/validateBatch';
 import type { SupportedLocale } from '../shared/locale';
 import { computeBatchTextSafe } from '../webview/computeBatchText';
-import { initialState, reducer } from '../webview/state/queryStore';
+import { initialState, metadataCatalogRef, reducer } from '../webview/state/queryStore';
 import { onHostMessage, postToHost } from './bridge';
 import { DocumentBar } from './components/DocumentBar';
 import { PackageNav } from './components/PackageNav';
@@ -65,15 +67,42 @@ export function App(): React.ReactElement {
       else if (msg.type === 'metadataTree') {
         dispatch({ type: 'SET_METADATA', tables: msg.tables });
         setMetadataLoaded(true);
+      } else if (msg.type === 'loadModel') {
+        // Save support (2026-09-21): ТОЙ САМИЙ критерій, що й Classic
+        // (`webview/App.tsx`'s 'loadModel' handler) --- `tryOpenBatch` (спільний
+        // `core/query/validateBatch.ts`) розбирає текст запиту, знайденого під
+        // курсором при відкритті команди (`extension.ts`), і диспатчить УЖЕ
+        // існуючий `LOAD_BATCH` reducer action (`queryStore.ts`) --- жодного
+        // нового domain/parser коду, лише підключення вже готового шляху до
+        // Canvas. Резолвер --- з `metadataCatalogRef` (той самий module-level
+        // ref, синхронно оновлюваний `SET_METADATA`-кейсом reducer'а, яким уже
+        // користується `allTables()`), а не окремий Canvas-specific стан.
+        const resolver = metadataCatalogRef.current.length ? buildResolverFromTables(metadataCatalogRef.current) : undefined;
+        const r = tryOpenBatch(msg.text, resolver, { preserveComments: true });
+        if (r.ok) dispatch({ type: 'LOAD_BATCH', doc: r.doc });
+        // Малоймовірний випадок (текст під курсором пройшов Classic-детектор
+        // меж запиту, але не парситься) свідомо без окремого error-UI в цьому
+        // проході --- Canvas тоді просто лишається порожнім, як і при звичайному
+        // відкритті без initial query; повноцінний error banner --- поза
+        // мінімальним Save-scope цього завдання.
       }
     });
     postToHost({ type: 'ready' });
     return off;
   }, []);
 
-  const handleCancel = React.useCallback(() => {
-    postToHost({ type: 'cancel' });
-  }, []);
+  /**
+   * Save support (2026-09-21): "Зберегти" тепер реально функціональна --- той
+   * самий `WebviewMsg.insertText`, що й Classic (`webview/App.tsx`'s
+   * `handleInsert`), з уже готовим client-side `batchText` (Canvas і так
+   * рахує його для SdblDock через `computeBatchTextSafe`, жодного нового
+   * обчислення). Хост (`canvasPanel.ts`) записує його в СПРАВЖНІЙ `insertResult()`
+   * з тими самими stale-document/`documentVersion` guard'ами, що й Classic.
+   */
+  const handleSave = React.useCallback(() => {
+    if (batchText.error || !batchText.text.trim()) return;
+    postToHost({ type: 'insertText', text: batchText.text });
+  }, [batchText]);
 
   const resizeSdbl = React.useCallback((delta: number) => {
     // SDBL dock над нижнім краєм: тягнення вгору (delta<0) має ЗБІЛЬШУВАТИ висоту.
@@ -88,7 +117,7 @@ export function App(): React.ReactElement {
   return (
     <div style={ROOT_STYLE}>
       <HoverStyles />
-      <DocumentBar locale={locale} queryName="" onCancel={handleCancel} />
+      <DocumentBar locale={locale} onSave={handleSave} saveDisabled={!!batchText.error || !batchText.text.trim()} />
       <PackageNav locale={locale} state={state} dispatch={dispatch} onOpenAdditional={() => setWorkspaceTab('additional')} />
       <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
         <Workspace

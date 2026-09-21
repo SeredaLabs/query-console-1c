@@ -4,16 +4,20 @@ import type { MetadataModel } from '../core/metadata/types';
 import type { HostMsg, WebviewMsg } from '../shared/messages';
 import { normalizeLocale } from '../shared/locale';
 import { loadMetadata, resolveOutPath } from './metadataLoader';
+import { insertResult } from './insertResult';
+import type { SavedEditorState } from './insertResult';
 
 /**
  * New Builder (Canvas) panel. Phase 1 — shell only (без metadata). Phase 2
  * додає завантаження метаданих для Sidebar — ТІЄЮ Ж, спільною host-side
  * інфраструктурою, що й Classic panel.ts (`loadMetadata`/`resolveOutPath`/
  * `createMetadataRepository` — не Classic UI, а вже спільний шар для обох
- * панелей). Протокол — ті самі HostMsg/WebviewMsg: 'init'/'ready'/'cancel'
- * (Phase 1) + 'metadataTree' (Phase 2), усі вже існували в messages.ts.
- * 'expandRef'/'generate'/'insertText'/'refreshCache' Canvas поки не надсилає —
- * Structure/Fields ще не реалізовані.
+ * панелей). Save support (2026-09-21): 'loadModel' (init-time, якщо
+ * `initialQueryText` є) і 'insertText' тепер підключені --- ТОЧНО ТОЙ САМИЙ
+ * `insertResult()`/`SavedEditorState`, що й Classic (`panel.ts`), жодної
+ * окремої Canvas save-семантики. 'expandRef'/'generate'/'refreshCache'
+ * Canvas і далі не надсилає — Structure/Fields-глибина (drill-down у поля
+ * метаданих) поза цим зрізом.
  */
 
 function nonce(): string {
@@ -40,7 +44,9 @@ function getHtml(webview: vscode.Webview, scriptUri: vscode.Uri, codiconCssUri: 
 export function createCanvasPanel(
   context: vscode.ExtensionContext,
   cfPath: string,
-  channel: vscode.OutputChannel
+  channel: vscode.OutputChannel,
+  savedEditor?: SavedEditorState,
+  initialQueryText?: string
 ): vscode.WebviewPanel {
   const panel = vscode.window.createWebviewPanel(
     '1c.queryConstructorCanvas',
@@ -66,7 +72,7 @@ export function createCanvasPanel(
     if (msg.type === 'ready') {
       const initMsg: HostMsg = {
         type: 'init',
-        hasInitialQuery: false,
+        hasInitialQuery: !!initialQueryText,
         queryTextEditorV2: false,
         locale: normalizeLocale(vscode.env.language),
       };
@@ -75,17 +81,25 @@ export function createCanvasPanel(
       const repository = createMetadataRepository(metadataModel.tables);
       const reply: HostMsg = { type: 'metadataTree', tables: [...repository.getTables()] };
       panel.webview.postMessage(reply);
+      if (initialQueryText) {
+        const loadMsg: HostMsg = { type: 'loadModel', text: initialQueryText };
+        panel.webview.postMessage(loadMsg);
+      }
       if (repository.getTables().length === 0 && !cfPath) {
         vscode.window.showWarningMessage(
           vscode.l10n.t('Configuration export not found. Set its path in queryConsole.metadataPath.')
         );
       }
+    } else if (msg.type === 'insertText') {
+      await insertResult(msg.text, savedEditor);
+      panel.dispose();
     } else if (msg.type === 'cancel') {
       panel.dispose();
     }
-    // Інші WebviewMsg-варіанти (expandRef/generate/insertText/refreshCache)
-    // Phase 2 не надсилає — Structure/Fields ще не реалізовані, а Sidebar
-    // показує лише верхньорівневі об'єкти метаданих (без drill-down у поля).
+    // Інші WebviewMsg-варіанти (expandRef/generate/refreshCache) Canvas поки
+    // не надсилає — Sidebar показує лише верхньорівневі об'єкти метаданих
+    // (без drill-down у поля), а "generate" не потрібен окремо від
+    // client-side `computeBatchTextSafe`, яким Canvas уже рахує SDBL сам.
   });
 
   channel.appendLine(vscode.l10n.t('[1C Query] New Builder (Preview) panel opened.'));
