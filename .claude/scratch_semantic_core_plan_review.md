@@ -1,3 +1,12 @@
+> **STATUS (2026-09-21): SUPERSEDED / HISTORICAL.** This is a pre-implementation
+> design-review document. The phases described below (1a-3f) as "deferred,
+> not started" have since shipped: Semantic Core exists at `src/core/semantic/**`,
+> `resolveAliasAt` is live in Hover/Completion for `complete` snapshots,
+> `findAliasTable` remains as an intentional fallback for `recovered`/`unavailable`
+> snapshots, and `partial` is a reserved-but-unimplemented (deferred) completeness
+> state. For the current architecture see `docs/development/architecture.md` and
+> `docs/development/known-issues.md`. Kept here for historical design rationale.
+
 # Review request (v3): SemanticIndex architecture for a future SDBL semantic layer
 
 This is a third review pass. Two prior passes critiqued earlier versions of

@@ -42,13 +42,32 @@ bridge; changes there require Extension Host coverage as well as WebView tests.
 
 ## Known internal coupling
 
-Two real circular-import pairs inside `src/core/query` are made load-order-safe
-via hook injection rather than restructured away: `sdblGenerator.ts` ↔
-`exprFormatter.ts` (`setInlineSubqueryReflow`) and `sdblParser.ts` →
-`qualifyBareFields.ts` → `sdblGenerator.ts` → `sdblParser.ts`
-(`setSubqueryParser`). This is a known refactor hazard, not an emergency — a
-future decomposition of `src/core/query` should account for it deliberately
-rather than assume the current file boundaries are the natural module seams.
+(Re-verified against the import graph on 2026-09-21, after the `qualifyBareFields`
+→ `sdblGenerator` edge was cut and `queryModelUtils.ts` was extracted — see below.)
+
+One real circular-import pair remains inside `src/core/query`, made
+load-order-safe via hook injection rather than restructured away:
+`sdblParser.ts` → `qualifyBareFields.ts` → `sdblParser.ts`
+(`setSubqueryParser`, registered once at module load so `qualifyBareFields`
+never has a static import of `sdblParser`). This is a known refactor hazard,
+not an emergency — a future decomposition of `src/core/query` should account
+for it deliberately rather than assume the current file boundaries are the
+natural module seams.
+
+`sdblGenerator.ts` → `exprFormatter.ts` is **not** a circular import:
+`exprFormatter.ts` has no import of `sdblGenerator.ts` at all. `sdblGenerator.ts`
+imports `exprFormatter.ts`'s formatting helpers one-way, and additionally
+registers a callback via `setInlineSubqueryReflow` so `exprFormatter.ts` can
+invoke generator-owned inline-subquery reflow logic without importing the
+generator. It's an inversion-of-control seam, not a cycle to break.
+
+`unionModel.ts` ↔ `sdblGenerator.ts` is a real, **accepted** cycle, deliberately
+narrowed to one binding: `unionModel.ts` imports only `fieldExpr` from
+`sdblGenerator.ts` (needed for final SDBL cell text), while `sdblGenerator.ts`
+imports `unionModel.ts`'s column-derivation helpers. This is pinned by an
+architecture guard test (`test/unit/unionModel.test.ts`) that fails if
+`unionModel.ts` ever imports a second binding from `sdblGenerator.ts` — treat
+it as accepted debt, not a pending TODO.
 
 `sdblParser.ts` also keeps the active `MetadataResolver` in module-scoped state
 only for the duration of a synchronous `parseDocument` call, restoring the

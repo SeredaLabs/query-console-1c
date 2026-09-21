@@ -100,6 +100,7 @@ MIT — see [LICENSE](LICENSE). Third-party attributions are listed in
 This project began in August 2026 as a fork of
 [AlekseyUAM/query_console_vscode](https://github.com/AlekseyUAM/query_console_vscode).
 Since then the query engine, metadata model, and validation have been rewritten,
-and an entirely new semantic layer—hover, autocomplete, and diagnostics—was
-added that did not exist in the original. It is now an independent project,
+and an entirely new semantic layer—hover and autocomplete—was added, alongside
+independently rewritten diagnostics and validation, none of which existed in
+the original. It is now an independent project,
 maintained by SeredaLabs.
