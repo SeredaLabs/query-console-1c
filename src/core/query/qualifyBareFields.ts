@@ -28,7 +28,7 @@ import { tokenize, type Token } from './sdblLexer';
 import type { QueryModel, SelectedField, Condition, FieldRef } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import type { QueryDocument } from './unionModel';
-import { resolveAliases } from './sdblGenerator';
+import { resolveAliases } from './queryModelUtils';
 import { computeJoinVisibility } from './joinVisibility';
 import { LITERAL_WORDS, PERIOD_WORDS } from './sdblKeywordSets';
 

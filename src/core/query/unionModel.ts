@@ -1,5 +1,10 @@
 import type { QueryModel, SelectedField, SelectedTabSectionField } from './queryModel';
-import { fieldExpr, synthesizedFieldAlias } from './sdblGenerator';
+import { synthesizedFieldAlias } from './queryModelUtils';
+// `fieldExpr` остаётся генератор-owned (переотрисовывает произвольные выражения
+// через `exprFormatter` — generation-specific форматирование, не model-level
+// операция, см. `queryModelUtils.ts`) — единственная оставшаяся зависимость
+// unionModel → sdblGenerator, обоснованная (не misplaced logic).
+import { fieldExpr } from './sdblGenerator';
 
 /** Один запрос-участник объединения. */
 export interface UnionMember {

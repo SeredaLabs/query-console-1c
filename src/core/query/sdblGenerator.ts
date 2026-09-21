@@ -4,6 +4,7 @@ import type { QueryDocument } from './unionModel';
 import { deriveUnionColumns, unionHasTabSection, unionHasTrailing, orderedSelectElements, elementAlias, type UnionMember } from './unionModel';
 import type { BatchDocument } from './batchModel';
 import { parseDocument } from './sdblParser';
+import { resolveAliases, isTabularSectionSource, qualifiedAutoAlias, synthesizedFieldAlias, joinKeyword } from './queryModelUtils';
 import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpression, formatJoinConjunct, normalizeLeafCase, stripNegatedFieldParens, stripNotFieldParens, stripRedundantLeafParens, appendIsNotNullTrailingSpace, renderOperatorRhs, flattenMultilineLeaf, reindentLeafSubquery, reindentLeafCase, reindentLeafBool, wrapBareCastOperand, reprintLeafArithmetic, canonicalizeComparisonOperands, setInlineSubqueryReflow, tightenLeafInOperator } from './exprFormatter';
 import { tokenize } from './sdblLexer';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
@@ -48,23 +49,6 @@ function wrapAggregate(func: AggregateFunction, expr: string): string {
     case 'Минимум': return `МИНИМУМ(${expr})`;
     case 'Среднее': return `СРЕДНЕЕ(${expr})`;
   }
-}
-
-export function resolveAliases(tables: SelectedTable[]): Map<string, string> {
-  const seen = new Set<string>();
-  const result = new Map<string, string>();
-  for (const t of tables) {
-    const base = defaultTableAlias(t);
-    let alias = base;
-    let counter = 1;
-    while (seen.has(alias)) {
-      alias = base + counter;
-      counter++;
-    }
-    seen.add(alias);
-    result.set(t.id, alias);
-  }
-  return result;
 }
 
 function accountingPositions(slice: string, v: SelectedTable['virtual'] & {}): string[] {
@@ -969,17 +953,6 @@ function selectionModifiers(selection: QueryModel['selection']): string {
 }
 
 /**
- * Ключевое слово соединения по галочкам «Все». Конструктор 1С сохраняет ПРАВОЕ
- * соединение как есть (не нормализует перестановкой в ЛЕВОЕ).
- */
-function joinKeyword(leftAll: boolean, rightAll: boolean): string {
-  if (leftAll && rightAll) return 'ПОЛНОЕ';
-  if (leftAll && !rightAll) return 'ЛЕВОЕ';
-  if (!leftAll && rightAll) return 'ПРАВОЕ';
-  return 'ВНУТРЕННЕЕ';
-}
-
-/**
  * Есть ли в выражении верхнеуровневый (вне скобок и строк) булев оператор И/ИЛИ.
  * Используется, чтобы отличить одиночное условие соединения от составного.
  */
@@ -1730,54 +1703,6 @@ function isConstGroupExpr(expression: string | undefined): boolean {
   if (expression === undefined) return false;
   const e = expression.trim();
   return isBareParamExpr(e) || CONST_GROUP_RE.test(e);
-}
-
-/**
- * Источник — табличная часть (ТЧ) объекта (`Справочник.X.ТЧ`, `Документ.X.ТЧ`,
- * …): полное имя из ≥3 сегментов и НЕ виртуальная таблица регистра (та тоже
- * трёхсегментна — `РегистрНакопления.X.Остатки`, но всегда `virtual`). У ТЧ
- * ведущий сегмент пути `Ссылка` — навигация к владельцу, и конструктор 1С
- * отбрасывает его при синтезе автопсевдонима склейкой (фаза 6.16).
- */
-function isTabularSectionSource(t: SelectedTable | undefined): boolean {
-  if (!t || t.subquery || t.virtual) return false;
-  return t.fullName.split('.').length >= 3;
-}
-
-/**
- * Автопсевдоним квалифицированного поля `<alias>.<path>` без явного `КАК`.
- * Конструктор 1С склеивает ВСЕ сегменты пути (`Родитель.Имя` → `РодительИмя`),
- * предварительно отбрасывая ведущий `Ссылка` у источника-ТЧ (где `Ссылка` —
- * навигация к владельцу; `Ссылка.Контрагент` → `Контрагент`). У справочника/
- * регистра ведущий `Ссылка` сохраняется (`Ссылка.Наименование` →
- * `СсылкаНаименование`). Голое (неквалифицированное) поле сюда не попадает —
- * ему даётся последний сегмент (курируемый 0043). Фаза 6.16, сверено MCP.
- */
-function qualifiedAutoAlias(path: string, tabularSource: boolean): string {
-  let segs = path.split('.');
-  if (tabularSource && segs.length > 1 && segs[0].toUpperCase() === 'ССЫЛКА') {
-    segs = segs.slice(1);
-  }
-  return segs.join('');
-}
-
-/**
- * Синтезированный автопсевдоним простого поля выборки без явного `КАК`, как его
- * ставит конструктор 1С. Квалифицированному полю (`Алиас.Путь`) — склейка
- * сегментов (с отбрасыванием ведущего `Ссылка` у ТЧ), голому — последний сегмент
- * (фаза 6.16). Источник поля определяется по `model.tables`. Единая точка правды
- * для генератора (fieldLine) и выравнивания колонок объединения (unionModel).
- */
-export function synthesizedFieldAlias(model: QueryModel, field: SelectedField): string {
-  if (field.qualified) {
-    // Нерезолвимая навигация по источнику-ВТ: автопсевдоним = ПОЛНЫЙ точечный путь
-    // дословно (`СтавкаНДС.Перечисление`), без склейки сегментов (фаза 6.18, парсер
-    // `markDottedAutoAlias`).
-    if (field.autoAliasDotted) return field.path;
-    const t = model.tables.find(tb => tb.id === field.tableId);
-    return qualifiedAutoAlias(field.path, isTabularSectionSource(t));
-  }
-  return field.path.split('.').pop() ?? field.path;
 }
 
 /**

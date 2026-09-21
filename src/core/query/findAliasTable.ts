@@ -62,9 +62,9 @@ export function findAliasTable(
     // Основний розбір провалився — ймовірно, через незавершений/ламкий SELECT-
     // список ПІД ЧАС редагування (див. repairSelectListsForRecovery). Пробуємо
     // ще раз без нього: нам потрібен лише блок ИЗ, не самі поля.
-    const repaired = repairSelectListsForRecovery(queryText);
-    if (repaired === undefined) return undefined;
     try {
+      const repaired = repairSelectListsForRecovery(queryText);
+      if (repaired === undefined) return undefined;
       doc = parseBatch(repaired, resolver);
     } catch {
       return undefined;
