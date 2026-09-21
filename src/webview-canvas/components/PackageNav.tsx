@@ -78,8 +78,8 @@ function relatedMemberIndices(memberIndex: number, relations: PackageTempTableRe
 }
 
 /**
- * Redesign polish (2026-09-21): "Створює/Доповнює/Видаляє ВТ" в
- * `QueryIdentity` тепер має semantic-колір ролі (§4/§11 узгодженого
+ * Redesign polish (2026-09-20/21): "Створює/Доповнює/Видаляє ВТ" в
+ * `QueryIdentity` тепер має semantic-колір ролі (§4/§9 узгодженого
  * прототипу) — ЛИШЕ прив'язка існуючого `QueryType` до вже наявних
  * `TOKENS.success/warning/danger`, жодної нової семантики домену. `select`
  * лишається нейтральним (жодного кольору) — семантика "звичайний запит", а
@@ -95,7 +95,9 @@ function roleAccent(queryType: 'select' | 'createTemp' | 'appendTemp' | 'dropTem
 }
 
 function roleIcon(queryType: 'select' | 'createTemp' | 'appendTemp' | 'dropTemp'): string {
-  return queryType === 'dropTemp' ? 'trash' : 'database';
+  if (queryType === 'dropTemp') return 'trash';
+  if (queryType === 'select') return 'file';
+  return 'database';
 }
 
 /**
@@ -120,6 +122,17 @@ function useContainerWidth(ref: React.RefObject<HTMLElement>): number {
   return width;
 }
 
+/**
+ * Visual polish (2026-09-21): ОДНА спільна "мова" контролів для всього
+ * PackageNav — Package numbers, UNION SELECT members, QueryIdentity, Add,
+ * overflow "⋯" усі мають однакову висоту/radius/border, щоб читатись як
+ * одна навігаційна панель, а не набір випадкових текстових кнопок (explicit
+ * design feedback: "the bar looks like a sequence of loose text/buttons").
+ * Це ЛИШЕ presentation-константи — жодного нового domain/behavior.
+ */
+const CONTROL_HEIGHT = 24;
+const CONTROL_RADIUS = 4;
+
 const BAR_STYLE: React.CSSProperties = {
   height: DIMENSIONS.packageNav,
   minHeight: DIMENSIONS.packageNav,
@@ -132,53 +145,175 @@ const BAR_STYLE: React.CSSProperties = {
   flexShrink: 0,
   display: 'flex',
   alignItems: 'center',
-  gap: 8,
-  padding: '0 12px',
+  gap: 6,
+  padding: '0 10px',
   borderBottom: `1px solid ${TOKENS.border}`,
   background: TOKENS.surface2,
   fontSize: 12,
   overflow: 'hidden',
 };
 
-const NAV_DIVIDER: React.CSSProperties = { width: 1, height: 14, background: TOKENS.border, margin: '0 2px', flexShrink: 0 };
+/** Тонкий вертикальний роздільник між трьома концептуальними зонами
+ * (Package / Query identity / UNION) — subtle, не "порожній" gap. */
+const NAV_DIVIDER: React.CSSProperties = { width: 1, height: 16, background: TOKENS.border, margin: '0 4px', flexShrink: 0 };
 
 const GROUP_LABEL: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 4,
-  color: TOKENS.textSecondary,
+  gap: 5,
+  color: TOKENS.textMuted,
   whiteSpace: 'nowrap',
   flexShrink: 0,
-};
-
-const NUMBER_BTN: React.CSSProperties = {
-  border: 'none',
-  background: 'transparent',
-  cursor: 'pointer',
-  fontSize: 12,
-  padding: '2px 4px',
-  borderRadius: 3,
-  color: TOKENS.textSecondary,
+  height: CONTROL_HEIGHT,
 };
 
 /**
- * Design review (2026-09-20, color consolidation): "+"/"✕" були однаково
- * сірими по всій стрічці — важко відрізнити додавання від видалення на
- * швидкий погляд. `success`/`chart*` токени зарезервовані під інші
- * семантики (field-inclusion, JOIN-kind), тому тут — `accent` для "+" (та
- * сама семантика, що вже читається як "активна дія" в чипах) і `danger` для
- * видалення (тільки на hover-reveal, щоб не додавати тривожності в стані
- * спокою).
+ * Один спільний "control box" (border+radius+height), яким тепер
+ * побудовано і сегментовану групу номерів (обгортка), і QueryIdentity, і
+ * compact n/total pill, і secondary "+ Об'єднання" — та сама card language,
+ * що вже є в решті New Builder (`TOKENS.border`/`surface1`), просто
+ * застосована до навігаційних контролів (explicit design requirement §6:
+ * "All controls should share height/radius/border/hover/focus language").
  */
-const ADD_BTN: React.CSSProperties = { ...NUMBER_BTN, fontWeight: 700, color: TOKENS.accent };
-const REMOVE_ICON_BTN: React.CSSProperties = {
+const CONTROL_BOX: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  height: CONTROL_HEIGHT,
+  border: `1px solid ${TOKENS.border}`,
+  borderRadius: CONTROL_RADIUS,
+  background: TOKENS.surface1,
+  flexShrink: 0,
+};
+
+/**
+ * Один переюзаний presentation-primitive для "номер/SELECT-чипа" (§11: "one
+ * tiny presentation primitive... reuse for BOTH Package members and UNION
+ * SELECT members" — жодного нового domain-стану, лише спільний рендер).
+ * Delete-affordance (`codicon-close`) --- ЗАВЖДИ в DOM з `opacity:0`, тому
+ * hover/focus НІКОЛИ не змінює ширину чипа/не зсуває сусідів (explicit
+ * test scenario §13: "positions of 7 and 8 MUST NOT change").
+ */
+function NavMemberChip({
+  label,
+  title,
+  active,
+  onSelect,
+  onRemove,
+  removeTitle,
+  divider,
+  badge,
+}: {
+  label: string;
+  title?: string;
+  active: boolean;
+  onSelect: () => void;
+  onRemove?: () => void;
+  removeTitle?: string;
+  divider: boolean;
+  badge?: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <span
+      className="qcc-nav-chip"
+      style={{
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        height: '100%',
+        borderRight: divider ? `1px solid ${TOKENS.border}` : undefined,
+        background: active ? TOKENS.surfaceSelected : 'transparent',
+      }}
+    >
+      <button
+        type="button"
+        title={title}
+        onClick={onSelect}
+        disabled={active}
+        style={{
+          border: 'none',
+          background: 'transparent',
+          color: active ? TOKENS.accent : TOKENS.textSecondary,
+          fontWeight: active ? 700 : 400,
+          fontSize: 12,
+          cursor: active ? 'default' : 'pointer',
+          padding: onRemove ? '0 13px 0 7px' : '0 7px',
+          height: '100%',
+          minWidth: 22,
+        }}
+      >
+        {label}
+      </button>
+      {badge}
+      {onRemove && (
+        <button
+          type="button"
+          className="qcc-nav-chip-close"
+          title={removeTitle}
+          onClick={e => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          style={{
+            position: 'absolute',
+            right: 2,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            border: 'none',
+            background: TOKENS.surface2,
+            color: TOKENS.danger,
+            borderRadius: 3,
+            width: 15,
+            height: 15,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+            cursor: 'pointer',
+            outline: 'none',
+          }}
+        >
+          <span className="codicon codicon-close" style={{ fontSize: 9 }} />
+        </button>
+      )}
+    </span>
+  );
+}
+
+/**
+ * Спільний square "+"-control для Package Add і UNION Add (§3/§11 — той
+ * самий visual grammar, однакова висота з `NavMemberChip`/`CONTROL_BOX`).
+ */
+function NavAddButton({ title, onClick }: { title: string; onClick: () => void }): React.ReactElement {
+  return (
+    <button
+      type="button"
+      className="qcc-btn"
+      title={title}
+      onClick={onClick}
+      style={{
+        ...CONTROL_BOX,
+        width: CONTROL_HEIGHT,
+        justifyContent: 'center',
+        cursor: 'pointer',
+        color: TOKENS.accent,
+        fontSize: 14,
+        fontWeight: 600,
+        padding: 0,
+      }}
+    >
+      +
+    </button>
+  );
+}
+
+const COMPACT_NAV_BTN: React.CSSProperties = {
   border: 'none',
   background: 'transparent',
   cursor: 'pointer',
-  fontSize: 10,
-  padding: '0 2px',
-  color: TOKENS.danger,
-  lineHeight: 1,
+  fontSize: 11,
+  padding: '0 5px',
+  height: '100%',
+  color: TOKENS.textSecondary,
 };
 
 const UNION_KEYWORD_BTN: React.CSSProperties = {
@@ -188,55 +323,19 @@ const UNION_KEYWORD_BTN: React.CSSProperties = {
   fontSize: 10.5,
   fontWeight: 600,
   letterSpacing: 0.3,
-  padding: '2px 3px',
+  padding: '0 4px',
+  height: CONTROL_HEIGHT,
   // Design review (2026-09-19): раніше chartOrange — "кричало" на
   // користувача, ніби ОБ'ЄДНАТИ ВСЕ це команда, а не режим композиції.
-  // Нейтральний textSecondary + окремий muted label ("⑂ Об'єднання:")
-  // пояснює контекст, не привертаючи зайвої уваги; єдиний акцентний
-  // колір у стрічці — активний SELECT-чип (TOKENS.accent).
+  // Нейтральний textSecondary пояснює контекст, не привертаючи зайвої
+  // уваги; єдиний акцентний колір у стрічці — активний SELECT-чип
+  // (TOKENS.accent) і role-колір QueryIdentity.
   color: TOKENS.textSecondary,
   whiteSpace: 'nowrap',
-};
-
-const UNION_LABEL: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 4,
-  color: TOKENS.textMuted,
-  whiteSpace: 'nowrap',
-  flexShrink: 0,
-};
-
-/**
- * Design review (2026-09-19, polish pass): члени UNION навмисно виглядають
- * НЕ так, як пакетні `[n]` (bracket-text) — округлий chip з м'яким фоном на
- * активному стані відрізняє "SELECT у межах поточного запиту" від "запит
- * пакета", щоб користувач не плутав два різних виміри навігації.
- */
-const UNION_CHIP_ACTIVE: React.CSSProperties = {
-  border: 'none',
-  cursor: 'default',
-  fontSize: 11,
-  fontWeight: 600,
-  padding: '1px 6px',
-  borderRadius: 3,
-  background: TOKENS.surfaceSelected,
-  color: TOKENS.accent,
-};
-
-const UNION_CHIP_INACTIVE: React.CSSProperties = {
-  border: 'none',
-  background: 'transparent',
-  cursor: 'pointer',
-  fontSize: 11,
-  fontWeight: 400,
-  padding: '1px 6px',
-  borderRadius: 3,
-  color: TOKENS.textSecondary,
 };
 
 /** Кількість SELECT-чипів, показаних повністю inline, перш ніж стиснути в
- * компактний "SELECT n/total ‹ ›" режим (design review 2026-09-19). */
+ * компактний "n/total ‹ ›" режим (design review 2026-09-19). */
 const UNION_INLINE_LIMIT = 4;
 
 /**
@@ -250,7 +349,8 @@ const UNION_INLINE_LIMIT = 4;
 const PACKAGE_INLINE_LIMIT = 8;
 
 /** container-width пороги (§10 узгодженого прототипу, адаптовано під
- * container query замість viewport query — див. `useContainerWidth`). */
+ * container query замість viewport query — див. `useContainerWidth`).
+ * НЕ змінені цим presentation-only проходом (explicit §12 constraint). */
 const MEDIUM_MAX = 760;
 const NARROW_MAX = 480;
 
@@ -262,10 +362,13 @@ const NARROW_MAX = 480;
  * (раніше в PackagePanel) свідомо не перенесені сюди — окреме майбутнє
  * рішення, не Phase 3E scope.
  *
- * Redesign (2026-09-21): узгоджений прототип (PackageNav — Package/Query
- * identity/UNION як ОДНА система + responsive поведінка) реалізовано БЕЗ
- * зміни domain/reducer — див. коментарі нижче в кожній секції щодо того, що
- * саме презентаційне, а що лишається спільним з Phase 12.
+ * Redesign (2026-09-21, presentation-only pass): попередній прохід уже
+ * реалізував Package/QueryIdentity/UNION responsive поведінку правильно за
+ * функціоналом, але виглядало як "набір розрізнених кнопок" (explicit
+ * feedback). Цей прохід НЕ змінює жодної поведінки/reducer/domain --- лише
+ * візуальну "мову" контролів (`CONTROL_BOX`/`NavMemberChip`/`NavAddButton`,
+ * §1-11 узгодженого прототипу), щоб Package/Query/UNION читались як ОДНА
+ * IDE navigation surface.
  */
 export function PackageNav({
   locale,
@@ -316,15 +419,15 @@ export function PackageNav({
   const overflowRef = React.useRef<HTMLButtonElement>(null);
   const [overflowAnchor, setOverflowAnchor] = React.useState<QueryIdentityAnchor | null>(null);
 
-  const identityMaxWidth = isNarrow ? 110 : 220;
+  const identityMaxWidth = isNarrow ? 100 : 200;
   const accent = roleAccent(queryType);
 
   return (
     <div style={{ minWidth: 0 }}>
       <div ref={barRef} style={BAR_STYLE}>
         <span style={GROUP_LABEL} title={t(locale, 'packageConceptTooltip')}>
-          <span className="codicon codicon-package" style={{ fontSize: 12 }} />
-          {!isNarrow && `${t(locale, 'sidebarPackage')}:`}
+          <span className="codicon codicon-package" style={{ fontSize: 13 }} />
+          {!isNarrow && t(locale, 'sidebarPackage')}
         </span>
 
         <PackageSwitcher
@@ -350,19 +453,18 @@ export function PackageNav({
             setIdentityAnchor(rect ? { top: rect.bottom + 4, left: rect.left } : { top: 40, left: 8 });
           }}
           style={{
-            border: 'none',
-            background: 'transparent',
+            ...CONTROL_BOX,
             cursor: 'pointer',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-            flex: '0 1 auto',
+            gap: 6,
+            padding: queryType === 'select' ? '0 8px' : '2px 8px',
             minWidth: 0,
-            margin: '0 2px',
-            padding: '1px 3px',
-            borderRadius: 3,
+            flex: '0 1 auto',
           }}
         >
+          <span
+            className={`codicon codicon-${roleIcon(queryType)}`}
+            style={{ fontSize: 12, color: accent ?? TOKENS.textMuted, flexShrink: 0 }}
+          />
           {queryType === 'select' ? (
             <span
               title={activeName}
@@ -371,18 +473,17 @@ export function PackageNav({
               {activeName} ▾
             </span>
           ) : (
-            <>
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0, lineHeight: 1.25 }}>
               <span
                 title={tempTableName || activeName}
-                style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: identityMaxWidth, color: TOKENS.text, fontWeight: 600, lineHeight: 1.3 }}
+                style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: identityMaxWidth, color: TOKENS.text, fontWeight: 600 }}
               >
                 {tempTableName || activeName}
               </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: accent, fontWeight: 500, fontSize: 10.5, lineHeight: 1.3 }}>
-                <span className={`codicon codicon-${roleIcon(queryType)}`} style={{ fontSize: 10 }} />
+              <span style={{ color: accent, fontWeight: 500, fontSize: 10 }}>
                 {t(locale, queryType === 'createTemp' ? 'packageIdentityRoleCreates' : queryType === 'appendTemp' ? 'packageIdentityRoleAppends' : 'packageIdentityRoleDrops')} ▾
               </span>
-            </>
+            </span>
           )}
         </button>
         {identityAnchor && (
@@ -403,6 +504,7 @@ export function PackageNav({
           onFirstUnionCreated={() => setShowUnionHint(true)}
           compact={state.queryList.length > UNION_INLINE_LIMIT || isMedium || isNarrow}
           showAdd={!isNarrow}
+          narrow={isNarrow}
         />
 
         {isNarrow && (
@@ -417,9 +519,9 @@ export function PackageNav({
                 const rect = overflowRef.current?.getBoundingClientRect();
                 setOverflowAnchor(rect ? { top: rect.bottom + 4, left: Math.max(8, rect.right - 220) } : { top: 40, left: 8 });
               }}
-              style={{ ...NUMBER_BTN, flexShrink: 0 }}
+              style={{ ...CONTROL_BOX, width: CONTROL_HEIGHT, justifyContent: 'center', cursor: 'pointer', padding: 0 }}
             >
-              <span className="codicon codicon-ellipsis" />
+              <span className="codicon codicon-ellipsis" style={{ fontSize: 13 }} />
             </button>
             {overflowAnchor && (
               <PackageNavOverflowMenu
@@ -467,10 +569,10 @@ export function PackageNav({
  * Redesign (2026-09-21): package-level navigation, винесена з тіла
  * `PackageNav` — той самий `assembleBatch`/`SET_ACTIVE_BATCH`/
  * `ADD_BATCH_QUERY`/`REMOVE_BATCH_QUERY`, жодних нових actions. Два режими:
- * inline (усі номери, як і раніше — до `PACKAGE_INLINE_LIMIT`/wide viewport)
- * і compact (`n/total ‹ ›`, той самий паттерн, що вже давно має
- * `UnionStrip` для SELECT-членів — свідомо ОДНАКОВА interaction grammar,
- * щоб Package і UNION відчувались частинами однієї системи).
+ * inline (сегментована група `NavMemberChip` — до `PACKAGE_INLINE_LIMIT`/
+ * wide container) і compact (`n/total ‹ ›` у тому самому `CONTROL_BOX`, що й
+ * UNION-версія нижче — свідомо ОДНАКОВА interaction grammar, щоб Package і
+ * UNION відчувались частинами однієї системи, §6/§11).
  */
 function PackageSwitcher({
   locale,
@@ -495,76 +597,47 @@ function PackageSwitcher({
 }): React.ReactElement {
   const active = state.activeBatch;
 
+  function continuityBadge(i: number, relations: PackageTempTableRelation[] | undefined): React.ReactElement | undefined {
+    if (!relations) return undefined;
+    return (
+      <span
+        tabIndex={0}
+        className="codicon codicon-database"
+        title={tempTableTooltip(locale, relations)}
+        onMouseEnter={() => setHighlightedMembers(relatedMemberIndices(i, relations))}
+        onMouseLeave={() => setHighlightedMembers(null)}
+        onFocus={() => setHighlightedMembers(relatedMemberIndices(i, relations))}
+        onBlur={() => setHighlightedMembers(null)}
+        style={{ fontSize: 9, color: TOKENS.textMuted, cursor: 'default', paddingRight: 4, outline: 'none' }}
+      />
+    );
+  }
+
   if (!compact) {
     return (
       <>
-        {Array.from({ length: batchCount }, (_, i) => {
-          const isActive = i === active;
-          const relations = continuity.get(i);
-          const highlighted = highlightedMembers?.has(i) ?? false;
-          return (
-            <span
-              key={i}
-              className="qcc-union-chip"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                borderRadius: 3,
-                boxShadow: highlighted ? `inset 0 -2px 0 0 ${TOKENS.accent}` : undefined,
-              }}
-            >
-              <button
-                type="button"
-                className="qcc-btn"
-                title={batchMemberName(state, i)}
-                onClick={() => {
-                  if (!isActive) dispatch({ type: 'SET_ACTIVE_BATCH', index: i });
-                }}
-                style={{
-                  ...NUMBER_BTN,
-                  color: isActive ? TOKENS.accent : TOKENS.textSecondary,
-                  fontWeight: isActive ? 700 : 400,
-                }}
-              >
-                {isActive ? `[${i + 1}]` : `${i + 1}`}
-              </button>
-              {relations && (
-                <span
-                  tabIndex={0}
-                  className="codicon codicon-database"
-                  title={tempTableTooltip(locale, relations)}
-                  onMouseEnter={() => setHighlightedMembers(relatedMemberIndices(i, relations))}
-                  onMouseLeave={() => setHighlightedMembers(null)}
-                  onFocus={() => setHighlightedMembers(relatedMemberIndices(i, relations))}
-                  onBlur={() => setHighlightedMembers(null)}
-                  style={{ fontSize: 10, color: TOKENS.textMuted, cursor: 'default', padding: '0 1px', outline: 'none' }}
+        <span style={{ ...CONTROL_BOX, overflow: 'hidden' }}>
+          {Array.from({ length: batchCount }, (_, i) => {
+            const isActive = i === active;
+            const relations = continuity.get(i);
+            const highlighted = highlightedMembers?.has(i) ?? false;
+            return (
+              <span key={i} style={{ position: 'relative', height: '100%', boxShadow: highlighted ? `inset 0 -2px 0 0 ${TOKENS.accent}` : undefined }}>
+                <NavMemberChip
+                  label={`${i + 1}`}
+                  title={batchMemberName(state, i)}
+                  active={isActive}
+                  onSelect={() => dispatch({ type: 'SET_ACTIVE_BATCH', index: i })}
+                  onRemove={batchCount > 1 ? () => dispatch({ type: 'REMOVE_BATCH_QUERY', index: i }) : undefined}
+                  removeTitle={`${t(locale, 'packageRemove')} ${i + 1}`}
+                  divider={i < batchCount - 1}
+                  badge={continuityBadge(i, relations)}
                 />
-              )}
-              {batchCount > 1 && (
-                <button
-                  type="button"
-                  className="qcc-union-remove"
-                  title={`${t(locale, 'packageRemove')} ${i + 1}`}
-                  onClick={() => dispatch({ type: 'REMOVE_BATCH_QUERY', index: i })}
-                  style={REMOVE_ICON_BTN}
-                >
-                  <span className="codicon codicon-trash" />
-                </button>
-              )}
-            </span>
-          );
-        })}
-        {showAdd && (
-          <button
-            type="button"
-            className="qcc-btn"
-            title={t(locale, 'packageAddQuery')}
-            onClick={() => dispatch({ type: 'ADD_BATCH_QUERY' })}
-            style={ADD_BTN}
-          >
-            +
-          </button>
-        )}
+              </span>
+            );
+          })}
+        </span>
+        {showAdd && <NavAddButton title={t(locale, 'packageAddQuery')} onClick={() => dispatch({ type: 'ADD_BATCH_QUERY' })} />}
       </>
     );
   }
@@ -573,18 +646,18 @@ function PackageSwitcher({
   const highlighted = highlightedMembers !== null && highlightedMembers.size > 0;
   return (
     <>
-      <span className="qcc-union-chip" style={{ display: 'flex', alignItems: 'center', gap: 2, boxShadow: highlighted ? `inset 0 -2px 0 0 ${TOKENS.accent}` : undefined }}>
+      <span className="qcc-nav-chip" style={{ ...CONTROL_BOX, gap: 2, padding: '0 2px', boxShadow: highlighted ? `inset 0 -2px 0 0 ${TOKENS.accent}` : undefined }}>
         <button
           type="button"
           className="qcc-btn"
           title={t(locale, 'packageUnionPrev')}
           disabled={active === 0}
           onClick={() => dispatch({ type: 'SET_ACTIVE_BATCH', index: active - 1 })}
-          style={{ ...NUMBER_BTN, opacity: active === 0 ? 0.4 : 1 }}
+          style={{ ...COMPACT_NAV_BTN, opacity: active === 0 ? 0.4 : 1 }}
         >
           ‹
         </button>
-        <span style={{ color: TOKENS.text, fontWeight: 600, whiteSpace: 'nowrap' }} title={batchMemberName(state, active)}>
+        <span style={{ color: TOKENS.text, fontWeight: 600, whiteSpace: 'nowrap', fontSize: 12 }} title={batchMemberName(state, active)}>
           {active + 1}/{batchCount}
         </span>
         <button
@@ -593,45 +666,24 @@ function PackageSwitcher({
           title={t(locale, 'packageUnionNext')}
           disabled={active === batchCount - 1}
           onClick={() => dispatch({ type: 'SET_ACTIVE_BATCH', index: active + 1 })}
-          style={{ ...NUMBER_BTN, opacity: active === batchCount - 1 ? 0.4 : 1 }}
+          style={{ ...COMPACT_NAV_BTN, opacity: active === batchCount - 1 ? 0.4 : 1 }}
         >
           ›
         </button>
-        {relations && (
-          <span
-            tabIndex={0}
-            className="codicon codicon-database"
-            title={tempTableTooltip(locale, relations)}
-            onMouseEnter={() => setHighlightedMembers(relatedMemberIndices(active, relations))}
-            onMouseLeave={() => setHighlightedMembers(null)}
-            onFocus={() => setHighlightedMembers(relatedMemberIndices(active, relations))}
-            onBlur={() => setHighlightedMembers(null)}
-            style={{ fontSize: 10, color: TOKENS.textMuted, cursor: 'default', padding: '0 1px', outline: 'none' }}
-          />
-        )}
+        {continuityBadge(active, relations)}
         {batchCount > 1 && (
           <button
             type="button"
-            className="qcc-union-remove"
+            className="qcc-nav-chip-close"
             title={`${t(locale, 'packageRemove')} ${active + 1}`}
             onClick={() => dispatch({ type: 'REMOVE_BATCH_QUERY', index: active })}
-            style={REMOVE_ICON_BTN}
+            style={{ border: 'none', background: 'transparent', color: TOKENS.danger, cursor: 'pointer', fontSize: 11, padding: '0 4px', height: '100%', display: 'flex', alignItems: 'center' }}
           >
-            <span className="codicon codicon-trash" />
+            <span className="codicon codicon-close" />
           </button>
         )}
       </span>
-      {showAdd && (
-        <button
-          type="button"
-          className="qcc-btn"
-          title={t(locale, 'packageAddQuery')}
-          onClick={() => dispatch({ type: 'ADD_BATCH_QUERY' })}
-          style={ADD_BTN}
-        >
-          +
-        </button>
-      )}
+      {showAdd && <NavAddButton title={t(locale, 'packageAddQuery')} onClick={() => dispatch({ type: 'ADD_BATCH_QUERY' })} />}
     </>
   );
 }
@@ -727,23 +779,21 @@ function PackageNavOverflowMenu({
 }
 
 /**
- * Design review (2026-09-19): УНІВЕРСАЛЬНИЙ інструмент "об'єднання
- * запитів" (ОБЪЕДИНИТЬ/ОБЪЕДИНИТЬ ВСЕ, `QueryState.queryList`/
- * `activeQuery` — той самий домен, що вже давно працює в Classic
- * `UnionsTab.tsx`/`ADD_QUERY`/`REMOVE_QUERY`/`SET_ACTIVE_QUERY`/
- * `SET_QUERY_DISTINCT`, жодних нових reducer actions) навмисно НЕ отримав
- * окремої вкладки чи persistent-стрічки — за прямим запитом користувача
- * вбудований у ЦЕЙ САМИЙ рядок PackageNav, щоб не додавати висоти.
- * `queryList`/`activeQuery` — per-active-batch-member state (входить у
- * snapshot `batchSaved`, як і `selectedFields`/`conditions`/...), тому
- * коректно перемикається разом із пакетом.
+ * Design review (2026-09-19, redesigned 2026-09-21): УНІВЕРСАЛЬНИЙ
+ * інструмент "об'єднання запитів" (ОБЪЕДИНИТЬ/ОБЪЕДИНИТЬ ВСЕ,
+ * `QueryState.queryList`/`activeQuery` — той самий домен, що вже давно
+ * працює в Classic `UnionsTab.tsx`/`ADD_QUERY`/`REMOVE_QUERY`/
+ * `SET_ACTIVE_QUERY`/`SET_QUERY_DISTINCT`, жодних нових reducer actions)
+ * навмисно НЕ отримав окремої вкладки чи persistent-стрічки — вбудований у
+ * ЦЕЙ САМИЙ рядок PackageNav.
  *
- * Коли union ще немає (queryList.length<=1) — лише тиха "+ Об'єднання"
- * текстова кнопка, без жодного додаткового шуму для звичайного запиту.
- * Коли є 2-4 SELECT (і достатньо широкий контейнер) — показані повністю
- * inline: `[1] — UNION — [2] +`. Понад {@link UNION_INLINE_LIMIT} АБО на
- * medium/narrow container width (redesign 2026-09-21, `compact` prop від
- * `PackageNav`) — стиснуто в `n/total ‹ ›`.
+ * Коли union ще немає (queryList.length<=1) — компактна secondary-дія
+ * (merge-іконка + текст у тому самому `CONTROL_BOX`, §7 explicit
+ * requirement "not a large disabled-looking grey text"). Коли є 2-4 SELECT
+ * (і достатньо широкий контейнер) — сегментована група `NavMemberChip`,
+ * той самий primitive, що й Package. Понад {@link UNION_INLINE_LIMIT} АБО
+ * на medium/narrow container width (`compact` prop від `PackageNav`) —
+ * стиснуто в `n/total ‹ ›`.
  *
  * Ключове слово між чипами i-1 та i визначається `queryList[i].distinct`
  * (те саме, що генератор читає в `generateDocument`: true → ОБЪЕДИНИТЬ,
@@ -756,6 +806,7 @@ function UnionStrip({
   onFirstUnionCreated,
   compact,
   showAdd,
+  narrow,
 }: {
   locale: SupportedLocale;
   state: QueryState;
@@ -763,6 +814,7 @@ function UnionStrip({
   onFirstUnionCreated: () => void;
   compact: boolean;
   showAdd: boolean;
+  narrow: boolean;
 }): React.ReactElement {
   const queryList = state.queryList;
 
@@ -776,27 +828,35 @@ function UnionStrip({
           dispatch({ type: 'ADD_QUERY' });
           onFirstUnionCreated();
         }}
-        style={{ ...NUMBER_BTN, flexShrink: 0, color: TOKENS.textMuted }}
+        style={{ ...CONTROL_BOX, gap: 5, padding: '0 8px', cursor: 'pointer', color: TOKENS.textSecondary, flexShrink: 0 }}
       >
-        {t(locale, 'packageAddUnion')}
+        <span className="codicon codicon-git-merge" style={{ fontSize: 12 }} />
+        {!narrow && t(locale, 'packageAddUnion')}
       </button>
     );
   }
 
   const [showMapping, setShowMapping] = React.useState(false);
 
-  const unionLabel = (
-    <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-      <span style={UNION_LABEL} title={t(locale, 'packageUnionLabelTooltip')}>
-        <span className="codicon codicon-git-merge" style={{ fontSize: 12 }} />
-        {t(locale, 'packageUnionLabel')}
-      </span>
+  // Visual QA (2026-09-21): на вузькому container width повний label
+  // ("⑂ Об'єднання" + mapping-кнопка) разом з bordered-контролами (важче за
+  // старий plain-текст на тому самому breakpoint) виштовхував "⋯" overflow
+  // trigger за межі видимої області (`overflow:hidden` на BAR_STYLE просто
+  // відрізав його, а не переносив на новий рядок) --- лишаємо тут ЛИШЕ
+  // merge-іконку без тексту/mapping-кнопки; сам mapping лишається
+  // доступним на wide/medium.
+  const unionLabel = narrow ? (
+    <span className="codicon codicon-git-merge" style={{ fontSize: 12, color: TOKENS.textMuted, flexShrink: 0 }} title={t(locale, 'packageUnionLabelTooltip')} />
+  ) : (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0, color: TOKENS.textMuted }} title={t(locale, 'packageUnionLabelTooltip')}>
+      <span className="codicon codicon-git-merge" style={{ fontSize: 12, marginRight: 3 }} />
+      {t(locale, 'packageUnionLabel')}
       <button
         type="button"
         className="qcc-btn"
         title={t(locale, 'packageUnionMappingButton')}
         onClick={() => setShowMapping(true)}
-        style={{ ...NUMBER_BTN, padding: '2px 3px' }}
+        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: TOKENS.textSecondary, padding: '0 3px', height: CONTROL_HEIGHT, display: 'flex', alignItems: 'center' }}
       >
         <span className="codicon codicon-list-flat" style={{ fontSize: 12 }} />
       </button>
@@ -812,30 +872,32 @@ function UnionStrip({
     return (
       <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
         {unionLabel}
-        <button
-          type="button"
-          className="qcc-btn"
-          title={t(locale, 'packageUnionPrev')}
-          disabled={active === 0}
-          onClick={() => dispatch({ type: 'SET_ACTIVE_QUERY', index: active - 1 })}
-          style={{ ...NUMBER_BTN, opacity: active === 0 ? 0.4 : 1 }}
-        >
-          ‹
-        </button>
-        <span style={{ color: TOKENS.text, fontWeight: 600, whiteSpace: 'nowrap' }}>
-          {active + 1}/{queryList.length}
+        <span style={{ ...CONTROL_BOX, gap: 2, padding: '0 2px' }}>
+          <button
+            type="button"
+            className="qcc-btn"
+            title={t(locale, 'packageUnionPrev')}
+            disabled={active === 0}
+            onClick={() => dispatch({ type: 'SET_ACTIVE_QUERY', index: active - 1 })}
+            style={{ ...COMPACT_NAV_BTN, opacity: active === 0 ? 0.4 : 1 }}
+          >
+            ‹
+          </button>
+          <span style={{ color: TOKENS.text, fontWeight: 600, whiteSpace: 'nowrap', fontSize: 12 }}>
+            {active + 1}/{queryList.length}
+          </span>
+          <button
+            type="button"
+            className="qcc-btn"
+            title={t(locale, 'packageUnionNext')}
+            disabled={active === queryList.length - 1}
+            onClick={() => dispatch({ type: 'SET_ACTIVE_QUERY', index: active + 1 })}
+            style={{ ...COMPACT_NAV_BTN, opacity: active === queryList.length - 1 ? 0.4 : 1 }}
+          >
+            ›
+          </button>
         </span>
-        <button
-          type="button"
-          className="qcc-btn"
-          title={t(locale, 'packageUnionNext')}
-          disabled={active === queryList.length - 1}
-          onClick={() => dispatch({ type: 'SET_ACTIVE_QUERY', index: active + 1 })}
-          style={{ ...NUMBER_BTN, opacity: active === queryList.length - 1 ? 0.4 : 1 }}
-        >
-          ›
-        </button>
-        {keywordLabel && (
+        {!narrow && keywordLabel && (
           <button
             type="button"
             className="qcc-btn"
@@ -846,23 +908,13 @@ function UnionStrip({
             {keywordLabel} ▾
           </button>
         )}
-        {showAdd && (
-          <button
-            type="button"
-            className="qcc-btn"
-            title={t(locale, 'packageUnionAdd')}
-            onClick={() => dispatch({ type: 'ADD_QUERY' })}
-            style={ADD_BTN}
-          >
-            +
-          </button>
-        )}
+        {showAdd && <NavAddButton title={t(locale, 'packageUnionAdd')} onClick={() => dispatch({ type: 'ADD_QUERY' })} />}
       </span>
     );
   }
 
   return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+    <span style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
       {unionLabel}
       {queryList.map((q, i) => {
         const active = i === state.activeQuery;
@@ -879,41 +931,27 @@ function UnionStrip({
                 {q.distinct ? t(locale, 'packageUnionKeywordDistinct') : t(locale, 'packageUnionKeywordAll')} ▾
               </button>
             )}
-            <span className="qcc-union-chip" style={{ display: 'flex', alignItems: 'center' }}>
-              <button
-                type="button"
+            {/* Кожен SELECT-чип — власний `CONTROL_BOX` (не одна суцільна
+                сегментована смуга, як у Package): між чипами завжди сидить
+                UNION/UNION ALL keyword-текст, тож "одна нерозривна група"
+                тут візуально не має сенсу — окремі бокси того самого
+                border/radius/height "мовою" читаються як частина ОДНІЄЇ
+                системи контролів без штучного злиття. */}
+            <span style={{ ...CONTROL_BOX, overflow: 'hidden' }}>
+              <NavMemberChip
+                label={`${i + 1}`}
                 title={active ? q.name : `${t(locale, 'packageUnionGoToPrefix')} ${i + 1}`}
-                onClick={() => {
-                  if (!active) dispatch({ type: 'SET_ACTIVE_QUERY', index: i });
-                }}
-                style={active ? UNION_CHIP_ACTIVE : UNION_CHIP_INACTIVE}
-              >
-                {i + 1}
-              </button>
-              <button
-                type="button"
-                className="qcc-union-remove"
-                title={t(locale, 'packageUnionRemove')}
-                onClick={() => dispatch({ type: 'REMOVE_QUERY', index: i })}
-                style={REMOVE_ICON_BTN}
-              >
-                <span className="codicon codicon-trash" />
-              </button>
+                active={active}
+                onSelect={() => dispatch({ type: 'SET_ACTIVE_QUERY', index: i })}
+                onRemove={() => dispatch({ type: 'REMOVE_QUERY', index: i })}
+                removeTitle={t(locale, 'packageUnionRemove')}
+                divider={false}
+              />
             </span>
           </React.Fragment>
         );
       })}
-      {showAdd && (
-        <button
-          type="button"
-          className="qcc-btn"
-          title={t(locale, 'packageUnionAdd')}
-          onClick={() => dispatch({ type: 'ADD_QUERY' })}
-          style={ADD_BTN}
-        >
-          +
-        </button>
-      )}
+      {showAdd && <NavAddButton title={t(locale, 'packageUnionAdd')} onClick={() => dispatch({ type: 'ADD_QUERY' })} />}
     </span>
   );
 }

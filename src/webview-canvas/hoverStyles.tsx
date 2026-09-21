@@ -123,6 +123,21 @@ const CSS = `
 .qcc-union-chip:hover .qcc-union-remove {
   opacity: 1;
 }
+
+/* PackageNav redesign (2026-09-21): NavMemberChip's delete affordance --
+   ALWAYS present in the DOM (never conditionally mounted) so hover/focus
+   never changes the chip's width and never shifts sibling numbers. Same
+   reveal-on-hover technique as .qcc-union-remove above, new class because
+   the container here is the chip itself (.qcc-nav-chip), not a shared
+   wrapper spanning multiple chips. */
+.qcc-nav-chip-close {
+  opacity: 0;
+  transition: opacity 120ms;
+}
+.qcc-nav-chip:hover .qcc-nav-chip-close,
+.qcc-nav-chip-close:focus {
+  opacity: 1;
+}
 `;
 
 export function HoverStyles(): React.ReactElement {
