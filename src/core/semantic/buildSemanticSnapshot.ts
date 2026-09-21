@@ -85,13 +85,13 @@ export function buildSemanticSnapshotFromText(
     // falls through to the recovery attempt below
   }
 
-  const repairedText = repairSelectListsForRecovery(sourceText);
-  if (repairedText !== undefined) {
-    try {
+  try {
+    const repairedText = repairSelectListsForRecovery(sourceText);
+    if (repairedText !== undefined) {
       return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, parseBatch(repairedText, resolver), 'recovered'));
-    } catch {
-      // repair itself wasn't enough — fall through to 'unavailable'
     }
+  } catch {
+    // repair itself wasn't enough — fall through to 'unavailable'
   }
 
   return createSemanticSnapshot(documentVersion, sourceText, EMPTY_BATCH, 'unavailable');
