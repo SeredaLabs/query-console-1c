@@ -132,11 +132,19 @@ const CSS = `
    wrapper spanning multiple chips. */
 .qcc-nav-chip-close {
   opacity: 0;
+  /* Bug fix (2026-09-21, round 2 visual QA): opacity:0 alone does NOT
+     remove an element from hit-testing --- the invisible close button was
+     silently intercepting clicks meant for the chip's own select button
+     underneath/beside it (found live: clicking a package number kept
+     deleting it instead of selecting it). pointer-events: none at rest,
+     re-enabled only once actually revealed. */
+  pointer-events: none;
   transition: opacity 120ms;
 }
 .qcc-nav-chip:hover .qcc-nav-chip-close,
 .qcc-nav-chip-close:focus {
   opacity: 1;
+  pointer-events: auto;
 }
 `;
 

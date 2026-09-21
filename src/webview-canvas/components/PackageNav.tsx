@@ -94,10 +94,22 @@ function roleAccent(queryType: 'select' | 'createTemp' | 'appendTemp' | 'dropTem
   }
 }
 
-function roleIcon(queryType: 'select' | 'createTemp' | 'appendTemp' | 'dropTemp'): string {
-  if (queryType === 'dropTemp') return 'trash';
-  if (queryType === 'select') return 'file';
-  return 'database';
+/**
+ * Visual polish (2026-09-21, round 2): package-member marker перейшов з
+ * окремої `codicon-database` іконки на маленьку top-right status dot —
+ * та сама `PackageTempTableRelation[]` (`derivePackageTempTableContinuity`),
+ * жодної нової логіки, лише інший спосіб її показати. Dot належить ЛИШЕ
+ * PRODUCER-ролі цього конкретного члена (creates/appends/drops) --- член,
+ * що ЛИШЕ споживає (`consumes`) чужу ВТ, дота не отримує (explicit
+ * design decision: "consumer SELECT залишається без dot" --- маркер
+ * позначає операцію НАД ВТ, а не факт читання).
+ */
+function memberDotColor(relations: PackageTempTableRelation[] | undefined): string | undefined {
+  if (!relations) return undefined;
+  if (relations.some(r => r.role === 'creates')) return TOKENS.success;
+  if (relations.some(r => r.role === 'appends')) return TOKENS.warning;
+  if (relations.some(r => r.role === 'drops')) return TOKENS.danger;
+  return undefined;
 }
 
 /**
@@ -155,7 +167,12 @@ const BAR_STYLE: React.CSSProperties = {
 
 /** Тонкий вертикальний роздільник між трьома концептуальними зонами
  * (Package / Query identity / UNION) — subtle, не "порожній" gap. */
-const NAV_DIVIDER: React.CSSProperties = { width: 1, height: 16, background: TOKENS.border, margin: '0 4px', flexShrink: 0 };
+/** Visual polish (2026-09-21, round 2): слабший і коротший, ніж раніше —
+ * тепер, коли Package/Identity/UNION самі bordered, три виразні `|` поруч
+ * читались як зайвий "паркан" (§12 explicit feedback). `borderSubtle` (той
+ * самий приглушений indent-guide токен, що вже використовує канва) замість
+ * повного `border`. */
+const NAV_DIVIDER: React.CSSProperties = { width: 1, height: 12, background: TOKENS.borderSubtle, margin: '0 2px', flexShrink: 0 };
 
 const GROUP_LABEL: React.CSSProperties = {
   display: 'flex',
@@ -201,7 +218,7 @@ function NavMemberChip({
   onRemove,
   removeTitle,
   divider,
-  badge,
+  dot,
 }: {
   label: string;
   title?: string;
@@ -210,7 +227,7 @@ function NavMemberChip({
   onRemove?: () => void;
   removeTitle?: string;
   divider: boolean;
-  badge?: React.ReactNode;
+  dot?: React.ReactNode;
 }): React.ReactElement {
   return (
     <span
@@ -236,14 +253,27 @@ function NavMemberChip({
           fontWeight: active ? 700 : 400,
           fontSize: 12,
           cursor: active ? 'default' : 'pointer',
-          padding: onRemove ? '0 13px 0 7px' : '0 7px',
+          padding: '0 7px',
           height: '100%',
           minWidth: 22,
         }}
       >
         {label}
       </button>
-      {badge}
+      {/* Bug fix (2026-09-21, round 2 visual QA): раніше reserved-простір
+          для × був padding-right НА самій number-кнопці, тож геометричний
+          центр кнопки (куди клікають автоматизовані інструменти й trackpad
+          "клік по центру") опинявся впритул до invisible close-зони —
+          flaky клік іноді "потрапляв" у видалення замість вибору. Тепер
+          reserved-простір --- окремий непроклікуваний spacer ПІСЛЯ кнопки
+          (у звичайному flow), а не її власний padding: кнопка залишається
+          вузькою навколо тексту, close сидить лише над spacer'ом. */}
+      {onRemove && <span aria-hidden style={{ width: 13, flexShrink: 0 }} />}
+      {dot && (
+        <span style={{ position: 'absolute', top: 1, right: 1, pointerEvents: 'none' }}>
+          {dot}
+        </span>
+      )}
       {onRemove && (
         <button
           type="button"
@@ -447,7 +477,11 @@ export function PackageNav({
           ref={identityRef}
           type="button"
           className="qcc-btn"
-          title={t(locale, 'queryIdentityOpenTitle')}
+          title={
+            queryType === 'select'
+              ? activeName
+              : `${t(locale, queryType === 'createTemp' ? 'packageIdentityRoleCreates' : queryType === 'appendTemp' ? 'packageIdentityRoleAppends' : 'packageIdentityRoleDrops')} ${tempTableName || activeName}`
+          }
           onClick={() => {
             const rect = identityRef.current?.getBoundingClientRect();
             setIdentityAnchor(rect ? { top: rect.bottom + 4, left: rect.left } : { top: 40, left: 8 });
@@ -456,35 +490,39 @@ export function PackageNav({
             ...CONTROL_BOX,
             cursor: 'pointer',
             gap: 6,
-            padding: queryType === 'select' ? '0 8px' : '2px 8px',
+            padding: '0 8px',
             minWidth: 0,
             flex: '0 1 auto',
           }}
         >
           <span
-            className={`codicon codicon-${roleIcon(queryType)}`}
-            style={{ fontSize: 12, color: accent ?? TOKENS.textMuted, flexShrink: 0 }}
-          />
-          {queryType === 'select' ? (
+            style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: identityMaxWidth, color: TOKENS.text, fontWeight: 600 }}
+          >
+            {queryType === 'select' ? activeName : (tempTableName || activeName)}
+          </span>
+          {/* Visual polish (2026-09-21, round 2): database-іконка + другий
+              рядок з дієсловом ("Створює ВТ") прибрані (§3/§4 explicit
+              feedback: "занадто важко і дублює інформацію") --- тип операції
+              тепер передається ЛИШЕ кольором маленького "ВТ" badge (та сама
+              `roleAccent`), popover (клік) і `title` цієї кнопки лишаються
+              повним текстовим джерелом семантики для accessibility (§15). */}
+          {queryType !== 'select' && (
             <span
-              title={activeName}
-              style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: identityMaxWidth, color: TOKENS.text, fontWeight: 600 }}
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                lineHeight: 1,
+                padding: '2px 4px',
+                borderRadius: 3,
+                color: accent,
+                background: accent ? `color-mix(in srgb, ${accent} 18%, transparent)` : undefined,
+                flexShrink: 0,
+              }}
             >
-              {activeName} ▾
-            </span>
-          ) : (
-            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0, lineHeight: 1.25 }}>
-              <span
-                title={tempTableName || activeName}
-                style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: identityMaxWidth, color: TOKENS.text, fontWeight: 600 }}
-              >
-                {tempTableName || activeName}
-              </span>
-              <span style={{ color: accent, fontWeight: 500, fontSize: 10 }}>
-                {t(locale, queryType === 'createTemp' ? 'packageIdentityRoleCreates' : queryType === 'appendTemp' ? 'packageIdentityRoleAppends' : 'packageIdentityRoleDrops')} ▾
-              </span>
+              {t(locale, 'queryIdentityTempBadge')}
             </span>
           )}
+          <span style={{ color: TOKENS.textMuted, flexShrink: 0 }}>▾</span>
         </button>
         {identityAnchor && (
           <QueryIdentityPopover
@@ -597,18 +635,37 @@ function PackageSwitcher({
 }): React.ReactElement {
   const active = state.activeBatch;
 
-  function continuityBadge(i: number, relations: PackageTempTableRelation[] | undefined): React.ReactElement | undefined {
-    if (!relations) return undefined;
+  /**
+   * Visual polish (2026-09-21, round 2): status dot замість окремої
+   * `codicon-database` іконки --- accessible через `tabIndex`+`title` (§15:
+   * колір ЛИШЕ shortcut, повна операція+ім'я ВТ завжди в tooltip через
+   * `tempTableTooltip`, той самий hover/focus highlight-механізм для
+   * пов'язаних package-членів, що й раніше).
+   */
+  function memberDot(i: number, relations: PackageTempTableRelation[] | undefined, outside: boolean): React.ReactElement | undefined {
+    const color = memberDotColor(relations);
+    if (!color || !relations) return undefined;
     return (
       <span
         tabIndex={0}
-        className="codicon codicon-database"
+        role="img"
+        aria-label={tempTableTooltip(locale, relations)}
         title={tempTableTooltip(locale, relations)}
         onMouseEnter={() => setHighlightedMembers(relatedMemberIndices(i, relations))}
         onMouseLeave={() => setHighlightedMembers(null)}
         onFocus={() => setHighlightedMembers(relatedMemberIndices(i, relations))}
         onBlur={() => setHighlightedMembers(null)}
-        style={{ fontSize: 9, color: TOKENS.textMuted, cursor: 'default', paddingRight: 4, outline: 'none' }}
+        style={{
+          display: 'block',
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          background: color,
+          cursor: 'default',
+          outline: 'none',
+          pointerEvents: 'auto',
+          ...(outside ? { position: 'absolute', top: -2, right: -2 } : {}),
+        }}
       />
     );
   }
@@ -631,7 +688,7 @@ function PackageSwitcher({
                   onRemove={batchCount > 1 ? () => dispatch({ type: 'REMOVE_BATCH_QUERY', index: i }) : undefined}
                   removeTitle={`${t(locale, 'packageRemove')} ${i + 1}`}
                   divider={i < batchCount - 1}
-                  badge={continuityBadge(i, relations)}
+                  dot={memberDot(i, relations, false)}
                 />
               </span>
             );
@@ -646,7 +703,7 @@ function PackageSwitcher({
   const highlighted = highlightedMembers !== null && highlightedMembers.size > 0;
   return (
     <>
-      <span className="qcc-nav-chip" style={{ ...CONTROL_BOX, gap: 2, padding: '0 2px', boxShadow: highlighted ? `inset 0 -2px 0 0 ${TOKENS.accent}` : undefined }}>
+      <span className="qcc-nav-chip" style={{ ...CONTROL_BOX, position: 'relative', gap: 2, padding: batchCount > 1 ? '0 15px 0 2px' : '0 2px', boxShadow: highlighted ? `inset 0 -2px 0 0 ${TOKENS.accent}` : undefined }}>
         <button
           type="button"
           className="qcc-btn"
@@ -670,7 +727,7 @@ function PackageSwitcher({
         >
           ›
         </button>
-        {continuityBadge(active, relations)}
+        {memberDot(active, relations, true)}
         {batchCount > 1 && (
           <button
             type="button"
@@ -856,9 +913,9 @@ function UnionStrip({
         className="qcc-btn"
         title={t(locale, 'packageUnionMappingButton')}
         onClick={() => setShowMapping(true)}
-        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: TOKENS.textSecondary, padding: '0 3px', height: CONTROL_HEIGHT, display: 'flex', alignItems: 'center' }}
+        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: TOKENS.textMuted, opacity: 0.75, padding: '0 3px', height: CONTROL_HEIGHT, display: 'flex', alignItems: 'center' }}
       >
-        <span className="codicon codicon-list-flat" style={{ fontSize: 12 }} />
+        <span className="codicon codicon-list-flat" style={{ fontSize: 11 }} />
       </button>
       {showMapping && (
         <UnionMappingPopover locale={locale} state={state} dispatch={dispatch} onClose={() => setShowMapping(false)} />
@@ -872,7 +929,7 @@ function UnionStrip({
     return (
       <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
         {unionLabel}
-        <span style={{ ...CONTROL_BOX, gap: 2, padding: '0 2px' }}>
+        <span className="qcc-nav-chip" style={{ ...CONTROL_BOX, position: 'relative', gap: 2, padding: '0 15px 0 2px' }}>
           <button
             type="button"
             className="qcc-btn"
@@ -895,6 +952,21 @@ function UnionStrip({
             style={{ ...COMPACT_NAV_BTN, opacity: active === queryList.length - 1 ? 0.4 : 1 }}
           >
             ›
+          </button>
+          {/* Visual polish (2026-09-21, round 2): compact UNION раніше НЕ мав
+              жодного способу видалити active SELECT (§8 explicit critical
+              gap) --- той самий inline hover-`×` grammar, що вже працює для
+              compact Package (§6), НЕ окремий overflow-запис, бо на
+              medium-width тут немає спільного kebab-меню взагалі (те з'являється
+              лише на narrow). REMOVE_QUERY, жодної нової дії. */}
+          <button
+            type="button"
+            className="qcc-nav-chip-close"
+            title={t(locale, 'packageUnionRemove')}
+            onClick={() => dispatch({ type: 'REMOVE_QUERY', index: active })}
+            style={{ position: 'absolute', right: 2, top: '50%', transform: 'translateY(-50%)', border: 'none', background: TOKENS.surface2, color: TOKENS.danger, borderRadius: 3, width: 15, height: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer', outline: 'none' }}
+          >
+            <span className="codicon codicon-close" style={{ fontSize: 9 }} />
           </button>
         </span>
         {!narrow && keywordLabel && (
