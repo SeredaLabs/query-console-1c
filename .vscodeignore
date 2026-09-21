@@ -11,6 +11,7 @@ test-results/**
 playwright-report/**
 tooling/**
 tmp/**
+output/**
 docs/en/**
 docs/uk/**
 docs/ru/**
