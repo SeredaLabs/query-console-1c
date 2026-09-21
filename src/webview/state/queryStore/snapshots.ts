@@ -304,6 +304,30 @@ export function availableTempTables(state: QueryState): MetaTable[] {
 }
 
 /**
+ * PackageNav Quick Actions (2026-09-20): той самий набір, що й
+ * `availableTempTables`, але з `createdAt` (package-member index, де
+ * відкрився lifetime) --- потрібен ЛИШЕ для UI-підпису picker'а ("створена в
+ * Запит N"), не для жодної нової domain-семантики. Окрема функція, а не
+ * розширення сигнатури `availableTempTables` (щоб не ламати наявних
+ * викликачів, яким `createdAt` не потрібен).
+ */
+export function availableTempTablesWithOrigin(state: QueryState): { table: MetaTable; createdAt: number }[] {
+  const batch = assembleBatch(state);
+  const lifetimes = deriveTempTableLifetimes(batch.members);
+  const out: { table: MetaTable; createdAt: number }[] = [];
+  for (const list of lifetimes.values()) {
+    for (let k = list.length - 1; k >= 0; k--) {
+      const lt = list[k];
+      if (lt.createIndex < state.activeBatch && (lt.dropIndex === null || lt.dropIndex >= state.activeBatch)) {
+        out.push({ table: { kind: 'ВременнаяТаблица', name: lt.name, fullName: lt.name, fields: lt.fields }, createdAt: lt.createIndex });
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+/**
  * Option B (metadata-resolution audit, 2026-09-20): чи є `fullName`
  * package-derived тимчасовою таблицею, ДОСТУПНОЮ на поточній позиції
  * (`state.activeBatch`) --- тобто ЧИТАЄТЬСЯ позиційно з реального

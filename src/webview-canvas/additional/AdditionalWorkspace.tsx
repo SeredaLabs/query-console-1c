@@ -46,7 +46,9 @@ import { CARD, SECTION_LABEL, TOKENS } from '../theme';
  * це форма налаштувань, не список record'ів.
  */
 
-const QUERY_TYPES: { value: QueryType; label: MessageKey }[] = [
+/** Reused by `QueryIdentityPopover` (PackageNav quick actions) so the query-type
+ * option list is defined in exactly one place. */
+export const QUERY_TYPES: { value: QueryType; label: MessageKey }[] = [
   { value: 'select', label: 'additionalWorkspaceQueryTypeSelect' },
   { value: 'createTemp', label: 'additionalWorkspaceQueryTypeCreateTemp' },
   { value: 'appendTemp', label: 'additionalWorkspaceQueryTypeAppendTemp' },
@@ -70,7 +72,7 @@ const RADIO_ROW: React.CSSProperties = {
  * Neutral/muted (НЕ warning-жовтий), без "NEW" — другорядний елемент,
  * що не конкурує з текстом radio-label.
  */
-const VERSION_BADGE: React.CSSProperties = {
+export const VERSION_BADGE: React.CSSProperties = {
   fontSize: 10,
   lineHeight: '14px',
   padding: '0 4px',
