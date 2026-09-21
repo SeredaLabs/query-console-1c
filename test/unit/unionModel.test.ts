@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import * as fs from 'fs';
+import * as path from 'path';
 import { deriveUnionColumns, fieldAlias } from '../../src/core/query/unionModel';
 import type { UnionMember } from '../../src/core/query/unionModel';
 import type { QueryModel } from '../../src/core/query/queryModel';
@@ -6,6 +8,30 @@ import type { QueryModel } from '../../src/core/query/queryModel';
 function member(name: string, model: QueryModel, distinct = false): UnionMember {
   return { name, distinct, model };
 }
+
+/**
+ * Architecture guard (KEEP decision on `sdblGenerator ↔ unionModel`, dependency
+ * audit 2026-09-21): `unionModel.ts → sdblGenerator.ts` is an accepted, deliberate
+ * dependency — `deriveUnionColumns` needs `fieldExpr` for the final SDBL cell text
+ * (generation-specific formatting), while everything else in `unionModel.ts` is
+ * pure QueryModel-level logic that doesn't need the generator at all. This is NOT
+ * a "circular imports are fine, don't check" test — it pins the boundary at
+ * exactly ONE binding, so if a future edit silently widens the cycle (e.g. someone
+ * reaches for `formatSelectExpression` or another generator export from here), this
+ * test fails and forces a deliberate re-review instead of the cycle growing unnoticed.
+ */
+describe('unionModel.ts → sdblGenerator.ts dependency boundary (accepted debt, not general cycle tolerance)', () => {
+  it('imports exactly one binding from sdblGenerator.ts (fieldExpr)', () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '../../src/core/query/unionModel.ts'),
+      'utf8'
+    );
+    const m = src.match(/import\s*\{([^}]*)\}\s*from\s*['"]\.\/sdblGenerator['"]/);
+    expect(m).not.toBeNull();
+    const names = m![1].split(',').map(s => s.trim()).filter(Boolean);
+    expect(names).toEqual(['fieldExpr']);
+  });
+});
 
 describe('fieldAlias', () => {
   it('uses explicit alias when present', () => {
