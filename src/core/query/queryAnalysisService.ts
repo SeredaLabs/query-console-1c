@@ -1,6 +1,7 @@
 import type { MetadataResolver } from './metadataResolver';
 import { tryOpenBatch } from './validateBatch';
-import { resolveAliases, fieldExpr, synthesizedFieldAlias } from './sdblGenerator';
+import { fieldExpr } from './sdblGenerator';
+import { resolveAliases, synthesizedFieldAlias, joinKeyword } from './queryModelUtils';
 import { extractQueryParamNames } from './resultProcessingTemplate';
 import { getBatchStatementSpans } from './sdblParser';
 import type { QueryModel, Condition } from './queryModel';
@@ -94,19 +95,6 @@ export interface QueryAnalysisResult {
 }
 
 const EMPTY_RESULT: QueryAnalysisResult = { diagnostics: [], warnings: [], result: null, tempTables: [], parameters: [] };
-
-/**
- * Зеркало приватной `joinKeyword` из sdblGenerator.ts (не экспортирована оттуда).
- * Та же тривиальная 4-строчная логика на основе leftAll/rightAll — дублировать
- * безопаснее, чем менять генератор ради экспорта (см. design-док, раздел 21.1:
- * sdblGenerator.ts — файл, которого эта задача не трогает).
- */
-function joinKeyword(leftAll: boolean, rightAll: boolean): QueryAnalysisJoin['keyword'] {
-  if (leftAll && rightAll) return 'ПОЛНОЕ';
-  if (leftAll && !rightAll) return 'ЛЕВОЕ';
-  if (!leftAll && rightAll) return 'ПРАВОЕ';
-  return 'ВНУТРЕННЕЕ';
-}
 
 /**
  * Compatibility-путь ТОЛЬКО для синтаксических ошибок парсера («Ошибка разбора
