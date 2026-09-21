@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { validateBatchText, tryParseBatch, tryOpenBatch } from '../../src/core/query/validateBatch';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
@@ -214,6 +214,67 @@ describe('структурные ключевые слова внутри «сы
   it('проекция табличной части в корректной форме — по-прежнему ok:true', () => {
     const text = 'ВЫБРАТЬ Т.Товары.(Номенклатура, Количество) КАК ТЧ ИЗ Документ.РеализацияТоваровУслуг КАК Т';
     expect(tryOpenBatch(text).ok).toBe(true);
+  });
+});
+
+describe('tryOpenBatch: structured diagnostic (plumbing refactor — structured → string → regex устранён)', () => {
+  const ВАЛЮТЫ: MetaTable = {
+    kind: 'Справочник', name: 'Валюты', fullName: 'Справочник.Валюты',
+    fields: [{ name: 'Ссылка', kind: 'standard', types: [{ ref: { kind: 'Справочник', name: 'Валюты' } }] }],
+  };
+  const resolver = buildResolverFromTables([ВАЛЮТЫ]);
+
+  it('семантическая ошибка (таблица не найдена) несёт диагностику с line/col/fullName', () => {
+    const r = tryOpenBatch('ВЫБРАТЬ Т.Ссылка КАК С ИЗ Справочник.Валюты1 КАК Т', resolver);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.diagnostic).toBeDefined();
+    expect(r.diagnostic?.line).toBe(1);
+    expect(typeof r.diagnostic?.col).toBe('number');
+    expect(r.diagnostic?.fullName).toBe('Справочник.Валюты1');
+    // старый .error string остаётся доступным (contract не сломан)
+    expect(r.error).toContain('Таблица не найдена');
+  });
+
+  it('семантическая ошибка без позиции (повторяющийся псевдоним) → diagnostic без line/col, без исключения', () => {
+    const text = 'ВЫБРАТЬ Т.Ссылка КАК А, Т.Ссылка КАК А ИЗ Справочник.Валюты КАК Т';
+    expect(() => tryOpenBatch(text, resolver)).not.toThrow();
+    const r = tryOpenBatch(text, resolver);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error).toContain('Повторяющийся псевдоним');
+    expect(r.diagnostic?.line).toBeUndefined();
+    expect(r.diagnostic?.col).toBeUndefined();
+  });
+
+  it('синтаксическая ошибка → без структурированного diagnostic (compatibility path парсера не расширяется)', () => {
+    const r = tryOpenBatch('ВЫБРАТЬ ИЗ ИЗ', resolver);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.diagnostic).toBeUndefined();
+    expect(r.error).toBeTruthy();
+  });
+
+  it('diagnostic.line/col получены НАПРЯМУЮ из SemanticError, а не парсингом текста сообщения (смена wording не влияет)', async () => {
+    vi.resetModules();
+    vi.doMock('../../src/core/query/semanticValidator', () => ({
+      validateBatchSemantics: () => [
+        // Специально: текст сообщения НЕ содержит ни «Ошибка разбора L:C», ни
+        // «{(L, C)}» — ни один существующий текстовый паттерн не совпадёт. Если бы
+        // diagnostic всё ещё получался regex-ом из message, тест бы упал.
+        { message: 'Совершенно произвольный текст без формата позиции', line: 7, col: 3, fullName: 'Справочник.Тест' },
+      ],
+    }));
+    const { tryOpenBatch: tryOpenBatchMocked } = await import('../../src/core/query/validateBatch');
+    const r = tryOpenBatchMocked('ВЫБРАТЬ Т.Ссылка ИЗ Справочник.Валюты КАК Т', resolver);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error).toBe('Совершенно произвольный текст без формата позиции');
+    expect(r.diagnostic?.line).toBe(7);
+    expect(r.diagnostic?.col).toBe(3);
+    expect(r.diagnostic?.fullName).toBe('Справочник.Тест');
+    vi.doUnmock('../../src/core/query/semanticValidator');
+    vi.resetModules();
   });
 });
 

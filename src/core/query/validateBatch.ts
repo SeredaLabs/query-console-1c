@@ -14,7 +14,22 @@ import type { BatchDocument } from './batchModel';
 import type { MetadataResolver } from './metadataResolver';
 import { validateBatchSemantics } from './semanticValidator';
 
-export type ParseAttempt = { ok: true; doc: BatchDocument } | { ok: false; error: string };
+/**
+ * Позиция ошибки, уже структурированная её источником (`SemanticError` из
+ * `semanticValidator.ts`) — не текст, который нужно повторно парсить. Синтаксические
+ * ошибки парсера (`tryParseBatch`) её пока не несут: `sdblParser.ts` бросает `Error`
+ * только с готовым текстом сообщения (её трогать не входит в эту задачу) — для них
+ * `diagnostic` остаётся `undefined`, `error` — единственный источник информации.
+ */
+export interface ErrorDiagnostic {
+  line?: number;
+  col?: number;
+  fullName?: string;
+}
+
+export type ParseAttempt =
+  | { ok: true; doc: BatchDocument }
+  | { ok: false; error: string; diagnostic?: ErrorDiagnostic };
 
 /**
  * Единый разбор текста пакета — общий источник правды для открытия из текста
@@ -48,7 +63,10 @@ export function tryOpenBatch(
   const r = tryParseBatch(text, opts);
   if (!r.ok) return r;
   const errors = validateBatchSemantics(r.doc, resolver, text);
-  if (errors.length > 0) return { ok: false, error: errors[0].message };
+  if (errors.length > 0) {
+    const { message, line, col, fullName } = errors[0];
+    return { ok: false, error: message, diagnostic: { line, col, fullName } };
+  }
   return r;
 }
 

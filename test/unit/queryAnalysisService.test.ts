@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { analyze } from '../../src/core/query/queryAnalysisService';
@@ -81,6 +81,46 @@ describe('analyze: разбор полей/источников/соединен
       'ВЫБРАТЬ 1 КАК Поле\nИЗ Справочник.Валюты КАК Валюты\nГДЕ Валюты.Код = &Код И Валюты.Наименование <> &Код'
     );
     expect(r.parameters).toEqual([{ name: 'Код', usageCount: 2 }]);
+  });
+});
+
+describe('analyze: structured diagnostic plumbing (structured → string → regex устранён)', () => {
+  it('ошибка без позиции (дубликат псевдонима) → diagnostics без line/col, без исключения', () => {
+    const resolver = buildResolverFromTables([
+      { fullName: 'Справочник.Валюты', kind: 'Справочник', name: 'Валюты', fields: [{ name: 'Код', kind: 'standard', types: [] }] } as MetaTable,
+    ]);
+    const text = 'ВЫБРАТЬ Валюты.Код КАК А, Валюты.Код КАК А ИЗ Справочник.Валюты КАК Валюты';
+    expect(() => analyze(text, resolver)).not.toThrow();
+    const r = analyze(text, resolver);
+    expect(r.diagnostics.length).toBe(1);
+    expect(r.diagnostics[0].message).toContain('Повторяющийся псевдоним');
+    expect(r.diagnostics[0].line).toBeUndefined();
+    expect(r.diagnostics[0].col).toBeUndefined();
+  });
+
+  it('line/col семантической ошибки получены НАПРЯМУЮ из structured diagnostic, а не regex по тексту сообщения', async () => {
+    vi.resetModules();
+    vi.doMock('../../src/core/query/validateBatch', () => ({
+      tryOpenBatch: () => ({
+        ok: false,
+        // Текст умышленно не содержит ни один из известных regex-форматов позиции
+        // («Ошибка разбора L:C», «{(L, C)}») — если бы queryAnalysisService всё ещё
+        // извлекал позицию regex-ом из message, эти диагностики остались бы пустыми.
+        error: 'Абсолютно нечитаемый парсером текст ошибки',
+        diagnostic: { line: 42, col: 5, fullName: 'Справочник.Тест' },
+      }),
+    }));
+    const { analyze: analyzeMocked } = await import('../../src/core/query/queryAnalysisService');
+    const r = analyzeMocked('неважно какой текст');
+    expect(r.diagnostics).toEqual([{ message: 'Абсолютно нечитаемый парсером текст ошибки', line: 42, col: 5 }]);
+    vi.doUnmock('../../src/core/query/validateBatch');
+    vi.resetModules();
+  });
+
+  it('синтаксическая ошибка по-прежнему получает line/col через изолированный compatibility-путь (парсер не менялся)', () => {
+    const r = analyze('ВЫБРАТЬ ИЗ КАК Поле1 ИЗ Справочник.Контрагенты');
+    expect(r.diagnostics[0].line).toBe(1);
+    expect(r.diagnostics[0].col).toBe(9);
   });
 });
 

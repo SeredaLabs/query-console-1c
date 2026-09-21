@@ -109,19 +109,17 @@ function joinKeyword(leftAll: boolean, rightAll: boolean): QueryAnalysisJoin['ke
 }
 
 /**
- * Лучшее из возможного извлечение позиции ошибки из готового текста сообщения —
- * синтаксическая (`sdblLexer`/`sdblParser`: «Ошибка разбора 5:2 — …») и семантическая
- * (`semanticValidator`: «{(5, 2)}: Таблица не найдена…») ошибки форматируют позицию
- * по-разному, единого структурированного объекта ошибки эти модули не отдают (см.
- * design-док, раздел 21.1 — их трогать нельзя). Если ни один формат не совпал —
- * `undefined`, вызывающая сторона показывает сообщение без точной позиции (раздел 6
- * design-дока: маркер — «если возможно», не обязательное условие).
+ * Compatibility-путь ТОЛЬКО для синтаксических ошибок парсера («Ошибка разбора
+ * 5:2 — …») — `sdblParser.ts` пока бросает `Error` с готовым текстом сообщения, не
+ * структурированной позицией, а переписывание его error-handling вне scope этой
+ * задачи. Семантические ошибки сюда не попадают: `tryOpenBatch` уже отдаёт для них
+ * структурированный `diagnostic` (`ErrorDiagnostic` из `validateBatch.ts`,
+ * построенный из `SemanticError` в `semanticValidator.ts`) — регэксп по тексту
+ * сообщения им не нужен и не используется.
  */
-function parseErrorPosition(message: string): { line?: number; col?: number } {
+function parseSyntaxErrorPosition(message: string): { line?: number; col?: number } {
   const syntax = message.match(/Ошибка разбора (\d+):(\d+)/);
   if (syntax) return { line: Number(syntax[1]), col: Number(syntax[2]) };
-  const semantic = message.match(/\{\((\d+),\s*(\d+)\)\}/);
-  if (semantic) return { line: Number(semantic[1]), col: Number(semantic[2]) };
   return {};
 }
 
@@ -191,7 +189,11 @@ function analyzeModel(model: QueryModel): Omit<QueryAnalysisQuery, 'name'> {
 export function analyze(text: string, resolver?: MetadataResolver): QueryAnalysisResult {
   const r = tryOpenBatch(text, resolver);
   if (!r.ok) {
-    return { ...EMPTY_RESULT, diagnostics: [{ message: r.error, ...parseErrorPosition(r.error) }] };
+    // Семантическая ошибка уже несёт структурированную позицию (`r.diagnostic`) —
+    // используется напрямую. Синтаксическая ошибка её не несёт (см.
+    // `parseSyntaxErrorPosition`) — единственный оставшийся compatibility-путь.
+    const pos = r.diagnostic ?? parseSyntaxErrorPosition(r.error);
+    return { ...EMPTY_RESULT, diagnostics: [{ message: r.error, line: pos.line, col: pos.col }] };
   }
 
   const spans = getBatchStatementSpans(text);
