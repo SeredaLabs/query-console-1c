@@ -108,6 +108,66 @@ describe('countRelevantXmlFiles / sourceFileCount (architecture audit P2, deleti
     const result = commitMetadataSnapshot(SAMPLE_MODEL, root); // без 3-го аргумента
     expect(readMetadataSnapshot(result.targetDir).sourceFileCount).toBeUndefined();
   });
+
+  it('sourceFileCount неверного типа (не число) — бросает', () => {
+    const root = freshTmpDir();
+    const result = commitMetadataSnapshot(SAMPLE_MODEL, root, 3);
+    const snapshotFile = path.join(result.targetDir, 'metadata-snapshot.json');
+    const raw = JSON.parse(fs.readFileSync(snapshotFile, 'utf8'));
+    fs.writeFileSync(snapshotFile, JSON.stringify({ ...raw, sourceFileCount: 'три' }));
+
+    expect(() => readMetadataSnapshot(result.targetDir)).toThrow(/sourceFileCount/);
+  });
+});
+
+// Review follow-up (2026-09-22): matching formatVersion alone does NOT prove
+// `model` itself is well-formed — a corrupted/malformed model that still has
+// the right formatVersion previously slipped through readMetadataSnapshot's
+// blind `as MetadataSnapshotFile` cast untouched, and would have been
+// returned as a SUCCESSFUL 'direct-snapshot-cached' hit by
+// loadMetadataSnapshotFirst, bypassing its own try/catch safety net entirely.
+describe('readMetadataSnapshot — structural validation of model (review follow-up)', () => {
+  function writeRawSnapshot(root: string, content: unknown): string {
+    const result = commitMetadataSnapshot(SAMPLE_MODEL, root, 1);
+    fs.writeFileSync(path.join(result.targetDir, 'metadata-snapshot.json'), JSON.stringify(content));
+    return result.targetDir;
+  }
+
+  it('model отсутствует — бросает', () => {
+    const root = freshTmpDir();
+    const dir = writeRawSnapshot(root, { formatVersion: SNAPSHOT_FORMAT_VERSION });
+    expect(() => readMetadataSnapshot(dir)).toThrow(/model/);
+  });
+
+  it('model — не объект (например, строка) — бросает', () => {
+    const root = freshTmpDir();
+    const dir = writeRawSnapshot(root, { formatVersion: SNAPSHOT_FORMAT_VERSION, model: 'не объект' });
+    expect(() => readMetadataSnapshot(dir)).toThrow(/model/);
+  });
+
+  it('model.tables отсутствует/не массив — бросает', () => {
+    const root = freshTmpDir();
+    const dir = writeRawSnapshot(root, {
+      formatVersion: SNAPSHOT_FORMAT_VERSION,
+      model: { version: 1, tables: 'не массив' },
+    });
+    expect(() => readMetadataSnapshot(dir)).toThrow(/model/);
+  });
+
+  it('model.version отсутствует/неверного типа — бросает', () => {
+    const root = freshTmpDir();
+    const dir = writeRawSnapshot(root, {
+      formatVersion: SNAPSHOT_FORMAT_VERSION,
+      model: { tables: [] },
+    });
+    expect(() => readMetadataSnapshot(dir)).toThrow(/model/);
+  });
+
+  it('корректный снимок по-прежнему читается без ошибок (не ложное срабатывание)', () => {
+    const root = freshTmpDir();
+    const result = commitMetadataSnapshot(SAMPLE_MODEL, root, 1);
+    expect(() => readMetadataSnapshot(result.targetDir)).not.toThrow();
+  });
 });
 
 describe('buildMetadataSnapshotFromXml — direct-путь (без YAML) на реальной фикстуре', () => {

@@ -160,9 +160,18 @@ export function loadMetadataSnapshotFirst(
         // Architecture audit P2 (2026-09-22): mtime alone misses a pure XML
         // DELETION — removing a file bumps no one's mtime, so the check above
         // would keep treating the snapshot as fresh forever. sourceFileCount
-        // (absent on a pre-upgrade snapshot — skip, don't force a rebuild just
-        // because of the format upgrade) catches that shrink.
-        if (snapshot.sourceFileCount === undefined || snapshot.sourceFileCount === countRelevantXmlFiles(cfPath)) {
+        // catches that shrink.
+        //
+        // Migration follow-up (2026-09-22): a snapshot committed BEFORE this
+        // field existed has `sourceFileCount === undefined` — treating that as
+        // "trust it" (the original version of this check) would mean every
+        // already-installed user's existing snapshot stays exactly as
+        // deletion-blind as before, indefinitely, since a pure deletion is
+        // precisely the edit that never forces a rebuild through any other
+        // path. Falling through to rebuild instead is a ONE-TIME cost per
+        // pre-upgrade snapshot: it commits a fresh snapshot with
+        // sourceFileCount populated, so every later check is fully protected.
+        if (snapshot.sourceFileCount !== undefined && snapshot.sourceFileCount === countRelevantXmlFiles(cfPath)) {
           return { model: snapshot.model, source: 'direct-snapshot-cached', issues: [], redirected: false };
         }
       }

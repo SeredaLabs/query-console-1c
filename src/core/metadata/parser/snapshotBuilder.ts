@@ -51,8 +51,11 @@ export interface MetadataSnapshotFile {
    * Удаление XML-объекта (напр. `Catalogs/Старый.xml`) НЕ увеличивает ничей
    * mtime — снимок продолжал бы считаться "свежим" навсегда, пока какая-то
    * ДРУГАЯ, несвязанная правка случайно не тронет более новый файл. Optional —
-   * снимок, закоммиченный ДО этого поля, читается без него; сравнение в этом
-   * случае пропускается (не форсируем rebuild только из-за апгрейда формата).
+   * снимок, закоммиченный ДО этого поля, читается без него, но
+   * `loadMetadataSnapshotFirst` трактует отсутствие как «нельзя доверять» и
+   * форсирует ОДНОРАЗОВЫЙ rebuild (после которого новый снимок уже несёт это
+   * поле) — иначе уже существующие у пользователей снимки остались бы
+   * deletion-blind навсегда, а не только до апгрейда.
    */
   sourceFileCount?: number;
 }
@@ -126,13 +129,32 @@ export function commitMetadataSnapshot(
  */
 export function readMetadataSnapshot(committedDir: string): MetadataSnapshotFile {
   const raw = fs.readFileSync(path.join(committedDir, SNAPSHOT_FILE_NAME), 'utf8');
-  const file = JSON.parse(raw) as MetadataSnapshotFile;
+  const file = JSON.parse(raw) as Partial<MetadataSnapshotFile>;
   if (file.formatVersion !== SNAPSHOT_FORMAT_VERSION) {
     throw new Error(
       `Снимок метаданных в "${committedDir}" имеет formatVersion=${file.formatVersion}, ожидался ${SNAPSHOT_FORMAT_VERSION}.`
     );
   }
-  return file;
+  // Architecture audit follow-up (2026-09-22): matching `formatVersion` alone
+  // does NOT guarantee `model` itself is well-formed — a future bug could
+  // commit bad data under a still-current formatVersion, or corruption could
+  // land past the formatVersion field without touching it. Without this,
+  // `loadMetadataSnapshotFirst` would return `{ model: <malformed> }` as a
+  // SUCCESSFUL 'direct-snapshot-cached' result — bypassing its own try/catch
+  // safety net entirely, since nothing here would have thrown. Every one of
+  // these checks is exactly what a caller would immediately dereference
+  // (`model.tables.length`, `model.version`, `sourceFileCount === count`).
+  const model = file.model as Partial<MetadataModel> | undefined;
+  if (
+    model === null || typeof model !== 'object' ||
+    typeof model.version !== 'number' || !Array.isArray(model.tables)
+  ) {
+    throw new Error(`Снимок метаданных в "${committedDir}" повреждён: model отсутствует или имеет неверную структуру.`);
+  }
+  if (file.sourceFileCount !== undefined && typeof file.sourceFileCount !== 'number') {
+    throw new Error(`Снимок метаданных в "${committedDir}" повреждён: sourceFileCount имеет неверный тип.`);
+  }
+  return file as MetadataSnapshotFile;
 }
 
 /** mtime самого файла снимка (не каталога) — используется

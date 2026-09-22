@@ -214,6 +214,50 @@ describe('loadMetadataSnapshotFirst (production entry point, panel.ts)', () => {
     expect(second.source).toBe('direct-snapshot-cached');
     expect(spy).not.toHaveBeenCalled();
   });
+
+  // Review follow-up (2026-09-22): the FIRST version of this fix treated a
+  // missing sourceFileCount (a snapshot committed by an already-installed,
+  // pre-upgrade version) as "trust it" — meaning every already-existing
+  // snapshot would have stayed exactly as deletion-blind as before this fix,
+  // forever, since a pure deletion never triggers a rebuild through any other
+  // path either. It must instead force exactly ONE rebuild per pre-upgrade
+  // snapshot, after which the freshly committed snapshot carries
+  // sourceFileCount and is fully protected from then on.
+  it('старый снимок без sourceFileCount форсирует ОДНОРАЗОВЫЙ rebuild, затем снова тёплый и полностью защищённый', () => {
+    const { cfPath, snapshotOutPath, yamlOutPath } = freshCfCopy();
+    const first = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, yamlOutPath);
+    expect(first.source).toBe('direct-snapshot');
+
+    // Имитация снимка от версии ДО этого поля: стираем sourceFileCount из уже
+    // закоммиченного файла, ничего больше не меняя (mtime снимка НЕ трогаем).
+    const committedDir = resolveManagedCfDir(snapshotOutPath);
+    const snapshotFile = path.join(committedDir, 'metadata-snapshot.json');
+    const raw = JSON.parse(fs.readFileSync(snapshotFile, 'utf8'));
+    delete raw.sourceFileCount;
+    fs.writeFileSync(snapshotFile, JSON.stringify(raw));
+
+    // Открытие №2 (первое ПОСЛЕ "апгрейда"): должно пересобрать, а не тихо
+    // довериться устаревшему по формату снимку.
+    const migrateSpy = vi.spyOn(snapshotBuilder, 'buildMetadataSnapshotFromXml');
+    const second = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, yamlOutPath);
+    expect(second.source).toBe('direct-snapshot');
+    expect(migrateSpy).toHaveBeenCalledTimes(1);
+    migrateSpy.mockRestore();
+
+    // Открытие №3: теперь снимок уже несёт sourceFileCount — обычный тёплый
+    // кэш, БЕЗ повторной пересборки (одноразовая миграция, не навсегда).
+    const warmSpy = vi.spyOn(snapshotBuilder, 'buildMetadataSnapshotFromXml');
+    const third = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, yamlOutPath);
+    expect(third.source).toBe('direct-snapshot-cached');
+    expect(warmSpy).not.toHaveBeenCalled();
+
+    // И теперь удаление объекта ОПЯТЬ корректно ловится — миграция реально
+    // включила deletion-detection для этого снимка, а не просто пересобрала его разово.
+    fs.rmSync(path.join(cfPath, 'Catalogs', 'Тест.xml'));
+    const fourth = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, yamlOutPath);
+    expect(fourth.source).toBe('direct-snapshot');
+    expect(fourth.model.tables.map(t => t.fullName)).not.toContain('Справочник.Тест');
+  });
 });
 
 describe('newestRelevantMtime (exported for panel.ts residual "оба пути упали" branch)', () => {
