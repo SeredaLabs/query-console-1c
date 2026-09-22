@@ -5,6 +5,24 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.84 - 2026-09-22
+
+### Fixed
+
+- A nonexistent field referenced in GROUP BY, ORDER BY, TOTALS BY, or INDEX BY
+  is now caught as "field not found", instead of silently passing validation.
+  This also covers an aggregate over a qualified field (e.g. `СУММА(Т.NoSuchField)`)
+  that was previously missed even in the regular SELECT-list check.
+
+### Verified
+
+- Confirmed (via a full read-only audit with real reproduction scripts) that
+  Hover and Completion already resolve a reused table alias correctly per
+  scope — separate `;`-statements, UNION branches, and nested/correlated
+  subqueries never cross-contaminate. Added permanent regression tests
+  pinning this for reused aliases across batch statements and UNION
+  branches; no behavior changed.
+
 ## 0.1.83 - 2026-09-22
 
 ### Fixed
