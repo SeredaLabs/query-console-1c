@@ -212,6 +212,34 @@ export function validateBatchSemantics(
     }
   };
 
+  /**
+   * Источники (`ИЗ …`/`СОЕДИНЕНИЕ …`) с одинаковым (регистронезависимо)
+   * псевдонимом — architecture audit P1 №4 (2026-09-22). `sdblParser.ts`
+   * ВСЕГДА проставляет `alias` каждой таблице (явный `КАК`, голый псевдоним
+   * или синтезированный по умолчанию — см. `parseTableSource`), и строит по
+   * нему карту `aliasToId` простым `Map.set` — при коллизии ПОСЛЕДНЯЯ
+   * таблица молча побеждает: КАЖДОЕ поле `Алиас.Поле`, написанное для ЛЮБОЙ
+   * из таблиц-дублей (включая первую), на самом деле привязывается к
+   * `tableId` последней. Это не внутренняя деталь реализации — сам 1С
+   * считает такой источник неоднозначным ("Неоднозначность имени поля") и
+   * не должен позволять его открыть/применить. Структурная проверка,
+   * метаданные не нужны — та же категория риска, что и checkDuplicateAliases.
+   */
+  const checkDuplicateSourceAliases = (model: QueryModel): void => {
+    const seen = new Map<string, number>();
+    const reported = new Set<string>();
+    for (const t of model.tables) {
+      if (!t.alias) continue;
+      const key = t.alias.toLowerCase();
+      const count = (seen.get(key) ?? 0) + 1;
+      seen.set(key, count);
+      if (count >= 2 && !reported.has(key)) {
+        reported.add(key);
+        errors.push({ message: `Повторяющийся псевдоним источника "${t.alias}"` });
+      }
+    }
+  };
+
   const walkConditions = (conditions: Condition[] | undefined): void => {
     for (const c of conditions ?? []) {
       if (c.subquery) walkDocument(c.subquery);
@@ -242,6 +270,7 @@ export function validateBatchSemantics(
       else checkTable(t);
     }
     checkDuplicateAliases(model);
+    checkDuplicateSourceAliases(model);
     checkFieldPaths(model);
     walkConditions(model.conditions);
     walkConditions(model.having);

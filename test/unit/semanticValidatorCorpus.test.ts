@@ -53,6 +53,27 @@ describe('checkFieldPaths: нуль хибних спрацювань на ре�
     expect(falsePositives, `Хибних спрацювань: ${falsePositives.length}\n${preview}`).toEqual([]);
   });
 
+  it('жоден реальний запит не дає "Повторяющийся псевдоним источника" (architecture audit P1 №4, 2026-09-22)', () => {
+    const falsePositives: Array<{ file: string; messages: string[] }> = [];
+    for (const g of golden) {
+      if (!g.valid) continue;
+      let errors;
+      try {
+        errors = validateBatchSemantics(parseBatch(g.input, resolver), resolver, g.input);
+      } catch {
+        continue;
+      }
+      const dupSourceErrors = errors.filter(e => e.message.includes('Повторяющийся псевдоним источника'));
+      if (dupSourceErrors.length > 0) {
+        falsePositives.push({ file: g.file, messages: dupSourceErrors.map(e => e.message) });
+      }
+    }
+    const preview = falsePositives.slice(0, 20)
+      .map(f => `  ${f.file}:\n    ${f.messages.join('\n    ')}`)
+      .join('\n');
+    expect(falsePositives, `Хибних спрацювань: ${falsePositives.length}\n${preview}`).toEqual([]);
+  });
+
   it('жоден реальний запит не дає "Таблица не найдена" (issue #3: .Изменения — 4/1976, 0.2%)', () => {
     // Історична знахідка (PHASE_9, ~v0.1.22): повний прогін по золотому корпусу
     // давав 4 хибних спрацювання на «<Тип>.<Объект>.Изменения» — службовій

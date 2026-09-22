@@ -135,6 +135,18 @@ describe('tryOpenBatch / validateBatchText с резолвером (8.4)', () =>
   it('validateBatchText без резолвера — прежнее поведение', () => {
     expect(validateBatchText(bad).ok).toBe(true);
   });
+
+  // Architecture audit P1 №4 (2026-09-22): дубль псевдонима источника раньше
+  // ОТКРЫВАЛСЯ без ошибки — `tryOpenBatch`'s `validateBatchSemantics` теперь
+  // блокирует это при загрузке из текста, ДО того, как модель с последующей
+  // подменой tableId попадёт в конструктор (Classic и Canvas используют один и
+  // тот же `tryOpenBatch` в своём `loadModel`-обработчике).
+  it('дублирующийся псевдоним источника → not ok, без резолвера тоже (структурная проверка)', () => {
+    const dup = 'ВЫБРАТЬ А.Ссылка ИЗ Справочник.Валюты КАК А, Справочник.Валюты1 КАК А';
+    const r = tryOpenBatch(dup);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe('Повторяющийся псевдоним источника "А"');
+  });
 });
 
 describe('структурные ключевые слова внутри «сырых» выражений (полный аудит парсера)', () => {
