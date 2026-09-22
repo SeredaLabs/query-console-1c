@@ -169,7 +169,11 @@ export function validateBatchSemantics(
     const idToTable = new Map<string, SelectedTable>();
     for (const t of model.tables) idToTable.set(t.id, t);
 
-    for (const f of model.fields) {
+    // Review follow-up (2026-09-22): раньше проверялись только `model.fields` —
+    // `trailingFields` (поля ПОСЛЕ развёрнутой звезды `Алиас.*`, напр.
+    // `ВЫБРАТЬ Т.*, Т.НетТакогоПоля ИЗ …`) молча пропускались, хотя это те же
+    // `SelectedField`-узлы с тем же `qualified`/`expression` контрактом.
+    for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
       if (f.expression !== undefined) continue;
       if (!f.qualified) continue; // голову-таблицу определяем только у квалифицированного поля
       const src = idToTable.get(f.tableId);
@@ -322,7 +326,9 @@ export interface MalformedCustomHit {
   kind:
     | 'condition' | 'joinCondition' | 'join' | 'field' | 'totalGroupField'
     // Architecture audit P1 №3 (2026-09-22) — раньше НЕ обходились вовсе:
-    | 'trailingField' | 'groupField' | 'totalField' | 'orderField' | 'indexField' | 'tabSectionExpr';
+    | 'trailingField' | 'groupField' | 'totalField' | 'orderField' | 'indexField' | 'tabSectionExpr'
+    // Review follow-up (2026-09-22) — Построитель отчётов (model.builder):
+    | 'builderCondition';
   text: string;
 }
 
@@ -346,9 +352,19 @@ export interface MalformedCustomHit {
  * `exprFields`/`columns` (произвольные выражения внутри проекции ТЧ) — каждый
  * из этих узлов может нести такой же непроверенный сырой текст, как уже
  * проверяемые `fields`/`conditions`, и молча проходил бы Apply-gate.
- * `model.builder` (Построитель отчётов, ReportBuilder) сюда намеренно НЕ
- * включён — walkModel его вообще не обходит ни для одной проверки (даже
- * checkTable), это отдельный, никогда не валидировавшийся путь модели.
+ *
+ * Review follow-up (2026-09-22): `model.builder` (Построитель отчётов —
+ * `{ВЫБРАТЬ}`/`{ГДЕ}`/`{УПОРЯДОЧИТЬ ПО}`/`{ИТОГИ}`) теперь тоже проверяется.
+ * `parseBuilderCondition` (sdblParser.ts) собирает элемент-УСЛОВИЕ блока
+ * `{ГДЕ}` (`BuilderField.condition === true`) тем же способом, что и обычные
+ * `custom`-условия — токены до `,`/`}`/`КАК`, без проверки собственной
+ * грамматики — подтверждено реальным репро через parseBatch: `{ГДЕ Т.Ссылка
+ * = = &А}` парсится без ошибки и раньше давал `errors: []`. Обычные (не
+ * `condition`) элементы построителя — ссылки поля (`Алиас.Поле`), собранные
+ * парсером сегмент-за-сегментом с проверкой каждого сегмента — не могут быть
+ * структурно некорректны в принципе, поэтому не проверяются (аналогично
+ * тому, как голые/`custom`-размеченные условия различаются в `walkConditions`
+ * ниже).
  */
 export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCustomHit[] {
   const hits: MalformedCustomHit[] = [];
@@ -401,6 +417,12 @@ export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCus
     for (const idx of model.indexing?.indexes ?? []) {
       for (const f of idx.fields) {
         if (f.expression !== undefined) check(f.expression, 'indexField');
+      }
+    }
+    const builder = model.builder;
+    if (builder) {
+      for (const f of [...builder.fields, ...builder.conditions, ...builder.order, ...builder.totals]) {
+        if (f.condition) check(f.ref, 'builderCondition');
       }
     }
     walkConditions(model.conditions);

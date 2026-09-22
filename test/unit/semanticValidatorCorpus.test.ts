@@ -32,6 +32,30 @@ describe('checkFieldPaths: нуль хибних спрацювань на ре�
     expect(golden.length).toBeGreaterThan(0);
   });
 
+  // Review follow-up (2026-09-22): checkFieldPaths раньше проверял только
+  // `model.fields`, пропуская `model.trailingFields` целиком (поля после
+  // развёрнутой звезды `X.*`). Подтверждаем, что реальные golden-запросы
+  // реально наполняют эту ветку — иначе "нуль хибних спрацювань" ниже ничего
+  // бы не доказывал (некому было бы их вызвать).
+  it('golden-запити реально наповнюють trailingFields (не мертва гілка обходу)', () => {
+    let withTrailingFields = 0;
+    for (const g of golden) {
+      if (!g.valid) continue;
+      let doc;
+      try {
+        doc = parseBatch(g.input, resolver);
+      } catch {
+        continue;
+      }
+      for (const member of doc.members) {
+        for (const m of member.members) {
+          if ((m.model.trailingFields ?? []).length > 0) withTrailingFields++;
+        }
+      }
+    }
+    expect(withTrailingFields, 'очікувався принаймні 1 реальний golden-запит з trailingFields').toBeGreaterThan(0);
+  });
+
   it('жоден реальний запит не дає "Поле ... не найдено"', () => {
     const falsePositives: Array<{ file: string; messages: string[] }> = [];
     for (const g of golden) {
@@ -119,7 +143,7 @@ describe('findMalformedCustomExpressions: нове покриття обходу
   }
 
   it('golden-запити реально наповнюють кожну нову гілку обходу (не мертвий код)', () => {
-    const coverage = { trailingFields: 0, groupFields: 0, totalFields: 0, orderFields: 0, indexing: 0 };
+    const coverage = { trailingFields: 0, groupFields: 0, totalFields: 0, orderFields: 0, indexing: 0, builderCondition: 0 };
     for (const g of golden) {
       if (!g.valid) continue;
       let doc;
@@ -135,6 +159,10 @@ describe('findMalformedCustomExpressions: нове покриття обходу
           if ((model.totals?.totalFields ?? []).some(f => f.expression !== undefined)) coverage.totalFields++;
           if ((model.order?.fields ?? []).some(f => f.expression !== undefined)) coverage.orderFields++;
           if ((model.indexing?.indexes ?? []).some(idx => idx.fields.some(f => f.expression !== undefined))) coverage.indexing++;
+          const builder = model.builder;
+          if (builder && [...builder.fields, ...builder.conditions, ...builder.order, ...builder.totals].some(f => f.condition)) {
+            coverage.builderCondition++;
+          }
         });
       }
     }

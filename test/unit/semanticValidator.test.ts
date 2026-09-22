@@ -394,6 +394,19 @@ describe('validateBatchSemantics (8.4)', () => {
       const e = errs('ВЫБРАТЬ X.СсылкаНаНесуществующее.ЧтоУгодно КАК П ИЗ Справочник.Валюты КАК X', withoutTarget);
       expect(e).toEqual([]);
     });
+
+    // Review follow-up (2026-09-22): раньше проверялись только `model.fields` —
+    // `trailingFields` (поля ПОСЛЕ развёрнутой звезды `X.*`) молча пропускались,
+    // хотя это тот же `SelectedField`-контракт (qualified/expression), что и
+    // обычные поля выборки.
+    it('несуществующее поле в trailingFields (после X.*) → ошибка (раньше пропускалось)', () => {
+      const e = errs('ВЫБРАТЬ X.*, X.НетТакогоПоля ИЗ Справочник.Валюты КАК X');
+      expect(e).toEqual([{ message: 'Поле "НетТакогоПоля" не найдено в "Справочник.Валюты"' }]);
+    });
+
+    it('существующее поле в trailingFields (после X.*) → пусто (не ложное срабатывание)', () => {
+      expect(errs('ВЫБРАТЬ X.*, X.Наименование ИЗ Справочник.Валюты КАК X')).toEqual([]);
+    });
   });
 });
 
@@ -664,5 +677,42 @@ describe('findMalformedCustomExpressions (PR-14, docs/development/known-issues.m
         exprFields: [{ expression: 'Т.Код + 1', alias: 'Поле1' }],
       }],
     }))).toEqual([]);
+  });
+
+  // Review follow-up (2026-09-22): model.builder (Построитель отчётов,
+  // {ВЫБРАТЬ}/{ГДЕ}/{УПОРЯДОЧИТЬ ПО}/{ИТОГИ}) раньше не обходился ВООБЩЕ —
+  // подтверждено реальным репро через parseBatch (не только через
+  // batchWithModel): `{ГДЕ Т.Ссылка = = &А}` парсится без ошибки и давал
+  // errors: []. condition-элементы (`parseBuilderCondition`, sdblParser.ts)
+  // собирают токены до `,`/`}`/`КАК` тем же способом, что и обычные custom-
+  // условия — без проверки собственной грамматики.
+  it('сломанное condition-поле builder ({ГДЕ}) — находится (реальный парсер, не только batchWithModel)', () => {
+    const text = 'ВЫБРАТЬ Т.Ссылка ИЗ Справочник.Валюты КАК Т\n{ГДЕ\n\tТ.Ссылка = = &А}';
+    const hits = findMalformedCustomExpressions(parseBatch(text));
+    expect(hits).toEqual([{ kind: 'builderCondition', text: 'Т.Ссылка = = &А' }]);
+  });
+
+  it('ЛЕГИТИМНОЕ condition-поле builder ({ГДЕ}) — НЕ находится', () => {
+    const text = 'ВЫБРАТЬ Т.Ссылка ИЗ Справочник.Валюты КАК Т\n{ГДЕ\n\tТ.Ссылка = &А}';
+    expect(findMalformedCustomExpressions(parseBatch(text))).toEqual([]);
+  });
+
+  it('простая ссылка поля builder ({ВЫБРАТЬ}, не condition) — не проверяется и не может быть найдена как malformed', () => {
+    // Парсер гарантирует структурную корректность голой ссылки поля построителя
+    // (сегмент за сегментом) — этот узел в принципе не может быть malformed,
+    // поэтому неважно, за счёт какой логики findMalformedCustomExpressions его
+    // пропускает; важно лишь отсутствие ложного срабатывания.
+    const text = 'ВЫБРАТЬ Т.Ссылка\n{ВЫБРАТЬ\n\tТ.Ссылка.*}\nИЗ Справочник.Валюты КАК Т';
+    expect(findMalformedCustomExpressions(parseBatch(text))).toEqual([]);
+  });
+
+  it('сломанное condition-поле builder через batchWithModel (все 4 блока: fields/conditions/order/totals)', () => {
+    const bad = { ref: 'Т.Код = = &А', child: false, condition: true as const };
+    for (const key of ['fields', 'conditions', 'order', 'totals'] as const) {
+      const hits = findMalformedCustomExpressions(batchWithModel({
+        builder: { fields: [], conditions: [], order: [], totals: [], [key]: [bad] },
+      }));
+      expect(hits, `builder.${key}`).toEqual([{ kind: 'builderCondition', text: 'Т.Код = = &А' }]);
+    }
   });
 });
