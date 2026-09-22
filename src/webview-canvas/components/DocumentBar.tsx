@@ -99,10 +99,16 @@ export function DocumentBar({
   locale,
   onSave,
   saveDisabled,
+  saveDisabledReason,
 }: {
   locale: SupportedLocale;
   onSave: () => void;
   saveDisabled: boolean;
+  /** Apply-gate parity fix (2026-09-22): why Save is disabled, when it's a known
+   * capability/preservation gate (unsafe virtual table / malformed custom
+   * expression) rather than just "nothing to save" — shown as a tooltip so the
+   * disabled state isn't silent, same intent as Classic's okError banner. */
+  saveDisabledReason?: string;
 }): React.ReactElement {
   return (
     <div style={BAR_STYLE}>
@@ -116,6 +122,7 @@ export function DocumentBar({
           className="qcc-btn"
           style={saveDisabled ? BTN_PRIMARY_DISABLED : BTN_PRIMARY}
           disabled={saveDisabled}
+          title={saveDisabledReason}
           onClick={onSave}
         >
           {t(locale, 'save')}

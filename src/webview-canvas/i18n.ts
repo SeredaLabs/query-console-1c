@@ -13,6 +13,10 @@ const DICT = {
     switchToClassic: 'Classic',
     cancel: 'Cancel',
     save: 'Save',
+    // Apply-gate parity fix (2026-09-22): same capability/preservation gate as
+    // Classic's constructor.unsafeVirtual/constructor.malformedCustom.
+    saveBlockedUnsafeVirtual: 'A virtual table here contains parameters (the third and subsequent arguments) that cannot be preserved without data loss. Saving is blocked.',
+    saveBlockedMalformed: 'A custom condition or expression appears to be syntactically broken. Saving is blocked to avoid writing an invalid query.',
     notYetAvailable: 'Available once Structure/Fields are implemented',
     sidebarMetadata: 'Metadata',
     sidebarPackage: 'Package',
@@ -245,6 +249,8 @@ const DICT = {
     switchToClassic: 'Класичний',
     cancel: 'Скасувати',
     save: 'Зберегти',
+    saveBlockedUnsafeVirtual: 'Віртуальна таблиця містить параметри (третій і наступні аргументи), які неможливо зберегти без втрати даних. Збереження заблоковано.',
+    saveBlockedMalformed: 'Довільна умова або вираз виглядає синтаксично некоректним. Збереження заблоковано, щоб не записати невалідний запит.',
     notYetAvailable: 'Стане доступним після реалізації Structure/Fields',
     sidebarMetadata: 'Метадані',
     sidebarPackage: 'Пакет',
@@ -477,6 +483,8 @@ const DICT = {
     switchToClassic: 'Классический',
     cancel: 'Отмена',
     save: 'Сохранить',
+    saveBlockedUnsafeVirtual: 'Виртуальная таблица содержит параметры (третий и последующие аргументы), которые невозможно сохранить без потери данных. Сохранение заблокировано.',
+    saveBlockedMalformed: 'Произвольное условие или выражение выглядит синтаксически некорректным. Сохранение заблокировано, чтобы не записать невалидный запрос.',
     notYetAvailable: 'Станет доступным после реализации Structure/Fields',
     sidebarMetadata: 'Метаданные',
     sidebarPackage: 'Пакет',

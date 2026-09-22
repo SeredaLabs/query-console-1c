@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
 import { tryOpenBatch } from '../core/query/validateBatch';
+import { findUnsafeVirtualTables, findMalformedCustomExpressions } from '../core/query/semanticValidator';
 import type { SupportedLocale } from '../shared/locale';
 import { computeBatchTextSafe } from '../webview/computeBatchText';
-import { initialState, metadataCatalogRef, reducer } from '../webview/state/queryStore';
+import { assembleBatch, initialState, metadataCatalogRef, reducer } from '../webview/state/queryStore';
 import { onHostMessage, postToHost } from './bridge';
 import { DocumentBar } from './components/DocumentBar';
 import { PackageNav } from './components/PackageNav';
@@ -11,6 +12,7 @@ import { SdblDock } from './components/SdblDock';
 import { Workspace } from './components/Workspace';
 import type { WorkspaceTab } from './components/WorkspaceNav';
 import { HoverStyles } from './hoverStyles';
+import { t } from './i18n';
 import type { StructureSelection } from './structure/StructureWorkspace';
 import { DIMENSIONS, ROOT_STYLE } from './theme';
 
@@ -92,6 +94,22 @@ export function App(): React.ReactElement {
   }, []);
 
   /**
+   * Apply-gate parity fix (2026-09-22, audit P1 #1): Save раніше перевіряв
+   * ЛИШЕ `batchText.error`/порожній текст --- на відміну від Classic
+   * (`webview/App.tsx`'s `unsafeVtError`/`malformedCustomError`), жодного
+   * capability/preservation gate ПЕРЕД записом. Віртуальна таблиця з
+   * непокритими позиціями 3+ (`findUnsafeVirtualTables`) чи пошкоджений
+   * custom-вираз (`findMalformedCustomExpressions`) мовчки зберігались би з
+   * втратою даних (§27/28/54 P0.5 --- той самий gate, що вже захищає Classic).
+   * Той самий `assembleBatch(state)`, що Canvas і так рахує кожен рендер для
+   * `batchText` --- жодної нової моделі/обчислення, лише підключення вже
+   * існуючих у ядрі перевірок.
+   */
+  const unsafeVtNames = React.useMemo(() => findUnsafeVirtualTables(assembleBatch(state)), [state]);
+  const malformedCustomHits = React.useMemo(() => findMalformedCustomExpressions(assembleBatch(state)), [state]);
+  const saveBlocked = unsafeVtNames.length > 0 || malformedCustomHits.length > 0;
+
+  /**
    * Save support (2026-09-21): "Зберегти" тепер реально функціональна --- той
    * самий `WebviewMsg.insertText`, що й Classic (`webview/App.tsx`'s
    * `handleInsert`), з уже готовим client-side `batchText` (Canvas і так
@@ -100,9 +118,9 @@ export function App(): React.ReactElement {
    * з тими самими stale-document/`documentVersion` guard'ами, що й Classic.
    */
   const handleSave = React.useCallback(() => {
-    if (batchText.error || !batchText.text.trim()) return;
+    if (batchText.error || !batchText.text.trim() || saveBlocked) return;
     postToHost({ type: 'insertText', text: batchText.text });
-  }, [batchText]);
+  }, [batchText, saveBlocked]);
 
   const resizeSdbl = React.useCallback((delta: number) => {
     // SDBL dock над нижнім краєм: тягнення вгору (delta<0) має ЗБІЛЬШУВАТИ висоту.
@@ -117,7 +135,18 @@ export function App(): React.ReactElement {
   return (
     <div style={ROOT_STYLE}>
       <HoverStyles />
-      <DocumentBar locale={locale} onSave={handleSave} saveDisabled={!!batchText.error || !batchText.text.trim()} />
+      <DocumentBar
+        locale={locale}
+        onSave={handleSave}
+        saveDisabled={!!batchText.error || !batchText.text.trim() || saveBlocked}
+        saveDisabledReason={
+          unsafeVtNames.length > 0
+            ? t(locale, 'saveBlockedUnsafeVirtual')
+            : malformedCustomHits.length > 0
+            ? t(locale, 'saveBlockedMalformed')
+            : undefined
+        }
+      />
       <PackageNav locale={locale} state={state} dispatch={dispatch} onOpenAdditional={() => setWorkspaceTab('additional')} />
       <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
         <Workspace
