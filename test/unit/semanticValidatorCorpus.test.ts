@@ -56,6 +56,38 @@ describe('checkFieldPaths: нуль хибних спрацювань на ре�
     expect(withTrailingFields, 'очікувався принаймні 1 реальний golden-запит з trailingFields').toBeGreaterThan(0);
   });
 
+  // Review follow-up (2026-09-22): checkFieldPaths розширено ще на 5 гілок —
+  // СГРУППИРОВАТЬ/УПОРЯДОЧИТЬ/ИТОГИ/ИНДЕКСИРОВАТЬ ПО та агрегат над
+  // квалифицированным операндом (funcOperandQualified). Підтверджуємо, що
+  // реальні golden-запити виконують КОЖНУ з них (крім totals.groupFields —
+  // жоден запит корпусу не використовує квалифицированную ссылку саме в
+  // ИТОГИ ПО; ця гілка перевірена вручну через прямий parseBatch-репро в
+  // semanticValidator.test.ts, а не корпусом).
+  it('golden-запити реально наповнюють нові гілки checkFieldPaths (окрім totals.groupFields)', () => {
+    const coverage = { grouping: 0, orderQualified: 0, indexingQualified: 0, funcOperandQualified: 0 };
+    for (const g of golden) {
+      if (!g.valid) continue;
+      let doc;
+      try {
+        doc = parseBatch(g.input, resolver);
+      } catch {
+        continue;
+      }
+      for (const member of doc.members) {
+        for (const m of member.members) {
+          const model = m.model;
+          if ((model.grouping?.groupFields ?? []).some(f => f.expression === undefined)) coverage.grouping++;
+          if ((model.order?.fields ?? []).some(f => f.qualified)) coverage.orderQualified++;
+          if ((model.indexing?.indexes ?? []).some(idx => idx.fields.some(f => f.qualified))) coverage.indexingQualified++;
+          if ([...model.fields, ...(model.trailingFields ?? [])].some(f => f.funcOperandQualified)) coverage.funcOperandQualified++;
+        }
+      }
+    }
+    for (const [branch, count] of Object.entries(coverage)) {
+      expect(count, `${branch}: очікувався принаймні 1 реальний golden-запит з цією гілкою`).toBeGreaterThan(0);
+    }
+  });
+
   it('жоден реальний запит не дає "Поле ... не найдено"', () => {
     const falsePositives: Array<{ file: string; messages: string[] }> = [];
     for (const g of golden) {

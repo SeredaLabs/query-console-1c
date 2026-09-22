@@ -169,26 +169,30 @@ export function validateBatchSemantics(
     const idToTable = new Map<string, SelectedTable>();
     for (const t of model.tables) idToTable.set(t.id, t);
 
-    // Review follow-up (2026-09-22): раньше проверялись только `model.fields` —
-    // `trailingFields` (поля ПОСЛЕ развёрнутой звезды `Алиас.*`, напр.
-    // `ВЫБРАТЬ Т.*, Т.НетТакогоПоля ИЗ …`) молча пропускались, хотя это те же
-    // `SelectedField`-узлы с тем же `qualified`/`expression` контрактом.
-    for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
-      if (f.expression !== undefined) continue;
-      if (!f.qualified) continue; // голову-таблицу определяем только у квалифицированного поля
-      const src = idToTable.get(f.tableId);
-      if (!src || src.subquery || !src.fullName || src.fullName.startsWith('&')) continue;
+    /**
+     * Проверка существования ОДНОГО поля (tableId, path) по метаданным — ядро,
+     * общее для `model.fields`/`trailingFields` и всех остальных мест модели,
+     * адресующих поле квалифицированной ссылкой `Алиас.Путь` (review follow-up,
+     * 2026-09-22): `grouping.groupFields` (СГРУППИРОВАТЬ ПО), `order.fields`
+     * (УПОРЯДОЧИТЬ ПО), `totals.groupFields` (ИТОГИ ПО),
+     * `indexing.indexes[].fields` (ИНДЕКСИРОВАТЬ ПО) — реальные репро через
+     * parseBatch подтвердили: несуществующее поле в любом из них давало
+     * `errors: []`, хотя семантически это тот же класс ошибки, что и в SELECT.
+     */
+    const checkOne = (tableId: string, path: string): void => {
+      const src = idToTable.get(tableId);
+      if (!src || src.subquery || !src.fullName || src.fullName.startsWith('&')) return;
       const meta = r.tableByFullName(src.fullName);
       // Временные таблицы: состав колонок — эвристический вывод, может быть
       // неполон — не проверяем (см. файловый комментарий выше).
-      if (!meta || meta.kind === 'ВременнаяТаблица') continue;
+      if (!meta || meta.kind === 'ВременнаяТаблица') return;
 
-      const segs = f.path.split('.');
+      const segs = path.split('.');
       const resolution = resolveFieldPath(meta, segs, r);
-      if (resolution.stoppedReason !== 'fieldNotFound') continue;
+      if (resolution.stoppedReason !== 'fieldNotFound') return;
 
       const badSegment = resolution.unresolvedTail[0];
-      if (PSEUDO_FIELDS.has(badSegment.toUpperCase())) continue;
+      if (PSEUDO_FIELDS.has(badSegment.toUpperCase())) return;
 
       const ownerMeta = resolution.resolved.length > 0
         ? (resolution.resolved[resolution.resolved.length - 1].refTarget ?? meta)
@@ -196,6 +200,50 @@ export function validateBatchSemantics(
       errors.push({
         message: `Поле "${badSegment}" не найдено в "${ownerMeta.fullName}"`,
       });
+    };
+
+    // `model.fields`/`trailingFields`: квалифицированное поле (`f.qualified`)
+    // ИЛИ агрегат над квалифицированным операндом (`f.funcOperandQualified` —
+    // ОТДЕЛЬНЫЙ от `qualified` флаг для случая `ФУНКЦИЯ(Алиас.Поле)`, до этого
+    // фикса тоже пропускался: `СУММА(Т.НетТакогоПоля)` давало `errors: []`).
+    for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
+      if (f.expression !== undefined) continue;
+      if (!f.qualified && !f.funcOperandQualified) continue;
+      checkOne(f.tableId, f.path);
+    }
+
+    // `grouping.groupFields` (СГРУППИРОВАТЬ ПО): `parseGroupFieldRef`
+    // (sdblParser.ts) НИКОГДА не проставляет `qualified` (в отличие от
+    // order/totals/indexing ниже) — но `tableId`/`path` без `expression`
+    // ВСЕГДА означают уже резолвленную ссылку (Алиас.Путь либо голый путь,
+    // резолвленный к таблице-владельцу), поэтому гейта по `qualified` здесь
+    // нет и не должно быть.
+    for (const f of model.grouping?.groupFields ?? []) {
+      if (f.expression !== undefined) continue;
+      checkOne(f.tableId, f.path);
+    }
+
+    // `order.fields`/`totals.groupFields`/`indexing.indexes[].fields`:
+    // `resolveSectionFieldRef` (sdblParser.ts, общая для всех трёх) проставляет
+    // `qualified: true` ТОЛЬКО для резолвленной `Алиас.Путь`/голой владелец-
+    // ссылки; ссылка по псевдониму выборки (`selectAlias`) его не получает —
+    // та же семантика, что и у `model.fields`, поэтому тот же гейт.
+    for (const f of model.order?.fields ?? []) {
+      if (f.expression !== undefined) continue;
+      if (!f.qualified) continue;
+      checkOne(f.tableId, f.path);
+    }
+    for (const f of model.totals?.groupFields ?? []) {
+      if (f.expression !== undefined) continue;
+      if (!f.qualified) continue;
+      checkOne(f.tableId, f.path);
+    }
+    for (const idx of model.indexing?.indexes ?? []) {
+      for (const f of idx.fields) {
+        if (f.expression !== undefined) continue;
+        if (!f.qualified) continue;
+        checkOne(f.tableId, f.path);
+      }
     }
   };
 
