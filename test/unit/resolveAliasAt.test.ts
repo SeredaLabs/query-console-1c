@@ -163,4 +163,56 @@ describe('resolveAliasAt', () => {
     const pos = text.indexOf('Т.Код');
     expect(resolveAliasAt(snapshot, pos, 'т').kind).toBe('resolved');
   });
+
+  // Hover/Completion scope audit (2026-09-22): closes the two scope-isolation
+  // scenarios the audit found were exercised only by ad hoc repro scripts, not
+  // by a permanent test — same reused alias in two DIFFERENT scopes must each
+  // resolve to their OWN declaration, not just "resolved (something)". The
+  // resolved symbol's `ref.path` segments (`batch`/`union` index) identify
+  // EXACTLY which statement/branch declared the table that was found, so a
+  // regression that silently resolved to the wrong same-name declaration would
+  // fail these even though `.kind` alone would still read "resolved".
+  describe('same alias reused in two different batch statements (`;`-separated)', () => {
+    const text =
+      'ВЫБРАТЬ Т.Код ИЗ Справочник.Товары КАК Т\n' +
+      ';\n' +
+      'ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т';
+    const snapshot = buildSemanticSnapshotFromText(1, text);
+    const posStmt1 = text.indexOf('Т.Код');
+    const posStmt2 = text.lastIndexOf('Т.Код');
+
+    it('resolves Т in the FIRST statement to a table declared in batch index 0', () => {
+      const r = resolveAliasAt(snapshot, posStmt1, 'Т');
+      expect(r.kind).toBe('resolved');
+      if (r.kind === 'resolved') expect(r.value.ref.path[0]).toEqual({ kind: 'batch', index: 0 });
+    });
+
+    it('resolves Т in the SECOND statement to a table declared in batch index 1 — NOT the first statement\'s Т', () => {
+      const r = resolveAliasAt(snapshot, posStmt2, 'Т');
+      expect(r.kind).toBe('resolved');
+      if (r.kind === 'resolved') expect(r.value.ref.path[0]).toEqual({ kind: 'batch', index: 1 });
+    });
+  });
+
+  describe('same alias reused in two ОБЪЕДИНИТЬ branches of the same statement', () => {
+    const text =
+      'ВЫБРАТЬ Т.Код ИЗ Справочник.Товары КАК Т ' +
+      'ОБЪЕДИНИТЬ ВСЕ ' +
+      'ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т';
+    const snapshot = buildSemanticSnapshotFromText(1, text);
+    const posBranch1 = text.indexOf('Т.Код');
+    const posBranch2 = text.lastIndexOf('Т.Код');
+
+    it('resolves Т in the FIRST branch to a table declared in union index 0', () => {
+      const r = resolveAliasAt(snapshot, posBranch1, 'Т');
+      expect(r.kind).toBe('resolved');
+      if (r.kind === 'resolved') expect(r.value.ref.path[1]).toEqual({ kind: 'union', index: 0 });
+    });
+
+    it('resolves Т in the SECOND branch to a table declared in union index 1 — NOT the first branch\'s Т', () => {
+      const r = resolveAliasAt(snapshot, posBranch2, 'Т');
+      expect(r.kind).toBe('resolved');
+      if (r.kind === 'resolved') expect(r.value.ref.path[1]).toEqual({ kind: 'union', index: 1 });
+    });
+  });
 });
