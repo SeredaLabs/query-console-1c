@@ -5,6 +5,18 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.83 - 2026-09-22
+
+### Fixed
+
+- A nonexistent field referenced right after an expanded star selection
+  (`SELECT T.*, T.NoSuchField FROM ...`) is now caught as "field not found",
+  instead of silently passing validation.
+- Report Builder condition blocks (`{WHERE}`/`{SELECT}`/`{ORDER BY}`/
+  `{TOTALS}`) are now covered by the same structural-expression check as
+  regular query conditions — a malformed condition inside one of these blocks
+  can no longer be saved without being caught.
+
 ## 0.1.82 - 2026-09-22
 
 ### Fixed
