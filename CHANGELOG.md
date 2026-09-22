@@ -5,6 +5,103 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.81 - 2026-09-22
+
+### Fixed
+
+- New Builder (Canvas): Save no longer bypasses the capability/preservation
+  gate Classic already had — a virtual table with uncovered positions 3+, or
+  a structurally broken custom expression, is now blocked from being saved
+  instead of silently losing data on a Canvas round-trip.
+- New Builder (Canvas): a query that fails to parse when opened is now shown
+  as a full-panel error with a Close action, instead of silently presenting
+  as an empty, editable canvas that could overwrite the original query text
+  on Save.
+- The Apply-gate's structural-expression check now also covers trailing
+  fields after an expanded star selection, GROUP BY/ORDER BY/index fields,
+  ИТОГИ aggregate expressions, and expressions inside tabular-section
+  projections — a malformed custom expression in any of these could
+  previously be saved without being caught.
+- Two sources sharing the same alias (explicit `КАК А` twice, or two bare
+  references to the same table) are now rejected when opening a query,
+  instead of silently misattributing fields to the wrong source.
+- Deleting a metadata XML object no longer leaves it lingering in an
+  already-cached metadata snapshot — deletions are now detected the same way
+  additions/changes already were.
+- A metadata snapshot from an incompatible or corrupted format version is no
+  longer silently trusted as a valid cache.
+- The last-known-good metadata cache is now written atomically, so an
+  interrupted write can no longer corrupt the one fallback used when every
+  other metadata load path has failed.
+
+### Security
+
+- Updated `@xmldom/xmldom` to 0.9.12, resolving a high-severity advisory in
+  the bundled version.
+
+### Changed
+
+- The packaged extension (`.vscodeignore`) now uses an allowlist for `out/`
+  instead of a denylist, so a stray build artifact can no longer be
+  accidentally included in the VSIX (a stale nested copy of the extension
+  had been shipping this way).
+
+## 0.1.80 - 2026-09-21
+
+### Fixed
+
+- The tolerant-parser repair pass could throw an uncaught lexer error on
+  common mid-typing states (e.g. an unterminated string) — Hover now
+  degrades gracefully instead of crashing.
+
+## 0.1.79 - 2026-09-21
+
+### Changed
+
+- New Builder: PackageNav round 3 — unified the delete control into a single
+  control next to "+", replacing the previous separate/inconsistent controls.
+
+## 0.1.78 - 2026-09-21
+
+### Added
+
+- New Builder (Canvas): wired the canvas up to the real editor load and save
+  flow — opening from text and saving now go through the same
+  `tryOpenBatch`/`insertResult` path Classic uses.
+
+## 0.1.77 - 2026-09-21
+
+### Changed
+
+- New Builder: PackageNav round 2 — status dots, single-line query identity,
+  and a more compact UNION delete control.
+
+## 0.1.76 - 2026-09-21
+
+### Changed
+
+- New Builder: polished PackageNav's segmented navigation styling.
+
+## 0.1.75 - 2026-09-21
+
+### Added
+
+- New Builder: PackageNav quick actions and a responsive layout redesign.
+
+## 0.1.74 - 2026-09-20
+
+### Added
+
+- New Builder: Phase 12A/12B — temp-table producer/consumer UI foundation and
+  package temp-table continuity in PackageNav.
+
+### Fixed
+
+- Established the UNION + temp-table compound-carrier invariant and finalized
+  temp-table lifecycle semantics in the query model, closing a class of edge
+  cases around which UNION member actually carries `ПОМЕСТИТЬ`/`ДОБАВИТЬ`.
+- Source Browser: shortened the popover footer and made it close on Escape.
+
 ## 0.1.73 - 2026-09-20
 
 ### Changed
