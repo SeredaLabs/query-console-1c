@@ -17,6 +17,12 @@ const DICT = {
     // Classic's constructor.unsafeVirtual/constructor.malformedCustom.
     saveBlockedUnsafeVirtual: 'A virtual table here contains parameters (the third and subsequent arguments) that cannot be preserved without data loss. Saving is blocked.',
     saveBlockedMalformed: 'A custom condition or expression appears to be syntactically broken. Saving is blocked to avoid writing an invalid query.',
+    // Load-failure fix (2026-09-22, audit P1 #2): a query that fails to parse
+    // must NOT silently present as an empty, editable canvas — see App.tsx's
+    // 'loadModel' handler for why a blocking overlay (not just a banner) is
+    // required here.
+    openFailedTitle: 'Could not open this query',
+    openFailedClose: 'Close',
     notYetAvailable: 'Available once Structure/Fields are implemented',
     sidebarMetadata: 'Metadata',
     sidebarPackage: 'Package',
@@ -251,6 +257,8 @@ const DICT = {
     save: 'Зберегти',
     saveBlockedUnsafeVirtual: 'Віртуальна таблиця містить параметри (третій і наступні аргументи), які неможливо зберегти без втрати даних. Збереження заблоковано.',
     saveBlockedMalformed: 'Довільна умова або вираз виглядає синтаксично некоректним. Збереження заблоковано, щоб не записати невалідний запит.',
+    openFailedTitle: 'Не вдалося відкрити цей запит',
+    openFailedClose: 'Закрити',
     notYetAvailable: 'Стане доступним після реалізації Structure/Fields',
     sidebarMetadata: 'Метадані',
     sidebarPackage: 'Пакет',
@@ -485,6 +493,8 @@ const DICT = {
     save: 'Сохранить',
     saveBlockedUnsafeVirtual: 'Виртуальная таблица содержит параметры (третий и последующие аргументы), которые невозможно сохранить без потери данных. Сохранение заблокировано.',
     saveBlockedMalformed: 'Произвольное условие или выражение выглядит синтаксически некорректным. Сохранение заблокировано, чтобы не записать невалидный запрос.',
+    openFailedTitle: 'Не удалось открыть этот запрос',
+    openFailedClose: 'Закрыть',
     notYetAvailable: 'Станет доступным после реализации Structure/Fields',
     sidebarMetadata: 'Метаданные',
     sidebarPackage: 'Пакет',

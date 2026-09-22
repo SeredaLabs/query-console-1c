@@ -14,7 +14,7 @@ import type { WorkspaceTab } from './components/WorkspaceNav';
 import { HoverStyles } from './hoverStyles';
 import { t } from './i18n';
 import type { StructureSelection } from './structure/StructureWorkspace';
-import { DIMENSIONS, ROOT_STYLE } from './theme';
+import { DIMENSIONS, ROOT_STYLE, TOKENS } from './theme';
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -51,6 +51,10 @@ export function App(): React.ReactElement {
 
   const [selection, setSelection] = React.useState<StructureSelection>(null);
   const [inspectorWidth, setInspectorWidth] = React.useState<number>(DIMENSIONS.inspector.default);
+  // Load-failure fix (2026-09-22, audit P1 #2): non-null → the query under the
+  // cursor failed to parse. Rendered as a blocking overlay (see below), never as
+  // a silently empty, editable canvas.
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   // Package/query switch, REMOVE_TABLE чи REMOVE_JOIN, чия ціль зараз обрана
   // — selection не повинна пережити зникнення своєї цілі (design §9/§10,
@@ -79,14 +83,22 @@ export function App(): React.ReactElement {
         // Canvas. Резолвер --- з `metadataCatalogRef` (той самий module-level
         // ref, синхронно оновлюваний `SET_METADATA`-кейсом reducer'а, яким уже
         // користується `allTables()`), а не окремий Canvas-specific стан.
+        //
+        // Load-failure fix (2026-09-22, audit P1 #2): раніше провал `tryOpenBatch`
+        // просто нічого не диспатчив --- Canvas лишався мовчки порожнім, як при
+        // звичайному відкритті без initial query, і НЕ відрізнявся від нього. Хост
+        // (`canvasPanel.ts`) при цьому ВЖЕ захопив `savedEditor` (діапазон
+        // оригінального тексту в редакторі) при відкритті панелі --- якщо
+        // користувач після цього побудує НОВИЙ запит у порожньому Canvas і натисне
+        // Save, `insertText` перезапише ОРИГІНАЛЬНИЙ текст під курсором, хоча
+        // Canvas його навіть не відкривав. `loadError` рендериться як блокуючий
+        // overlay (нижче) --- єдина дія користувача звідти --- Close (`cancel`,
+        // `canvasPanel.ts` диспозить панель БЕЗ жодного `insertText`), той самий
+        // fail-closed підхід, що й Classic (`webview/App.tsx`'s `loadError`).
         const resolver = metadataCatalogRef.current.length ? buildResolverFromTables(metadataCatalogRef.current) : undefined;
         const r = tryOpenBatch(msg.text, resolver, { preserveComments: true });
-        if (r.ok) dispatch({ type: 'LOAD_BATCH', doc: r.doc });
-        // Малоймовірний випадок (текст під курсором пройшов Classic-детектор
-        // меж запиту, але не парситься) свідомо без окремого error-UI в цьому
-        // проході --- Canvas тоді просто лишається порожнім, як і при звичайному
-        // відкритті без initial query; повноцінний error banner --- поза
-        // мінімальним Save-scope цього завдання.
+        if (r.ok) { dispatch({ type: 'LOAD_BATCH', doc: r.doc }); setLoadError(null); }
+        else setLoadError(r.error);
       }
     });
     postToHost({ type: 'ready' });
@@ -122,6 +134,13 @@ export function App(): React.ReactElement {
     postToHost({ type: 'insertText', text: batchText.text });
   }, [batchText, saveBlocked]);
 
+  /** Load-failure fix (2026-09-22): closes the panel WITHOUT ever sending
+   * `insertText` --- `canvasPanel.ts` disposes on `cancel`, same as Classic's
+   * `handleCancel`. The only way out of the loadError overlay. */
+  const handleClose = React.useCallback(() => {
+    postToHost({ type: 'cancel' });
+  }, []);
+
   const resizeSdbl = React.useCallback((delta: number) => {
     // SDBL dock над нижнім краєм: тягнення вгору (delta<0) має ЗБІЛЬШУВАТИ висоту.
     setSdblHeight(h => clamp(h - delta, DIMENSIONS.sdbl.min, DIMENSIONS.sdbl.max));
@@ -133,6 +152,7 @@ export function App(): React.ReactElement {
   }, []);
 
   return (
+    <>
     <div style={ROOT_STYLE}>
       <HoverStyles />
       <DocumentBar
@@ -172,5 +192,32 @@ export function App(): React.ReactElement {
         onResize={resizeSdbl}
       />
     </div>
+
+    {/* Load-failure fix (2026-09-22, audit P1 #2): blocking overlay, same intent
+        as Classic's `loadError` banner --- covers the whole panel so the user
+        cannot reach an empty, editable canvas (and Save) behind it; Close is the
+        only escape and never sends `insertText`. */}
+    {loadError != null && (
+      <div
+        data-testid="canvas-load-error"
+        style={{
+          position: 'fixed', inset: 0,
+          background: TOKENS.background,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: 12, padding: 24, textAlign: 'center', zIndex: 400,
+        }}
+      >
+        <div style={{ color: TOKENS.danger, fontSize: 14, fontWeight: 600 }}>
+          {t(locale, 'openFailedTitle')}
+        </div>
+        <div style={{ color: TOKENS.danger, fontSize: 13, whiteSpace: 'pre-wrap', maxWidth: 640 }}>
+          {loadError}
+        </div>
+        <button type="button" className="qcc-btn" onClick={handleClose}>
+          {t(locale, 'openFailedClose')}
+        </button>
+      </div>
+    )}
+    </>
   );
 }
