@@ -2,7 +2,7 @@
   "name": "query-console-1c",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.1.80",
+  "version": "0.1.81",
   "icon": "assets/images/icon.png",
   "license": "MIT",
   "publisher": "SeredaLabs",
