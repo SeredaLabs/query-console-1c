@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -94,5 +94,72 @@ describe('writeLastKnownGood — best-effort, не бросает на сбое 
     const badStorageDir = path.join(blockerFile, 'nested');
 
     expect(() => writeLastKnownGood(badStorageDir, '/whatever/cf', MODEL)).not.toThrow();
+  });
+});
+
+// Architecture audit P2 (2026-09-22): раньше писалось напрямую в целевой файл
+// (fs.writeFileSync(target, …)) — прерванная запись могла оставить target
+// усечённым/повреждённым и УНИЧТОЖИТЬ единственную страховку на случай, когда
+// все остальные пути загрузки уже отказали. Теперь пишем во временный файл и
+// атомарно renameSync поверх цели.
+describe('writeLastKnownGood — атомарная запись (temp + rename)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('успешная запись не оставляет временных файлов — ровно один итоговый файл', () => {
+    writeLastKnownGood(tmpDir, '/project-f/src/cf', MODEL);
+    const files = fs.readdirSync(tmpDir);
+    expect(files).toHaveLength(1);
+    expect(files[0]).not.toContain('.tmp-');
+  });
+
+  it('сбой ПОСЛЕ записи временного файла (renameSync бросает) — старый target остаётся ЦЕЛЫМ, временный файл убирается', async () => {
+    // Сначала — настоящий успешный good-снимок через РЕАЛЬНУЮ (немокнутую)
+    // реализацию, который симулированный сбой ниже НЕ должен тронуть.
+    writeLastKnownGood(tmpDir, '/project-g/src/cf', MODEL);
+    const before = readLastKnownGood(tmpDir, '/project-g/src/cf');
+    expect(before?.model).toEqual(MODEL);
+
+    // Node's `fs` module экспорты не configurable — vi.spyOn(fs, ...) не может
+    // их подменить напрямую; мокаем модуль целиком через vi.doMock (реальные
+    // реализации для всего, кроме renameSync — importActual).
+    vi.resetModules();
+    vi.doMock('fs', async () => {
+      const actual = await vi.importActual<typeof fs>('fs');
+      return {
+        ...actual,
+        renameSync: () => {
+          throw new Error('симулированный сбой переименования (диск переполнен на середине)');
+        },
+      };
+    });
+    const { writeLastKnownGood: writeMocked } = await import('../../src/core/metadata/lastKnownGoodCache');
+
+    const updatedModel: MetadataModel = {
+      version: 1,
+      tables: [{ kind: 'Справочник', name: 'Другой', fullName: 'Справочник.Другой', fields: [] }],
+    };
+    expect(() => writeMocked(tmpDir, '/project-g/src/cf', updatedModel)).not.toThrow();
+
+    vi.doUnmock('fs');
+    vi.resetModules();
+
+    // Старый last-known-good НЕ повреждён и НЕ заменён — сбой renameSync
+    // произошёл ДО того, как что-либо тронуло сам target.
+    const after = readLastKnownGood(tmpDir, '/project-g/src/cf');
+    expect(after?.model).toEqual(MODEL);
+
+    // Ни одного осиротевшего .tmp-* файла в каталоге хранения.
+    const leftoverTmp = fs.readdirSync(tmpDir).filter(f => f.includes('.tmp-'));
+    expect(leftoverTmp).toEqual([]);
+  });
+
+  it('конкурентные записи для РАЗНЫХ cfPath используют разные временные имена (нет коллизии)', () => {
+    writeLastKnownGood(tmpDir, '/project-h1/src/cf', MODEL);
+    writeLastKnownGood(tmpDir, '/project-h2/src/cf', MODEL);
+    expect(readLastKnownGood(tmpDir, '/project-h1/src/cf')?.model).toEqual(MODEL);
+    expect(readLastKnownGood(tmpDir, '/project-h2/src/cf')?.model).toEqual(MODEL);
+    expect(fs.readdirSync(tmpDir)).toHaveLength(2);
   });
 });

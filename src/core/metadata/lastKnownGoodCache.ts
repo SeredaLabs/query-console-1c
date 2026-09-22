@@ -51,16 +51,33 @@ function lastKnownGoodPath(storageDir: string, cfPath: string): string {
  * просто пропускает отсутствующие подкаталоги) — это отдельный, не связанный
  * с last-known-good пробел (см. docs/development/known-issues.md), но здесь он не должен
  * стирать уже накопленный last-known-good.
+ *
+ * Architecture audit P2 (2026-09-22): раньше писалось напрямую в целевой файл
+ * (`fs.writeFileSync(target, …)`) — прерванная запись (диск переполнился/
+ * процесс убит на середине) могла оставить `target` усечённым/повреждённым и
+ * тем самым УНИЧТОЖИТЬ предыдущий рабочий last-known-good — единственную
+ * страховку на случай, когда ВСЕ остальные пути загрузки уже отказали
+ * (см. файловый комментарий модуля). Пишем во временный файл и атомарно
+ * `renameSync` поверх цели — тот же приём, что уже использует
+ * `generationStore.ts` для staged-коммитов: `target` либо остаётся старым
+ * целым файлом, либо становится новым целым файлом, никогда не усечённым
+ * промежуточным состоянием.
  */
 export function writeLastKnownGood(storageDir: string, cfPath: string, model: MetadataModel): void {
   if (model.tables.length === 0) return;
+  const target = lastKnownGoodPath(storageDir, cfPath);
+  const tmp = `${target}.tmp-${process.pid}-${Date.now()}`;
   try {
-    const target = lastKnownGoodPath(storageDir, cfPath);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     const file: LastKnownGood = { cacheVersion: LAST_KNOWN_GOOD_VERSION, builtAtMs: Date.now(), model };
-    fs.writeFileSync(target, JSON.stringify(file));
+    fs.writeFileSync(tmp, JSON.stringify(file));
+    fs.renameSync(tmp, target);
   } catch {
-    // best-effort
+    // best-effort: an interrupted write must never leave behind an orphaned
+    // tmp file OR a truncated target — target is untouched by construction
+    // above (renameSync either fully succeeds or never runs); clean up
+    // whatever tmp state we managed to create.
+    try { fs.rmSync(tmp, { force: true }); } catch { /* best-effort cleanup */ }
   }
 }
 
