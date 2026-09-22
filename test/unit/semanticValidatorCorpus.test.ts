@@ -13,7 +13,7 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { parseBatch } from '../../src/core/query/sdblParser';
-import { validateBatchSemantics } from '../../src/core/query/semanticValidator';
+import { validateBatchSemantics, findMalformedCustomExpressions } from '../../src/core/query/semanticValidator';
 import { buildYamlResolver } from '../../src/core/metadata/buildYamlResolver';
 
 interface Golden { file: string; valid: boolean; input: string; query_text: string; }
@@ -97,6 +97,67 @@ describe('checkFieldPaths: нуль хибних спрацювань на ре�
     }
     const preview = falsePositives.slice(0, 20)
       .map(f => `  ${f.file}:\n    ${f.messages.join('\n    ')}`)
+      .join('\n');
+    expect(falsePositives, `Хибних спрацювань: ${falsePositives.length}\n${preview}`).toEqual([]);
+  });
+});
+
+/**
+ * Architecture audit P1 №3 (2026-09-22): `findMalformedCustomExpressions`'s
+ * traversal used to skip `trailingFields`/`grouping.groupFields`/
+ * `totals.totalFields`/`order.fields`/`indexing.indexes[].fields`/
+ * `tabSectionFields[].exprFields`/`.columns` entirely — a malformed custom
+ * expression in any of them silently passed the Apply-gate. Beyond the usual
+ * false-positive sweep, this also asserts the new branches are actually
+ * EXERCISED by real corpus queries (not just theoretically reachable) — a
+ * zero-false-positive result on code nobody's real query ever hits would prove
+ * nothing.
+ */
+describe('findMalformedCustomExpressions: нове покриття обходу на реальному корпусі', () => {
+  function walkDoc(qdoc: { members: { model: import('../../src/core/query/queryModel').QueryModel }[] }, fn: (m: import('../../src/core/query/queryModel').QueryModel) => void): void {
+    for (const m of qdoc.members) fn(m.model);
+  }
+
+  it('golden-запити реально наповнюють кожну нову гілку обходу (не мертвий код)', () => {
+    const coverage = { trailingFields: 0, groupFields: 0, totalFields: 0, orderFields: 0, indexing: 0 };
+    for (const g of golden) {
+      if (!g.valid) continue;
+      let doc;
+      try {
+        doc = parseBatch(g.input);
+      } catch {
+        continue;
+      }
+      for (const member of doc.members) {
+        walkDoc(member, model => {
+          if ((model.trailingFields ?? []).some(f => f.expression !== undefined)) coverage.trailingFields++;
+          if ((model.grouping?.groupFields ?? []).some(f => f.expression !== undefined)) coverage.groupFields++;
+          if ((model.totals?.totalFields ?? []).some(f => f.expression !== undefined)) coverage.totalFields++;
+          if ((model.order?.fields ?? []).some(f => f.expression !== undefined)) coverage.orderFields++;
+          if ((model.indexing?.indexes ?? []).some(idx => idx.fields.some(f => f.expression !== undefined))) coverage.indexing++;
+        });
+      }
+    }
+    for (const [branch, count] of Object.entries(coverage)) {
+      expect(count, `${branch}: очікувався принаймні 1 реальний golden-запит з цією гілкою`).toBeGreaterThan(0);
+    }
+  });
+
+  it('жоден реальний запит не дає хибних спрацювань на розширеному обході', () => {
+    const falsePositives: Array<{ file: string; hits: unknown[] }> = [];
+    for (const g of golden) {
+      if (!g.valid) continue;
+      let doc;
+      try {
+        doc = parseBatch(g.input);
+      } catch {
+        continue;
+      }
+      const hits = findMalformedCustomExpressions(doc);
+      if (hits.length > 0) falsePositives.push({ file: g.file, hits });
+    }
+    const preview = falsePositives.slice(0, 20)
+      .map(f => `  ${f.file}:\n    ${JSON.stringify(f.hits)}`)
       .join('\n');
     expect(falsePositives, `Хибних спрацювань: ${falsePositives.length}\n${preview}`).toEqual([]);
   });

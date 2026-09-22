@@ -319,7 +319,10 @@ export function findUnsafeVirtualTables(doc: BatchDocument): string[] {
 /** Один custom/сырой узел модели, чей сохранённый текст структурно некорректен
  * — см. `isStructurallyValidExpression` (`expressionSyntaxCheck.ts`). */
 export interface MalformedCustomHit {
-  kind: 'condition' | 'joinCondition' | 'join' | 'field' | 'totalGroupField';
+  kind:
+    | 'condition' | 'joinCondition' | 'join' | 'field' | 'totalGroupField'
+    // Architecture audit P1 №3 (2026-09-22) — раньше НЕ обходились вовсе:
+    | 'trailingField' | 'groupField' | 'totalField' | 'orderField' | 'indexField' | 'tabSectionExpr';
   text: string;
 }
 
@@ -333,6 +336,19 @@ export interface MalformedCustomHit {
  * акцептор грамматики SDBL-выражений/условий — см. её файловый комментарий).
  * Обход — рекурсивно по вложенным подзапросам, тем же способом, что и
  * `findUnsafeVirtualTables` выше (ТЗ §54 P0.5, тот же Apply-blocking gate).
+ *
+ * Architecture audit P1 №3 (2026-09-22): изначальный обход пропускал ЦЕЛЫЙ
+ * класс custom-текстовых узлов модели — `trailingFields` (поля ПОСЛЕ развёрнутой
+ * звезды), `grouping.groupFields` (СГРУППИРОВАТЬ ПО), `totals.totalFields`
+ * (агрегаты ИТОГИ — отдельно от уже проверяемых `totals.groupFields`),
+ * `order.fields` (УПОРЯДОЧИТЬ ПО `&Параметр`/произвольное выражение),
+ * `indexing.indexes[].fields` (ИНДЕКСИРОВАТЬ ПО), и `tabSectionFields[]`'s
+ * `exprFields`/`columns` (произвольные выражения внутри проекции ТЧ) — каждый
+ * из этих узлов может нести такой же непроверенный сырой текст, как уже
+ * проверяемые `fields`/`conditions`, и молча проходил бы Apply-gate.
+ * `model.builder` (Построитель отчётов, ReportBuilder) сюда намеренно НЕ
+ * включён — walkModel его вообще не обходит ни для одной проверки (даже
+ * checkTable), это отдельный, никогда не валидировавшийся путь модели.
  */
 export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCustomHit[] {
   const hits: MalformedCustomHit[] = [];
@@ -361,8 +377,31 @@ export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCus
     for (const f of model.fields) {
       if (f.expression !== undefined) check(f.expression, 'field');
     }
+    for (const f of model.trailingFields ?? []) {
+      if (f.expression !== undefined) check(f.expression, 'trailingField');
+    }
+    for (const tsf of model.tabSectionFields ?? []) {
+      for (const ef of tsf.exprFields ?? []) check(ef.expression, 'tabSectionExpr');
+      for (const col of tsf.columns ?? []) {
+        if (col.kind === 'expr') check(col.expression, 'tabSectionExpr');
+      }
+    }
+    for (const f of model.grouping?.groupFields ?? []) {
+      if (f.expression !== undefined) check(f.expression, 'groupField');
+    }
     for (const f of model.totals?.groupFields ?? []) {
       if (f.expression !== undefined) check(f.expression, 'totalGroupField');
+    }
+    for (const f of model.totals?.totalFields ?? []) {
+      if (f.expression !== undefined) check(f.expression, 'totalField');
+    }
+    for (const f of model.order?.fields ?? []) {
+      if (f.expression !== undefined) check(f.expression, 'orderField');
+    }
+    for (const idx of model.indexing?.indexes ?? []) {
+      for (const f of idx.fields) {
+        if (f.expression !== undefined) check(f.expression, 'indexField');
+      }
     }
     walkConditions(model.conditions);
     walkConditions(model.having);

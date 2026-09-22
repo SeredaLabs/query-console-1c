@@ -576,4 +576,93 @@ describe('findMalformedCustomExpressions (PR-14, docs/development/known-issues.m
     expect(findMalformedCustomExpressions(batchWithCondition('Т.Код = %1'))).toEqual([]);
     expect(findMalformedCustomExpressions(batchWithCondition('#Марк#'))).toEqual([]);
   });
+
+  // Architecture audit P1 №3 (2026-09-22): до этого фикса ВЕСЬ обход просто не
+  // заглядывал в эти узлы модели — сломанный custom-текст в них молча проходил
+  // Apply-gate. Каждый собран напрямую (та же техника, что и batchWithCondition
+  // выше) — реальный отчёт аудита воспроизводился ровно на trailingField.
+  function batchWithModel(model: Partial<import('../../src/core/query/queryModel').QueryModel>): ReturnType<typeof parseBatch> {
+    return {
+      members: [{
+        members: [{
+          name: 'Запрос 1',
+          distinct: false,
+          model: {
+            tables: [{ id: 't0', fullName: 'Справочник.Валюты', alias: 'Т' }],
+            fields: [{ tableId: 't0', path: 'Код', alias: 'Код' }],
+            ...model,
+          },
+        }],
+      }],
+    };
+  }
+
+  it('сломанное trailingField (аудит: "В.Ссылка + КАК Плохое") — находится', () => {
+    const hits = findMalformedCustomExpressions(batchWithModel({
+      trailingFields: [{ tableId: 't0', path: '', alias: 'Плохое', expression: 'Т.Код + ' }],
+    }));
+    expect(hits).toEqual([{ kind: 'trailingField', text: 'Т.Код + ' }]);
+  });
+
+  it('сломанное grouping.groupFields (СГРУППИРОВАТЬ ПО &Параметр-выражение) — находится', () => {
+    const hits = findMalformedCustomExpressions(batchWithModel({
+      grouping: { multiple: false, groupFields: [{ tableId: 't0', path: '', expression: 'Т.Код = = &А' }] },
+    }));
+    expect(hits).toEqual([{ kind: 'groupField', text: 'Т.Код = = &А' }]);
+  });
+
+  it('сломанное totals.totalFields (агрегат ИТОГИ, отдельно от totals.groupFields) — находится', () => {
+    const hits = findMalformedCustomExpressions(batchWithModel({
+      totals: { grand: false, groupFields: [], totalFields: [{ tableId: 't0', path: '', expression: 'ВЫБОР КОГДА Т.Код = &А ТОГДА 1' }] },
+    }));
+    expect(hits).toEqual([{ kind: 'totalField', text: 'ВЫБОР КОГДА Т.Код = &А ТОГДА 1' }]);
+  });
+
+  it('сломанное order.fields (УПОРЯДОЧИТЬ ПО произвольное выражение) — находится', () => {
+    const hits = findMalformedCustomExpressions(batchWithModel({
+      order: { fields: [{ tableId: 't0', path: '', direction: 'asc', expression: 'Т.Код = = &А' }], auto: false },
+    }));
+    expect(hits).toEqual([{ kind: 'orderField', text: 'Т.Код = = &А' }]);
+  });
+
+  it('сломанное indexing.indexes[].fields (ИНДЕКСИРОВАТЬ ПО) — находится', () => {
+    const hits = findMalformedCustomExpressions(batchWithModel({
+      indexing: { indexes: [{ unique: false, fields: [{ tableId: 't0', path: '', expression: 'Т.Код = = &А' }] }] },
+    }));
+    expect(hits).toEqual([{ kind: 'indexField', text: 'Т.Код = = &А' }]);
+  });
+
+  it('сломанное tabSectionFields[].exprFields (произвольное выражение внутри проекции ТЧ) — находится', () => {
+    const hits = findMalformedCustomExpressions(batchWithModel({
+      tabSectionFields: [{
+        tableId: 't0', tsName: 'Товары', tsFullName: 'Справочник.Валюты.Товары', fields: [],
+        exprFields: [{ expression: 'Т.Код = = &А', alias: 'Поле1' }],
+      }],
+    }));
+    expect(hits).toEqual([{ kind: 'tabSectionExpr', text: 'Т.Код = = &А' }]);
+  });
+
+  it('сломанное tabSectionFields[].columns (kind:"expr") — находится', () => {
+    const hits = findMalformedCustomExpressions(batchWithModel({
+      tabSectionFields: [{
+        tableId: 't0', tsName: 'Товары', tsFullName: 'Справочник.Валюты.Товары', fields: [],
+        columns: [{ kind: 'expr', expression: 'Т.Код = = &А', alias: 'Поле1' }],
+      }],
+    }));
+    expect(hits).toEqual([{ kind: 'tabSectionExpr', text: 'Т.Код = = &А' }]);
+  });
+
+  it('ЛЕГИТИМНЫЕ версии всех новых узлов — НЕ находятся (не ложные срабатывания)', () => {
+    expect(findMalformedCustomExpressions(batchWithModel({
+      trailingFields: [{ tableId: 't0', path: '', alias: 'X', expression: 'Т.Код + 1' }],
+      grouping: { multiple: false, groupFields: [{ tableId: 't0', path: '', expression: 'Т.Код + 1' }] },
+      totals: { grand: false, groupFields: [], totalFields: [{ tableId: 't0', path: '', expression: 'Т.Код + 1' }] },
+      order: { fields: [{ tableId: 't0', path: '', direction: 'asc', expression: 'Т.Код + 1' }], auto: false },
+      indexing: { indexes: [{ unique: false, fields: [{ tableId: 't0', path: '', expression: 'Т.Код + 1' }] }] },
+      tabSectionFields: [{
+        tableId: 't0', tsName: 'Товары', tsFullName: 'Справочник.Валюты.Товары', fields: [],
+        exprFields: [{ expression: 'Т.Код + 1', alias: 'Поле1' }],
+      }],
+    }))).toEqual([]);
+  });
 });
