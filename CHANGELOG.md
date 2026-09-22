@@ -5,6 +5,18 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.85 - 2026-09-22
+
+### Fixed
+
+- A nonexistent field referenced inside `ГРУППИРУЮЩИМ НАБОРАМ` (multiple
+  grouping sets) is now caught as "field not found", and a malformed
+  expression there now blocks Apply the same way it already did for a plain
+  `GROUP BY` list.
+- A field referenced in both the SELECT list and an auto-derived GROUP BY no
+  longer produces two identical "field not found" diagnostics for the same
+  problem.
+
 ## 0.1.84 - 2026-09-22
 
 ### Fixed
