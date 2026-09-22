@@ -21,10 +21,15 @@ docs/*.md
 docs/*.yml
 scripts/**
 node_modules/**
-out/**/*.map
-out/cli/**
-out/test-integration/**
-out/corpus-verify/**
+# Allowlist for out/: only the two directories the shipped extension actually
+# loads (package.json's "main", canvasPanel.ts/panel.ts's out/webview/* refs).
+# A denylist here (out/cli/**, out/test-integration/**, ...) misses ANY future
+# or leftover build byproduct under out/ — audit P2 found a stale
+# out/canvas-preview-extension/ (~3MB, a whole nested copy of the extension)
+# silently packaged into the VSIX because it wasn't on that denylist.
+out/**
+!out/extension/extension.js
+!out/webview/**
 bench/**
 .env
 .env.*
