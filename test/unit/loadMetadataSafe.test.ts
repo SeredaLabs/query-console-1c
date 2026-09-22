@@ -178,6 +178,42 @@ describe('loadMetadataSnapshotFirst (production entry point, panel.ts)', () => {
     expect(spy).toHaveBeenCalled();
     expect(r.model.tables.length).toBeGreaterThan(0);
   });
+
+  // Architecture audit P2 (2026-09-22): удаление XML-объекта конфигурации не
+  // трогает mtime НИ ОДНОГО другого файла — newestRelevantMtime (mtime-only)
+  // не растёт, снимок навсегда считался бы "свежим", и удалённый объект
+  // оставался бы в модели до какой-то НЕСВЯЗАННОЙ будущей правки. Точное
+  // воспроизведение: удаляем Catalogs/Тест.xml, ничего больше не трогаем.
+  it('удаление XML-объекта инвалидирует тёплый снимок (mtime других файлов не менялся)', () => {
+    const { cfPath, snapshotOutPath, yamlOutPath } = freshCfCopy();
+    const first = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, yamlOutPath);
+    expect(first.source).toBe('direct-snapshot');
+    expect(first.model.tables.map(t => t.fullName)).toContain('Справочник.Тест');
+
+    fs.rmSync(path.join(cfPath, 'Catalogs', 'Тест.xml'));
+
+    const spy = vi.spyOn(snapshotBuilder, 'buildMetadataSnapshotFromXml');
+    const second = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, yamlOutPath);
+
+    // "direct-snapshot", НЕ "direct-snapshot-cached" — доказывает, что старый
+    // снимок (всё ещё содержащий удалённый Справочник.Тест) не был тихо возвращён.
+    expect(second.source).toBe('direct-snapshot');
+    expect(spy).toHaveBeenCalled();
+    expect(second.model.tables.map(t => t.fullName)).not.toContain('Справочник.Тест');
+  });
+
+  it('удаление БЕЗ последующего изменения структуры (тот же file count) — по-прежнему тёплый кэш', () => {
+    // Регресс на ложные срабатывания: если count не менялся между коммитом и
+    // проверкой, кэш должен остаться тёплым (обычный, самый частый случай).
+    const { cfPath, snapshotOutPath, yamlOutPath } = freshCfCopy();
+    loadMetadataSnapshotFirst(cfPath, snapshotOutPath, yamlOutPath);
+
+    const spy = vi.spyOn(snapshotBuilder, 'buildMetadataSnapshotFromXml');
+    const second = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, yamlOutPath);
+
+    expect(second.source).toBe('direct-snapshot-cached');
+    expect(spy).not.toHaveBeenCalled();
+  });
 });
 
 describe('newestRelevantMtime (exported for panel.ts residual "оба пути упали" branch)', () => {

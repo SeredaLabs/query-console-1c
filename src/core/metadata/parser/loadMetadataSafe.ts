@@ -28,7 +28,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { resolveManagedCfDir, isOwnedGeneration, type MetadataBuildIssue } from './generationStore';
-import { buildMetadataSnapshotFromXml, readMetadataSnapshot, snapshotFileMtimeMs } from './snapshotBuilder';
+import { buildMetadataSnapshotFromXml, readMetadataSnapshot, snapshotFileMtimeMs, countRelevantXmlFiles } from './snapshotBuilder';
 import { HANDLERS } from './xmlScan';
 import { parseConfiguration } from './parseConfiguration';
 import { rebuildModelCache } from '../modelCache';
@@ -156,7 +156,15 @@ export function loadMetadataSnapshotFirst(
   if (isOwnedGeneration(committedDir)) {
     try {
       if (snapshotFileMtimeMs(committedDir) >= newestRelevantMtime(cfPath)) {
-        return { model: readMetadataSnapshot(committedDir).model, source: 'direct-snapshot-cached', issues: [], redirected: false };
+        const snapshot = readMetadataSnapshot(committedDir);
+        // Architecture audit P2 (2026-09-22): mtime alone misses a pure XML
+        // DELETION — removing a file bumps no one's mtime, so the check above
+        // would keep treating the snapshot as fresh forever. sourceFileCount
+        // (absent on a pre-upgrade snapshot — skip, don't force a rebuild just
+        // because of the format upgrade) catches that shrink.
+        if (snapshot.sourceFileCount === undefined || snapshot.sourceFileCount === countRelevantXmlFiles(cfPath)) {
+          return { model: snapshot.model, source: 'direct-snapshot-cached', issues: [], redirected: false };
+        }
       }
     } catch {
       // missing/corrupt snapshot file despite a valid ownership marker — fall

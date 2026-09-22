@@ -10,7 +10,7 @@ import { parseConfiguration } from '../../src/core/metadata/parser/parseConfigur
 import { isOwnedGeneration, resolveManagedCfDir } from '../../src/core/metadata/parser/generationStore';
 import {
   commitMetadataSnapshot, readMetadataSnapshot, buildMetadataSnapshotFromXml,
-  SNAPSHOT_FORMAT_VERSION,
+  SNAPSHOT_FORMAT_VERSION, countRelevantXmlFiles,
 } from '../../src/core/metadata/parser/snapshotBuilder';
 import type { MetadataModel } from '../../src/core/metadata/types';
 
@@ -87,7 +87,38 @@ describe('commitMetadataSnapshot / readMetadataSnapshot — та же safety-и�
   });
 });
 
+describe('countRelevantXmlFiles / sourceFileCount (architecture audit P2, deletion-detection)', () => {
+  it('считает top-level .xml во всех RELEVANT_SUBDIRS фикстуры', () => {
+    // test/fixtures/cf: Catalogs/Тест.xml + Documents/ТестДок.xml = 2.
+    expect(countRelevantXmlFiles(FIXTURE_CF)).toBe(2);
+  });
+
+  it('несуществующий cfPath — 0, не бросает', () => {
+    expect(countRelevantXmlFiles('/no/such/path/at/all')).toBe(0);
+  });
+
+  it('commitMetadataSnapshot сохраняет переданный sourceFileCount, readMetadataSnapshot отдаёт его обратно', () => {
+    const root = freshTmpDir();
+    const result = commitMetadataSnapshot(SAMPLE_MODEL, root, 7);
+    expect(readMetadataSnapshot(result.targetDir).sourceFileCount).toBe(7);
+  });
+
+  it('sourceFileCount не задан (старый формат снимка) — читается как undefined, не бросает', () => {
+    const root = freshTmpDir();
+    const result = commitMetadataSnapshot(SAMPLE_MODEL, root); // без 3-го аргумента
+    expect(readMetadataSnapshot(result.targetDir).sourceFileCount).toBeUndefined();
+  });
+});
+
 describe('buildMetadataSnapshotFromXml — direct-путь (без YAML) на реальной фикстуре', () => {
+  it('снимок несёт корректный sourceFileCount фикстуры', () => {
+    const root = freshTmpDir();
+    const cfPath = path.join(root, 'cf-src');
+    fs.cpSync(FIXTURE_CF, cfPath, { recursive: true });
+    const built = buildMetadataSnapshotFromXml(cfPath, path.join(root, 'snapshot-out'));
+    expect(readMetadataSnapshot(built.snapshot.targetDir).sourceFileCount).toBe(2);
+  });
+
   it('снимок не теряет данные и не расходится с независимо построенным YAML-путём (old-vs-new)', () => {
     const root = freshTmpDir();
     const cfPath = path.join(root, 'cf-src');

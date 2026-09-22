@@ -33,7 +33,7 @@ import {
   cleanupStaleSiblings, stagingDirFor, finalizeStaging, commitGeneration,
   type CommitResult, type MetadataBuildIssue,
 } from './generationStore';
-import { scanConfigurationObjects, scanCommonAttributes } from './xmlScan';
+import { scanConfigurationObjects, scanCommonAttributes, HANDLERS } from './xmlScan';
 import { buildMetadataModel } from '../yamlLoader';
 import type { MetadataModel } from '../types';
 
@@ -44,19 +44,62 @@ export const SNAPSHOT_FORMAT_VERSION = 1;
 export interface MetadataSnapshotFile {
   formatVersion: number;
   model: MetadataModel;
+  /**
+   * Architecture audit P2 (2026-09-22): число top-level `.xml`-файлов в
+   * `RELEVANT_SUBDIRS` НА МОМЕНТ коммита этого снимка — компаньон к
+   * `loadMetadataSafe.ts`'s `newestRelevantMtime` freshness-проверке (mtime-only).
+   * Удаление XML-объекта (напр. `Catalogs/Старый.xml`) НЕ увеличивает ничей
+   * mtime — снимок продолжал бы считаться "свежим" навсегда, пока какая-то
+   * ДРУГАЯ, несвязанная правка случайно не тронет более новый файл. Optional —
+   * снимок, закоммиченный ДО этого поля, читается без него; сравнение в этом
+   * случае пропускается (не форсируем rebuild только из-за апгрейда формата).
+   */
+  sourceFileCount?: number;
 }
 
 const SNAPSHOT_FILE_NAME = 'metadata-snapshot.json';
+
+/** Те же подкаталоги, что `loadMetadataSafe.ts`'s `RELEVANT_SUBDIRS` —
+ * единственные, которые `scanConfigurationObjects`/`scanCommonAttributes`
+ * реально читают. Продублировано (не импортировано оттуда), чтобы не создавать
+ * обратную зависимость `snapshotBuilder.ts → loadMetadataSafe.ts` (сейчас
+ * зависимость идёт ТОЛЬКО в одну сторону: `loadMetadataSafe.ts` импортирует
+ * из `snapshotBuilder.ts`) — при изменении списка обновлять оба места. */
+const RELEVANT_SUBDIRS = [...HANDLERS.map(h => h.subdir), 'CommonAttributes'];
+
+/**
+ * Количество top-level `.xml`-файлов в `RELEVANT_SUBDIRS` — deletion-sensitive
+ * компаньон к `newestRelevantMtime` (см. `MetadataSnapshotFile.sourceFileCount`).
+ * Экспортирована, чтобы `loadMetadataSafe.ts` мог посчитать ТЕКУЩЕЕ значение
+ * для сравнения с тем, что сохранено в снимке.
+ */
+export function countRelevantXmlFiles(cfPath: string): number {
+  let count = 0;
+  for (const subdir of RELEVANT_SUBDIRS) {
+    try {
+      for (const file of fs.readdirSync(path.join(cfPath, subdir))) {
+        if (file.endsWith('.xml')) count++;
+      }
+    } catch {
+      // отсутствующий/недоступный подкаталог — 0 файлов из него
+    }
+  }
+  return count;
+}
 
 /**
  * Коммитит уже построенную модель как JSON-снимок через staged-build +
  * ownership-marker + logical-commit (generationStore.ts, без изменений).
  */
-export function commitMetadataSnapshot(model: MetadataModel, snapshotOutPath: string): CommitResult {
+export function commitMetadataSnapshot(
+  model: MetadataModel,
+  snapshotOutPath: string,
+  sourceFileCount?: number
+): CommitResult {
   cleanupStaleSiblings(snapshotOutPath);
   const stagingDir = stagingDirFor(snapshotOutPath);
   fs.mkdirSync(stagingDir, { recursive: true });
-  const file: MetadataSnapshotFile = { formatVersion: SNAPSHOT_FORMAT_VERSION, model };
+  const file: MetadataSnapshotFile = { formatVersion: SNAPSHOT_FORMAT_VERSION, model, sourceFileCount };
   try {
     fs.writeFileSync(path.join(stagingDir, SNAPSHOT_FILE_NAME), JSON.stringify(file));
     finalizeStaging(stagingDir);
@@ -147,6 +190,6 @@ export function buildMetadataSnapshotFromXml(cfPath: string, snapshotOutPath: st
   if (model.tables.length === 0) {
     throw new Error(`"${cfPath}": пересобранные метаданные содержат 0 таблиц — отказываемся коммитить как новое текущее состояние.`);
   }
-  const snapshot = commitMetadataSnapshot(model, snapshotOutPath);
+  const snapshot = commitMetadataSnapshot(model, snapshotOutPath, countRelevantXmlFiles(cfPath));
   return { snapshot, model, issues };
 }
