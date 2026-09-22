@@ -67,11 +67,29 @@ export function commitMetadataSnapshot(model: MetadataModel, snapshotOutPath: st
   return commitGeneration(stagingDir, snapshotOutPath);
 }
 
-/** Читает уже закоммиченный снимок (каталог — см. `resolveManagedCfDir` из
- * generationStore.ts). */
+/**
+ * Читает уже закоммиченный снимок (каталог — см. `resolveManagedCfDir` из
+ * generationStore.ts).
+ *
+ * Architecture audit P2 (2026-09-22): раньше `formatVersion` из файла нигде не
+ * сверялся с текущим {@link SNAPSHOT_FORMAT_VERSION} — снимок из будущей
+ * (несовместимой) или испорченной версии формата тихо принимался как валидный
+ * кэш. Бросок здесь — не новый failure mode: `loadMetadataSafe.ts`'s
+ * `loadMetadataSnapshotFirst` уже оборачивает свой единственный вызов этой
+ * функции в try/catch, трактующий ЛЮБОЕ исключение (включая «отсутствующий/
+ * испорченный файл despite a valid ownership marker») как «провалившийся
+ * тёплый кэш» и падает в полный, безопасный YAML-фолбэк — несовпадение версии
+ * формата это тот же самый класс проблемы.
+ */
 export function readMetadataSnapshot(committedDir: string): MetadataSnapshotFile {
   const raw = fs.readFileSync(path.join(committedDir, SNAPSHOT_FILE_NAME), 'utf8');
-  return JSON.parse(raw) as MetadataSnapshotFile;
+  const file = JSON.parse(raw) as MetadataSnapshotFile;
+  if (file.formatVersion !== SNAPSHOT_FORMAT_VERSION) {
+    throw new Error(
+      `Снимок метаданных в "${committedDir}" имеет formatVersion=${file.formatVersion}, ожидался ${SNAPSHOT_FORMAT_VERSION}.`
+    );
+  }
+  return file;
 }
 
 /** mtime самого файла снимка (не каталога) — используется

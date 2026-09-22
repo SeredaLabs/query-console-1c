@@ -153,6 +153,31 @@ describe('loadMetadataSnapshotFirst (production entry point, panel.ts)', () => {
     const r = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, yamlOutPath);
     expect(r.model.tables.length).toBeGreaterThan(0);
   });
+
+  // Architecture audit P2 (2026-09-22): закоммиченный снимок с formatVersion
+  // из будущей/несовместимой версии формата (напр. 999) раньше тихо
+  // принимался как валидный тёплый кэш — теперь readMetadataSnapshot бросает,
+  // и этот вызывающий код (уже существующий try/catch) деградирует до полного
+  // rebuild ровно как при любом другом повреждённом снимке выше.
+  it('formatVersion снимка не совпадает — деградирует до rebuild, а не тихо принимает несовместимые данные', () => {
+    const { cfPath, snapshotOutPath, yamlOutPath } = freshCfCopy();
+    const first = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, yamlOutPath);
+    expect(first.source).toBe('direct-snapshot');
+
+    const committedDir = resolveManagedCfDir(snapshotOutPath);
+    const snapshotFile = path.join(committedDir, 'metadata-snapshot.json');
+    const raw = JSON.parse(fs.readFileSync(snapshotFile, 'utf8'));
+    fs.writeFileSync(snapshotFile, JSON.stringify({ ...raw, formatVersion: 999 }));
+
+    const spy = vi.spyOn(snapshotBuilder, 'buildMetadataSnapshotFromXml');
+    const r = loadMetadataSnapshotFirst(cfPath, snapshotOutPath, yamlOutPath);
+
+    // Не "direct-snapshot-cached" (что означало бы, что несовместимые данные
+    // из formatVersion=999 были тихо использованы) — полноценный rebuild.
+    expect(r.source).toBe('direct-snapshot');
+    expect(spy).toHaveBeenCalled();
+    expect(r.model.tables.length).toBeGreaterThan(0);
+  });
 });
 
 describe('newestRelevantMtime (exported for panel.ts residual "оба пути упали" branch)', () => {

@@ -64,6 +64,27 @@ describe('commitMetadataSnapshot / readMetadataSnapshot — та же safety-и�
     const result = commitMetadataSnapshot(SAMPLE_MODEL, root);
     expect(resolveManagedCfDir(root)).toBe(result.targetDir);
   });
+
+  // Architecture audit P2 (2026-09-22): раньше formatVersion из файла нигде не
+  // сверялся с SNAPSHOT_FORMAT_VERSION — снимок из будущей/несовместимой версии
+  // формата тихо принимался как валидный кэш (воспроизведено буквально:
+  // formatVersion: 999 проходил без единой ошибки).
+  it('formatVersion в файле не совпадает с текущим SNAPSHOT_FORMAT_VERSION → бросает', () => {
+    const root = freshTmpDir();
+    const result = commitMetadataSnapshot(SAMPLE_MODEL, root);
+
+    const snapshotFile = path.join(result.targetDir, 'metadata-snapshot.json');
+    const raw = JSON.parse(fs.readFileSync(snapshotFile, 'utf8'));
+    fs.writeFileSync(snapshotFile, JSON.stringify({ ...raw, formatVersion: 999 }));
+
+    expect(() => readMetadataSnapshot(result.targetDir)).toThrow(/formatVersion/);
+  });
+
+  it('formatVersion совпадает — читается без ошибок (не ложное срабатывание)', () => {
+    const root = freshTmpDir();
+    const result = commitMetadataSnapshot(SAMPLE_MODEL, root);
+    expect(() => readMetadataSnapshot(result.targetDir)).not.toThrow();
+  });
 });
 
 describe('buildMetadataSnapshotFromXml — direct-путь (без YAML) на реальной фикстуре', () => {
