@@ -63,7 +63,11 @@ describe('checkFieldPaths: нуль хибних спрацювань на ре�
   // жоден запит корпусу не використовує квалифицированную ссылку саме в
   // ИТОГИ ПО; ця гілка перевірена вручну через прямий parseBatch-репро в
   // semanticValidator.test.ts, а не корпусом).
-  it('golden-запити реально наповнюють нові гілки checkFieldPaths (окрім totals.groupFields)', () => {
+  // Review follow-up round 2 (2026-09-22): grouping.groupSets (ГРУППИРУЮЩИМ
+  // НАБОРАМ) — теж перевіряється, але жоден запит золотого корпусу цю
+  // (рідкісну) SDBL-конструкцію не використовує; ця гілка перевірена лише
+  // прямим parseBatch-репро в semanticValidator.test.ts, як і totals.groupFields.
+  it('golden-запити реально наповнюють нові гілки checkFieldPaths (окрім totals.groupFields і grouping.groupSets)', () => {
     const coverage = { grouping: 0, orderQualified: 0, indexingQualified: 0, funcOperandQualified: 0 };
     for (const g of golden) {
       if (!g.valid) continue;

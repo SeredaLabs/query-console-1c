@@ -456,6 +456,28 @@ describe('validateBatchSemantics (8.4)', () => {
     it('агрегат над существующим квалифицированным полем — пусто (не ложное срабатывание)', () => {
       expect(errs('ВЫБРАТЬ X.ОсновнаяВалюта, СУММА(X.ОсновнаяВалюта) КАК Сумма ИЗ Справочник.Валюты КАК X СГРУППИРОВАТЬ ПО X.ОсновнаяВалюта')).toEqual([]);
     });
+
+    // Review follow-up round 2 (2026-09-22): ГРУППИРУЮЩИМ НАБОРАМ хранит поля
+    // в `grouping.groupSets` (набор наборов), а не в `grouping.groupFields`
+    // (плоский список) — тот же FieldRef-контракт, но обходился отдельно.
+    it('ГРУППИРУЮЩИМ НАБОРАМ: несуществующее поле → ошибка (раньше пропускалось)', () => {
+      const e = errs('ВЫБРАТЬ X.ОсновнаяВалюта, СУММА(1) ИЗ Справочник.Валюты КАК X СГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ ((X.НетТакогоПоля))');
+      expect(e).toEqual([{ message: 'Поле "НетТакогоПоля" не найдено в "Справочник.Валюты"' }]);
+    });
+
+    it('ГРУППИРУЮЩИМ НАБОРАМ: существующее поле → пусто', () => {
+      expect(errs('ВЫБРАТЬ X.ОсновнаяВалюта, СУММА(1) ИЗ Справочник.Валюты КАК X СГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ ((X.ОсновнаяВалюта))')).toEqual([]);
+    });
+
+    // Review follow-up round 2 (2026-09-22): то же (tableId, path) может
+    // законно встретиться и в model.fields, и в grouping.groupFields
+    // одновременно (парсер автоматически копирует явное поле SELECT в
+    // groupFields, когда СГРУППИРОВАТЬ ПО не задан явно) — без дедупликации
+    // это давало ДВЕ идентичные ошибки.
+    it('несуществующее поле одновременно в SELECT и в auto-groupFields → ОДНА ошибка, не две', () => {
+      const e = errs('ВЫБРАТЬ X.НетТакогоПоля, СУММА(1) ИЗ Справочник.Валюты КАК X СГРУППИРОВАТЬ ПО X.НетТакогоПоля');
+      expect(e).toEqual([{ message: 'Поле "НетТакогоПоля" не найдено в "Справочник.Валюты"' }]);
+    });
   });
 });
 
@@ -671,6 +693,23 @@ describe('findMalformedCustomExpressions (PR-14, docs/development/known-issues.m
       grouping: { multiple: false, groupFields: [{ tableId: 't0', path: '', expression: 'Т.Код = = &А' }] },
     }));
     expect(hits).toEqual([{ kind: 'groupField', text: 'Т.Код = = &А' }]);
+  });
+
+  // Review follow-up round 2 (2026-09-22): grouping.groupSets (ГРУППИРУЮЩИМ
+  // НАБОРАМ) обходился отдельной веткой никогда — реальный репро
+  // `ГРУППИРУЮЩИМ НАБОРАМ ((X.Код = = &А))` давал пустой результат.
+  it('сломанное grouping.groupSets (ГРУППИРУЮЩИМ НАБОРАМ) — находится', () => {
+    const hits = findMalformedCustomExpressions(batchWithModel({
+      grouping: { multiple: true, groupFields: [], groupSets: [[{ tableId: 't0', path: '', expression: 'Т.Код = = &А' }]] },
+    }));
+    expect(hits).toEqual([{ kind: 'groupField', text: 'Т.Код = = &А' }]);
+  });
+
+  it('ЛЕГИТИМНОЕ grouping.groupSets — НЕ находится', () => {
+    const hits = findMalformedCustomExpressions(batchWithModel({
+      grouping: { multiple: true, groupFields: [], groupSets: [[{ tableId: 't0', path: '', expression: 'Т.Код + 1' }]] },
+    }));
+    expect(hits).toEqual([]);
   });
 
   it('сломанное totals.totalFields (агрегат ИТОГИ, отдельно от totals.groupFields) — находится', () => {

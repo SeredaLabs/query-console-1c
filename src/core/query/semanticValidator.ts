@@ -173,12 +173,22 @@ export function validateBatchSemantics(
      * Проверка существования ОДНОГО поля (tableId, path) по метаданным — ядро,
      * общее для `model.fields`/`trailingFields` и всех остальных мест модели,
      * адресующих поле квалифицированной ссылкой `Алиас.Путь` (review follow-up,
-     * 2026-09-22): `grouping.groupFields` (СГРУППИРОВАТЬ ПО), `order.fields`
-     * (УПОРЯДОЧИТЬ ПО), `totals.groupFields` (ИТОГИ ПО),
-     * `indexing.indexes[].fields` (ИНДЕКСИРОВАТЬ ПО) — реальные репро через
-     * parseBatch подтвердили: несуществующее поле в любом из них давало
-     * `errors: []`, хотя семантически это тот же класс ошибки, что и в SELECT.
+     * 2026-09-22): `grouping.groupFields`/`groupSets` (СГРУППИРОВАТЬ ПО, в т.ч.
+     * ГРУППИРУЮЩИМ НАБОРАМ), `order.fields` (УПОРЯДОЧИТЬ ПО), `totals.groupFields`
+     * (ИТОГИ ПО), `indexing.indexes[].fields` (ИНДЕКСИРОВАТЬ ПО) — реальные
+     * репро через parseBatch подтвердили: несуществующее поле в любом из них
+     * давало `errors: []`, хотя семантически это тот же класс ошибки, что и в
+     * SELECT.
+     *
+     * Дедупликация (review follow-up, 2026-09-22): одно и то же (tableId, path)
+     * может законно встретиться в НЕСКОЛЬКИХ из этих мест одновременно — парсер
+     * автоматически копирует явные поля SELECT в `groupFields`, когда список
+     * СГРУППИРОВАТЬ ПО не задан явно. Без дедупликации несуществующее поле,
+     * попавшее туда таким образом, давало ДВЕ идентичные ошибки; текущий UI
+     * использует только первую (пользовательской регрессии нет), но полный
+     * список `errors` не должен содержать дублей.
      */
+    const reportedFieldNotFound = new Set<string>();
     const checkOne = (tableId: string, path: string): void => {
       const src = idToTable.get(tableId);
       if (!src || src.subquery || !src.fullName || src.fullName.startsWith('&')) return;
@@ -197,6 +207,9 @@ export function validateBatchSemantics(
       const ownerMeta = resolution.resolved.length > 0
         ? (resolution.resolved[resolution.resolved.length - 1].refTarget ?? meta)
         : meta;
+      const dedupKey = `${tableId} ${path}`;
+      if (reportedFieldNotFound.has(dedupKey)) return;
+      reportedFieldNotFound.add(dedupKey);
       errors.push({
         message: `Поле "${badSegment}" не найдено в "${ownerMeta.fullName}"`,
       });
@@ -221,6 +234,18 @@ export function validateBatchSemantics(
     for (const f of model.grouping?.groupFields ?? []) {
       if (f.expression !== undefined) continue;
       checkOne(f.tableId, f.path);
+    }
+
+    // `grouping.groupSets` (СГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ) — тот же
+    // `FieldRef`-контракт, что и `groupFields` (набор наборов вместо одного
+    // плоского списка), заполняется той же `parseGroupFieldRef` — та же
+    // семантика гейта (без `qualified`, review follow-up 2026-09-22: реальный
+    // репро `ГРУППИРУЮЩИМ НАБОРАМ ((X.НетТакогоПоля))` давал `errors: []`).
+    for (const set of model.grouping?.groupSets ?? []) {
+      for (const f of set) {
+        if (f.expression !== undefined) continue;
+        checkOne(f.tableId, f.path);
+      }
     }
 
     // `order.fields`/`totals.groupFields`/`indexing.indexes[].fields`:
@@ -452,6 +477,15 @@ export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCus
     }
     for (const f of model.grouping?.groupFields ?? []) {
       if (f.expression !== undefined) check(f.expression, 'groupField');
+    }
+    // `grouping.groupSets` (ГРУППИРУЮЩИМ НАБОРАМ) — review follow-up
+    // (2026-09-22): тот же `FieldRef`-контракт, что и `groupFields`, но
+    // обходился отдельным веткам никогда; реальный репро
+    // `ГРУППИРУЮЩИМ НАБОРАМ ((X.Код = = &А))` давал пустой результат.
+    for (const set of model.grouping?.groupSets ?? []) {
+      for (const f of set) {
+        if (f.expression !== undefined) check(f.expression, 'groupField');
+      }
     }
     for (const f of model.totals?.groupFields ?? []) {
       if (f.expression !== undefined) check(f.expression, 'totalGroupField');
