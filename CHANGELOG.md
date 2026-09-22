@@ -5,6 +5,19 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.82 - 2026-09-22
+
+### Fixed
+
+- A metadata snapshot committed before deletion-detection existed (0.1.81 and
+  earlier) is no longer silently trusted as fully up to date — the next open
+  forces a one-time rebuild that brings it fully up to date, instead of
+  staying blind to deleted metadata objects indefinitely.
+- A structurally malformed metadata snapshot (missing or invalid model data)
+  is no longer returned as a successful cache hit — it's now treated as
+  corrupt, the same as any other broken snapshot, and triggers a safe
+  rebuild.
+
 ## 0.1.81 - 2026-09-22
 
 ### Fixed
