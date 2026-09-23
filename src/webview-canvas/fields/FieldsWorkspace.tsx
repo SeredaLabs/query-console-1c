@@ -6,7 +6,7 @@ import type { AggregateFunction, SelectedField } from '../../core/query/queryMod
 import { defaultTableAlias } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import { allTables, type QueryAction, type QueryState } from '../../webview/state/queryStore';
-import { ResizeHandle } from '../components/ResizeHandle';
+import { ResizeHandle } from '../../webview/components/ResizeHandle';
 import { t } from '../i18n';
 import { CARD, DIMENSIONS, SECTION_LABEL, TOKENS } from '../theme';
 

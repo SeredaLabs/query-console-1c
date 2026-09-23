@@ -1,11 +1,11 @@
 import * as React from 'react';
-import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
-import { tryOpenBatch } from '../core/query/validateBatch';
-import { findUnsafeVirtualTables, findMalformedCustomExpressions } from '../core/query/semanticValidator';
+import { findStaticApplyBlocker, decideApply } from '../webview/applyGate';
+import { localizeDiagnostic, setLocale as setClassicLocale, t as classicT } from '../webview/i18n';
 import type { SupportedLocale } from '../shared/locale';
 import { computeBatchTextSafe } from '../webview/computeBatchText';
-import { assembleBatch, initialState, metadataCatalogRef, reducer } from '../webview/state/queryStore';
-import { onHostMessage, postToHost } from './bridge';
+import { initialState, reducer } from '../webview/state/queryStore';
+import { postToHost } from '../webview/bridge';
+import { useDesignerSession } from '../webview/hooks/useDesignerSession';
 import { DocumentBar } from './components/DocumentBar';
 import { PackageNav } from './components/PackageNav';
 import { SdblDock } from './components/SdblDock';
@@ -36,9 +36,6 @@ function clamp(value: number, min: number, max: number): number {
 export function App(): React.ReactElement {
   const [locale, setLocale] = React.useState<SupportedLocale>('en');
   const [state, dispatch] = React.useReducer(reducer, undefined, initialState);
-  // 'metadataTree' ще не прийшов від хоста (loadMetadata асинхронний) — відрізняємо
-  // від "прийшов, і таблиць реально 0" (справжній empty state).
-  const [metadataLoaded, setMetadataLoaded] = React.useState(false);
 
   const [sdblCollapsed, setSdblCollapsed] = React.useState(true);
   const [sdblHeight, setSdblHeight] = React.useState<number>(DIMENSIONS.sdbl.default);
@@ -51,10 +48,9 @@ export function App(): React.ReactElement {
 
   const [selection, setSelection] = React.useState<StructureSelection>(null);
   const [inspectorWidth, setInspectorWidth] = React.useState<number>(DIMENSIONS.inspector.default);
-  // Load-failure fix (2026-09-22, audit P1 #2): non-null → the query under the
-  // cursor failed to parse. Rendered as a blocking overlay (see below), never as
-  // a silently empty, editable canvas.
-  const [loadError, setLoadError] = React.useState<string | null>(null);
+  // Result of the click-time check (`decideApply` 'invalid'), already localized;
+  // cleared as soon as the generated text changes.
+  const [saveError, setSaveError] = React.useState<string | null>(null);
 
   // Package/query switch, REMOVE_TABLE чи REMOVE_JOIN, чия ціль зараз обрана
   // — selection не повинна пережити зникнення своєї цілі (design §9/§10,
@@ -67,59 +63,33 @@ export function App(): React.ReactElement {
     }
   }, [state.selectedTables, state.joins, selection]);
 
-  React.useEffect(() => {
-    const off = onHostMessage(msg => {
-      if (msg.type === 'init' && msg.locale) setLocale(msg.locale);
-      else if (msg.type === 'metadataTree') {
-        dispatch({ type: 'SET_METADATA', tables: msg.tables });
-        setMetadataLoaded(true);
-      } else if (msg.type === 'loadModel') {
-        // Save support (2026-09-21): ТОЙ САМИЙ критерій, що й Classic
-        // (`webview/App.tsx`'s 'loadModel' handler) --- `tryOpenBatch` (спільний
-        // `core/query/validateBatch.ts`) розбирає текст запиту, знайденого під
-        // курсором при відкритті команди (`extension.ts`), і диспатчить УЖЕ
-        // існуючий `LOAD_BATCH` reducer action (`queryStore.ts`) --- жодного
-        // нового domain/parser коду, лише підключення вже готового шляху до
-        // Canvas. Резолвер --- з `metadataCatalogRef` (той самий module-level
-        // ref, синхронно оновлюваний `SET_METADATA`-кейсом reducer'а, яким уже
-        // користується `allTables()`), а не окремий Canvas-specific стан.
-        //
-        // Load-failure fix (2026-09-22, audit P1 #2): раніше провал `tryOpenBatch`
-        // просто нічого не диспатчив --- Canvas лишався мовчки порожнім, як при
-        // звичайному відкритті без initial query, і НЕ відрізнявся від нього. Хост
-        // (`canvasPanel.ts`) при цьому ВЖЕ захопив `savedEditor` (діапазон
-        // оригінального тексту в редакторі) при відкритті панелі --- якщо
-        // користувач після цього побудує НОВИЙ запит у порожньому Canvas і натисне
-        // Save, `insertText` перезапише ОРИГІНАЛЬНИЙ текст під курсором, хоча
-        // Canvas його навіть не відкривав. `loadError` рендериться як блокуючий
-        // overlay (нижче) --- єдина дія користувача звідти --- Close (`cancel`,
-        // `canvasPanel.ts` диспозить панель БЕЗ жодного `insertText`), той самий
-        // fail-closed підхід, що й Classic (`webview/App.tsx`'s `loadError`).
-        const resolver = metadataCatalogRef.current.length ? buildResolverFromTables(metadataCatalogRef.current) : undefined;
-        const r = tryOpenBatch(msg.text, resolver, { preserveComments: true });
-        if (r.ok) { dispatch({ type: 'LOAD_BATCH', doc: r.doc }); setLoadError(null); }
-        else setLoadError(r.error);
-      }
-    });
-    postToHost({ type: 'ready' });
-    return off;
-  }, []);
+  // Сесія з хостом — СПІЛЬНА з Classic (`webview/hooks/useDesignerSession.ts`):
+  // ready → metadataTree → loadModel тим самим `tryOpenBatch` → `LOAD_BATCH`,
+  // стан завантаження (Canvas не показує порожнє редаговане полотно, яке потім
+  // перезапише LOAD_BATCH) і `loadError` (блокуючий overlay нижче, лише Close —
+  // жодного `insertText` поверх оригінального тексту, який Canvas не відкрив).
+  // Тут лише Canvas-специфічне: локаль.
+  const { loading, metadataLoaded, loadError, buildResolver } = useDesignerSession(dispatch, msg => {
+    if (msg.type === 'init' && msg.locale) {
+      setLocale(msg.locale);
+      // Texts Canvas reuses from Classic instead of duplicating (core diagnostics
+      // via `localizeDiagnostic`, metadata group labels, loading/open-failed
+      // messages) read Classic's own module-level locale.
+      setClassicLocale(msg.locale);
+    }
+  });
 
   /**
-   * Apply-gate parity fix (2026-09-22, audit P1 #1): Save раніше перевіряв
-   * ЛИШЕ `batchText.error`/порожній текст --- на відміну від Classic
-   * (`webview/App.tsx`'s `unsafeVtError`/`malformedCustomError`), жодного
-   * capability/preservation gate ПЕРЕД записом. Віртуальна таблиця з
-   * непокритими позиціями 3+ (`findUnsafeVirtualTables`) чи пошкоджений
-   * custom-вираз (`findMalformedCustomExpressions`) мовчки зберігались би з
-   * втратою даних (§27/28/54 P0.5 --- той самий gate, що вже захищає Classic).
-   * Той самий `assembleBatch(state)`, що Canvas і так рахує кожен рендер для
-   * `batchText` --- жодної нової моделі/обчислення, лише підключення вже
-   * існуючих у ядрі перевірок.
+   * Apply gate — ТОЙ САМИЙ, що й Classic «ОК» (`webview/applyGate.ts`, спільний
+   * модуль, жодної Canvas-копії перевірок): небезпечна віртуальна таблиця чи
+   * пошкоджений custom-вираз блокують кнопку постійно, а при натисканні
+   * `decideApply` ще раз перевіряє згенерований текст тим самим критерієм, що й
+   * відкриття з тексту (`validateBatchText`: поля, таблиці, дублікати псевдонімів,
+   * кількість колонок ОБЪЕДИНЕНИЯ).
    */
-  const unsafeVtNames = React.useMemo(() => findUnsafeVirtualTables(assembleBatch(state)), [state]);
-  const malformedCustomHits = React.useMemo(() => findMalformedCustomExpressions(assembleBatch(state)), [state]);
-  const saveBlocked = unsafeVtNames.length > 0 || malformedCustomHits.length > 0;
+  const applyBlocker = React.useMemo(() => findStaticApplyBlocker(state), [state]);
+  const saveBlocked = applyBlocker !== null;
+  React.useEffect(() => { setSaveError(null); }, [batchText.text]);
 
   /**
    * Save support (2026-09-21): "Зберегти" тепер реально функціональна --- той
@@ -130,9 +100,14 @@ export function App(): React.ReactElement {
    * з тими самими stale-document/`documentVersion` guard'ами, що й Classic.
    */
   const handleSave = React.useCallback(() => {
-    if (batchText.error || !batchText.text.trim() || saveBlocked) return;
+    const decision = decideApply(batchText.text, batchText.error, applyBlocker, buildResolver());
+    if (!decision.ok) {
+      if (decision.kind === 'invalid') setSaveError(localizeDiagnostic(decision.error));
+      return;
+    }
+    setSaveError(null);
     postToHost({ type: 'insertText', text: batchText.text });
-  }, [batchText, saveBlocked]);
+  }, [batchText, applyBlocker, buildResolver]);
 
   /** Load-failure fix (2026-09-22): closes the panel WITHOUT ever sending
    * `insertText` --- `canvasPanel.ts` disposes on `cancel`, same as Classic's
@@ -160,12 +135,13 @@ export function App(): React.ReactElement {
         onSave={handleSave}
         saveDisabled={!!batchText.error || !batchText.text.trim() || saveBlocked}
         saveDisabledReason={
-          unsafeVtNames.length > 0
+          applyBlocker?.kind === 'unsafeVirtualTable'
             ? t(locale, 'saveBlockedUnsafeVirtual')
-            : malformedCustomHits.length > 0
+            : applyBlocker?.kind === 'malformedCustom'
             ? t(locale, 'saveBlockedMalformed')
             : undefined
         }
+        saveError={saveError ?? undefined}
       />
       <PackageNav locale={locale} state={state} dispatch={dispatch} onOpenAdditional={() => setWorkspaceTab('additional')} />
       <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
@@ -208,14 +184,30 @@ export function App(): React.ReactElement {
         }}
       >
         <div style={{ color: TOKENS.danger, fontSize: 14, fontWeight: 600 }}>
-          {t(locale, 'openFailedTitle')}
+          {classicT('constructor.openFailed')}
         </div>
         <div style={{ color: TOKENS.danger, fontSize: 13, whiteSpace: 'pre-wrap', maxWidth: 640 }}>
-          {loadError}
+          {localizeDiagnostic(loadError)}
         </div>
         <button type="button" className="qcc-btn" onClick={handleClose}>
-          {t(locale, 'openFailedClose')}
+          {classicT('actions.close')}
         </button>
+      </div>
+    )}
+
+    {/* 7.8.2 (shared with Classic via useDesignerSession): covers the canvas until
+        metadata and the initial query, if any, have arrived. */}
+    {loading && loadError == null && (
+      <div
+        data-testid="canvas-loading-overlay"
+        style={{
+          position: 'fixed', inset: 0,
+          background: TOKENS.background,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 300, color: TOKENS.textSecondary, fontSize: 14,
+        }}
+      >
+        {classicT('constructor.loading')}
       </div>
     )}
     </>

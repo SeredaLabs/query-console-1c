@@ -8,6 +8,7 @@ import { SECTION_LABEL, TOKENS } from '../theme';
 import { ConditionModeToggle, type ConditionMode } from './Toolbar';
 import { JoinKindPicker } from './JoinKindPicker';
 import { joinKindLabel, type JoinKindLabel } from './joinKind';
+import { CONDITION_OPERATORS } from '../../webview/conditionOperators';
 
 const BTN: React.CSSProperties = {
   border: 'none',
@@ -36,9 +37,6 @@ function tableLabel(tableId: string, tables: SelectedTable[]): string {
   return tb ? defaultTableAlias(tb) : tableId;
 }
 
-/** Той самий перелік, що й Classic ConnectionsTab та New Builder Inspector (OPERATORS) — паритет,
- * а не тільки неявне `=`, при створенні зв'язку так само, як і при редагуванні. */
-const OPERATORS: ConditionOperator[] = ['=', '<>', '>', '>=', '<', '<=', 'В', 'МЕЖДУ', 'ПОДОБНО'];
 
 /** Поля обраної таблиці (top-level, без tabular sections — той самий обсяг, що TableCard показує для source). */
 function fieldsOf(tableId: string, tables: SelectedTable[], tablesMeta: MetaTable[]): MetaField[] {
@@ -356,7 +354,7 @@ export function JoinManagerPopover({
                   <label style={{ fontSize: 11, color: TOKENS.textSecondary, flexShrink: 0, width: 54 }}>
                     &nbsp;
                     <select value={operator} onChange={e => setOperator(e.target.value as ConditionOperator)} style={SELECT_STYLE}>
-                      {OPERATORS.map(op => (
+                      {CONDITION_OPERATORS.map(op => (
                         <option key={op} value={op}>
                           {op}
                         </option>

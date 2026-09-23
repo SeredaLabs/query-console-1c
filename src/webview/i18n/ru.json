@@ -232,6 +232,7 @@
   "diagnostic.tableNotFound": "Таблица не найдена: \"{table}\"",
   "diagnostic.duplicateAlias": "Повторяющийся псевдоним: \"{alias}\"",
   "diagnostic.unionColumnCount": "Количество столбцов в результатах объединения не совпадает ({counts})",
+  "diagnostic.fieldNotFound": "Поле \"{field}\" не найдено в \"{table}\"",
   "diagnostic.expectedKeyword": "ожидалось ключевое слово «{value}»",
   "diagnostic.expectedSymbol": "ожидался символ «{value}»",
   "diagnostic.unexpectedCharacter": "неожиданный символ {value}",

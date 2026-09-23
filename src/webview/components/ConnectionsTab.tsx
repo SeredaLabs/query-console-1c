@@ -7,8 +7,8 @@ import { fieldsTypeCompatible } from '../../core/query/fieldTypeCompat';
 import { IconButton } from './IconButton';
 import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox, ROW_PADDING_Y } from '../sharedStyles';
 import { t } from '../i18n';
+import { CONDITION_OPERATORS } from '../conditionOperators';
 
-const OPERATORS: ConditionOperator[] = ['=', '<>', '>', '>=', '<', '<=', 'В', 'МЕЖДУ', 'ПОДОБНО'];
 
 interface Props {
   selectedTables: SelectedTable[];
@@ -185,7 +185,7 @@ export function ConnectionsTab(props: Props): React.ReactElement {
                         onChange={e => onSetOperator(i, e.target.value as ConditionOperator, ci)}
                         style={{ ...INPUT, width: 60, flexShrink: 0 }}
                       >
-                        {OPERATORS.map(op => <option key={op} value={op}>{op}</option>)}
+                        {CONDITION_OPERATORS.map(op => <option key={op} value={op}>{op}</option>)}
                       </select>
                       {fieldSelect(i, ci, 'right', rightTableId, c.rightPath ?? '', fieldMeta(leftTableId, c.leftPath ?? ''))}
                     </div>

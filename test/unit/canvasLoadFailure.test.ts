@@ -45,9 +45,26 @@ describe('src/webview-canvas/App.tsx surfaces load failure instead of silently e
   const APP_TSX = path.resolve(__dirname, '../../src/webview-canvas/App.tsx');
   const src = fs.readFileSync(APP_TSX, 'utf8');
 
-  it('sets loadError on a failed tryOpenBatch and clears it on success', () => {
-    expect(src).toMatch(/if\s*\(r\.ok\)\s*\{[\s\S]*?setLoadError\(null\)[\s\S]*?\}/);
-    expect(src).toMatch(/else\s+setLoadError\(r\.error\)/);
+  it('gets loadError from the session hook shared with Classic (useDesignerSession)', () => {
+    expect(src).toMatch(/const \{[^}]*\bloadError\b[^}]*\} = useDesignerSession\(dispatch/);
+    expect(src).not.toMatch(/tryOpenBatch\(/);
+  });
+
+  it('the shared session sets loadError on a failed tryOpenBatch and clears it on success', () => {
+    const hook = fs.readFileSync(path.resolve(__dirname, '../../src/webview/hooks/useDesignerSession.ts'), 'utf8');
+    expect(hook).toMatch(/if\s*\(r\.ok\)\s*\{[\s\S]*?setLoadError\(null\)[\s\S]*?\}/);
+    expect(hook).toMatch(/else\s+setLoadError\(r\.error\)/);
+  });
+
+  it('Classic uses the same session hook (one loadModel/loading implementation)', () => {
+    const classic = fs.readFileSync(path.resolve(__dirname, '../../src/webview/App.tsx'), 'utf8');
+    expect(classic).toContain('useDesignerSession(dispatch');
+    expect(classic).not.toMatch(/tryOpenBatch\(/);
+  });
+
+  it('renders a loading overlay until metadata and the initial query arrive', () => {
+    expect(src).toMatch(/\{loading && loadError == null && \(/);
+    expect(src).toContain('data-testid="canvas-loading-overlay"');
   });
 
   it('renders a full-panel blocking overlay when loadError is set', () => {
@@ -63,12 +80,15 @@ describe('src/webview-canvas/App.tsx surfaces load failure instead of silently e
   });
 });
 
-describe('src/extension/canvasPanel.ts disposes on cancel without writing to the document', () => {
-  it('the cancel branch never calls insertResult', () => {
-    const src = fs.readFileSync(
-      path.resolve(__dirname, '../../src/extension/canvasPanel.ts'),
-      'utf8'
-    );
+describe('the Canvas panel disposes on cancel without writing to the document', () => {
+  it('canvasPanel.ts delegates to the shared designer host (panel.ts createDesignerPanel)', () => {
+    const src = fs.readFileSync(path.resolve(__dirname, '../../src/extension/canvasPanel.ts'), 'utf8');
+    expect(src).toContain('createDesignerPanel(');
+    expect(src).not.toMatch(/onDidReceiveMessage/);
+  });
+
+  it("the shared host's cancel branch never calls insertResult", () => {
+    const src = fs.readFileSync(path.resolve(__dirname, '../../src/extension/panel.ts'), 'utf8');
     const cancelBranch = src.match(/else if \(msg\.type === 'cancel'\) \{([^}]*)\}/s);
     expect(cancelBranch).not.toBeNull();
     expect(cancelBranch![1]).not.toContain('insertResult');

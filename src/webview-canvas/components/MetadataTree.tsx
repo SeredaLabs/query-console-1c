@@ -3,152 +3,24 @@ import type { MetaField, MetaTable, TableKind } from '../../core/metadata/types'
 import type { SelectedTable } from '../../core/query/queryModel';
 import { Chevron } from '../../webview/components/Chevron';
 import { MetaKindIcon } from '../../webview/components/MetaKindIcon';
+import { highlightMatches } from '../../webview/components/highlightMatches';
 import type { SupportedLocale } from '../../shared/locale';
-import { groupLabel, t } from '../i18n';
+import { t } from '../i18n';
+import {
+  GROUP_KINDS, groupLabel, tokenizeSearch, buildRenderModel,
+  type RenderField, type RenderTs, type RenderTable,
+} from '../../webview/metadataTreeModel';
 import { TOKENS } from '../theme';
 
-/**
- * Phase 3D-Tree: той самий перелік верхньорівневих видів метаданих, що й
- * Classic DbTreePanel.tsx (GROUP_KINDS) — реальна таксономія 1С, а не
- * довільний вибір UI.
- */
-const GROUP_KINDS: TableKind[] = [
-  'Справочник', 'Документ',
-  'ПланОбмена', 'ПланВидовХарактеристик', 'ПланСчетов', 'ПланВидовРасчета',
-  'БизнесПроцесс', 'Задача',
-  'РегистрСведений', 'РегистрНакопления', 'РегистрБухгалтерии', 'РегистрРасчета',
-  'Последовательность', 'ЖурналДокументов', 'КритерийОтбора',
-  'Константа', 'Перечисление',
-];
+// Групування/пошук/підсвічування — спільна модель із Classic DbTreePanel
+// (`webview/metadataTreeModel.ts`); тут лише рендер.
 
 function isReferenceField(field: MetaField): boolean {
   return field.types.some(ty => ty.ref);
 }
 
-function tokenize(query: string): string[] {
-  return query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-}
-
-function textMatchesToken(text: string, token: string): boolean {
-  return text.toLowerCase().includes(token);
-}
-
-function textMatchesAllTokens(text: string, tokens: string[]): boolean {
-  const lower = text.toLowerCase();
-  return tokens.every(tok => lower.includes(tok));
-}
-
-/**
- * Search corpus — та сама ідея, що й Classic `tableCorpus()`
- * (DbTreePanel.tsx): назва таблиці + власні поля + табличні частини + їхні
- * поля. Кешовано по посиланню на об'єкт (метадані не змінюються, поки не
- * перезавантажаться цілком).
- */
-const tableCorpusCache = new WeakMap<MetaTable, string>();
-function tableCorpus(table: MetaTable): string {
-  const cached = tableCorpusCache.get(table);
-  if (cached !== undefined) return cached;
-  const parts = [table.name, ...table.fields.map(f => f.name)];
-  for (const ts of table.tabularSections ?? []) {
-    parts.push(ts.name, ...ts.fields.map(f => f.name));
-  }
-  const corpus = parts.join(' ').toLowerCase();
-  tableCorpusCache.set(table, corpus);
-  return corpus;
-}
-
-function tableMatchesQuery(table: MetaTable, tokens: string[]): boolean {
-  const corpus = tableCorpus(table);
-  return tokens.every(tok => corpus.includes(tok));
-}
-
 function highlight(name: string, tokens: string[]): React.ReactNode {
-  if (tokens.length === 0) return name;
-  const lower = name.toLowerCase();
-  const ranges: Array<[number, number]> = [];
-  for (const tok of tokens) {
-    let from = 0;
-    while (true) {
-      const idx = lower.indexOf(tok, from);
-      if (idx === -1) break;
-      ranges.push([idx, idx + tok.length]);
-      from = idx + tok.length;
-    }
-  }
-  if (ranges.length === 0) return name;
-  ranges.sort((a, b) => a[0] - b[0]);
-  const merged: Array<[number, number]> = [];
-  for (const r of ranges) {
-    const last = merged[merged.length - 1];
-    if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);
-    else merged.push(r);
-  }
-  const parts: React.ReactNode[] = [];
-  let pos = 0;
-  merged.forEach(([start, end], i) => {
-    if (start > pos) parts.push(name.slice(pos, start));
-    parts.push(
-      <mark key={i} style={{ background: 'var(--vscode-editor-findMatchHighlightBackground)', color: 'inherit', borderRadius: 2 }}>
-        {name.slice(start, end)}
-      </mark>
-    );
-    pos = end;
-  });
-  if (pos < name.length) parts.push(name.slice(pos));
-  return <>{parts}</>;
-}
-
-/** Одне вже відфільтроване (при активному пошуку) поле, готове до рендеру. */
-interface RenderField {
-  field: MetaField;
-  key: string;
-}
-interface RenderTs {
-  ts: MetaTable;
-  key: string;
-  fields: RenderField[];
-}
-interface RenderTable {
-  table: MetaTable;
-  key: string;
-  fields: RenderField[];
-  tabularSections: RenderTs[];
-}
-interface RenderGroup {
-  kind: TableKind;
-  tables: RenderTable[];
-}
-
-/**
- * Єдина модель фільтрації дерева під пошук — той самий паттерн, що й
- * Classic `buildRenderModel` (DbTreePanel.tsx), без ref-drill-down (не в
- * scope Phase 3D-Tree).
- */
-function buildRenderModel(topLevelTables: MetaTable[], tokens: string[], isSearching: boolean): RenderGroup[] {
-  return GROUP_KINDS.map(kind => {
-    const groupAll = topLevelTables.filter(tb => tb.kind === kind);
-    const groupTables = isSearching ? groupAll.filter(tb => tableMatchesQuery(tb, tokens)) : groupAll;
-    const tables: RenderTable[] = groupTables.map(table => {
-      const nameMatches = isSearching && textMatchesAllTokens(table.name, tokens);
-      const fields: RenderField[] = (isSearching
-        ? table.fields.filter(f => nameMatches || tokens.some(tok => textMatchesToken(f.name, tok)))
-        : table.fields
-      ).map(field => ({ field, key: `${table.fullName}#${field.name}` }));
-      const tabularSections: RenderTs[] = (table.tabularSections ?? [])
-        .filter(ts => !isSearching || nameMatches || textMatchesAllTokens(ts.name, tokens) || ts.fields.some(f => tokens.some(tok => textMatchesToken(f.name, tok))))
-        .map(ts => {
-          const tsNameMatches = isSearching && textMatchesAllTokens(ts.name, tokens);
-          const showAll = nameMatches || tsNameMatches;
-          const tsFields: RenderField[] = (isSearching
-            ? ts.fields.filter(f => showAll || tokens.some(tok => textMatchesToken(f.name, tok)))
-            : ts.fields
-          ).map(field => ({ field, key: `${ts.fullName}#${field.name}` }));
-          return { ts, key: ts.fullName, fields: tsFields };
-        });
-      return { table, key: table.fullName, fields, tabularSections };
-    });
-    return { kind, tables };
-  });
+  return highlightMatches(name, tokens, 'var(--vscode-editor-findMatchHighlightBackground)');
 }
 
 // Phase 3E.1: стабільні колонки [chevron-slot][icon][label][trailing] —
@@ -426,7 +298,7 @@ export function MetadataTree({
     return () => clearTimeout(timer);
   }, [query]);
 
-  const tokens = React.useMemo(() => tokenize(debouncedQuery), [debouncedQuery]);
+  const tokens = React.useMemo(() => tokenizeSearch(debouncedQuery), [debouncedQuery]);
   const isSearching = tokens.length > 0;
 
   const topLevel = React.useMemo(() => tables.filter(tb => GROUP_KINDS.includes(tb.kind)), [tables]);
@@ -546,7 +418,7 @@ export function MetadataTree({
                 <div className="qcc-meta-row" style={GROUP_HEADER_STYLE} onClick={() => toggleGroup(group.kind)}>
                   <Chevron expanded={isGroupExpanded} />
                   <MetaKindIcon kind={group.kind} size={14} />
-                  <span>{groupLabel(locale, group.kind)}</span>
+                  <span>{groupLabel(group.kind)}</span>
                 </div>
                 {isGroupExpanded && group.tables.map(rt => (
                   <TableRow

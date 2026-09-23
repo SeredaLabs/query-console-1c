@@ -8,6 +8,7 @@ import type { SupportedLocale } from '../../shared/locale';
 import { allTables, type QueryAction, type QueryState } from '../../webview/state/queryStore';
 import { t } from '../i18n';
 import { CARD, SECTION_LABEL, TOKENS } from '../theme';
+import { CONDITION_OPERATORS } from '../../webview/conditionOperators';
 
 /**
  * Phase 8 — Conditions Workspace. Той самий грід-патерн, що й Fields
@@ -27,7 +28,6 @@ import { CARD, SECTION_LABEL, TOKENS } from '../theme';
  * в new_builder_current_state.md).
  */
 
-const OPERATORS: ConditionOperator[] = ['=', '<>', '>', '>=', '<', '<=', 'В', 'МЕЖДУ', 'ПОДОБНО'];
 
 const BAR_STYLE: React.CSSProperties = {
   height: 36,
@@ -400,7 +400,7 @@ export function ConditionsWorkspace({
                                 onChange={e => dispatch({ type: 'SET_CONDITION_OPERATOR', index: idx, operator: e.target.value as ConditionOperator })}
                                 style={CELL_INPUT}
                               >
-                                {OPERATORS.map(op => (
+                                {CONDITION_OPERATORS.map(op => (
                                   <option key={op} value={op}>
                                     {op}
                                   </option>
@@ -566,7 +566,7 @@ function ConditionPropertiesPanel({
               onChange={e => dispatch({ type: 'SET_CONDITION_OPERATOR', index: conditionIdx, operator: e.target.value as ConditionOperator })}
               style={PANEL_INPUT}
             >
-              {OPERATORS.map(op => (
+              {CONDITION_OPERATORS.map(op => (
                 <option key={op} value={op}>
                   {op}
                 </option>

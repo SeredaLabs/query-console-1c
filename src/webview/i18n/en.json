@@ -232,6 +232,7 @@
   "diagnostic.tableNotFound": "Table not found: \"{table}\"",
   "diagnostic.duplicateAlias": "Duplicate alias: \"{alias}\"",
   "diagnostic.unionColumnCount": "Union result column counts do not match ({counts})",
+  "diagnostic.fieldNotFound": "Field \"{field}\" not found in \"{table}\"",
   "diagnostic.expectedKeyword": "expected keyword “{value}”",
   "diagnostic.expectedSymbol": "expected symbol “{value}”",
   "diagnostic.unexpectedCharacter": "unexpected character {value}",

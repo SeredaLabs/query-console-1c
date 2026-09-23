@@ -4,6 +4,7 @@ import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
 import { t } from '../i18n';
 import { CARD, SECTION_LABEL, TOKENS } from '../theme';
+import { distinctFieldRefs } from '../../webview/fieldSource';
 
 /**
  * Phase 10 — Sorting Workspace. Той самий мінімальний грід-патерн, що й
@@ -141,16 +142,11 @@ export function SortingWorkspace({
     });
 
   // "+ Сортування": лише прості (не-expression) поля, що ВЖЕ у SELECT —
-  // той самий обсяг, що Classic OrderTab.tsx (distinctFieldRefs), бо
+  // той самий обсяг і та сама функція, що Classic OrderTab.tsx (distinctFieldRefs), бо
   // OrderField не вміє адресувати довільний вираз/поле поза SELECT.
   const addableFields = React.useMemo(() => {
-    const seen = new Set<string>();
     const out: { tableId: string; path: string; label: string }[] = [];
-    for (const sf of state.selectedFields) {
-      if (sf.path === '') continue;
-      const key = `${sf.tableId} ${sf.path}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
+    for (const sf of distinctFieldRefs(state.selectedFields)) {
       const already = orderFields.some(o => o.tableId === sf.tableId && o.path === sf.path);
       if (already) continue;
       out.push({ tableId: sf.tableId, path: sf.path, label: `${tableLabelOf(sf.tableId)}.${sf.path}` });

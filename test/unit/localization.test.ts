@@ -32,6 +32,15 @@ describe('localization', () => {
       .toBe('3:7: Таблицю не знайдено: "Справочник.Валюты"');
   });
 
+  it('localizes the field-not-found diagnostic instead of the generic fallback', () => {
+    setLocale('en');
+    expect(localizeDiagnostic('Поле "Цена" не найдено в "Справочник.Валюты"'))
+      .toBe('Field "Цена" not found in "Справочник.Валюты"');
+    setLocale('uk');
+    expect(localizeDiagnostic('Поле "Цена" не найдено в "Справочник.Валюты"'))
+      .toBe('Поле "Цена" не знайдено в "Справочник.Валюты"');
+  });
+
   it('localizes linter warnings by stable code', () => {
     setLocale('en');
     expect(localizeLintWarning('top-without-order', 'ignored source text'))

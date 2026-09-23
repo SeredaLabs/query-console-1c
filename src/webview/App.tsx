@@ -1,13 +1,11 @@
 import * as React from 'react';
-import { useReducer, useEffect, useMemo, useState } from 'react';
+import { useReducer, useMemo, useState } from 'react';
 import { ConstructorView } from './components/ConstructorView';
-import { postToHost, onHostMessage } from './bridge';
-import { initialState, reducer, assembleBatch } from './state/queryStore';
+import { postToHost } from './bridge';
+import { useDesignerSession } from './hooks/useDesignerSession';
+import { initialState, reducer } from './state/queryStore';
 import { computeBatchTextSafe } from './computeBatchText';
-import { tryOpenBatch, validateBatchText } from '../core/query/validateBatch';
-import { findUnsafeVirtualTables, findMalformedCustomExpressions } from '../core/query/semanticValidator';
-import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
-import type { MetaTable } from '../core/metadata/types';
+import { findStaticApplyBlocker, decideApply } from './applyGate';
 import { BTN } from './sharedStyles';
 import { localizeDiagnostic, setLocale, t } from './i18n';
 
@@ -19,61 +17,31 @@ export function App(): React.ReactElement {
   // 8.1: «Сохранять комментарии» — включено по умолчанию. Управляет и сбором
   // комментариев при открытии, и их печатью в итоговом тексте при сохранении.
   const [preserveComments, setPreserveComments] = useState(true);
-  // 7.8.2: пока не пришли метаданные (и модель запроса, если открываем существующий
-  // текст) — показываем индикатор загрузки, чтобы не мигать пустым конструктором.
-  const [loading, setLoading] = useState(true);
   // 7.8.10: текст ошибки валидации при нажатии ОК (null = нет ошибки).
   const [okError, setOkError] = useState<string | null>(null);
-  // Текст синтаксической ошибки при открытии из текста (null = нет): некорректный
-  // запрос НЕ открывается пустым конструктором, а показывает ошибку с номером строки.
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const expectModelRef = React.useRef(false);
   // Стадия 1 плана «Текст запроса v2» — прокидывается хостом из настройки
   // `queryConsole.queryTextEditorV2` (по умолчанию выключено).
   const [queryTextEditorV2, setQueryTextEditorV2] = useState(false);
-  const [localeRevision, setLocaleRevision] = useState(0);
-  // 8.4: таблицы метаданных для локальной семантической проверки открытия/ОК.
-  // Резолвер строится из них только при непустом списке (иначе — fail-open: undefined).
-  const metaTablesRef = React.useRef<MetaTable[]>([]);
-  const buildResolver = () =>
-    metaTablesRef.current.length ? buildResolverFromTables(metaTablesRef.current) : undefined;
-
-  useEffect(() => {
-    const unsub = onHostMessage(msg => {
-      if (msg.type === 'init') {
-        // `locale` was added to a versionless host/WebView contract. A restored
-        // panel or older harness may still send the previous shape; keep the
-        // already selected locale instead of invalidating the dictionary.
-        if (msg.locale) {
-          setLocale(msg.locale);
-          setLocaleRevision(revision => revision + 1);
-        }
-        expectModelRef.current = msg.hasInitialQuery;
-        setQueryTextEditorV2(msg.queryTextEditorV2);
-      } else if (msg.type === 'metadataTree') {
-        metaTablesRef.current = msg.tables;
-        dispatch({ type: 'SET_METADATA', tables: msg.tables });
-        // Нет входного запроса — конструктор готов сразу после метаданных.
-        if (!expectModelRef.current) setLoading(false);
-      } else if (msg.type === 'refFields') {
-        dispatch({ type: 'SET_REF_FIELDS', ref: msg.ref, fields: msg.fields });
-      } else if (msg.type === 'refreshResult') {
-        setRefreshState({ ok: msg.ok, message: msg.message });
-      } else if (msg.type === 'loadModel') {
-        // Открытие из текста и проверка при «ОК» (7.8.10) используют ЕДИНЫЙ разбор.
-        // 8.4: `tryOpenBatch` добавляет к синтаксису локальную семантическую проверку
-        // (существование таблиц по кэшу). Текст корректен — загружаем модель; иначе
-        // показываем ошибку (синтаксическую или семантическую) вместо пустого
-        // конструктора. В любом случае снимаем оверлей загрузки (7.8.2).
-        const r = tryOpenBatch(msg.text, buildResolver(), { preserveComments: true });
-        if (r.ok) { dispatch({ type: 'LOAD_BATCH', doc: r.doc }); setLoadError(null); }
-        else setLoadError(r.error);
-        setLoading(false);
+  // Лише примусовий ре-рендер при зміні локалі (повідомлення рахуються в рендері).
+  const [, setLocaleRevision] = useState(0);
+  // Сессия с хостом (ready → metadataTree → loadModel, загрузка/ошибка открытия) —
+  // общая с Canvas (`hooks/useDesignerSession.ts`); здесь только Classic-сообщения.
+  const { loading, loadError, buildResolver } = useDesignerSession(dispatch, msg => {
+    if (msg.type === 'init') {
+      // `locale` was added to a versionless host/WebView contract. A restored
+      // panel or older harness may still send the previous shape; keep the
+      // already selected locale instead of invalidating the dictionary.
+      if (msg.locale) {
+        setLocale(msg.locale);
+        setLocaleRevision(revision => revision + 1);
       }
-    });
-    postToHost({ type: 'ready' });
-    return unsub;
-  }, []);
+      setQueryTextEditorV2(msg.queryTextEditorV2);
+    } else if (msg.type === 'refFields') {
+      dispatch({ type: 'SET_REF_FIELDS', ref: msg.ref, fields: msg.fields });
+    } else if (msg.type === 'refreshResult') {
+      setRefreshState({ ok: msg.ok, message: msg.message });
+    }
+  });
 
   function handleInsert(text: string) {
     postToHost({ type: 'insertText', text });
@@ -101,33 +69,16 @@ export function App(): React.ReactElement {
     [state, preserveComments]
   );
 
-  // PR-05 (ТЗ §27/28/54 P0.5): capability/preservation gate ПЕРЕД записью в
-  // редактор. Виртуальная таблица с непокрытыми позициями 3+ (см.
-  // KNOWN_ISSUES.md, findUnsafeVirtualTables) не может быть безопасно применена
-  // конструктором — правка молча роняла бы эти аргументы. В отличие от
-  // generationError, это НЕ ошибка генерации (generateBatch отрабатывает штатно),
-  // а известная граница capability модели — поэтому отдельная переменная, хотя
-  // отображается тем же каналом okError/okDisabled.
-  const unsafeVtError = useMemo(() => {
-    const names = findUnsafeVirtualTables(assembleBatch(state));
-    return names.length > 0
-      ? t('constructor.unsafeVirtual', { name: names[0] })
-      : null;
-  }, [state, localeRevision]);
-
-  // PR-14 (docs/development/known-issues.md, ТЗ §54 P0.5 — тот же
-  // Apply-blocking gate, что и unsafeVtError): tolerant-парсер сохраняет
-  // непонятный фрагмент как custom-текст БЕЗ проверки его собственной
-  // грамматической корректности. `findMalformedCustomExpressions` прогоняет
-  // такой текст через структурный акцептор грамматики SDBL
-  // (`expressionSyntaxCheck.ts`) — не полная семантика, но заметно больше
-  // одной лишь проверки баланса скобок (шаг 1): ловит и двойные операторы,
-  // и незакрытые CASE/функции, оставаясь без ложных срабатываний на золотом
-  // корпусе и на двух независимых реальных production-конфигурациях.
-  const malformedCustomError = useMemo(() => {
-    const hits = findMalformedCustomExpressions(assembleBatch(state));
-    return hits.length > 0 ? t('constructor.malformedCustom') : null;
-  }, [state, localeRevision]);
+  // PR-05/PR-14 (ТЗ §27/28/54 P0.5): capability/preservation gate ПЕРЕД записью в
+  // редактор — небезпечна віртуальна таблиця або синтаксично зламаний custom-вираз
+  // (див. `applyGate.ts`, спільний із Canvas). Не помилка генерації, а відома
+  // межа capability моделі — тому окремо від generationError, хоча відображається
+  // тим самим каналом okError/okDisabled.
+  const applyBlocker = useMemo(() => findStaticApplyBlocker(state), [state]);
+  const unsafeVtError = applyBlocker?.kind === 'unsafeVirtualTable'
+    ? t('constructor.unsafeVirtual', { name: applyBlocker.name })
+    : null;
+  const malformedCustomError = applyBlocker?.kind === 'malformedCustom' ? t('constructor.malformedCustom') : null;
 
   return (
     <>
@@ -145,9 +96,11 @@ export function App(): React.ReactElement {
           // эта проверка на случай прямого вызова/будущей развязки условий, чтобы
           // «ОК» никогда не мог отправить insertText при известной ошибке генерации
           // ИЛИ известной потере данных виртуальной таблицы (ТЗ §27/§28).
-          if (generationError || unsafeVtError || malformedCustomError) return;
-          const v = validateBatchText(batchText, buildResolver());
-          if (!v.ok) { setOkError(v.error); return; }
+          const decision = decideApply(batchText, generationError, applyBlocker, buildResolver());
+          if (!decision.ok) {
+            if (decision.kind === 'invalid') setOkError(decision.error);
+            return;
+          }
           setOkError(null);
           handleInsert(batchText);
         }}

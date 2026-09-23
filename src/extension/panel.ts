@@ -19,20 +19,31 @@ function nonce(): string {
   return Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
-function getHtml(webview: vscode.Webview, scriptUri: vscode.Uri, codiconCssUri: vscode.Uri, n: string): string {
+function getHtml(webview: vscode.Webview, scriptUri: vscode.Uri, codiconCssUri: vscode.Uri, n: string, title: string): string {
   return `<!DOCTYPE html>
 <html lang="${normalizeLocale(vscode.env.language)}">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${n}'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource};">
   <link rel="stylesheet" href="${webview.asWebviewUri(codiconCssUri)}">
-  <title>${vscode.l10n.t('1C: Query Designer')}</title>
+  <title>${title}</title>
 </head>
 <body style="margin:0;padding:0;height:100vh;">
   <div id="root" style="height:100%;"></div>
   <script nonce="${n}" src="${webview.asWebviewUri(scriptUri)}"></script>
 </body>
 </html>`;
+}
+
+/** What differs between the Classic designer and the Canvas preview panels. */
+export interface DesignerPanelKind {
+  viewType: string;
+  /** Already localized panel/tab title. */
+  title: string;
+  /** Bundle under `out/webview/`. */
+  script: string;
+  /** `init` message's `queryTextEditorV2` flag, read on every `ready`. */
+  queryTextEditorV2: () => boolean;
 }
 
 export function createPanel(
@@ -42,9 +53,32 @@ export function createPanel(
   savedEditor?: SavedEditorState,
   initialQueryText?: string
 ): vscode.WebviewPanel {
+  return createDesignerPanel(context, cfPath, channel, {
+    viewType: '1c.queryConstructor',
+    title: vscode.l10n.t('1C: Query Designer'),
+    script: 'main.js',
+    queryTextEditorV2: () => vscode.workspace.getConfiguration('queryConsole').get<boolean>('queryTextEditorV2', false),
+  }, savedEditor, initialQueryText);
+}
+
+/**
+ * The designer panel host shared by Classic (`createPanel`) and Canvas
+ * (`canvasPanel.ts`): HTML/CSP, metadata loading, the whole message bridge
+ * (init/metadataTree/loadModel, expandRef, generate, insertText, cancel,
+ * refreshCache) and the new-window option. Both UIs speak the same protocol
+ * (`shared/messages.ts`), so the host side is not duplicated per UI.
+ */
+export function createDesignerPanel(
+  context: vscode.ExtensionContext,
+  cfPath: string,
+  channel: vscode.OutputChannel,
+  kind: DesignerPanelKind,
+  savedEditor?: SavedEditorState,
+  initialQueryText?: string
+): vscode.WebviewPanel {
   const panel = vscode.window.createWebviewPanel(
-    '1c.queryConstructor',
-    vscode.l10n.t('1C: Query Designer'),
+    kind.viewType,
+    kind.title,
     vscode.ViewColumn.Beside,
     {
       enableScripts: true,
@@ -53,10 +87,10 @@ export function createPanel(
     }
   );
 
-  const scriptUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', 'main.js');
+  const scriptUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', kind.script);
   const codiconCssUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', 'codicon.css');
   const n = nonce();
-  panel.webview.html = getHtml(panel.webview, scriptUri, codiconCssUri, n);
+  panel.webview.html = getHtml(panel.webview, scriptUri, codiconCssUri, n, kind.title);
 
   const outPath = resolveOutPath(context);
   let metadataModel: MetadataModel = { version: 1, tables: [] };
@@ -66,11 +100,10 @@ export function createPanel(
     if (msg.type === 'ready') {
       // 7.8.2: сразу сообщаем вебвью, ждать ли загрузку модели запроса, чтобы оно
       // показало индикатор загрузки и не мигало пустым конструктором до заполнения.
-      const queryTextEditorV2 = vscode.workspace.getConfiguration('queryConsole').get<boolean>('queryTextEditorV2', false);
       const initMsg: HostMsg = {
         type: 'init',
         hasInitialQuery: !!initialQueryText,
-        queryTextEditorV2,
+        queryTextEditorV2: kind.queryTextEditorV2(),
         locale: normalizeLocale(vscode.env.language),
       };
       panel.webview.postMessage(initMsg);

@@ -1,6 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import * as fs from 'fs';
-import * as path from 'path';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { findUnsafeVirtualTables, findMalformedCustomExpressions } from '../../src/core/query/semanticValidator';
 import { assembleBatch, initialState, reducer } from '../../src/webview/state/queryStore';
@@ -58,29 +56,5 @@ describe('Canvas Apply-gate data path (webview/state/queryStore, shared with Cla
   });
 });
 
-/**
- * Pins the fix at the source level: Canvas's App.tsx must import and use both
- * gate functions, the same way Classic's App.tsx already does. A future edit
- * that accidentally drops this wiring (e.g. during an unrelated Save-flow
- * refactor) fails this test instead of silently reintroducing the bug.
- */
-describe('src/webview-canvas/App.tsx uses the same Apply-gate as Classic', () => {
-  const APP_TSX = path.resolve(__dirname, '../../src/webview-canvas/App.tsx');
-
-  it('imports findUnsafeVirtualTables and findMalformedCustomExpressions from semanticValidator', () => {
-    const src = fs.readFileSync(APP_TSX, 'utf8');
-    expect(src).toMatch(/import\s*\{[^}]*findUnsafeVirtualTables[^}]*\}\s*from\s*['"]\.\.\/core\/query\/semanticValidator['"]/);
-    expect(src).toMatch(/import\s*\{[^}]*findMalformedCustomExpressions[^}]*\}\s*from\s*['"]\.\.\/core\/query\/semanticValidator['"]/);
-  });
-
-  it('handleSave and saveDisabled both reference the gate result (not just batchText.error)', () => {
-    const src = fs.readFileSync(APP_TSX, 'utf8');
-    expect(src).toContain('saveBlocked');
-    // The gate must actually be able to block: `saveBlocked` must be read at
-    // least twice — once for the button's disabled state, once inside
-    // handleSave's own early-return (defense in depth, mirroring Classic's
-    // onOk double-check of generationError/unsafeVtError/malformedCustomError).
-    const occurrences = (src.match(/saveBlocked/g) ?? []).length;
-    expect(occurrences).toBeGreaterThanOrEqual(3); // declaration + handleSave + saveDisabled
-  });
-});
+// Source-level wiring of the shared gate (Classic and Canvas) is pinned in
+// test/unit/applyGate.test.ts.

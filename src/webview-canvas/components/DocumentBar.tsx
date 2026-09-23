@@ -89,6 +89,15 @@ const BTN_PRIMARY: React.CSSProperties = {
   color: 'var(--vscode-button-foreground)',
 };
 
+const SAVE_ERROR_STYLE: React.CSSProperties = {
+  fontSize: 12,
+  color: TOKENS.danger,
+  maxWidth: 480,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+};
+
 const BTN_PRIMARY_DISABLED: React.CSSProperties = {
   ...BTN_PRIMARY,
   cursor: 'not-allowed',
@@ -100,6 +109,7 @@ export function DocumentBar({
   onSave,
   saveDisabled,
   saveDisabledReason,
+  saveError,
 }: {
   locale: SupportedLocale;
   onSave: () => void;
@@ -109,6 +119,9 @@ export function DocumentBar({
    * expression) rather than just "nothing to save" — shown as a tooltip so the
    * disabled state isn't silent, same intent as Classic's okError banner. */
   saveDisabledReason?: string;
+  /** Why the last Save click was refused by the click-time check
+   * (`webview/applyGate.ts` `decideApply`, same as Classic's okError). */
+  saveError?: string;
 }): React.ReactElement {
   return (
     <div style={BAR_STYLE}>
@@ -117,6 +130,11 @@ export function DocumentBar({
         <span style={CANVAS_BADGE}>CANVAS</span>
       </div>
       <div style={ACTIONS_STYLE}>
+        {saveError && (
+          <span data-testid="canvas-save-error" role="alert" style={SAVE_ERROR_STYLE} title={saveError}>
+            {saveError}
+          </span>
+        )}
         <button
           type="button"
           className="qcc-btn"

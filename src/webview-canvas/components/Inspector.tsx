@@ -9,9 +9,11 @@ import { MetaKindIcon } from '../../webview/components/MetaKindIcon';
 import { JoinKindPicker } from '../structure/JoinKindPicker';
 import { joinKindLabel, joinKindVisual } from '../structure/joinKind';
 import type { StructureSelection } from '../structure/StructureWorkspace';
-import { groupLabel, t } from '../i18n';
+import { t } from '../i18n';
+import { groupLabel } from '../../webview/metadataTreeModel';
 import { CARD, DIMENSIONS, SECTION_LABEL, TOKENS } from '../theme';
-import { ResizeHandle } from './ResizeHandle';
+import { ResizeHandle } from '../../webview/components/ResizeHandle';
+import { CONDITION_OPERATORS } from '../../webview/conditionOperators';
 
 const CONTAINER_STYLE: React.CSSProperties = {
   ...CARD,
@@ -205,7 +207,7 @@ function SourceInspector({
         {meta && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
             <MetaKindIcon kind={meta.kind} size={14} />
-            <span style={{ fontSize: 12, color: TOKENS.textSecondary }}>{groupLabel(locale, meta.kind)}</span>
+            <span style={{ fontSize: 12, color: TOKENS.textSecondary }}>{groupLabel(meta.kind)}</span>
           </div>
         )}
         <div>
@@ -231,10 +233,6 @@ function SourceInspector({
   );
 }
 
-/** Той самий перелік, що й Classic ConnectionsTab (`OPERATORS`) — раніше в New Builder
- * Inspector умова поле=поле мала лише неявний `=`, хоча домен/reducer (`SET_JOIN_OPERATOR`)
- * і Classic вже підтримують довільний оператор. */
-const OPERATORS: ConditionOperator[] = ['=', '<>', '>', '>=', '<', '<=', 'В', 'МЕЖДУ', 'ПОДОБНО'];
 
 function fieldsOf(tableId: string, selectedTables: SelectedTable[], tablesMeta: MetaTable[]): MetaField[] {
   const table = selectedTables.find(tb => tb.id === tableId);
@@ -345,14 +343,14 @@ function JoinInspector({
           <div style={IDENT_NAME} title={leftLabel}>
             {leftLabel}
           </div>
-          <div style={IDENT_KIND}>{leftMeta ? groupLabel(locale, leftMeta.kind) : '—'}</div>
+          <div style={IDENT_KIND}>{leftMeta ? groupLabel(leftMeta.kind) : '—'}</div>
         </div>
         <span className="codicon codicon-arrow-right" style={{ fontSize: 14, color: TOKENS.textMuted, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
           <div style={IDENT_NAME} title={rightLabel}>
             {rightLabel}
           </div>
-          <div style={IDENT_KIND}>{rightMeta ? groupLabel(locale, rightMeta.kind) : '—'}</div>
+          <div style={IDENT_KIND}>{rightMeta ? groupLabel(rightMeta.kind) : '—'}</div>
         </div>
       </div>
 
@@ -435,7 +433,7 @@ function JoinInspector({
                       onChange={e => dispatch({ type: 'SET_JOIN_OPERATOR', index: joinIndex, operator: e.target.value as ConditionOperator, condIndex: i })}
                       style={{ ...DARK_SELECT, textAlign: 'center' }}
                     >
-                      {OPERATORS.map(op => (
+                      {CONDITION_OPERATORS.map(op => (
                         <option key={op} value={op}>
                           {op}
                         </option>
@@ -475,7 +473,7 @@ function JoinInspector({
                       onChange={e => dispatch({ type: 'SET_JOIN_OPERATOR', index: joinIndex, operator: e.target.value as ConditionOperator, condIndex: i })}
                       style={{ ...DARK_SELECT, flexShrink: 0, width: 52, textAlign: 'center' }}
                     >
-                      {OPERATORS.map(op => (
+                      {CONDITION_OPERATORS.map(op => (
                         <option key={op} value={op}>
                           {op}
                         </option>

@@ -3,7 +3,7 @@ import type { SupportedLocale } from '../../shared/locale';
 import { CodeEditor } from '../../webview/components/CodeEditor';
 import { t } from '../i18n';
 import { DIMENSIONS, TOKENS } from '../theme';
-import { ResizeHandle } from './ResizeHandle';
+import { ResizeHandle } from '../../webview/components/ResizeHandle';
 
 const HEADER_STYLE: React.CSSProperties = {
   height: DIMENSIONS.sdbl.collapsed,
