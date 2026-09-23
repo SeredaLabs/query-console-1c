@@ -45,7 +45,7 @@ export function findMetaField(
   return meta.fields.find(f => f.name === top);
 }
 
-export function isNumericField(field: MetaField | undefined): boolean {
+function isNumericField(field: MetaField | undefined): boolean {
   if (!field || !field.types) return false;
   return field.types.some(t => t.primitive === 'Число');
 }

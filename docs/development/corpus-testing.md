@@ -12,6 +12,16 @@ broader confidence than the committed subset. See
 [0004](decisions/0004-querymodel-round-trip-contract.md) for why this
 contract exists and what depends on it.
 
+To triage individual failures from a corpus run (JSON files in the configured
+errors directory, `tmp/corpus-errors` by default):
+`npm run probe:error -- <name.txt.json> | --all` re-runs our designer on each
+input and prints the first diff against the recorded validator text;
+`npm run oracle:reprobe -- <name.txt.json> | --all` asks the live oracle
+(`validate_query` over MCP, URL from `.mcp.json`) and reports whether ours,
+the committed golden and the live output agree (`--patch-golden` refreshes a
+stale golden entry where ours matches live). Both need the private corpus and
+metadata cache, like `accept:oracle`.
+
 ## Classification gate
 
 Every corpus entry is classified as `SUPPORTED`, `RECOVERED`, `UNSUPPORTED`, or

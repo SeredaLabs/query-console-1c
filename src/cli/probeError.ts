@@ -2,8 +2,8 @@
  * Быстрый пробник одного запроса: грузит resolver один раз, прогоняет
  * конструктор на input(ах) из corpus-error JSON(ов) и печатает фокус-дифф.
  * Использование:
- *   node out/cli/probeError.js <name1.txt.json> [name2.txt.json ...]
- *   node out/cli/probeError.js --all          (все из tmp/corpus-errors)
+ *   npm run probe:error -- <name1.txt.json> [name2.txt.json ...]
+ *   npm run probe:error -- --all          (все из tmp/corpus-errors)
  * Имена ищутся в tmp/corpus-errors (или передавайте полный путь).
  */
 import * as fs from 'fs';

@@ -14,10 +14,6 @@ export function setLocale(locale: SupportedLocale): void {
   if (typeof document !== 'undefined') document.documentElement.lang = locale;
 }
 
-export function getLocale(): SupportedLocale {
-  return activeLocale;
-}
-
 export function t(key: MessageKey, args: Record<string, string | number> = {}): string {
   const template = dictionaries[activeLocale][key] ?? en[key];
   return template.replace(/\{(\w+)\}/g, (match, name: string) =>

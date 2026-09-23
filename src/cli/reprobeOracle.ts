@@ -5,7 +5,7 @@
  *   ours==live?  golden==live?  ours==golden?
  * и первый дифф ours-vs-live. Так видно: (а) устарел ли golden, (б) совпадает ли наш
  * вывод с ЖИВЫМ оракулом.
- * Запуск: node out/cli/reprobeOracle.js <name1.txt.json> [...]  |  --all
+ * Запуск: npm run oracle:reprobe -- <name1.txt.json> [...]  |  --all
  * Доп. флаг --patch-golden: для записей, где ours==live, обновляет query_text в
  *   tmp/query1c/oracle/golden.jsonl ЖИВЫМ текстом (refresh устаревшего эталона).
  */

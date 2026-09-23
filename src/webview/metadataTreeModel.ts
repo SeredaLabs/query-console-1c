@@ -52,11 +52,11 @@ export function tokenizeSearch(query: string): string[] {
   return query.trim().toLowerCase().split(/\s+/).filter(Boolean);
 }
 
-export function textMatchesToken(text: string, token: string): boolean {
+function textMatchesToken(text: string, token: string): boolean {
   return text.toLowerCase().includes(token);
 }
 
-export function textMatchesAllTokens(text: string, tokens: string[]): boolean {
+function textMatchesAllTokens(text: string, tokens: string[]): boolean {
   const lower = text.toLowerCase();
   return tokens.every(tok => lower.includes(tok));
 }

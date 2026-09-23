@@ -118,13 +118,6 @@ function walkDocument(qdoc: QueryDocument, warnings: LintWarning[]): void {
   for (const member of qdoc.members) lintModel(member.model, warnings);
 }
 
-/** Пролінтувати один документ (участник ОБЪЕДИНЕНИЯ або одиночний запит). */
-export function lintDocument(doc: QueryDocument): LintWarning[] {
-  const warnings: LintWarning[] = [];
-  walkDocument(doc, warnings);
-  return warnings;
-}
-
 /** Пролінтувати весь пакет (усі `;`-блоки). */
 export function lintBatch(batch: BatchDocument): LintWarning[] {
   const warnings: LintWarning[] = [];

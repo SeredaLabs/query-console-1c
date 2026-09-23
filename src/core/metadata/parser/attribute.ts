@@ -11,7 +11,7 @@ export function parseAttribute(attrEl: any): ParsedField | null {
   return clean({ name, category: 'attribute' as const, types, synonym: readSynonym(props) });
 }
 
-export function parseTabularSection(tsEl: any): ParsedTabularSection | null {
+function parseTabularSection(tsEl: any): ParsedTabularSection | null {
   const props = childByLocalName(tsEl, 'Properties');
   if (!props) return null;
   const name = nodeText(childByLocalName(props, 'Name'));

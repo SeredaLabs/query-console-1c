@@ -1715,7 +1715,7 @@ function isConstGroupExpr(expression: string | undefined): boolean {
  * `outerAlias` — функция выбора псевдонима всей ТЧ (для дедупликации в одиночном
  * запросе); при `suppress` не вызывается.
  */
-export function renderTabProjection(
+function renderTabProjection(
   model: QueryModel,
   tsf: SelectedTabSectionField,
   aliases: Map<string, string>,

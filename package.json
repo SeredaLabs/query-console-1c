@@ -140,6 +140,8 @@
     "harvest": "npm run build:oracle && node out/cli/harvestOracle.js",
     "accept:oracle": "npm run build:oracle && node out/cli/oracleAcceptCli.js",
     "oracle:diff": "esbuild src/cli/oracleDiff.ts --bundle --outfile=out/cli/oracleDiff.js --platform=node --format=cjs && node out/cli/oracleDiff.js",
+    "probe:error": "esbuild src/cli/probeError.ts --bundle --outfile=out/cli/probeError.js --platform=node --format=cjs && node out/cli/probeError.js",
+    "oracle:reprobe": "esbuild src/cli/reprobeOracle.ts --bundle --outfile=out/cli/reprobeOracle.js --platform=node --format=cjs && node out/cli/reprobeOracle.js",
     "build:webview": "esbuild src/webview/main.tsx --bundle --outfile=out/webview/main.js --platform=browser --format=iife --loader:.tsx=tsx --loader:.ts=ts && node scripts/copy-files.mjs out/webview/ node_modules/@vscode/codicons/dist/codicon.css node_modules/@vscode/codicons/dist/codicon.ttf",
     "build:canvas": "esbuild src/webview-canvas/main.tsx --bundle --outfile=out/webview/canvasApp.js --platform=browser --format=iife --loader:.tsx=tsx --loader:.ts=ts",
     "typecheck:extension": "tsc -p tsconfig.json --noEmit",

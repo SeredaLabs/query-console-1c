@@ -1,4 +1,3 @@
-import type { Join } from '../../core/query/queryModel';
 
 export type JoinKindLabel = 'LEFT' | 'INNER' | 'FULL';
 
@@ -39,19 +38,4 @@ export function joinKindVisual(kind: JoinKindLabel, tokens: Record<string, strin
     case 'FULL':
       return { icon: 'combine', color: tokens.chartPurple };
   }
-}
-
-/**
- * Компактний опис умови зв'язку для canvas-бейджа (gap analysis: "не видно
- * по лініям... який зараз зв'язок по полям, реалізовано лише при наведенні"
- * — Inspector). Тепер бейдж сам показує це, без потреби виділяти/наводити.
- * Читає лише `conditions[0]`/top-level mirror (той самий single-conjunct
- * обсяг, що вже редагується в Inspector/creation popover) — без імен
- * таблиць (лінія й так візуально з'єднує саме ці дві картки).
- */
-export function joinConditionSummary(join: Join): string | null {
-  const cond = join.conditions?.[0] ?? join;
-  if (cond.custom && cond.expression) return cond.expression;
-  if (cond.leftPath && cond.rightPath) return `${cond.leftPath} ${cond.operator ?? '='} ${cond.rightPath}`;
-  return null;
 }

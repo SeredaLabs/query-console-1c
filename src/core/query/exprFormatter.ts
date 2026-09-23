@@ -120,7 +120,7 @@ const UNARY_MINUS_PREV_WORDS = new Set([
  * Подзапрос в `В (ВЫБРАТЬ …)` конструктор раскладывает по строкам как полноценный
  * запрос — такой лист нельзя сплющивать в одну строку.
  */
-export function leafHasSubquery(raw: string): boolean {
+function leafHasSubquery(raw: string): boolean {
   let toks: Token[];
   try {
     toks = tokenize(raw);
@@ -135,7 +135,7 @@ export function leafHasSubquery(raw: string): boolean {
  * Такой CASE конструктор раскладывает построчно (reindentLeafCase) — лист сплющивать
  * нельзя, иначе схлопнется в одну строку (фаза 6.15.21).
  */
-export function leafHasCase(raw: string): boolean {
+function leafHasCase(raw: string): boolean {
   let toks: Token[];
   try {
     toks = tokenize(raw);
@@ -264,7 +264,7 @@ export function wrapBareCastOperand(text: string): string {
  * И b`). Такой «лист» — на самом деле булево значение-выражение, которое конструктор
  * раскладывает по строкам с переносом по оператору; сплющивать его нельзя.
  */
-export function leafHasTopBoolean(raw: string): boolean {
+function leafHasTopBoolean(raw: string): boolean {
   return leafHasBoolean(raw, false);
 }
 
@@ -299,7 +299,7 @@ function leafHasBoolean(raw: string, anyDepth: boolean): boolean {
   return false;
 }
 
-export function flattenLeafText(raw: string): string {
+function flattenLeafText(raw: string): string {
   if (!raw || !/\s/.test(raw)) return raw;
   let toks: Token[];
   try {
@@ -962,7 +962,7 @@ function opensWithVyborInCall(text: string): boolean {
  * ТОГДА/ИНАЧЕ верхнеуровневые И/ИЛИ — это редкая геометрия продолжения значения,
  * которую reindentLeafCase обрабатывает отдельно и которой нет в каноне; их не трогаем.
  */
-export function splitInlineLeafCase(text: string): string {
+function splitInlineLeafCase(text: string): string {
   if (!text.includes('ВЫБОР') && !/ВЫБОР/iu.test(text)) return text;
   let toks: Token[];
   try {
@@ -1156,7 +1156,7 @@ export function splitInlineLeafCase(text: string): string {
  * Переводы строк сохраняются (заменяем только символы скобок пробелом и подчищаем
  * прилегающие пробелы, не трогая `\n`). Фаза 6.16.76, MCP-проба оракула.
  */
-export function stripRedundantCallWrapParens(text: string): string {
+function stripRedundantCallWrapParens(text: string): string {
   if (!text.includes('(')) return text;
   let toks: Token[];
   try {
@@ -1982,7 +1982,7 @@ export function reindentLeafCase(text: string, base: number, funcParenDepth = fa
  * ВАЖНО: в каноне всего корпуса нет ни одного инлайн `КОГДА X ТОГДА Y`, поэтому
  * направленный сплит однострочных КОГДА/ТОГДА безопасен.
  */
-export function reflowLeafSelectorCase(text: string, valueBaseInd: number): string | null {
+function reflowLeafSelectorCase(text: string, valueBaseInd: number): string | null {
   if (!text) return null;
   // Сплющиваем весь лист в одну строку (аргументы вызова), сохраняя пунктуацию.
   const flat = flattenLeafText(text);
@@ -2271,7 +2271,7 @@ function isTupleGroupAt(sig: Token[], openIdx: number): boolean {
   return false;
 }
 
-export function normalizeLeafWhitespace(raw: string): string {
+function normalizeLeafWhitespace(raw: string): string {
   if (!raw) return raw;
   let toks: Token[];
   try {
@@ -2459,7 +2459,7 @@ function enclosingFunctionIs(sig: Token[], idx: number, names: Set<string>): boo
  * затрагиваются (кроме переноса `НЕ ` в правиле 3). Многострочный лист в правило 3 не
  * попадает: предикат `В` приходит листом-сравнением без переносов строк.
  */
-export function canonicalizeLeafLexemes(raw: string): string {
+function canonicalizeLeafLexemes(raw: string): string {
   if (!raw) return raw;
   let toks: Token[];
   try {
@@ -3051,7 +3051,7 @@ export function reprintLeafArithmetic(raw: string): string {
  * (reprintLeafArithmetic их разбирает целиком). Иначе исходный текст без изменений
  * (булева логика/предикаты/несколько сравнений не трогаем).
  */
-export function reprintLeafComparison(raw: string): string {
+function reprintLeafComparison(raw: string): string {
   if (!raw || raw.includes('\n') || !raw.includes('(')) return raw;
   let toks: Token[];
   try { toks = tokenize(raw); } catch { return raw; }
