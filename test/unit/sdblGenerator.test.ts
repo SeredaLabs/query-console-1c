@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { generate, generateDocument, generateBatch } from '../../src/core/query/sdblGenerator';
+import { generate, generateDocument, generateBatch, formatAsBslString } from '../../src/core/query/sdblGenerator';
 import type { QueryDocument, UnionMember } from '../../src/core/query/unionModel';
 import type { BatchDocument } from '../../src/core/query/batchModel';
 import type { QueryModel } from '../../src/core/query/queryModel';
+import { findQueryAt } from '../../src/extension/queryAtCursor';
 import { assertValidSdbl } from '../helpers/assertValidSdbl';
 
 describe('generate', () => {
@@ -1745,5 +1746,31 @@ describe('источник-подзапрос (ИЗ (ВЫБРАТЬ …) КАК 
     expect(out).toContain('\n\t\n\tОБЪЕДИНИТЬ ВСЕ\n\t\n');
     // Хвост закрывается `) КАК Данные`.
     expect(out.endsWith(') КАК Данные')).toBe(true);
+  });
+});
+
+describe('formatAsBslString', () => {
+  it('wraps a single-line text in double quotes', () => {
+    expect(formatAsBslString('ВЫБРАТЬ 1')).toBe('"ВЫБРАТЬ 1"');
+  });
+
+  it('удваивает внутренние двойные кавычки строкового литерала запроса', () => {
+    const text = 'ГДЕ ЧтоТо = "СтроковоеЗначение" ';
+    expect(formatAsBslString(text)).toBe('"ГДЕ ЧтоТо = ""СтроковоеЗначение"" "');
+  });
+
+  it('удваивает кавычки на строках-продолжениях', () => {
+    const text = 'ВЫБРАТЬ\n"Значение" КАК П';
+    expect(formatAsBslString(text)).toBe('"ВЫБРАТЬ\n|""Значение"" КАК П"');
+  });
+
+  it('round-trips с findQueryAt: extract → format → extract сохраняет текст', () => {
+    const text = 'ВЫБРАТЬ\n"СтроковоеЗначение" КАК Поле';
+    const bsl = formatAsBslString(text);
+    const source = `Запрос.Текст = ${bsl};`;
+    const offset = source.indexOf('ВЫБРАТЬ');
+    const hit = findQueryAt(source, offset);
+    expect(hit).not.toBeNull();
+    expect(hit!.text).toBe(text);
   });
 });

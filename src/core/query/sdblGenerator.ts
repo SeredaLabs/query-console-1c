@@ -3111,7 +3111,10 @@ function renderHaving(
 }
 
 export function formatAsBslString(text: string): string {
-  const lines = text.split('\n');
+  // Inside a BSL string literal every double quote must be doubled. This is
+  // the inverse of the `""` → `"` unescaping performed by findQueryAt.
+  const escaped = text.replace(/"/g, '""');
+  const lines = escaped.split('\n');
   const body = lines[0] + (lines.length > 1 ? '\n' + lines.slice(1).map(l => `|${l}`).join('\n') : '');
   return `"${body}"`;
 }
