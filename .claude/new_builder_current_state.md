@@ -61,10 +61,11 @@ semantics у `QueryState`.
 selection); - `SdblDock` (низ, collapsible).
 
 `WorkspaceNav` tabs (з іконками-codicon на кожній, Phase 5.8):
-Структура (`list-tree`) --- єдина з реальним вмістом; Поля
-(`symbol-field`), Умови (`filter`), Групування (`group-by-ref-type`),
-Сортування (`sort-precedence`), Додатково (`settings-gear`) --- усі
-Phase 1 placeholder ("Цей workspace буде реалізовано в наступній фазі").
+Структура (`list-tree`), Поля (`symbol-field`), Умови (`filter`),
+Групування (`group-by-ref-type`), Сортування (`sort-precedence`),
+Додатково (`settings-gear`) --- усі шість мають реальний вміст (Phase
+7-11, див. §10; оновлено 2026-09-23). Ключ `workspacePlaceholder` лишився
+в i18n, але ніде не рендериться.
 
 **Важливо (bug-fix, актуально для будь-якої майбутньої вкладки):**
 `Workspace.tsx` монтує `StructureWorkspace` ЗАВЖДИ (приховує через
@@ -536,22 +537,33 @@ Classic і New Builder ділять ЦІЛКОМ ці семантики (жод
 `isPackageTempTableName`/`allTables`/`compoundCarrierOf` викликаються з
 обох `src/webview/` і `src/webview-canvas/` без розбіжностей.
 
-## 11. Відомі обмеження / gaps (оновлено 2026-09-18)
+## 11. Відомі обмеження / gaps (оновлено 2026-09-23)
 
 - немає query execution/results/row forecast --- і не повинно бути;
-- **New Builder НЕ підтягує існуючий запит при відкритті команди.**
-  `1c.queryConstructorCanvas` (`extension.ts`) навмисно НЕ шукає запит під
-  курсором (на відміну від Classic `1c.queryConstructor`), і
-  `canvasPanel.ts` завжди шле `hasInitialQuery: false` --- панель стартує
-  з порожнього `initialState()` незалежно від контексту виклику. Це
-  свідоме архітектурне рішення (Structure/Fields ще не мали
-  SDBL→QueryState парсингу назад), а не забутий баг. Classic-шлях
-  (`createPanel`/`panel.ts`) вже вміє це робити (`queryText`/`queryRange`
-  → `QueryState`) --- інфраструктура існує, просто не підключена до
-  Canvas. Явного номера фази під це в roadmap немає (найближче --- STOP 2
-  "Full SELECT Validation" неявно це передбачає, коли Canvas стане
-  functionally complete); варто розглянути як окрему фазу перед/біля
-  Phase 7, якщо user захоче "edit existing query" workflow раніше.
+- **Відкриття й збереження запиту працюють** (оновлено 2026-09-23;
+  попередня версія цього пункту стверджувала протилежне). Команда
+  `1c.queryConstructorCanvas` шукає запит під курсором (`extension.ts`),
+  `canvasPanel.ts` шле `hasInitialQuery: !!initialQueryText` і
+  `loadModel`; Canvas розбирає його тим самим `tryOpenBatch` →
+  `LOAD_BATCH`, що й Classic. Помилка розбору --- блокуючий overlay, з
+  якого лише Close (без `insertText`). «Зберегти» шле `insertText` через
+  той самий `insertResult()`. Перевірка перед збереженням --- СПІЛЬНИЙ із
+  Classic `src/webview/applyGate.ts` (`findStaticApplyBlocker` постійно,
+  `decideApply` → `validateBatchText` при натисканні); повідомлення ядра
+  локалізує Classic `localizeDiagnostic`. Правило: у Canvas не дублювати
+  логіку Classic, а перевикористовувати/виносити в спільний модуль.
+- Спільний із Classic код (2026-09-23, правило «не дублювати Classic»):
+  сесія з хостом і стан завантаження --- `webview/hooks/useDesignerSession.ts`
+  (Canvas тепер показує overlay завантаження); хост панелі ---
+  `panel.ts` `createDesignerPanel` (`canvasPanel.ts` лише задає bundle/
+  заголовок; хост уже обробляє `expandRef`/`refreshCache`, тож для них
+  потрібен лише UI); дерево метаданих --- `webview/metadataTreeModel.ts` +
+  `components/highlightMatches.tsx`; оператори --- `webview/conditionOperators.ts`;
+  `bridge`/`ResizeHandle` --- Classic-модулі; поля сортування ---
+  `distinctFieldRefs`. Сторожі: `applyGate`/`metadataTreeModel`/`canvasReuse`/
+  `canvasLoadFailure` тести.
+- немає кнопки Cancel, UI оновлення кешу метаданих, UI розгортання полів-
+  посилань, reorder/rename запитів пакета;
 - table alias editing не підтримувався reducer;
 - per-table filters/indexes/DISTINCT не можна вигадувати, якщо model
   settings query-level;
@@ -564,10 +576,12 @@ Classic і New Builder ділять ЦІЛКОМ ці семантики (жод
   див. Query Scope рішення в roadmap);
 - немає SKD/report builder mode;
 - Fields (Phase 7), Conditions (Phase 8), Grouping (Phase 9), Sorting
-  (Phase 10) і Additional (Phase 11) --- усі реалізовано, див. §10; це
-  ЗАВЕРШУЄ всі 6 вкладок `WorkspaceNav` з roadmap. HAVING, "групуючі
-  набори", reorder пріоритету сортування, "Тип запиту"/тимчасові таблиці
-  (Phase 13) і "Кеш метаданих" --- свідомо поза scope (див. §10).
+  (Phase 10) і Additional (Phase 11) --- вкладки реалізовано, див. §10,
+  але НЕ весь scope цих фаз з roadmap: немає ИТОГИ (Phase 9), індексів
+  (Phase 11), "групуючих наборів", HAVING, reorder пріоритету сортування,
+  "Кеш метаданих". "Тип запиту"/тимчасові таблиці реалізовано (Phase 12A:
+  `QueryIdentityPopover.tsx`, `AdditionalWorkspace.tsx`), зіставлення
+  колонок ОБЪЕДИНЕНИЯ --- `UnionMappingPopover.tsx`.
 
 Ці твердження обов'язково перевірити по актуальному repository перед
 реалізацією.
@@ -601,7 +615,8 @@ audit і будь-яка полірування НОВИХ екранів (Field
 ще немає.
 
 Phase 6 (Joins Overview) --- **завершено** (2026-09-18):
-`JoinsOverview.tsx` --- floating popover (той самий паттерн, що Source
+`JoinsOverview.tsx` (станом на 2026-09-23 окремого файлу немає --- список
+живе в `structure/JoinManagerPopover.tsx`) --- floating popover (той самий паттерн, що Source
 Browser/Join creation popover), відкривається кнопкою "Зв'язки (N)" у
 Toolbar (disabled коли 0 joins). Textual list поверх `state.joins`
 (kind badge + `alias ↔ alias`), клік по рядку == клік по JOIN на канві

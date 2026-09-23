@@ -10,7 +10,8 @@ locales fall back to English.
 |---|---|
 | Manifest commands/settings | `package.nls.json`, `package.nls.uk.json`, `package.nls.ru.json` |
 | Extension-host runtime | `vscode.l10n.t(...)` and `l10n/bundle.l10n*.json` |
-| WebView | `src/webview/i18n/{en,uk,ru}.json` through `t(...)` |
+| Classic WebView | `src/webview/i18n/{en,uk,ru}.json` through `t(...)`; also the shared core-diagnostic translations (`localizeDiagnostic`), reused by Canvas |
+| Canvas WebView | `src/webview-canvas/i18n.ts` (Canvas-only UI strings) |
 | User documentation | mirrored files in `docs/{en,uk,ru}` |
 
 The extension sends normalized `vscode.env.language` in the `init` message.

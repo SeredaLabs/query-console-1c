@@ -10,8 +10,9 @@ npm run build
 npm run dev
 ```
 
-`npm run build` bundles the extension host and WebView into `out/`. `npm run dev`
-launches an Extension Development Host after building. The optional setup helper
+`npm run build` bundles the extension host and both WebViews (Classic and
+Canvas) into `out/`. `npm run dev` launches an Extension Development Host after
+building. The optional setup helper
 can also install Playwright browsers:
 
 ```bash
@@ -22,9 +23,9 @@ npm run setup -- --e2e
 
 | Command | Purpose |
 |---|---|
-| `npm run typecheck` | Check extension/core and WebView TypeScript projects |
+| `npm run typecheck` | Check extension/core, Classic WebView and Canvas WebView TypeScript projects (test files are not type-checked) |
 | `npm run test:unit` | Run Vitest tests |
-| `npm run test:e2e` | Run the static WebView Playwright suite |
+| `npm run test:e2e` | Run the static Classic WebView Playwright suite (Canvas has no e2e suite yet) |
 | `npm run test:integration` | Run real VS Code Extension Host tests |
 | `npm run docs:check` | Validate localized docs and links |
 | `npm run package` | Build the release VSIX |

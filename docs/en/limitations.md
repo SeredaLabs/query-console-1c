@@ -1,5 +1,5 @@
 <!--
-source_version: 3
+source_version: 4
 translation_status: canonical
 -->
 
@@ -19,6 +19,13 @@ Cursor detection supports static BSL strings beginning with `ВЫБРАТЬ` or
 `УНИЧТОЖИТЬ`. The tolerant parser and validator are not a complete 1C compiler.
 Successful parsing does not prove that every custom expression, field,
 dot-navigation chain, or platform-specific construct is valid.
+
+When the designer opens or applies a query, field names are checked against
+the metadata in the select list, grouping, ordering, indexing, join
+conditions, and the simple conditions of the top-level query. Fields of
+temporary tables, conditions inside subqueries, and custom expressions are
+not checked. Editor diagnostics report syntax errors only; a missing field
+is reported by the designer, not underlined in the editor.
 
 ## ⛔ Round-trip exclusions
 

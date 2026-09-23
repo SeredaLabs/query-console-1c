@@ -24,12 +24,13 @@ changing the pipeline.
 
 ## Extension flow
 
-`panel.ts` loads metadata without blocking panel creation, reports controlled
+`metadataLoader.ts` (used by both the Classic `panel.ts` and the Canvas
+`canvasPanel.ts`) loads metadata without blocking panel creation, reports controlled
 failures, and sends the model to the WebView. Cache freshness on the primary
 path IS compared against the XML export's mtime — a stale committed snapshot
 triggers a rebuild rather than being served silently (`loadMetadataSafe.ts`).
 
-If both the direct path and its YAML fallback fail, `panel.ts` no longer falls
+If both the direct path and its YAML fallback fail, `metadataLoader.ts` no longer falls
 back to a legacy parser limited to Catalogs/Documents. Instead it reads a
 last-known-good snapshot from `context.globalStorageUri`
 (`lastKnownGoodCache.ts`) — the last successfully built FULL model, written
