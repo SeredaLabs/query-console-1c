@@ -5,6 +5,30 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.86 - 2026-09-23
+
+### Fixed
+
+- Hover and completion inside a query with a broken select list (for example
+  a missing comma, or an empty list) now resolve the alias at the cursor's
+  own position: with the same alias used in two `ОБЪЕДИНИТЬ` branches, the
+  second branch no longer shows the first branch's table.
+- The Canvas preview's Save now applies the same check as the Classic
+  designer's OK: a query Classic refuses (for example two fields with the same
+  alias, or a missing field) is no longer written back, and the reason is
+  shown next to Save.
+- "Field not found" is now also reported for standard `СОЕДИНЕНИЕ … ПО`
+  conditions and for standard `ГДЕ`/`ИМЕЮЩИЕ` conditions of the top-level
+  query. A tabular section accessed through a dot (`Т.Товары.Номенклатура`)
+  is checked against the tabular section's own fields.
+- The "field not found" message is now translated in the English and
+  Ukrainian UI instead of showing a generic "unsupported diagnostic" text.
+
+### Changed
+
+- Canvas preview: a loading screen is shown until the query under the cursor
+  is opened, and metadata group names match the Classic designer.
+
 ## 0.1.85 - 2026-09-22
 
 ### Fixed
