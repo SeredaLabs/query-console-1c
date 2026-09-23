@@ -1,5 +1,29 @@
 # New Builder --- Target UX Roadmap
 
+## Current implementation checkpoint (2026-09-23)
+
+This file remains the target sequence, but implementation has not followed the
+phase numbers strictly. The repository and
+`.claude/new_builder_current_state.md` are the source of truth for delivered
+behavior.
+
+- Phases 0--6 and STOP 1 are complete.
+- The baseline UI for Phases 7--11 is implemented. Deliberately deferred gaps
+  remain: totals, grouping sets, HAVING, indexes and sort-priority reorder.
+- Phase 12 is complete, including package navigation and position-aware
+  temporary-table lifecycle/continuity.
+- STOP 2 has not been formally completed. A real Canvas browser E2E and a
+  recorded Classic/Canvas semantic-parity pass are still required.
+- Phase 13 is the next main implementation phase. Manual temporary-table
+  editing and source-subquery drill-down are not implemented in Canvas.
+- Phase 14 was implemented ahead of Phase 13: UNION/UNION ALL navigation and
+  positional column mapping are available.
+- Most of Phase 15 is implemented: the SDBL dock is read-only, highlighted,
+  copyable, resizable and collapsible. UI-to-SDBL cross-highlight remains.
+- Phase 16 and the advanced part of Phase 17 have not started. Phase 18 is
+  partially complete for Structure/TableCard, but accessibility and final
+  polish across the other workspaces remain.
+
 ## Architecture Contract
 
 -   Classic Builder (`src/webview/`) зберегти.
@@ -141,21 +165,21 @@ indexes.
 
 Не перетворювати на dumping ground.
 
-## STOP 2 --- Full SELECT Validation
+## STOP 2 --- Full SELECT Validation (pending)
 
 Порівняти New і Classic на однаковій domain model: - sources; - joins; -
 fields; - conditions; - grouping; - totals; - sorting; - additional.
 
 Generated SDBL має бути семантично еквівалентним.
 
-## Phase 12 --- Package 2.0
+## Phase 12 --- Package 2.0 (implemented)
 
 Package = ordered flow/sequence.
 
 Візуально підкреслити temp-table continuity, але не створювати новий
 dependency graph у domain.
 
-## Phase 13 --- Temp Table / Subquery Parity
+## Phase 13 --- Temp Table / Subquery Parity (next; not started)
 
 Якщо Classic/shared domain уже підтримують manual temp table і
 subquery-as-source --- додати Canvas/New UI поверх існуючих semantics.
@@ -195,14 +219,14 @@ Query Scope architecture (target concept, підтверджено, поки Н�
 implementation зараз **не починати**. Перед стартом (орієнтовно Phase 13)
 --- окремий Implementation Gate на основі цього аудиту.
 
-## Phase 14 --- UNION UX
+## Phase 14 --- UNION UX (implemented ahead of Phase 13)
 
 Спочатку audit representation.
 
 Якщо correspondence positional --- лише візуалізувати positional
 alignment. Не створювати explicit mapping object без domain support.
 
-## Phase 15 --- SDBL Developer Experience
+## Phase 15 --- SDBL Developer Experience (base implemented; cross-highlight pending)
 
 SDBL --- постійний proof of generated result: - read-only; -
 highlighted; - copy; - expand/collapse.
@@ -212,19 +236,19 @@ fragment; - condition → WHERE fragment.
 
 Тільки без зміни core semantics.
 
-## Phase 16 --- Expression Builder
+## Phase 16 --- Expression Builder (not started)
 
 Окрема reusable фаза після стабілізації CRUD.
 
 Перевірити Classic implementation, CodeMirror dependencies і bundle
 impact. Не інтегрувати CodeMirror раніше.
 
-## Phase 17 --- Advanced Interactions
+## Phase 17 --- Advanced Interactions (not started beyond baseline controls)
 
 Після стабільного CRUD: - drag field-to-field JOIN; - keyboard
 shortcuts; - find/focus helpers.
 
-## Phase 18 --- Final Polish
+## Phase 18 --- Final Polish (partially complete)
 
 -   consistent SVG icons;
 -   typography;

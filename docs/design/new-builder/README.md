@@ -39,5 +39,12 @@ To test it, enable `queryConsole.enableNewBuilderPreview` in VS Code Settings,
 then run `1C: New Builder (Preview)` from Command Palette. The visual interface
 is still under development and does not replace the Classic Constructor.
 
+Current checkpoint: the baseline roadmap through Phase 12 is implemented,
+including real query load/save, all six workspaces, package/UNION navigation,
+and temporary-table continuity. Phase 13 (manual temporary-table editing and
+source-subquery drill-down) is the next main implementation phase. Formal
+Classic/Canvas parity validation and a Canvas-specific browser E2E are still
+pending, so the preview flag remains intentional.
+
 For contributor debugging, `F5` or `npm run preview:canvas` starts an Extension
 Development Host and opens Canvas automatically.

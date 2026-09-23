@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { TOKENS } from '../theme';
-import { joinCurve, type Point } from './geometry';
 import { joinKindVisual, type JoinKindLabel } from './joinKind';
 
 /**
@@ -21,8 +20,7 @@ import { joinKindVisual, type JoinKindLabel } from './joinKind';
  */
 export const JoinPath = React.memo(function JoinPath({
   index,
-  a,
-  b,
+  d,
   kind,
   selected,
   hovered,
@@ -31,8 +29,8 @@ export const JoinPath = React.memo(function JoinPath({
   onHoverChange,
 }: {
   index: number;
-  a: Point;
-  b: Point;
+  /** Уже прокладений obstacle-aware SVG path; один і той самий route використовують line, hit-area і minimap. */
+  d: string;
   kind: JoinKindLabel;
   selected: boolean;
   hovered: boolean;
@@ -41,7 +39,6 @@ export const JoinPath = React.memo(function JoinPath({
   onClick: (index: number) => void;
   onHoverChange: (index: number, hovered: boolean) => void;
 }): React.ReactElement {
-  const { d } = joinCurve(a, b);
   const color = joinKindVisual(kind, TOKENS).color;
   const active = selected || hovered;
   const strokeWidth = selected ? 3 : 2;

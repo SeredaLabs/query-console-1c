@@ -1,5 +1,9 @@
 # New Builder --- Current State
 
+> Updated against repository HEAD on 2026-09-23. The concise capability
+> matrix lives in `.claude/new_builder_capability_map.md`; this document keeps
+> the implementation detail and invariants.
+
 ## 1. Призначення документа
 
 Цей файл описує **фактичний поточний стан** Canvas-конструктора. Він не
@@ -35,7 +39,7 @@ shared query state/reducer/core.
 
 `src/webview-canvas/`
 
-Окремий webview entry/bundle (`out/webview/canvas.js`). Використовує той
+Окремий webview entry/bundle (`out/webview/canvasApp.js`). Використовує той
 самий `QueryState` і reducer, що Classic.
 
 Canvas-specific transient state --- позиції карток, zoom, selection та
@@ -164,6 +168,16 @@ blue/selection-стиль).
 над-картковий "Видалити зв'язок" при selected). Один `Inspector`
 (п.7) замість колишньої окремої пріоритетності панелей.
 
+JOIN geometry тепер рахується одним детермінованим batch у
+`structure/edgeRouter.ts`: ортогональні маршрути обходять прямокутники інших
+карток із clearance, incident edges отримують окремі впорядковані port slots,
+паралельні JOIN не мають ідентичного path, а вже прокладені сегменти дають
+штраф за overlap/crossing. Badge обирає вільний сегмент маршруту з перевіркою
+колізій із картками та попередніми badge. Той самий масив route points
+використовують основний SVG, hit-area, overlay і minimap. Це локальний router
+для поточних/вручну пересунутих позицій; автоматичне розташування вузлів
+лишається існуючим BFS і не переводилось на ELK.
+
 **Створення/редагування з'єднання (закрито 2026-09-18, gap у Phase 3/4,
 не окрема фаза):** і creation popover (Toolbar "Додати зв'язок"), і
 Inspector тепер мають ОДНАКОВУ структуровану форму — три секції
@@ -204,9 +218,10 @@ REMOVE_FIELD/ADD_EXPRESSION_FIELD reducer actions. Адаптивний layout
 SET_CONDITION_CUSTOM/SET_CONDITION_OPERATOR/SET_CONDITION_PARAM/
 SET_CONDITION_EXPRESSION (той самий набір, що вже використовував Classic
 `ConditionsTab.tsx`) --- жодних нових reducer actions. Немає екшена для
-створення `subquery`/`hierarchy`/`negated`-умов (заповнюються лише
-парсингом існуючого SDBL, якого New Builder ще не робить) --- UI такі
-умови не створює. Простий v1-layout (без адаптивних breakpoints, як у
+створення `subquery`/`hierarchy`/`negated`-умов: вони можуть потрапити в
+стан під час відкриття існуючого SDBL і мають зберігатися round-trip, але
+Canvas UI такі умови структурно не створює. Простий v1-layout (без
+адаптивних breakpoints, як у
 Fields) --- кандидат для вирівнювання з Fields-патерном пізніше, якщо
 знадобиться на вузьких viewport.
 
@@ -306,17 +321,20 @@ Live-QA підтвердив: додавання поля, зміна напря
   `fullName`, НЕ за `id`; чекбокс-список будується з `state.selectedTables`).
 
 Жодних нових reducer actions. Свідомо НЕ включено:
-- **"Кеш метаданих"** (refresh-button + preserveComments) --- Classic-
-  специфічний host-round-trip механізм, без архітектурного еквівалента
-  в New Builder (client-side `computeBatchTextSafe`, без host cache).
+- **"Кеш метаданих"** (refresh-button + preserveComments) --- Canvas не має
+  відповідного UI. Після об'єднання host-коду `panel.ts` уже підтримує
+  `refreshCache`, тому для майбутнього додавання потрібне лише обережне
+  Canvas UI wiring, а не окремий протокол чи копія host-логіки.
 
 Live-QA підтвердив точний порядок ключових слів генератора (`selectionModifiers()`:
 РАЗРЕШЕННЫЕ → РАЗЛИЧНЫЕ → ПЕРВЫЕ N) і коректний `ДЛЯ ИЗМЕНЕНИЯ
 <Таблиця>` при виборі джерела для блокування.
 
-SDBL preview (`SdblDock`) у Canvas існує (низ екрана, collapsible), але
-це той самий read-only generated-text dock, що й у Phase 1 shell, не
-field-level cross-highlight (Phase 15, не почато).
+SDBL preview (`SdblDock`) у Canvas існує (низ екрана, collapsible) і вже
+закриває базову частину Phase 15: реальний generated text, read-only
+CodeMirror/SDBL highlighting, copy, resize та expand/collapse. Не реалізовано
+лише field/join/condition-to-SDBL cross-highlight; тому Phase 15 ще не
+закрита формально.
 
 **UNION + temp-table compound-carrier invariant (fix-фаза, 2026-09-20, ПЕРЕД Phase 12B)** ---
 під час дизайну Phase 12B (візуалізація producer→consumer у `PackageNav`)
@@ -539,6 +557,11 @@ Classic і New Builder ділять ЦІЛКОМ ці семантики (жод
 
 ## 11. Відомі обмеження / gaps (оновлено 2026-09-23)
 
+**Поточний milestone:** baseline Phases 0--12 реалізований; STOP 2 ще не
+зафіксований; наступна основна фаза --- Phase 13. Phase 14 виконана
+достроково, Phase 15 виконана без cross-highlight, Phase 18 частково виконана
+для Structure/TableCard.
+
 - немає query execution/results/row forecast --- і не повинно бути;
 - **Відкриття й збереження запиту працюють** (оновлено 2026-09-23;
   попередня версія цього пункту стверджувала протилежне). Команда
@@ -562,6 +585,10 @@ Classic і New Builder ділять ЦІЛКОМ ці семантики (жод
   `bridge`/`ResizeHandle` --- Classic-модулі; поля сортування ---
   `distinctFieldRefs`. Сторожі: `applyGate`/`metadataTreeModel`/`canvasReuse`/
   `canvasLoadFailure` тести.
+- формальний STOP 2 не пройдено: немає зафіксованого Classic/Canvas
+  semantic-parity прогону на однаковій domain model;
+- `npm run test:e2e` досі запускає лише Classic harness (`main.js`) і не
+  покриває реальний Canvas-сценарій load → edit → Save → insertText;
 - немає UI оновлення кешу метаданих, UI розгортання полів-посилань,
   reorder/rename запитів пакета;
 - кнопку «Скасувати» в Canvas свідомо НЕ додаємо (рішення користувача
@@ -570,10 +597,13 @@ Classic і New Builder ділять ЦІЛКОМ ці семантики (жод
   на overlay помилки відкриття, і там кнопка «Закрити» є. Не вважати це
   прогалиною паритету з Classic.
 - table alias editing не підтримувався reducer;
+- параметри віртуальної таблиці відображаються лише як badge: у Canvas немає
+  UI, що диспатчить уже наявний `SET_VIRTUAL_PARAMS`;
 - per-table filters/indexes/DISTINCT не можна вигадувати, якщо model
   settings query-level;
 - ExpressionBuilder у Canvas відсутній (Phase 16, не почато);
-- CodeMirror integration відкладений (Phase 16);
+- CodeMirror вже використовується read-only у SDBL dock; інтеграція
+  ExpressionBuilder/editable expression UX відкладена до Phase 16;
 - drag field-to-field для JOIN відкладений (Phase 17);
 - arbitrary cyclic graph не має гарантії crossing elimination;
 - manual temp table / subquery-as-source були в Classic, але не мали
@@ -587,6 +617,11 @@ Classic і New Builder ділять ЦІЛКОМ ці семантики (жод
   "Кеш метаданих". "Тип запиту"/тимчасові таблиці реалізовано (Phase 12A:
   `QueryIdentityPopover.tsx`, `AdditionalWorkspace.tsx`), зіставлення
   колонок ОБЪЕДИНЕНИЯ --- `UnionMappingPopover.tsx`.
+- Phase 14 фактично реалізована: `PackageNav` керує UNION/UNION ALL і
+  учасниками, `UnionMappingPopover` показує позиційне зіставлення та дозволяє
+  змінювати aliases/порядок без вигаданого explicit-mapping domain object;
+- Phase 15 реалізована, крім cross-highlight між workspace selection і
+  відповідним фрагментом згенерованого SDBL.
 
 Ці твердження обов'язково перевірити по актуальному repository перед
 реалізацією.

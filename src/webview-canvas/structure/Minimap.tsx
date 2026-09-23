@@ -1,5 +1,5 @@
 import * as React from 'react';
-import type { Join, SelectedTable } from '../../core/query/queryModel';
+import type { SelectedTable } from '../../core/query/queryModel';
 import { TOKENS } from '../theme';
 import { identityColor } from './colors';
 import { minimapToWorld, worldToMinimap, type Point, type Rect } from './geometry';
@@ -12,13 +12,13 @@ const PADDING = 6;
 /**
  * Навігаційний minimap (Phase 3C) — НЕ domain representation, читає ті самі
  * джерела, що вже рендерить Structure (positions/state.selectedTables/
- * state.joins), нічого не кешує й не дублює. Прямокутники карток —
+ * routed JOIN geometry), нічого не кешує й не дублює. Прямокутники карток —
  * identity-колір як маленький accent (border), нейтральна заливка. Лінії —
  * нейтральні, тонкі. Click/drag → `onPanTo(worldPoint)`.
  */
 export function Minimap({
   tables,
-  joins,
+  routes,
   positions,
   cardSize,
   content,
@@ -27,7 +27,7 @@ export function Minimap({
   onPanTo,
 }: {
   tables: SelectedTable[];
-  joins: Join[];
+  routes: ReadonlyArray<{ points: readonly Point[] } | null>;
   positions: Record<string, Pos>;
   cardSize: (id: string) => Size;
   content: Rect;
@@ -118,23 +118,17 @@ export function Minimap({
         );
       })}
       <svg width={MAP_WIDTH} height={MAP_HEIGHT} style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}>
-        {joins.map((join, i) => {
-          const posA = positions[join.leftTableId];
-          const posB = positions[join.rightTableId];
-          if (!posA || !posB) return null;
-          const sizeA = cardSize(join.leftTableId);
-          const sizeB = cardSize(join.rightTableId);
-          const centerA = worldToMinimap({ x: posA.x + sizeA.width / 2, y: posA.y + sizeA.height / 2 }, scaleTransform);
-          const centerB = worldToMinimap({ x: posB.x + sizeB.width / 2, y: posB.y + sizeB.height / 2 }, scaleTransform);
+        {routes.map((route, i) => {
+          if (!route) return null;
+          const points = route.points.map(point => worldToMinimap(point, scaleTransform));
+          const d = points.map((point, pointIndex) => `${pointIndex === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
           return (
-            <line
+            <path
               key={i}
-              x1={centerA.x}
-              y1={centerA.y}
-              x2={centerB.x}
-              y2={centerB.y}
+              d={d}
               stroke={TOKENS.border}
               strokeWidth={1}
+              fill="none"
             />
           );
         })}

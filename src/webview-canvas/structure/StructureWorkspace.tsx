@@ -8,16 +8,15 @@ import { t } from '../i18n';
 import { TOKENS } from '../theme';
 import { CanvasSurface } from './CanvasSurface';
 import {
-  anchorPoints,
   boundingBox,
   cardRect,
   contentExceedsViewport,
-  joinCurve,
   minimapTransform,
   screenToWorld,
   type Point,
   type Rect,
 } from './geometry';
+import { routeEdges } from './edgeRouter';
 import { joinKindLabel, type JoinKindLabel } from './joinKind';
 import type { Pos } from './layout';
 import { Minimap } from './Minimap';
@@ -174,30 +173,29 @@ export function StructureWorkspace({
     [positions, cardSize]
   );
 
-  // Геометрія кожного JOIN — рахується ОДИН раз за рендер, використовується
-  // і SVG-шаром (лінії, під картками), і HTML-шаром (markers+badge, над
-  // картками), і minimap. Джойн, чия таблиця ще не має позиції (не мало б
-  // траплятись — REMOVE_TABLE каскадно чистить пов'язані joins — але
-  // захисно), не рендериться.
+  // Усі JOIN маршрутизуються одним детермінованим batch: так router може
+  // розвести порти однієї картки, паралельні JOIN та врахувати вже прокладені
+  // сегменти. Один результат використовують SVG, overlay і minimap.
   const joinGeometry = React.useMemo(() => {
+    const nodes = state.selectedTables.flatMap(table => {
+      const rect = tableRect(table.id);
+      return rect ? [{ id: table.id, rect }] : [];
+    });
+    const routes = routeEdges(nodes, state.joins.map((join, index) => ({
+      id: index,
+      sourceId: join.leftTableId,
+      targetId: join.rightTableId,
+    })));
     return state.joins.map((join, index) => {
-      const rectA = tableRect(join.leftTableId);
-      const rectB = tableRect(join.rightTableId);
-      if (!rectA || !rectB) return null;
-      const { a, b } = anchorPoints(rectA, rectB);
-      // `mid` тепер точка РІВНО на вигнутій лінії (той самий `joinCurve`, що
-      // малює саму лінію в JoinPath) — інакше badge/маркери "плавали" б
-      // поза кривою для несиметричних з'єднань (gap analysis: плавніша лінія).
-      const { mid } = joinCurve(a, b);
+      const route = routes[index];
+      if (!route) return null;
       return {
         index,
-        a,
-        b,
-        mid,
+        ...route,
         kind: joinKindLabel(join.leftAll, join.rightAll),
       };
     });
-  }, [state.joins, tableRect]);
+  }, [state.joins, state.selectedTables, tableRect]);
 
   // ---- Phase 3C performance pass: стабільні callbacks (useCallback), щоб
   // React.memo на TableCard/JoinPath/JoinOverlay реально пропускав рендер
@@ -312,8 +310,9 @@ export function StructureWorkspace({
 
   const contentBox = React.useMemo(() => {
     const rects = state.selectedTables.map(tb => cardRect(positions[tb.id] ?? { x: 0, y: 0 }, cardSize(tb.id)));
-    return boundingBox(rects);
-  }, [state.selectedTables, positions, cardSize]);
+    const routePoints = joinGeometry.flatMap(route => route?.points.map(point => ({ ...point, width: 0, height: 0 })) ?? []);
+    return boundingBox([...rects, ...routePoints]);
+  }, [state.selectedTables, positions, cardSize, joinGeometry]);
 
   const handleFit = (): void => {
     if (!contentBox || !containerRef.current) return;
@@ -425,7 +424,7 @@ export function StructureWorkspace({
           showMinimap && contentBox && viewportWorld && minimapScaleTransform ? (
             <Minimap
               tables={state.selectedTables}
-              joins={state.joins}
+              routes={joinGeometry}
               positions={positions}
               cardSize={cardSize}
               content={contentBox}
@@ -455,8 +454,7 @@ export function StructureWorkspace({
               <JoinPath
                 key={g.index}
                 index={g.index}
-                a={g.a}
-                b={g.b}
+                d={g.d}
                 kind={g.kind}
                 selected={selection?.kind === 'join' && selection.joinIndex === g.index}
                 hovered={hoveredJoin === g.index}
@@ -498,9 +496,9 @@ export function StructureWorkspace({
             <JoinOverlay
               key={g.index}
               index={g.index}
-              a={g.a}
-              b={g.b}
-              mid={g.mid}
+              a={g.start}
+              b={g.end}
+              label={g.label}
               kind={g.kind}
               selected={isSelected}
               hovered={hoveredJoin === g.index}

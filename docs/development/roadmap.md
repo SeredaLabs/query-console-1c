@@ -21,6 +21,14 @@ with the extension but remains hidden by default behind the
 `queryConsole.enableNewBuilderPreview` experimental setting, so it does not
 replace the Classic Constructor.
 
+The current Canvas baseline covers roadmap Phases 0--12. UNION UX (Phase 14)
+and most of the read-only SDBL developer experience (Phase 15) were completed
+ahead of sequence. Phase 13 remains the next main implementation step:
+source-subquery drill-down and manual temporary-table editing. Before Canvas
+can leave preview, the project still requires a recorded Classic/Canvas
+semantic-parity gate and a real Canvas browser E2E covering load, edit, save,
+and insertion back into the source document.
+
 ## Explicitly considered and not planned
 
 Evaluated and deliberately not pursued, so they don't need re-litigating from

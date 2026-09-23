@@ -33,7 +33,7 @@ export const JoinOverlay = React.memo(function JoinOverlay({
   index,
   a,
   b,
-  mid,
+  label,
   kind,
   selected,
   hovered,
@@ -44,7 +44,7 @@ export const JoinOverlay = React.memo(function JoinOverlay({
   index: number;
   a: Point;
   b: Point;
-  mid: Point;
+  label: Point;
   kind: JoinKindLabel;
   selected: boolean;
   hovered: boolean;
@@ -65,8 +65,8 @@ export const JoinOverlay = React.memo(function JoinOverlay({
         className="qcc-join-badge"
         style={{
           position: 'absolute',
-          left: mid.x,
-          top: mid.y,
+          left: label.x,
+          top: label.y,
           transform: 'translate(-50%, -50%)',
           display: 'flex',
           alignItems: 'center',
