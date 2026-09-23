@@ -5,6 +5,17 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+## 0.1.87 - 2026-09-24
+
+### Fixed
+
+- Formatting generated query text as a BSL string now doubles embedded double
+  quotes, so query string literals remain valid and round-trip back to the same
+  query text.
+- Canvas preview JOIN paths now route around other table cards, separate
+  parallel connections and distribute several connections across distinct
+  table-side ports. JOIN labels and the minimap use the same routed geometry.
+
 ## 0.1.86 - 2026-09-23
 
 ### Fixed
