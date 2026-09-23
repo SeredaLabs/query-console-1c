@@ -12,28 +12,22 @@
  *
  * Phase 3d/3e (semantic-core roadmap, memory: project-semantic-core-roadmap):
  * both `describeChain` (hover) and `resolveCompletionTarget` (autocomplete)
- * resolve the chain's HEAD alias via `resolveHeadTable`, which prefers
+ * resolve the chain's HEAD alias via `resolveHeadTable`, which uses ONLY
  * `resolveAliasAt` (position-aware — respects real JOIN-condition scoping and
- * nearest-ancestor subquery correlation, live-verified against real 1C) over
- * the OLD flat, whole-batch, first-match `findAliasTable`. Per this roadmap's
- * shadow-mode sweep (see `shadowMode.ts`) and an explicit product decision: a
- * non-`'resolved'` outcome (`'unknown'`/`'ambiguous'`) at a real, in-scope
- * position means NO answer for that alias — deliberately NOT falling back to
- * the old flat lookup, since doing so risked resurrecting confidently-WRONG
- * answers in exactly the cases (e.g. a right-nested JOIN's own inner
- * condition) this roadmap exists to fix. The old flat lookup is still used —
- * not as a "fallback on uncertainty", but because `resolveAliasAt` has no
- * data to work with at all: an `'unavailable'` snapshot, a `'recovered'` one
- * whose repair could not keep offsets in place (see `hasTrustworthyPositions`
- * — the usual broken-SELECT-list case, the v0.1.33 regression class, DOES
- * keep them and goes through `resolveAliasAt`), or a `headPosition`
- * translation failure.
+ * nearest-ancestor subquery correlation, live-verified against real 1C). A
+ * non-`'resolved'` outcome (`'unknown'`/`'ambiguous'`) means NO answer for
+ * that alias — an explicit product decision: a flat, whole-batch,
+ * first-match guess risked confidently-WRONG answers in exactly the cases
+ * (e.g. a right-nested JOIN's own inner condition, an alias reused across
+ * UNION branches) this resolver exists to fix. The old flat lookup is no
+ * longer used in production; a frozen copy lives in
+ * `tooling/corpus-verify/legacyFindAliasTable.ts` solely as the corpus
+ * shadow-mode baseline.
  */
 import type { MetadataResolver } from '../core/query/metadataResolver';
 import type { MetaTable } from '../core/metadata/types';
 import type { SelectedTable } from '../core/query/queryModel';
 import { resolveFieldPath, type FieldPathResolution } from '../core/query/fieldPathResolver';
-import { findAliasTable } from '../core/query/findAliasTable';
 import { buildSemanticSnapshotFromText } from '../core/semantic/buildSemanticSnapshot';
 import { resolveAliasAt } from '../core/semantic/resolveAliasAt';
 import { hasTrustworthyPositions } from '../core/semantic/semanticSnapshot';
@@ -210,13 +204,14 @@ export interface ChainDescription {
  *
  * Курсор усередині заміненого SELECT-списку при цьому не проблема: заглушка
  * тієї ж довжини лишає його в межах діапазону того самого учасника
- * `ОБЪЕДИНЕНИЯ`, тож область видимості визначається правильно.
+ * `ОБЪЕДИНЕНИЯ`, тож область видимості визначається правильно — саме це
+ * захищає від реального продакшн-регресу v0.1.33 (пропущена кома ламала весь
+ * SELECT).
  *
- * Інакше (`'unavailable'`, `'recovered'` без позицій — ремонт не вмістився в
- * початкову довжину, — або `headPosition` невідомий) `resolveAliasAt` тут
- * принципово безпорадний. Тоді — той самий старий плоский `findAliasTable`
- * (позиційно-сліпий), що й завжди захищав від реального продакшн-регресу
- * v0.1.33 (пропущена кома ламала весь SELECT).
+ * Інакше — `undefined` (unknown != invalid). Це `'unavailable'` (запит не
+ * розбирається навіть після ремонту — колишній плаский пошук робив той самий
+ * розбір і теж нічого не знаходив) або невідомий `headPosition` (для символу
+ * ідентифікатора `rawOffsetToQueryTextOffset` його завжди дає).
  */
 function resolveHeadTable(
   queryText: string,
@@ -225,33 +220,30 @@ function resolveHeadTable(
   headPosition: number | undefined,
 ): { table: SelectedTable; meta: MetaTable | undefined } | undefined {
   const snapshot = buildSemanticSnapshotFromText(1, queryText, resolver);
-  if (hasTrustworthyPositions(snapshot) && headPosition !== undefined) {
-    // Phase 2x-1: a bare identifier inside УПОРЯДОЧИТЬ/ИТОГИ can name a
-    // SELECT-output column, not a source alias at all — resolving it as one
-    // would risk a confident, WRONG answer if the name happens to collide
-    // with a real table alias elsewhere in the query.
-    if (isOutputAliasReference(snapshot, headPosition, alias)) return undefined;
-    const resolution = resolveAliasAt(snapshot, headPosition, alias);
-    if (resolution.kind !== 'resolved') return undefined;
-    const table = resolveSymbolTable(snapshot.model, resolution.value.ref.path);
-    // Те саме, що й стара findAliasTable: підзапит (fullName === '') і
-    // параметр-джерело (`&Имя`) — не справжня таблиця метаданих, unknown.
-    if (!table || !table.fullName || table.fullName.startsWith('&')) return undefined;
-    // A virtual-table source (`ИЗ РегистрНакопления.Х.Остатки(...) КАК Т`) is
-    // NEVER in `tableByFullName` — `buildResolverFromTables` deliberately
-    // keeps virtual tables in a separate map (`virtualTableByFullName`), real
-    // tables take priority on a name collision. Without this fallback, hover/
-    // completion on ANY field of a virtual-table alias (`Т.КоличествоОстаток`)
-    // silently showed nothing at all — not wrong, just always empty — since
-    // `meta` came back `undefined` for every virtual source, regardless of
-    // this roadmap's other work. Long-standing gap (same omission already
-    // existed in `findAliasTable.ts`'s old flat lookup below), not a
-    // regression from any specific phase.
-    const meta = resolver.tableByFullName(table.fullName) ?? resolver.virtualTableByFullName?.(table.fullName);
-    return { table, meta };
-  }
+  if (!hasTrustworthyPositions(snapshot) || headPosition === undefined) return undefined;
 
-  return findAliasTable(queryText, resolver, alias);
+  // Phase 2x-1: a bare identifier inside УПОРЯДОЧИТЬ/ИТОГИ can name a
+  // SELECT-output column, not a source alias at all — resolving it as one
+  // would risk a confident, WRONG answer if the name happens to collide
+  // with a real table alias elsewhere in the query.
+  if (isOutputAliasReference(snapshot, headPosition, alias)) return undefined;
+  const resolution = resolveAliasAt(snapshot, headPosition, alias);
+  if (resolution.kind !== 'resolved') return undefined;
+  const table = resolveSymbolTable(snapshot.model, resolution.value.ref.path);
+  // Підзапит (fullName === '') і параметр-джерело (`&Имя`) — не справжня
+  // таблиця метаданих, unknown.
+  if (!table || !table.fullName || table.fullName.startsWith('&')) return undefined;
+  // A virtual-table source (`ИЗ РегистрНакопления.Х.Остатки(...) КАК Т`) is
+  // NEVER in `tableByFullName` — `buildResolverFromTables` deliberately
+  // keeps virtual tables in a separate map (`virtualTableByFullName`), real
+  // tables take priority on a name collision. Without this fallback, hover/
+  // completion on ANY field of a virtual-table alias (`Т.КоличествоОстаток`)
+  // silently showed nothing at all — not wrong, just always empty — since
+  // `meta` came back `undefined` for every virtual source, regardless of
+  // this roadmap's other work. Long-standing gap, not a regression from any
+  // specific phase.
+  const meta = resolver.tableByFullName(table.fullName) ?? resolver.virtualTableByFullName?.(table.fullName);
+  return { table, meta };
 }
 
 function describeViaTable(

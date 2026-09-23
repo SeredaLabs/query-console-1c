@@ -14,7 +14,6 @@ import {
 } from '../../src/extension/hoverFieldInfo';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
 import { parseBatch } from '../../src/core/query/sdblParser';
-import { findAliasTable } from '../../src/core/query/findAliasTable';
 import type { MetaTable } from '../../src/core/metadata/types';
 
 describe('findChainAt', () => {
@@ -427,7 +426,8 @@ describe('відновлення після зламаного SELECT-списк
 
 describe('зламаний SELECT-список: псевдонім, повторений у гілках ОБЪЕДИНЕНИЯ, резолвиться позиційно', () => {
   // Ремонт тієї ж довжини дає 'recovered'-снепшоту позиції, тож працює
-  // resolveAliasAt, а не плаский findAliasTable (перший збіг по всьому пакету).
+  // resolveAliasAt. Колишній плаский пошук (перший збіг по всьому пакету)
+  // повертав тут таблицю ПЕРШОЇ гілки.
   const TEXT =
     'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Товары КАК Т\n' +
     'ОБЪЕДИНИТЬ ВСЕ\n' +
@@ -437,9 +437,8 @@ describe('зламаний SELECT-список: псевдонім, повтор
     'ИЗ Справочник.Контрагенты КАК Т';
   const cursor = TEXT.lastIndexOf('Т.\n');
 
-  it('передумова: звичайний розбір падає, а плаский пошук повертає ПЕРШУ гілку (Товары)', () => {
+  it('передумова: звичайний розбір падає', () => {
     expect(() => parseBatch(TEXT)).toThrow();
-    expect(findAliasTable(TEXT, resolver, 'Т')?.table.fullName).toBe('Справочник.Товары');
   });
 
   it('hover у другій гілці показує таблицю ДРУГОЇ гілки', () => {
@@ -448,6 +447,12 @@ describe('зламаний SELECT-список: псевдонім, повтор
 
   it('автодоповнення в другій гілці пропонує поля таблиці ДРУГОЇ гілки', () => {
     expect(resolveCompletionTarget(TEXT, resolver, ['Т'], cursor)?.meta.fullName).toBe('Справочник.Контрагенты');
+  });
+
+  it('порожній список полів (заглушка `*`) теж резолвиться позиційно, без плаского пошуку', () => {
+    const text = 'ВЫБРАТЬ ИЗ Справочник.Контрагенты КАК Т';
+    expect(() => parseBatch(text)).toThrow();
+    expect(describeChain(text, resolver, ['Т'], text.indexOf('ИЗ')).tableFullName).toBe('Справочник.Контрагенты');
   });
 
   it('у першій гілці — таблиця першої гілки', () => {

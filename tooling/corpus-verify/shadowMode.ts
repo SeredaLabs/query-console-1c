@@ -1,6 +1,11 @@
 /**
  * Phase 3b of the semantic-core roadmap (memory: project-semantic-core-roadmap).
  *
+ * Test/tooling only (moved out of `src/core/semantic` once production stopped
+ * using `findAliasTable`): the cutover this harness gated has shipped, and it
+ * now serves as the corpus-wide regression guard for `resolveAliasAt`,
+ * compared against the frozen `legacyFindAliasTable.ts` reference.
+ *
  * Shadow-mode comparison harness, per Refinement 4/5's explicit requirement
  * before any hover/completion cutover (Phase 3d/3e): run `resolveAliasAt`
  * (position-aware, new) alongside `hoverFieldInfo.ts`'s existing
@@ -23,13 +28,13 @@
  * includes the outer seed and the new resolver correctly excludes it) since
  * discovering them for review is the whole point of this harness.
  */
-import type { MetadataResolver } from '../query/metadataResolver';
-import { findAliasTable } from '../query/findAliasTable';
-import { buildSemanticSnapshotFromText } from './buildSemanticSnapshot';
-import { resolveAliasAt } from './resolveAliasAt';
-import { resolveSymbolTable } from './collectSymbols';
-import type { Symbol, SemanticSnapshot } from './semanticSnapshot';
-import type { Resolution } from './resolution';
+import type { MetadataResolver } from '../../src/core/query/metadataResolver';
+import { findAliasTable } from './legacyFindAliasTable';
+import { buildSemanticSnapshotFromText } from '../../src/core/semantic/buildSemanticSnapshot';
+import { resolveAliasAt } from '../../src/core/semantic/resolveAliasAt';
+import { resolveSymbolTable } from '../../src/core/semantic/collectSymbols';
+import type { Symbol, SemanticSnapshot } from '../../src/core/semantic/semanticSnapshot';
+import type { Resolution } from '../../src/core/semantic/resolution';
 
 export type ShadowModeClassification =
   | 'sameResolved'

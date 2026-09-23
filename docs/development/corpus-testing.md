@@ -24,8 +24,12 @@ explicit, reviewed, reported change — never a side effect nobody noticed.
 
 ## Semantic resolver shadow baseline
 
-The position-aware resolver is compared with the legacy flat alias resolver on
-the complete committed corpus. Disagreements are expected in legitimate scope
+The position-aware resolver (`resolveAliasAt`, the only alias resolver
+hover/completion use) is compared with a frozen copy of the legacy flat alias
+resolver (`tooling/corpus-verify/legacyFindAliasTable.ts`, harness in
+`tooling/corpus-verify/shadowMode.ts`; neither ships) on the complete committed
+corpus, so any change in `resolveAliasAt`'s results shows up as a reviewable
+diff. Disagreements are expected in legitimate scope
 cases, so a raw count is not a correctness metric. Instead,
 `test/fixtures/corpus/shadow-mode-baseline.json` freezes the identity and
 classification of every disagreement, together with a corpus hash and summary

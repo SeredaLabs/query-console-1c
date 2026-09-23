@@ -36,12 +36,10 @@ describe('resolveAliasAt', () => {
     if (result.kind === 'resolved') expect(result.value.alias).toBe('Т');
   });
 
-  it("returns unknown for a 'recovered' snapshot WITHOUT positions (repair had to shift offsets)", () => {
-    const broken = 'ВЫБРАТЬ ИЗ Справочник.А КАК Т'; // too-short SELECT list -> longer placeholder
-    const snapshot = buildSemanticSnapshotFromText(1, broken);
-    expect(snapshot.completeness).toBe('recovered');
-    expect(snapshot.sourceMapEvents).toEqual([]);
-    expect(resolveAliasAt(snapshot, 3, 'Т')).toEqual({ kind: 'unknown' });
+  it("returns unknown for a 'recovered' snapshot WITHOUT positions (defensive: offsets not trustworthy)", () => {
+    const recovered = buildSemanticSnapshotFromText(1, 'ВЫБРАТЬ Т.Поле1 Т.Поле2 ИЗ Справочник.А КАК Т');
+    const withoutPositions = { ...recovered, sourceMapEvents: [] };
+    expect(resolveAliasAt(withoutPositions, 3, 'Т')).toEqual({ kind: 'unknown' });
   });
 
   it("in a 'recovered' snapshot, an alias reused in two UNION branches resolves to the branch the cursor is in", () => {

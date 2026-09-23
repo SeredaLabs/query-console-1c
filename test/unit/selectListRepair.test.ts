@@ -76,10 +76,12 @@ describe('repairSelectListsForRecovery', () => {
     expect(repaired.lastIndexOf('Справочник.Б КАК Б')).toBe(broken.lastIndexOf('Справочник.Б КАК Б'));
   });
 
-  it('falls back to the longer " 1 " placeholder when the SELECT list is too short to hold one (length grows)', () => {
-    const broken = 'ВЫБРАТЬ ИЗ Справочник.Валюты КАК Т'; // empty field list: 1-char segment
-    const repaired = repairSelectListsForRecovery(broken)!;
-    expect(repaired.length).toBeGreaterThan(broken.length);
-    expect(() => parseBatch(repaired)).not.toThrow();
+  it('uses a "*" placeholder for a SELECT list too short to hold " 1 ", still keeping the length', () => {
+    for (const broken of ['ВЫБРАТЬ ИЗ Справочник.Валюты КАК Т', 'ВЫБРАТЬ\n ИЗ Справочник.Валюты КАК Т']) {
+      const repaired = repairSelectListsForRecovery(broken)!;
+      expect(repaired.length).toBe(broken.length);
+      expect(repaired.indexOf('ИЗ')).toBe(broken.indexOf('ИЗ'));
+      expect(() => parseBatch(repaired)).not.toThrow();
+    }
   });
 });

@@ -13,7 +13,7 @@
  * originally written to eventually replace/narrow, see below) need it.
  * `src/core/semantic` may depend on `src/core/query`, never the reverse — so
  * this had to live down here, moved from its original location the same way
- * `selectListRepair.ts`/`findAliasTable.ts` were in earlier phases.
+ * `selectListRepair.ts` was in an earlier phase.
  *
  * The rules below are NOT derived from reading the grammar or guessing — they
  * were live-verified against a real 1C instance (Phase 2a of this roadmap,

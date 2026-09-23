@@ -20,11 +20,13 @@
  *    once in `buildSemanticSnapshotFromText` as of Phase 3d — no longer
  *    re-collected on every call here).
  *
- * Shadow-mode comparison against `findAliasTable`'s old flat lookup
+ * Shadow-mode comparison against the old flat `findAliasTable` lookup
  * (Refinement 4/5's explicit gate) shipped and ran clean over the full golden
  * corpus before this resolver was wired into hover (Phase 3d,
- * `queryHoverProvider.ts`/`hoverFieldInfo.ts`) — see `shadowMode.ts` and this
- * phase's memory entry for the classified disagreement report.
+ * `queryHoverProvider.ts`/`hoverFieldInfo.ts`). It is now the ONLY alias
+ * resolver hover/completion use; the flat lookup survives only as a frozen
+ * reference for the corpus regression sweep
+ * (`tooling/corpus-verify/shadowMode.ts`, `legacyFindAliasTable.ts`).
  */
 import type { BatchDocument } from '../query/batchModel';
 import type { QueryDocument } from '../query/unionModel';

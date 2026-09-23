@@ -3,7 +3,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import * as path from 'path';
-import { classify, runShadowModeSweep, summarize } from '../../src/core/semantic/shadowMode';
+import { classify, runShadowModeSweep, summarize } from '../../tooling/corpus-verify/shadowMode';
 import { buildYamlResolver } from '../../src/core/metadata/buildYamlResolver';
 
 const resolver = buildYamlResolver(path.resolve(__dirname, '../fixtures/corpus/metadata/cf'));

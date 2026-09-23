@@ -89,9 +89,10 @@ export function buildSemanticSnapshotFromText(
   try {
     const repairedText = repairSelectListsForRecovery(sourceText);
     if (repairedText !== undefined) {
-      // The repair placeholder only ever keeps or grows a segment's length, so
-      // equal total length means every segment was blanked in place and each
-      // offset in `repairedText` is the same offset in `sourceText`.
+      // The repair placeholder is length-preserving, so each offset in
+      // `repairedText` is the same offset in `sourceText`. Checked rather than
+      // assumed: if a future repair ever shifted offsets, the snapshot must
+      // lose its positions instead of reporting wrong ones.
       if (repairedText.length === sourceText.length) {
         const sink = new RecordingBatchSourceMapSink();
         const model = parseBatch(repairedText, resolver, { batchSourceMap: sink });

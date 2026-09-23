@@ -82,11 +82,10 @@ export class RecordingSourceMapSink implements SourceMapSink {
  *
  * Produced for a `'complete'` parse, and for a repaired/recovered parse ONLY
  * when the repair kept every offset in place (see
- * `buildSemanticSnapshotFromText` in `src/core/semantic`). The repair heuristic
- * blanks a SELECT list with a same-length placeholder, but a segment too short
- * to hold one falls back to a longer `' 1 '`, shifting everything after it —
- * ranges recorded against such text would silently misreport positions in the
- * real source, which is worse than having none.
+ * `buildSemanticSnapshotFromText` in `src/core/semantic`; the repair heuristic
+ * blanks a SELECT list with a same-length placeholder). Ranges recorded against
+ * text with shifted offsets would silently misreport positions in the real
+ * source, which is worse than having none.
  */
 export interface AbsoluteSourceMapEvent {
   statementIndex: number;

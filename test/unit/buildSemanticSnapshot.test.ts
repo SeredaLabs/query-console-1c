@@ -6,7 +6,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { buildSemanticSnapshotFromText } from '../../src/core/semantic/buildSemanticSnapshot';
-import { hasTrustworthyPositions } from '../../src/core/semantic/semanticSnapshot';
+import { hasTrustworthyPositions, createSemanticSnapshot } from '../../src/core/semantic/semanticSnapshot';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { tryParseBatch } from '../../src/core/query/validateBatch';
 
@@ -43,13 +43,20 @@ describe('buildSemanticSnapshotFromText', () => {
     expect(hasTrustworthyPositions(snapshot)).toBe(true);
   });
 
-  it("a 'recovered' snapshot whose repair could NOT keep offsets in place (too-short SELECT list) carries NO sourceMapEvents", () => {
-    const broken = 'ВЫБРАТЬ ИЗ Справочник.Валюты КАК Т'; // empty field list — placeholder grows the text
+  it("an empty SELECT list (too short for the '1' placeholder) is still repaired in place, so the 'recovered' snapshot keeps positions", () => {
+    const broken = 'ВЫБРАТЬ ИЗ Справочник.Валюты КАК Т';
     const snapshot = buildSemanticSnapshotFromText(1, broken);
     expect(snapshot.completeness).toBe('recovered');
     expect(snapshot.model.members[0].members[0].model.tables[0].alias).toBe('Т');
-    expect(snapshot.sourceMapEvents).toEqual([]);
-    expect(hasTrustworthyPositions(snapshot)).toBe(false);
+    const table = snapshot.sourceMapEvents.find((e) => e.kind === 'table')!;
+    expect(broken.slice(table.range.start, table.range.end)).toBe('Справочник.Валюты КАК Т');
+    expect(hasTrustworthyPositions(snapshot)).toBe(true);
+  });
+
+  it("hasTrustworthyPositions: 'recovered' without events and 'unavailable' are not trustworthy", () => {
+    const empty = { members: [] };
+    expect(hasTrustworthyPositions(createSemanticSnapshot(1, 'x', empty, 'recovered'))).toBe(false);
+    expect(hasTrustworthyPositions(createSemanticSnapshot(1, 'x', empty, 'unavailable'))).toBe(false);
   });
 
   it("a query that cannot be parsed even after repair yields completeness 'unavailable' with an empty model and no sourceMapEvents, never a throw", () => {

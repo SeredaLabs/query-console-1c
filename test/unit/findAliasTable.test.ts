@@ -1,14 +1,11 @@
 /**
- * Direct tests for `findAliasTable`, moved from `src/extension/hoverFieldInfo.ts`
- * into `src/core/query` (Phase 3b of the semantic-core roadmap, memory:
- * project-semantic-core-roadmap) so the shadow-mode harness can compare
- * against it without `src/core/semantic` depending on `src/extension`.
- * Already exercised indirectly (39 tests) via `hoverFieldInfo.test.ts`'s
- * `describeChain`/`resolveCompletionTarget` — this file covers the function
- * itself directly, now that it's a public core export.
+ * Direct tests for the frozen legacy flat alias lookup
+ * (`tooling/corpus-verify/legacyFindAliasTable.ts`). Production no longer uses
+ * it; these tests pin that the shadow-mode corpus baseline it provides stays
+ * exactly the same algorithm.
  */
 import { describe, it, expect } from 'vitest';
-import { findAliasTable } from '../../src/core/query/findAliasTable';
+import { findAliasTable } from '../../tooling/corpus-verify/legacyFindAliasTable';
 import { buildYamlResolver } from '../../src/core/metadata/buildYamlResolver';
 import * as path from 'path';
 

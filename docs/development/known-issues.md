@@ -88,12 +88,13 @@ Hover (`describeChain`) and autocomplete (`resolveCompletionTarget`), both in
 batch, first-match -- a repeated alias for a different source elsewhere in
 the same batch could show/suggest the wrong table. As of the semantic-core
 roadmap's Phase 3d/3e (memory: project-semantic-core-roadmap), both share
-`resolveHeadTable`, which prefers `resolveAliasAt`, a position-aware resolver
+`resolveHeadTable`, which uses only `resolveAliasAt`, a position-aware resolver
 that respects real JOIN-condition scoping and nearest-ancestor subquery
 correlation (live-verified against real 1C). The old flat `findAliasTable`
-lookup is still used, but only when `resolveAliasAt` has no data to work with
-at all, never as a fallback on scope uncertainty: an `'unavailable'` snapshot,
-or a `'recovered'` one whose repair could not keep character offsets in place.
-The usual broken-SELECT-list case (a missing comma) is repaired with a
-same-length placeholder, so its `'recovered'` snapshot keeps positions and
-goes through `resolveAliasAt` too.
+lookup is no longer used in production: a broken SELECT list (a missing comma,
+an empty list) is repaired with a same-length placeholder, so its
+`'recovered'` snapshot keeps positions and goes through `resolveAliasAt` too.
+When nothing is resolvable (the query does not parse even after repair),
+hover/completion show nothing. A frozen copy of the flat lookup
+(`tooling/corpus-verify/legacyFindAliasTable.ts`) remains only as the
+shadow-mode corpus baseline (see [corpus testing](corpus-testing.md)).

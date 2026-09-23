@@ -1,30 +1,26 @@
 /**
- * Moved from `src/extension/hoverFieldInfo.ts` (v0.1.33-era logic) into
- * `src/core/query` so the semantic-core roadmap's shadow-mode harness
- * (`src/core/semantic/shadowMode.ts`, memory: project-semantic-core-roadmap,
- * Phase 3b) can compare `resolveAliasAt`'s position-aware resolution against
- * this EXACT production algorithm, without `src/core/semantic` importing
- * from `src/extension` (core must not depend on the extension layer — the
- * same reasoning that already moved `repairSelectListsForRecovery` here).
- * Behavior unchanged from the original; `hoverFieldInfo.ts` now imports it
- * from here instead of defining it locally.
+ * FROZEN REFERENCE, test/tooling only — not shipped, not used by the extension.
  *
- * KNOWN LIMITATION (documented, not hidden — see `docs/development/known-issues.md`
- * and `docs/{en,ru,uk}/limitations.md`): searches ALL tables in the whole
- * batch at once (every union branch, every subquery), first match wins —
- * position-blind, no real scope tree. `resolveAliasAt`
- * (`src/core/semantic/resolveAliasAt.ts`) is the position-aware replacement
- * this limitation motivated; this function stays exactly as-is so
- * shadow-mode has a stable, unmodified baseline to compare against.
+ * The flat alias lookup hover/completion used before the semantic-core
+ * roadmap (v0.1.33-era logic, previously `src/core/query/findAliasTable.ts`).
+ * Production now resolves aliases only via position-aware `resolveAliasAt`
+ * (`src/core/semantic/resolveAliasAt.ts`); this copy stays solely as the
+ * fixed baseline the corpus shadow-mode sweep (`shadowMode.ts` next to it,
+ * `test/fixtures/corpus/shadow-mode-baseline.json`) compares against, so any
+ * change in `resolveAliasAt`'s results over the golden corpus still shows up
+ * as a reviewable diff. Do not "fix" it: its value is that it never changes.
+ *
+ * Searches ALL tables in the whole batch at once (every union branch, every
+ * subquery), first match wins — position-blind, no real scope tree.
  */
-import { parseBatch } from './sdblParser';
-import type { BatchDocument } from './batchModel';
-import type { QueryDocument } from './unionModel';
-import type { QueryModel, SelectedTable } from './queryModel';
-import { defaultTableAlias } from './queryModel';
-import type { MetadataResolver } from './metadataResolver';
-import type { MetaTable } from '../metadata/types';
-import { repairSelectListsForRecovery } from './selectListRepair';
+import { parseBatch } from '../../src/core/query/sdblParser';
+import type { BatchDocument } from '../../src/core/query/batchModel';
+import type { QueryDocument } from '../../src/core/query/unionModel';
+import type { QueryModel, SelectedTable } from '../../src/core/query/queryModel';
+import { defaultTableAlias } from '../../src/core/query/queryModel';
+import type { MetadataResolver } from '../../src/core/query/metadataResolver';
+import type { MetaTable } from '../../src/core/metadata/types';
+import { repairSelectListsForRecovery } from '../../src/core/query/selectListRepair';
 
 function collectAllTables(doc: BatchDocument): SelectedTable[] {
   const out: SelectedTable[] = [];

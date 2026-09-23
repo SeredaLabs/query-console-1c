@@ -16,7 +16,7 @@ import {
   summarize,
   type ShadowModeCase,
   type ShadowModeClassification,
-} from '../../src/core/semantic/shadowMode';
+} from './shadowMode';
 
 export interface GoldenQuery {
   file: string;
