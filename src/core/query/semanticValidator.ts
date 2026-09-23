@@ -163,7 +163,7 @@ export function validateBatchSemantics(
    * `'targetUnresolved'` (пробел метаданных — ссылка резолвится, но целевая таблица
    * не в кэше) НИКОГДА не считается ошибкой (unknown != invalid).
    */
-  const checkFieldPaths = (model: QueryModel): void => {
+  const checkFieldPaths = (model: QueryModel, topLevel: boolean): void => {
     if (!resolver) return;
     const r = resolver;
     const idToTable = new Map<string, SelectedTable>();
@@ -197,16 +197,29 @@ export function validateBatchSemantics(
       // неполон — не проверяем (см. файловый комментарий выше).
       if (!meta || meta.kind === 'ВременнаяТаблица') return;
 
-      const segs = path.split('.');
-      const resolution = resolveFieldPath(meta, segs, r);
+      let segs = path.split('.');
+      let base = meta;
+      // `Алиас.<ТабличнаяЧасть>.Поле` (обращение к табличной части через точку,
+      // допустимо в условиях: `Таблица.Назначение.ОбъектНазначения В (&…)`):
+      // первый сегмент — не поле, а табличная часть источника, поэтому остаток
+      // пути проверяется по полям самой табличной части. Найдено полным прогоном
+      // по золотому корпусу (2 ложных «не найдено», когда проверка условий
+      // ГДЕ была добавлена).
+      const tabular = meta.tabularSections?.find(ts => ts.name.toUpperCase() === segs[0].toUpperCase());
+      if (tabular) {
+        if (segs.length === 1) return;
+        base = tabular;
+        segs = segs.slice(1);
+      }
+      const resolution = resolveFieldPath(base, segs, r);
       if (resolution.stoppedReason !== 'fieldNotFound') return;
 
       const badSegment = resolution.unresolvedTail[0];
       if (PSEUDO_FIELDS.has(badSegment.toUpperCase())) return;
 
       const ownerMeta = resolution.resolved.length > 0
-        ? (resolution.resolved[resolution.resolved.length - 1].refTarget ?? meta)
-        : meta;
+        ? (resolution.resolved[resolution.resolved.length - 1].refTarget ?? base)
+        : base;
       const dedupKey = `${tableId} ${path}`;
       if (reportedFieldNotFound.has(dedupKey)) return;
       reportedFieldNotFound.add(dedupKey);
@@ -270,6 +283,32 @@ export function validateBatchSemantics(
         checkOne(f.tableId, f.path);
       }
     }
+
+    // `СОЕДИНЕНИЕ … ПО`: СТАНДАРТНЫЙ конъюнкт (`custom=false`) — по контракту
+    // `JoinCondition` оба операнда чистые точечные `Алиас.Путь` своих
+    // источников, поэтому проверяется на любом уровне вложенности. Произвольный
+    // (`custom`) — сырой текст, не проверяется. `conditions` задан — это полный
+    // список конъюнктов (верхнеуровневые поля соединения — лишь зеркало первого).
+    for (const j of model.joins ?? []) {
+      for (const c of j.conditions ?? [j]) {
+        if (c.custom) continue;
+        if (c.leftTableId && c.leftPath) checkOne(c.leftTableId, c.leftPath);
+        if (c.rightTableId && c.rightPath) checkOne(c.rightTableId, c.rightPath);
+      }
+    }
+
+    // `ГДЕ`/`ИМЕЮЩИЕ`: стандартное условие (`custom=false`, `tableId`/`path`).
+    // ТОЛЬКО для запроса верхнего уровня: в подзапросе ГОЛОЕ поле условия парсер
+    // привязывает к единственному локальному источнику, даже если это на деле
+    // коррелированная ссылка на поле ОБЪЕМЛЮЩЕГО запроса (валидный запрос), а
+    // модель не хранит, было ли поле квалифицировано в тексте — проверка там
+    // дала бы ложное «не найдено». На верхнем уровне объемлющего запроса нет.
+    if (topLevel) {
+      for (const c of [...(model.conditions ?? []), ...(model.having ?? [])]) {
+        if (c.custom || c.expression !== undefined || !c.tableId || !c.path) continue;
+        checkOne(c.tableId, c.path);
+      }
+    }
   };
 
   const checkDuplicateAliases = (model: QueryModel): void => {
@@ -319,7 +358,7 @@ export function validateBatchSemantics(
 
   const walkConditions = (conditions: Condition[] | undefined): void => {
     for (const c of conditions ?? []) {
-      if (c.subquery) walkDocument(c.subquery);
+      if (c.subquery) walkDocument(c.subquery, false);
     }
   };
 
@@ -341,24 +380,25 @@ export function validateBatchSemantics(
     }
   };
 
-  const walkModel = (model: QueryModel): void => {
+  const walkModel = (model: QueryModel, topLevel: boolean): void => {
     for (const t of model.tables) {
-      if (t.subquery) walkDocument(t.subquery);
+      if (t.subquery) walkDocument(t.subquery, false);
       else checkTable(t);
     }
     checkDuplicateAliases(model);
     checkDuplicateSourceAliases(model);
-    checkFieldPaths(model);
+    checkFieldPaths(model, topLevel);
     walkConditions(model.conditions);
     walkConditions(model.having);
   };
 
-  function walkDocument(qdoc: QueryDocument): void {
+  /** `topLevel` — члены ОБЪЕДИНЕНИЯ самого оператора пакета (без объемлющего запроса). */
+  function walkDocument(qdoc: QueryDocument, topLevel: boolean): void {
     checkUnionColumnCount(qdoc);
-    for (const member of qdoc.members) walkModel(member.model);
+    for (const member of qdoc.members) walkModel(member.model, topLevel);
   }
 
-  for (const member of doc.members) walkDocument(member);
+  for (const member of doc.members) walkDocument(member, true);
 
   return errors;
 }

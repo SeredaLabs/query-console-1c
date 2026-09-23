@@ -92,6 +92,45 @@ describe('checkFieldPaths: нуль хибних спрацювань на ре�
     }
   });
 
+  // Поля в условиях (СОЕДИНЕНИЕ ПО на любом уровне, ГДЕ/ИМЕЮЩИЕ верхнего уровня,
+  // обращение к табличной части через точку) — те же гарантии "не мёртвая гілка",
+  // чтобы нуль хибних спрацювань ниже реально что-то доказывал.
+  it('golden-запити реально наповнюють перевірку полів в умовах', () => {
+    const coverage = { joinStandard: 0, whereStandardTopLevel: 0, tabularDotPath: 0 };
+    const walkJoins = (qdoc: { members: Array<{ model: import('../../src/core/query/queryModel').QueryModel }> }): void => {
+      for (const m of qdoc.members) {
+        if ((m.model.joins ?? []).some(j => (j.conditions ?? [j]).some(c => !c.custom && c.leftTableId && c.leftPath))) coverage.joinStandard++;
+        for (const t of m.model.tables) if (t.subquery) walkJoins(t.subquery);
+      }
+    };
+    for (const g of golden) {
+      if (!g.valid) continue;
+      let doc;
+      try {
+        doc = parseBatch(g.input, resolver);
+      } catch {
+        continue;
+      }
+      for (const member of doc.members) {
+        walkJoins(member);
+        for (const m of member.members) {
+          const std = [...(m.model.conditions ?? []), ...(m.model.having ?? [])]
+            .filter(c => !c.custom && c.expression === undefined && c.tableId && c.path);
+          if (std.length > 0) coverage.whereStandardTopLevel++;
+          if (std.some(c => {
+            const t = m.model.tables.find(x => x.id === c.tableId);
+            const meta = t?.fullName ? resolver.tableByFullName(t.fullName) : undefined;
+            const head = c.path!.split('.')[0].toUpperCase();
+            return !!meta?.tabularSections?.some(ts => ts.name.toUpperCase() === head);
+          })) coverage.tabularDotPath++;
+        }
+      }
+    }
+    for (const [branch, count] of Object.entries(coverage)) {
+      expect(count, `${branch}: очікувався принаймні 1 реальний golden-запит з цією гілкою`).toBeGreaterThan(0);
+    }
+  });
+
   it('жоден реальний запит не дає "Поле ... не найдено"', () => {
     const falsePositives: Array<{ file: string; messages: string[] }> = [];
     for (const g of golden) {
