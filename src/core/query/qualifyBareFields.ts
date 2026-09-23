@@ -30,6 +30,7 @@ import type { MetadataResolver } from './metadataResolver';
 import type { QueryDocument } from './unionModel';
 import { resolveAliases } from './queryModelUtils';
 import { computeJoinVisibility } from './joinVisibility';
+import { matchesAtNearestLevel } from './nearestAncestor';
 import { LITERAL_WORDS, PERIOD_WORDS } from './sdblKeywordSets';
 
 /** Структурные слова-операторы, никогда не являющиеся полем. */
@@ -67,8 +68,8 @@ const TYPE_PREFIXES = new Set([
 
 interface SourceInfo {
   /** `SelectedTable.id` — нужен, щоб звужувати `sources` до видимих у конкретному
-   * JOIN за `computeJoinVisibility` (не для зовнішніх/`outerSources`: там своя,
-   * вже об'єднуюча модель, id не потрібен). */
+   * JOIN за `computeJoinVisibility` (не для зовнішніх/`outerLevels`: там своя
+   * модель — рівні від найближчого, id не потрібен). */
   id: string;
   alias: string;
   /** Известный состав колонок (метаданные таблицы или выходные псевдонимы подзапроса). */
@@ -83,8 +84,13 @@ interface OwnerContext {
   aliasSpelling: Map<string, string>;
   /** Псевдонимы источников ОБЪЕМЛЮЩИХ запросов (коррелированные ссылки в подзапросе). */
   outerAliases: Set<string>;
-  /** Источники объемлющих запросов (для разрешения коррелированных голых полей). */
-  outerSources: SourceInfo[];
+  /**
+   * Источники объемлющих запросов ПО УРОВНЯМ, от ближайшего к дальнему (для
+   * разрешения коррелированных голых полей). Уровни не сливаются: владельца ищем
+   * на ближайшем уровне, где поле вообще есть (`matchesAtNearestLevel`) —
+   * правило 1С, проверенное вживую (`src/core/semantic/correlation.ts`).
+   */
+  outerLevels: SourceInfo[][];
   sources: SourceInfo[];
   /** Резолвер метаданных (для контекста встроенных в сырое выражение подзапросов). */
   resolver?: MetadataResolver;
@@ -130,7 +136,7 @@ function buildContext(
   model: QueryModel,
   resolver: MetadataResolver | undefined,
   outerAliases: Set<string> = new Set(),
-  outerSources: SourceInfo[] = []
+  outerLevels: SourceInfo[][] = []
 ): OwnerContext {
   const sources: SourceInfo[] = [];
   const aliases = new Set<string>();
@@ -171,14 +177,14 @@ function buildContext(
       sources.push({ id: t.id, alias, wildcard: true });
     }
   }
-  return { aliases, aliasSpelling, outerAliases, outerSources, sources, resolver, parseDoc: activeParseDoc };
+  return { aliases, aliasSpelling, outerAliases, outerLevels, sources, resolver, parseDoc: activeParseDoc };
 }
 
 /**
  * Звужує `ctx.sources` до множини `visibleIds` (з `computeJoinVisibility`) —
  * для кваліфікації голих полів САМЕ в умові конкретного JOIN. `undefined`
  * (немає JOIN-ів у моделі взагалі) повертає `ctx` як є. Тільки `sources`
- * звужується: `aliases`/`aliasSpelling`/`outerAliases`/`outerSources` лишаються
+ * звужується: `aliases`/`aliasSpelling`/`outerAliases`/`outerLevels` лишаються
  * повними (див. виклик у `processModel`).
  */
 function narrowContextForJoin(ctx: OwnerContext, visibleIds: ReadonlySet<string> | undefined): OwnerContext {
@@ -211,7 +217,7 @@ function ownerAlias(ctx: OwnerContext, name: string, requireMeta: boolean): stri
   if (ctx.sources.length === 1) {
     const s = ctx.sources[0];
     if (ctx.outerAliases.size > 0 && s.fields && !s.fields.has(N)) {
-      const outerOwners = ctx.outerSources.filter(os => os.fields?.has(N));
+      const outerOwners = matchesAtNearestLevel(os => os.fields?.has(N) ?? false, ctx.outerLevels);
       return outerOwners.length === 1 ? outerOwners[0].alias : undefined;
     }
     return s.alias;
@@ -265,8 +271,8 @@ function qualifySubquerySpan(innerRaw: string, outerCtx: OwnerContext): string {
   // Внешние псевдонимы/источники подзапроса = текущие + унаследованные внешние
   // (коррелированные ссылки на колонки объемлющих запросов).
   const innerOuterAliases = new Set([...outerCtx.outerAliases, ...outerCtx.aliases]);
-  const innerOuterSources = [...outerCtx.outerSources, ...outerCtx.sources];
-  const innerCtx = buildContext(m0, outerCtx.resolver, innerOuterAliases, innerOuterSources);
+  const innerOuterLevels = [outerCtx.sources, ...outerCtx.outerLevels];
+  const innerCtx = buildContext(m0, outerCtx.resolver, innerOuterAliases, innerOuterLevels);
   if (innerCtx.sources.length === 0) return innerRaw;
   return qualifyExpression(innerRaw, innerCtx);
 }
@@ -486,32 +492,32 @@ function processDocument(
   doc: QueryDocument,
   resolver: MetadataResolver | undefined,
   outerAliases: Set<string>,
-  outerSources: SourceInfo[]
+  outerLevels: SourceInfo[][]
 ): void {
-  for (const member of doc.members) processModel(member.model, resolver, outerAliases, outerSources);
+  for (const member of doc.members) processModel(member.model, resolver, outerAliases, outerLevels);
 }
 
 function processModel(
   model: QueryModel,
   resolver: MetadataResolver | undefined,
   outerAliases: Set<string>,
-  outerSources: SourceInfo[]
+  outerLevels: SourceInfo[][]
 ): void {
-  const ctx = buildContext(model, resolver, outerAliases, outerSources);
+  const ctx = buildContext(model, resolver, outerAliases, outerLevels);
 
   // Рекурсия в источники-подзапросы и подзапросы-условия: каждый разбирается со
   // СВОИМ контекстом владельцев, НО с псевдонимами текущего (и внешних) запросов в
   // области видимости — для распознавания коррелированных ссылок (`Регионы.Поле`).
   const innerOuter = new Set([...outerAliases, ...ctx.aliases]);
-  const innerOuterSources = [...outerSources, ...ctx.sources];
+  const innerOuterLevels = [ctx.sources, ...outerLevels];
   for (const t of model.tables) {
-    if (t.subquery) processDocument(t.subquery, resolver, innerOuter, innerOuterSources);
+    if (t.subquery) processDocument(t.subquery, resolver, innerOuter, innerOuterLevels);
   }
   for (const c of model.conditions ?? []) {
-    if (c.subquery) processDocument(c.subquery, resolver, innerOuter, innerOuterSources);
+    if (c.subquery) processDocument(c.subquery, resolver, innerOuter, innerOuterLevels);
   }
   for (const c of model.having ?? []) {
-    if (c.subquery) processDocument(c.subquery, resolver, innerOuter, innerOuterSources);
+    if (c.subquery) processDocument(c.subquery, resolver, innerOuter, innerOuterLevels);
   }
 
   if (ctx.sources.length === 0) return;
@@ -529,7 +535,7 @@ function processModel(
       if (!f.tableId || !model.tables.some(t => t.id === f.tableId)) return;
       const head = up(f.path.split('.')[0]);
       if (innerFields.has(head)) return;
-      const owners = outerSources.filter(os => os.fields?.has(head));
+      const owners = matchesAtNearestLevel(os => os.fields?.has(head) ?? false, outerLevels);
       if (owners.length !== 1) return;
       f.tableId = '';
       // Генератор печатает выражение-форму для коррелированной ссылки нельзя — оставляем

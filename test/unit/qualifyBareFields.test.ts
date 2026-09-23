@@ -94,3 +94,46 @@ describe('qualifyBareFields: JOIN-condition scoping (right-nested/flat-chain, li
     expect(out).toContain('ПО Т1.УникальноеА = Т2.УникальноеБ');
   });
 });
+
+describe('qualifyBareFields: correlated bare field, nearest enclosing level wins (live-verified real-1C rule)', () => {
+  // Real 1C (semantic-core roadmap Phase 2a, see src/core/semantic/correlation.ts):
+  // a bare field the subquery's own source lacks resolves to the NEAREST
+  // enclosing level that has it, even when a farther level has it too.
+  // Today this holds twice over: each nested subquery is parsed by its own
+  // `parseDocument` call (bottom-up), so the innermost one is qualified while
+  // only its parent is in scope; and the pass itself walks outer levels via
+  // `matchesAtNearestLevel`. These tests pin the rule so a future single-pass
+  // parse cannot silently fall back to pooling all ancestors together.
+  const T = (name: string, fields: string[]): MetaTable => ({
+    kind: 'Справочник', name, fullName: `Справочник.${name}`,
+    fields: fields.map(f => ({ name: f, kind: 'standard' as const, types: [{ primitive: 'Число' as const }] })),
+  });
+  const r = buildResolverFromTables([T('А', ['Код', 'Цена']), T('Б', ['Код', 'Цена']), T('В', ['Имя'])]);
+  const nested = (innerSelect: string) =>
+    'ВЫБРАТЬ А.Код ИЗ Справочник.А КАК А ГДЕ А.Код В ' +
+    '(ВЫБРАТЬ Б.Код ИЗ Справочник.Б КАК Б ГДЕ Б.Код В ' +
+    `(ВЫБРАТЬ ${innerSelect} ИЗ Справочник.В КАК В))`;
+
+  it('parent and grandparent both own the field — qualified by the PARENT, not left ambiguous', () => {
+    const out = generateBatch(parseBatch(nested('Цена'), r));
+    expect(out).toContain('Б.Цена');
+    expect(out).not.toContain('В.Цена');
+  });
+
+  it('only the grandparent owns the field — falls through to the grandparent', () => {
+    const r2 = buildResolverFromTables([T('А', ['Код', 'Цена']), T('Б', ['Код']), T('В', ['Имя'])]);
+    const out = generateBatch(parseBatch(nested('Цена'), r2));
+    expect(out).toContain('А.Цена');
+  });
+
+  it('two owners at the SAME nearest level stay unresolved (not rebound to either)', () => {
+    const r3 = buildResolverFromTables([T('А', ['Код']), T('Б', ['Код', 'Цена']), T('Г', ['Цена']), T('В', ['Имя'])]);
+    const q =
+      'ВЫБРАТЬ А.Код ИЗ Справочник.А КАК А ГДЕ А.Код В ' +
+      '(ВЫБРАТЬ Б.Код ИЗ Справочник.Б КАК Б, Справочник.Г КАК Г ГДЕ Б.Код В ' +
+      '(ВЫБРАТЬ Цена ИЗ Справочник.В КАК В))';
+    const out = generateBatch(parseBatch(q, r3));
+    expect(out).not.toContain('Б.Цена');
+    expect(out).not.toContain('Г.Цена');
+  });
+});

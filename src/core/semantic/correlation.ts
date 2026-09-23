@@ -24,6 +24,7 @@
  * different levels' candidates together into one ambiguity check.
  */
 import type { Resolution } from './resolution';
+import { matchesAtNearestLevel } from '../query/nearestAncestor';
 
 /** Anything with a known (possibly empty/unknown) set of field names it owns. */
 export interface FieldOwner {
@@ -37,17 +38,16 @@ export interface FieldOwner {
  * candidates together. `ancestorLevels` must be ordered NEAREST-FIRST.
  * Shared by `resolveCorrelatedField` (Phase 2b, live-verified) and
  * `resolveAliasCorrelated` (Phase 3b) — same rule, different match predicate.
+ * The level walk itself is `matchesAtNearestLevel` (`src/core/query`), which
+ * the parse-time `qualifyBareFields` pass uses too.
  */
 export function resolveNearestAncestorMatch<T>(
   matches: (item: T) => boolean,
   ancestorLevels: readonly (readonly T[])[],
 ): Resolution<T> {
-  for (const level of ancestorLevels) {
-    const found = level.filter(matches);
-    if (found.length === 1) return { kind: 'resolved', value: found[0] };
-    if (found.length > 1) return { kind: 'ambiguous', candidates: found };
-    // No match at this level at all — fall through to the next (farther) ancestor.
-  }
+  const found = matchesAtNearestLevel(matches, ancestorLevels);
+  if (found.length === 1) return { kind: 'resolved', value: found[0] };
+  if (found.length > 1) return { kind: 'ambiguous', candidates: found };
   return { kind: 'unknown' };
 }
 
