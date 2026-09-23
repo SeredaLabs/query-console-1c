@@ -562,8 +562,13 @@ Classic і New Builder ділять ЦІЛКОМ ці семантики (жод
   `bridge`/`ResizeHandle` --- Classic-модулі; поля сортування ---
   `distinctFieldRefs`. Сторожі: `applyGate`/`metadataTreeModel`/`canvasReuse`/
   `canvasLoadFailure` тести.
-- немає кнопки Cancel, UI оновлення кешу метаданих, UI розгортання полів-
-  посилань, reorder/rename запитів пакета;
+- немає UI оновлення кешу метаданих, UI розгортання полів-посилань,
+  reorder/rename запитів пакета;
+- кнопку «Скасувати» в Canvas свідомо НЕ додаємо (рішення користувача
+  2026-09-23): Canvas --- вкладка/вікно VS Code, закриття якого вже дорівнює
+  скасуванню (панель знищується без `insertText`); явний вихід потрібен лише
+  на overlay помилки відкриття, і там кнопка «Закрити» є. Не вважати це
+  прогалиною паритету з Classic.
 - table alias editing не підтримувався reducer;
 - per-table filters/indexes/DISTINCT не можна вигадувати, якщо model
   settings query-level;
