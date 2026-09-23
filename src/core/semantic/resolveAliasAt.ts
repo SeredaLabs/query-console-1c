@@ -32,6 +32,7 @@ import type { QueryModel } from '../query/queryModel';
 import type { AbsoluteSourceMapEvent } from '../query/sourceMap';
 import { rangeContains } from '../query/sourceMap';
 import type { Symbol, ModelPath, SemanticSnapshot } from './semanticSnapshot';
+import { hasTrustworthyPositions } from './semanticSnapshot';
 import type { Resolution } from './resolution';
 import { resolveNearestAncestorMatch } from './correlation';
 import { computeJoinVisibility } from '../query/joinVisibility';
@@ -130,12 +131,12 @@ function localSymbolsFor(allSymbols: readonly Symbol[], scopePath: ModelPath): S
  * scope level, same lookup `resolveAliasAt` itself does) — exported for other
  * position-aware checks that need "which model is this" without the rest of
  * alias-resolution (Phase 2x-1: `resolveOutputAliasReference.ts` uses this to
- * find the right model's `selectOutputAliases`). `undefined` for a
- * non-`'complete'` snapshot or a position outside any recorded scope, same as
- * `resolveAliasAt`'s own fail-open cases.
+ * find the right model's `selectOutputAliases`). `undefined` for a snapshot
+ * without trustworthy positions (`hasTrustworthyPositions`) or a position
+ * outside any recorded scope, same as `resolveAliasAt`'s own fail-open cases.
  */
 export function findModelAt(snapshot: SemanticSnapshot, position: number): QueryModel | undefined {
-  if (snapshot.completeness !== 'complete') return undefined;
+  if (!hasTrustworthyPositions(snapshot)) return undefined;
   return findScopeChain(snapshot.model, snapshot.sourceMapEvents, position)[0]?.model;
 }
 
@@ -145,12 +146,14 @@ export function findModelAt(snapshot: SemanticSnapshot, position: number): Query
  * system) against the visible source aliases at that exact point.
  *
  * `'unknown'` (not an error) whenever the snapshot can't support this: a
- * non-`'complete'` snapshot has no trustworthy `sourceMapEvents` (see
- * `SemanticSnapshot.sourceMapEvents`'s own doc), and a `position` outside any
- * recorded statement/union member range is likewise `'unknown'`.
+ * snapshot without trustworthy `sourceMapEvents` (`hasTrustworthyPositions` —
+ * `'unavailable'`, or `'recovered'` whose repair shifted offsets), and a
+ * `position` outside any recorded statement/union member range is likewise
+ * `'unknown'`. A `'recovered'` snapshot WITH positions is fine here: alias
+ * resolution only needs sources/joins, which the repair never touches.
  */
 export function resolveAliasAt(snapshot: SemanticSnapshot, position: number, alias: string): Resolution<Symbol> {
-  if (snapshot.completeness !== 'complete') return { kind: 'unknown' };
+  if (!hasTrustworthyPositions(snapshot)) return { kind: 'unknown' };
   const chain = findScopeChain(snapshot.model, snapshot.sourceMapEvents, position);
   if (chain.length === 0) return { kind: 'unknown' };
 

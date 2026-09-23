@@ -58,7 +58,8 @@ function withSymbolIndex(snapshot: SemanticSnapshot): SemanticSnapshot {
  *  1. a plain `parseBatch` — `completeness: 'complete'`.
  *  2. `repairSelectListsForRecovery` (blanks out broken top-level SELECT lists,
  *     keeping `ИЗ`/aliases/joins intact) then `parseBatch` again —
- *     `completeness: 'recovered'`. The recovered model's own SELECT-list fields
+ *     `completeness: 'recovered'`, with `sourceMapEvents` when the repair kept
+ *     offsets in place (length-preserving placeholder). The recovered model's own SELECT-list fields
  *     are placeholders, not the user's real fields — consumers that need real
  *     field data (not just source/alias visibility) must treat a `'recovered'`
  *     snapshot's fields as unreliable.
@@ -88,6 +89,14 @@ export function buildSemanticSnapshotFromText(
   try {
     const repairedText = repairSelectListsForRecovery(sourceText);
     if (repairedText !== undefined) {
+      // The repair placeholder only ever keeps or grows a segment's length, so
+      // equal total length means every segment was blanked in place and each
+      // offset in `repairedText` is the same offset in `sourceText`.
+      if (repairedText.length === sourceText.length) {
+        const sink = new RecordingBatchSourceMapSink();
+        const model = parseBatch(repairedText, resolver, { batchSourceMap: sink });
+        return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, model, 'recovered', sink.events));
+      }
       return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, parseBatch(repairedText, resolver), 'recovered'));
     }
   } catch {

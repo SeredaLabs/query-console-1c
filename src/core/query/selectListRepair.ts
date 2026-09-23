@@ -4,7 +4,8 @@
  * memory: project-semantic-core-roadmap) without duplicating the repair
  * heuristic — `src/core/semantic` may depend on `src/core/query`, but not on
  * `src/extension` (core must not depend on the extension layer). Behavior
- * unchanged from the original.
+ * unchanged from the original, except that the placeholder now preserves the
+ * replaced segment's length (see `blankSelectList`).
  */
 import { tokenize } from './sdblLexer';
 
@@ -18,8 +19,9 @@ import { tokenize } from './sdblLexer';
  *
  * Для КОЖНОГО учасника `ОБЪЕДИНЕНИЯ` на ВЕРХНЬОМУ рівні (не всередині вкладеного
  * підзапиту) підміняє все між `ВЫБРАТЬ` і найближчим `ИЗ` тієї ж глибини на
- * тривіальну заглушку `1` — той самий прийом токенізації з відстеженням глибини
- * дужок/фігурних дужок, що вже й перевірено використовує `splitUnionMemberTexts`
+ * тривіальну заглушку `1` тієї ж довжини (див. `blankSelectList`) — той самий
+ * прийом токенізації з відстеженням глибини дужок/фігурних дужок, що вже й
+ * перевірено використовує `splitUnionMemberTexts`
  * (sdblParser.ts) для розбиття учасників об'єднання.
  *
  * Викликається ТІЛЬКИ коли звичайний розбір вже провалився — жодного впливу на
@@ -74,7 +76,23 @@ export function repairSelectListsForRecovery(text: string): string | undefined {
   let result = text;
   for (let k = replacements.length - 1; k >= 0; k--) {
     const { start, end } = replacements[k];
-    result = result.slice(0, start) + ' 1 ' + result.slice(end);
+    result = result.slice(0, start) + blankSelectList(result.slice(start, end)) + result.slice(end);
   }
   return result;
+}
+
+/**
+ * Заглушка `1` тієї ж довжини, що й замінений список полів: усі символи, крім
+ * переносів рядка, стають пробілами, а `1` стає на друге місце (обабіч — пробіли,
+ * тож лексер не зліпить її з `ВЫБРАТЬ`/`ИЗ`). Збережена довжина — інваріант, на
+ * який спирається `buildSemanticSnapshotFromText`: зміщення в відремонтованому
+ * тексті збігаються з оригінальними, тож `'recovered'`-снепшот теж може мати
+ * `sourceMapEvents`. Сегмент коротший за 3 символи (`ВЫБРАТЬ ИЗ`) так не
+ * вміщається — лишається стара заглушка `' 1 '`, що подовжує текст; тоді
+ * довжини не збігаються і снепшот чесно лишається без позицій.
+ */
+function blankSelectList(segment: string): string {
+  if (segment.length < 3) return ' 1 ';
+  const blank = segment.replace(/[^\r\n]/g, ' ');
+  return blank[0] + '1' + ' ' + blank.slice(3);
 }

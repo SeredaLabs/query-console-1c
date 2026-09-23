@@ -97,7 +97,9 @@ export function createEmptySemanticIndex(): SemanticIndex {
  * - `'recovered'`: a full parse failed, but a repair heuristic
  *   (`repairSelectListsForRecovery`) produced text that DID parse — `model`'s
  *   structure (sources/aliases/joins) is trustworthy, but any SELECT-list field
- *   the repair touched is a placeholder, not the user's real field.
+ *   the repair touched is a placeholder, not the user's real field. Positions
+ *   (`sourceMapEvents`) are available when the repair preserved offsets — see
+ *   `hasTrustworthyPositions`.
  * - `'partial'`: reserved for a future, more capable partial-tree recovery this
  *   parser doesn't have yet (today a hard parse failure loses ALL structure,
  *   not just the broken part) — see `buildSemanticSnapshotFromText`'s doc.
@@ -114,14 +116,27 @@ export interface SemanticSnapshot {
   /**
    * Batch-wide, absolute-offset ranges for `model`'s tables/union members (see
    * `AbsoluteSourceMapEvent`), collected via `parseBatch`'s `batchSourceMap`
-   * option. ALWAYS empty (`[]`) for `completeness !== 'complete'` — a repaired
-   * or unavailable parse either ran against reflowed text (repair changes
-   * character offsets) or produced no real model at all, so no range in either
-   * case can be trusted to point at the user's actual source
-   * (`buildSemanticSnapshotFromText` enforces this).
+   * option. Populated for `'complete'`, and for `'recovered'` ONLY when the
+   * repair kept every character offset in place (its placeholder is
+   * length-preserving; see `repairSelectListsForRecovery`) — otherwise, and
+   * always for `'unavailable'`, it is empty (`[]`), since a range recorded
+   * against reflowed text would silently point at the wrong place in the
+   * user's source (`buildSemanticSnapshotFromText` enforces this). Check
+   * `hasTrustworthyPositions` rather than `completeness` alone.
    */
   sourceMapEvents: readonly AbsoluteSourceMapEvent[];
   index: SemanticIndex;
+}
+
+/**
+ * Whether `snapshot.sourceMapEvents` can be used for position-aware lookups:
+ * always for `'complete'`, and for `'recovered'` when the repair preserved
+ * offsets (non-empty events). Consumers that also need the real SELECT-list
+ * fields (output aliases, etc.) must still require `'complete'` themselves.
+ */
+export function hasTrustworthyPositions(snapshot: SemanticSnapshot): boolean {
+  if (snapshot.completeness === 'complete') return true;
+  return snapshot.completeness === 'recovered' && snapshot.sourceMapEvents.length > 0;
 }
 
 /**

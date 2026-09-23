@@ -6,6 +6,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { buildSemanticSnapshotFromText } from '../../src/core/semantic/buildSemanticSnapshot';
+import { hasTrustworthyPositions } from '../../src/core/semantic/semanticSnapshot';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { tryParseBatch } from '../../src/core/query/validateBatch';
 
@@ -26,15 +27,29 @@ describe('buildSemanticSnapshotFromText', () => {
     expect(text.slice(table.range.start, table.range.end)).toBe('Справочник.Валюты КАК Т');
   });
 
-  it("a query with a broken top-level SELECT list (missing comma) yields completeness 'recovered', with sources/aliases still intact but NO sourceMapEvents", () => {
+  it("a query with a broken top-level SELECT list (missing comma) yields completeness 'recovered', with sources/aliases intact and sourceMapEvents that slice back to the ORIGINAL text", () => {
     const broken = 'ВЫБРАТЬ Т.Поле1 Т.Поле2 ИЗ Справочник.Валюты КАК Т ГДЕ Т.Поле1 = 1'; // missing comma
     const snapshot = buildSemanticSnapshotFromText(1, broken);
     expect(snapshot.completeness).toBe('recovered');
     // Source/alias structure survives repair even though the field list doesn't.
     expect(snapshot.model.members[0].members[0].model.tables[0].alias).toBe('Т');
-    // Repair reflows character offsets, so a 'recovered' snapshot must never
-    // claim ranges against the ORIGINAL text — see sourceMapEvents' own doc.
+    // The repair placeholder is length-preserving, so ranges recorded against
+    // the repaired text are valid against the user's real text too.
+    const table = snapshot.sourceMapEvents.find((e) => e.kind === 'table')!;
+    expect(table).toBeDefined();
+    expect(broken.slice(table.range.start, table.range.end)).toBe('Справочник.Валюты КАК Т');
+    const member = snapshot.sourceMapEvents.find((e) => e.kind === 'unionMember')!;
+    expect(member.range.start).toBe(0); // covers the broken SELECT list itself
+    expect(hasTrustworthyPositions(snapshot)).toBe(true);
+  });
+
+  it("a 'recovered' snapshot whose repair could NOT keep offsets in place (too-short SELECT list) carries NO sourceMapEvents", () => {
+    const broken = 'ВЫБРАТЬ ИЗ Справочник.Валюты КАК Т'; // empty field list — placeholder grows the text
+    const snapshot = buildSemanticSnapshotFromText(1, broken);
+    expect(snapshot.completeness).toBe('recovered');
+    expect(snapshot.model.members[0].members[0].model.tables[0].alias).toBe('Т');
     expect(snapshot.sourceMapEvents).toEqual([]);
+    expect(hasTrustworthyPositions(snapshot)).toBe(false);
   });
 
   it("a query that cannot be parsed even after repair yields completeness 'unavailable' with an empty model and no sourceMapEvents, never a throw", () => {

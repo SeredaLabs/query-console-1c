@@ -80,13 +80,13 @@ export class RecordingSourceMapSink implements SourceMapSink {
  * `SourceMapSink` shared across chunks would have (see `parseBatch`'s own doc
  * comment on `ParseOptions.batchSourceMap`).
  *
- * ONLY produced for a `'complete'` parse (see
- * `buildSemanticSnapshotFromText` in `src/core/semantic`) — a repaired/
- * recovered parse runs against TEXT WITH DIFFERENT CHARACTER OFFSETS than the
- * user's real document (the repair heuristic replaces a variable-length SELECT
- * list with a fixed `' 1 '` placeholder, shifting everything after it), so
- * ranges recorded against repaired text would silently misreport positions in
- * the real source — worse than having none.
+ * Produced for a `'complete'` parse, and for a repaired/recovered parse ONLY
+ * when the repair kept every offset in place (see
+ * `buildSemanticSnapshotFromText` in `src/core/semantic`). The repair heuristic
+ * blanks a SELECT list with a same-length placeholder, but a segment too short
+ * to hold one falls back to a longer `' 1 '`, shifting everything after it —
+ * ranges recorded against such text would silently misreport positions in the
+ * real source, which is worse than having none.
  */
 export interface AbsoluteSourceMapEvent {
   statementIndex: number;

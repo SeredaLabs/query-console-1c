@@ -23,9 +23,11 @@
  * answers in exactly the cases (e.g. a right-nested JOIN's own inner
  * condition) this roadmap exists to fix. The old flat lookup is still used —
  * not as a "fallback on uncertainty", but because `resolveAliasAt` has no
- * data to work with at all: a `'recovered'`/`'unavailable'` snapshot (broken
- * SELECT list — the exact v0.1.33 regression class) carries no
- * `sourceMapEvents`, and neither does a `headPosition` translation failure.
+ * data to work with at all: an `'unavailable'` snapshot, a `'recovered'` one
+ * whose repair could not keep offsets in place (see `hasTrustworthyPositions`
+ * — the usual broken-SELECT-list case, the v0.1.33 regression class, DOES
+ * keep them and goes through `resolveAliasAt`), or a `headPosition`
+ * translation failure.
  */
 import type { MetadataResolver } from '../core/query/metadataResolver';
 import type { MetaTable } from '../core/metadata/types';
@@ -34,6 +36,7 @@ import { resolveFieldPath, type FieldPathResolution } from '../core/query/fieldP
 import { findAliasTable } from '../core/query/findAliasTable';
 import { buildSemanticSnapshotFromText } from '../core/semantic/buildSemanticSnapshot';
 import { resolveAliasAt } from '../core/semantic/resolveAliasAt';
+import { hasTrustworthyPositions } from '../core/semantic/semanticSnapshot';
 import { resolveSymbolTable } from '../core/semantic/collectSymbols';
 import { isOutputAliasReference } from '../core/semantic/resolveOutputAliasReference';
 import { describeVirtualTableArgAt, type VirtualTableArgDescription } from '../core/semantic/describeVirtualTableArg';
@@ -196,21 +199,24 @@ export interface ChainDescription {
  * Резолвить ГОЛОВУ ланцюжка (`alias`) до її таблиці — спільне ядро для
  * `describeChain` і `resolveCompletionTarget` (Phase 3d/3e).
  *
- * Коли `queryText` дає `completeness === 'complete'` снепшот (звичайний,
- * повністю розбираний запит) І `headPosition` відомий — резолвить позиційно-
+ * Коли снепшот має надійні позиції (`hasTrustworthyPositions`: повністю
+ * розбираний запит, АБО `'recovered'` зі зламаним SELECT-списком, чий ремонт
+ * зберіг зміщення) І `headPosition` відомий — резолвить позиційно-
  * усвідомлений `resolveAliasAt`; будь-який результат, крім `'resolved'`
  * (`'unknown'`/`'ambiguous'`), означає `undefined` — свідоме продуктове
  * рішення НЕ підстраховуватись старим плоским пошуком у цьому випадку, бо це
  * ризикувало б повернути підтверджено НЕПРАВИЛЬНУ відповідь саме в тих
  * випадках (право-вкладений JOIN тощо), заради яких цей резолвер і будувався.
  *
- * Інакше (снепшот `'recovered'`/`'unavailable'`, або `headPosition` невідомий) —
- * `resolveAliasAt` тут принципово безпорадний: у "recovered" моделі ЗОВСІМ немає
- * `sourceMapEvents` (репарація зсуває офсети — див. `SemanticSnapshot.
- * sourceMapEvents`'ів власний doc), а курсор при зламаному SELECT-списку якраз і
- * стоїть УСЕРЕДИНІ того, що repair замінив плейсхолдером. Тому тут — той самий
- * старий плоский `findAliasTable` (позиційно-сліпий), що й завжди захищав від
- * реального продакшн-регресу v0.1.33 (пропущена кома ламала весь SELECT).
+ * Курсор усередині заміненого SELECT-списку при цьому не проблема: заглушка
+ * тієї ж довжини лишає його в межах діапазону того самого учасника
+ * `ОБЪЕДИНЕНИЯ`, тож область видимості визначається правильно.
+ *
+ * Інакше (`'unavailable'`, `'recovered'` без позицій — ремонт не вмістився в
+ * початкову довжину, — або `headPosition` невідомий) `resolveAliasAt` тут
+ * принципово безпорадний. Тоді — той самий старий плоский `findAliasTable`
+ * (позиційно-сліпий), що й завжди захищав від реального продакшн-регресу
+ * v0.1.33 (пропущена кома ламала весь SELECT).
  */
 function resolveHeadTable(
   queryText: string,
@@ -219,7 +225,7 @@ function resolveHeadTable(
   headPosition: number | undefined,
 ): { table: SelectedTable; meta: MetaTable | undefined } | undefined {
   const snapshot = buildSemanticSnapshotFromText(1, queryText, resolver);
-  if (snapshot.completeness === 'complete' && headPosition !== undefined) {
+  if (hasTrustworthyPositions(snapshot) && headPosition !== undefined) {
     // Phase 2x-1: a bare identifier inside УПОРЯДОЧИТЬ/ИТОГИ can name a
     // SELECT-output column, not a source alias at all — resolving it as one
     // would risk a confident, WRONG answer if the name happens to collide

@@ -14,6 +14,7 @@ import {
 } from '../../src/extension/hoverFieldInfo';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
 import { parseBatch } from '../../src/core/query/sdblParser';
+import { findAliasTable } from '../../src/core/query/findAliasTable';
 import type { MetaTable } from '../../src/core/metadata/types';
 
 describe('findChainAt', () => {
@@ -421,6 +422,36 @@ describe('відновлення після зламаного SELECT-списк
     expect(() => parseBatch(text)).toThrow();
     const target = resolveCompletionTarget(text, nomenklaturaResolver, ['Номенклатура'], 0);
     expect(target?.meta.fullName).toBe('Справочник.Номенклатура');
+  });
+});
+
+describe('зламаний SELECT-список: псевдонім, повторений у гілках ОБЪЕДИНЕНИЯ, резолвиться позиційно', () => {
+  // Ремонт тієї ж довжини дає 'recovered'-снепшоту позиції, тож працює
+  // resolveAliasAt, а не плаский findAliasTable (перший збіг по всьому пакету).
+  const TEXT =
+    'ВЫБРАТЬ Т.Наименование ИЗ Справочник.Товары КАК Т\n' +
+    'ОБЪЕДИНИТЬ ВСЕ\n' +
+    'ВЫБРАТЬ\n' +
+    '\tТ.Наименование\n' + // <- немає коми перед наступним рядком
+    '\tТ.\n' +
+    'ИЗ Справочник.Контрагенты КАК Т';
+  const cursor = TEXT.lastIndexOf('Т.\n');
+
+  it('передумова: звичайний розбір падає, а плаский пошук повертає ПЕРШУ гілку (Товары)', () => {
+    expect(() => parseBatch(TEXT)).toThrow();
+    expect(findAliasTable(TEXT, resolver, 'Т')?.table.fullName).toBe('Справочник.Товары');
+  });
+
+  it('hover у другій гілці показує таблицю ДРУГОЇ гілки', () => {
+    expect(describeChain(TEXT, resolver, ['Т'], cursor).tableFullName).toBe('Справочник.Контрагенты');
+  });
+
+  it('автодоповнення в другій гілці пропонує поля таблиці ДРУГОЇ гілки', () => {
+    expect(resolveCompletionTarget(TEXT, resolver, ['Т'], cursor)?.meta.fullName).toBe('Справочник.Контрагенты');
+  });
+
+  it('у першій гілці — таблиця першої гілки', () => {
+    expect(describeChain(TEXT, resolver, ['Т'], TEXT.indexOf('Т.Наименование')).tableFullName).toBe('Справочник.Товары');
   });
 });
 

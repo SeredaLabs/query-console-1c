@@ -92,5 +92,8 @@ roadmap's Phase 3d/3e (memory: project-semantic-core-roadmap), both share
 that respects real JOIN-condition scoping and nearest-ancestor subquery
 correlation (live-verified against real 1C). The old flat `findAliasTable`
 lookup is still used, but only when `resolveAliasAt` has no data to work with
-at all (a `'recovered'`/`'unavailable'` snapshot -- a broken SELECT list, the
-query-parse recovery case above), never as a fallback on scope uncertainty.
+at all, never as a fallback on scope uncertainty: an `'unavailable'` snapshot,
+or a `'recovered'` one whose repair could not keep character offsets in place.
+The usual broken-SELECT-list case (a missing comma) is repaired with a
+same-length placeholder, so its `'recovered'` snapshot keeps positions and
+goes through `resolveAliasAt` too.

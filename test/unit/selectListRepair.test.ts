@@ -53,4 +53,33 @@ describe('repairSelectListsForRecovery', () => {
     const doc = parseBatch(repaired);
     expect(doc.members[0].members[0].model.tables[0].alias).toBe('Т');
   });
+
+  it('keeps the repaired text the same length, with newlines in place, so offsets after the SELECT list do not move', () => {
+    const broken =
+      'ВЫБРАТЬ\n' +
+      '\tТ.Поле1\n' +
+      '\tТ.Поле2\n' + // missing comma above
+      'ИЗ\n' +
+      '\tСправочник.Валюты КАК Т';
+    const repaired = repairSelectListsForRecovery(broken)!;
+    expect(repaired.length).toBe(broken.length);
+    expect(repaired.indexOf('ИЗ')).toBe(broken.indexOf('ИЗ'));
+    expect(repaired.split('\n').length).toBe(broken.split('\n').length);
+    expect(() => parseBatch(repaired)).not.toThrow();
+  });
+
+  it('keeps every UNION member\'s offsets in place when several SELECT lists are repaired', () => {
+    const broken =
+      'ВЫБРАТЬ А.Поле1 А.Поле2 ИЗ Справочник.А КАК А ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ Б.Поле1 Б.Поле2 ИЗ Справочник.Б КАК Б';
+    const repaired = repairSelectListsForRecovery(broken)!;
+    expect(repaired.length).toBe(broken.length);
+    expect(repaired.lastIndexOf('Справочник.Б КАК Б')).toBe(broken.lastIndexOf('Справочник.Б КАК Б'));
+  });
+
+  it('falls back to the longer " 1 " placeholder when the SELECT list is too short to hold one (length grows)', () => {
+    const broken = 'ВЫБРАТЬ ИЗ Справочник.Валюты КАК Т'; // empty field list: 1-char segment
+    const repaired = repairSelectListsForRecovery(broken)!;
+    expect(repaired.length).toBeGreaterThan(broken.length);
+    expect(() => parseBatch(repaired)).not.toThrow();
+  });
 });

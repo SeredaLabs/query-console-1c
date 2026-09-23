@@ -27,11 +27,38 @@ describe('resolveAliasAt', () => {
     expect(resolveAliasAt(snapshot, pos, 'НетТакого')).toEqual({ kind: 'unknown' });
   });
 
-  it('returns unknown for a non-complete snapshot (no trustworthy sourceMapEvents)', () => {
+  it("resolves in a 'recovered' snapshot whose repair kept offsets in place (broken SELECT list, cursor inside it)", () => {
     const broken = 'ВЫБРАТЬ Т.Поле1 Т.Поле2 ИЗ Справочник.А КАК Т'; // missing comma -> recovered
     const snapshot = buildSemanticSnapshotFromText(1, broken);
     expect(snapshot.completeness).toBe('recovered');
-    expect(resolveAliasAt(snapshot, 10, 'Т')).toEqual({ kind: 'unknown' });
+    const result = resolveAliasAt(snapshot, broken.indexOf('Т.Поле2'), 'Т');
+    expect(result.kind).toBe('resolved');
+    if (result.kind === 'resolved') expect(result.value.alias).toBe('Т');
+  });
+
+  it("returns unknown for a 'recovered' snapshot WITHOUT positions (repair had to shift offsets)", () => {
+    const broken = 'ВЫБРАТЬ ИЗ Справочник.А КАК Т'; // too-short SELECT list -> longer placeholder
+    const snapshot = buildSemanticSnapshotFromText(1, broken);
+    expect(snapshot.completeness).toBe('recovered');
+    expect(snapshot.sourceMapEvents).toEqual([]);
+    expect(resolveAliasAt(snapshot, 3, 'Т')).toEqual({ kind: 'unknown' });
+  });
+
+  it("in a 'recovered' snapshot, an alias reused in two UNION branches resolves to the branch the cursor is in", () => {
+    const broken =
+      'ВЫБРАТЬ Т.Поле1 Т.Поле2 ИЗ Справочник.А КАК Т ' + // missing comma
+      'ОБЪЕДИНИТЬ ВСЕ ' +
+      'ВЫБРАТЬ Т.Поле1 Т.Поле2 ИЗ Справочник.Б КАК Т'; // missing comma
+    const snapshot = buildSemanticSnapshotFromText(1, broken);
+    expect(snapshot.completeness).toBe('recovered');
+    const first = resolveAliasAt(snapshot, broken.indexOf('Т.Поле2'), 'Т');
+    const second = resolveAliasAt(snapshot, broken.lastIndexOf('Т.Поле2'), 'Т');
+    expect(first.kind).toBe('resolved');
+    expect(second.kind).toBe('resolved');
+    if (first.kind === 'resolved' && second.kind === 'resolved') {
+      expect(first.value.ref.path).not.toEqual(second.value.ref.path);
+      expect(second.value.ref.path[1]).toEqual({ kind: 'union', index: 1 });
+    }
   });
 
   it('returns unknown for a position outside any recorded statement', () => {
