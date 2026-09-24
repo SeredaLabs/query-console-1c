@@ -10,6 +10,9 @@ All notable changes are recorded here. The project uses
 - Query Designer windows now enter VS Code's compact auxiliary-window mode
   immediately after opening when the host supports it. The main VS Code
   window is not affected.
+- Canvas Package and UNION member numbers now stay expanded whenever they fit
+  the actual navigation-bar width; their `current/total` pagers appear only
+  when space is genuinely constrained.
 
 ## 0.1.87 - 2026-09-24
 

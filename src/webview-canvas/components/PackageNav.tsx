@@ -15,6 +15,7 @@ import { t } from '../i18n';
 import { DIMENSIONS, TOKENS } from '../theme';
 import { QueryIdentityPopover, type QueryIdentityAnchor } from './QueryIdentityPopover';
 import { UnionMappingPopover } from './UnionMappingPopover';
+import { resolveNavigationCompaction } from './packageNavLayout';
 
 /**
  * Phase 12B: будує текст tooltip'а маркера тимчасової таблиці з
@@ -351,19 +352,15 @@ const UNION_KEYWORD_BTN: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-/** Кількість SELECT-чипів, показаних повністю inline, перш ніж стиснути в
- * компактний "n/total ‹ ›" режим (design review 2026-09-19). */
-const UNION_INLINE_LIMIT = 4;
-
-/**
- * Redesign polish (2026-09-21): та сама ідея, що вже давно є в
- * `UNION_INLINE_LIMIT` — Package section тепер ТЕЖ стискається в
- * `n/total ‹ ›`, замість необмеженого inline-рендеру всіх номерів
- * (raw `overflow:hidden` без цього просто відрізав би доступ до
- * пізніх package-членів на 10-20 queries — саме той антипатерн, від якого
- * прямо просили відмовитись).
- */
-const PACKAGE_INLINE_LIMIT = 8;
+const NAV_MEASUREMENT_PROBE: React.CSSProperties = {
+  position: 'fixed',
+  left: -10000,
+  top: -10000,
+  display: 'flex',
+  alignItems: 'center',
+  visibility: 'hidden',
+  pointerEvents: 'none',
+};
 
 /** container-width пороги (§10 узгодженого прототипу, адаптовано під
  * container query замість viewport query — див. `useContainerWidth`).
@@ -404,9 +401,19 @@ export function PackageNav({
   const tempTableName = compoundTempTableName(state);
 
   const barRef = React.useRef<HTMLDivElement>(null);
+  const packageGroupRef = React.useRef<HTMLSpanElement>(null);
+  const unionGroupRef = React.useRef<HTMLSpanElement>(null);
+  const inlinePackageProbeRef = React.useRef<HTMLSpanElement>(null);
+  const compactPackageProbeRef = React.useRef<HTMLSpanElement>(null);
+  const inlineUnionProbeRef = React.useRef<HTMLSpanElement>(null);
+  const compactUnionProbeRef = React.useRef<HTMLSpanElement>(null);
   const barWidth = useContainerWidth(barRef);
   const isNarrow = barWidth <= NARROW_MAX;
   const isMedium = !isNarrow && barWidth <= MEDIUM_MAX;
+  const [measuredCompaction, setMeasuredCompaction] = React.useState({
+    compactPackage: false,
+    compactUnion: false,
+  });
 
   // PackageNav Quick Actions (2026-09-20): current-query identity відкриває
   // невеликий anchored popover (`QueryIdentityPopover`) замість переходу на
@@ -439,6 +446,59 @@ export function PackageNav({
   const identityMaxWidth = isNarrow ? 100 : 200;
   const accent = roleAccent(queryType);
 
+  // Package and UNION used to compact at fixed member counts (>8 and >4).
+  // Measure both complete and compact forms instead. A single deterministic
+  // decision prevents the two variable-width groups from alternately
+  // shrinking and expanding each other near the fit boundary.
+  React.useLayoutEffect(() => {
+    if (isMedium || isNarrow) {
+      setMeasuredCompaction(current =>
+        current.compactPackage || current.compactUnion
+          ? { compactPackage: false, compactUnion: false }
+          : current
+      );
+      return;
+    }
+
+    const bar = barRef.current;
+    const packageGroup = packageGroupRef.current;
+    const unionGroup = unionGroupRef.current;
+    const inlinePackageProbe = inlinePackageProbeRef.current;
+    const compactPackageProbe = compactPackageProbeRef.current;
+    const inlineUnionProbe = inlineUnionProbeRef.current;
+    const compactUnionProbe = compactUnionProbeRef.current;
+    if (!bar || !packageGroup || !unionGroup || !inlinePackageProbe || !compactPackageProbe || !inlineUnionProbe || !compactUnionProbe) return;
+
+    const fixedSiblingWidths = Array.from(bar.children)
+      .filter(child => child !== packageGroup && child !== unionGroup)
+      .map(child => {
+        const element = child as HTMLElement;
+        return Math.max(element.scrollWidth, element.getBoundingClientRect().width);
+      });
+    const next = resolveNavigationCompaction({
+      containerWidth: bar.clientWidth,
+      horizontalPadding: 20,
+      gap: 6,
+      fixedSiblingWidths,
+      packageWidths: {
+        inline: inlinePackageProbe.getBoundingClientRect().width,
+        compact: compactPackageProbe.getBoundingClientRect().width,
+      },
+      unionWidths: {
+        inline: inlineUnionProbe.getBoundingClientRect().width,
+        compact: compactUnionProbe.getBoundingClientRect().width,
+      },
+    });
+    setMeasuredCompaction(current =>
+      current.compactPackage === next.compactPackage && current.compactUnion === next.compactUnion
+        ? current
+        : next
+    );
+  });
+
+  const compactPackage = isMedium || isNarrow || measuredCompaction.compactPackage;
+  const compactUnion = isMedium || isNarrow || measuredCompaction.compactUnion;
+
   return (
     <div style={{ minWidth: 0 }}>
       <div ref={barRef} style={BAR_STYLE}>
@@ -447,17 +507,24 @@ export function PackageNav({
           {!isNarrow && t(locale, 'sidebarPackage')}
         </span>
 
-        <PackageSwitcher
-          locale={locale}
-          state={state}
-          dispatch={dispatch}
-          batchCount={batch.members.length}
-          compact={batch.members.length > PACKAGE_INLINE_LIMIT || isMedium || isNarrow}
-          continuity={continuity}
-          highlightedMembers={highlightedMembers}
-          setHighlightedMembers={setHighlightedMembers}
-          showAdd={!isNarrow}
-        />
+        <span
+          ref={packageGroupRef}
+          data-testid="package-switcher"
+          data-compact={compactPackage ? 'true' : 'false'}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
+        >
+          <PackageSwitcher
+            locale={locale}
+            state={state}
+            dispatch={dispatch}
+            batchCount={batch.members.length}
+            compact={compactPackage}
+            continuity={continuity}
+            highlightedMembers={highlightedMembers}
+            setHighlightedMembers={setHighlightedMembers}
+            showAdd={!isNarrow}
+          />
+        </span>
 
         <span style={NAV_DIVIDER} />
         <button
@@ -522,15 +589,22 @@ export function PackageNav({
           />
         )}
         <span style={NAV_DIVIDER} />
-        <UnionStrip
-          locale={locale}
-          state={state}
-          dispatch={dispatch}
-          onFirstUnionCreated={() => setShowUnionHint(true)}
-          compact={state.queryList.length > UNION_INLINE_LIMIT || isMedium || isNarrow}
-          showAdd={!isNarrow}
-          narrow={isNarrow}
-        />
+        <span
+          ref={unionGroupRef}
+          data-testid="union-switcher"
+          data-compact={compactUnion ? 'true' : 'false'}
+          style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}
+        >
+          <UnionStrip
+            locale={locale}
+            state={state}
+            dispatch={dispatch}
+            onFirstUnionCreated={() => setShowUnionHint(true)}
+            compact={compactUnion}
+            showAdd={!isNarrow}
+            narrow={isNarrow}
+          />
+        </span>
 
         {isNarrow && (
           <>
@@ -560,6 +634,58 @@ export function PackageNav({
           </>
         )}
       </div>
+      {!isMedium && !isNarrow && (
+        <>
+          <span ref={inlinePackageProbeRef} aria-hidden="true" style={{ ...NAV_MEASUREMENT_PROBE, gap: 6 }}>
+            <PackageSwitcher
+              locale={locale}
+              state={state}
+              dispatch={dispatch}
+              batchCount={batch.members.length}
+              compact={false}
+              continuity={continuity}
+              highlightedMembers={null}
+              setHighlightedMembers={() => undefined}
+              showAdd
+            />
+          </span>
+          <span ref={compactPackageProbeRef} aria-hidden="true" style={{ ...NAV_MEASUREMENT_PROBE, gap: 6 }}>
+            <PackageSwitcher
+              locale={locale}
+              state={state}
+              dispatch={dispatch}
+              batchCount={batch.members.length}
+              compact
+              continuity={continuity}
+              highlightedMembers={null}
+              setHighlightedMembers={() => undefined}
+              showAdd
+            />
+          </span>
+          <span ref={inlineUnionProbeRef} aria-hidden="true" style={NAV_MEASUREMENT_PROBE}>
+            <UnionStrip
+              locale={locale}
+              state={state}
+              dispatch={dispatch}
+              onFirstUnionCreated={() => undefined}
+              compact={false}
+              showAdd
+              narrow={false}
+            />
+          </span>
+          <span ref={compactUnionProbeRef} aria-hidden="true" style={NAV_MEASUREMENT_PROBE}>
+            <UnionStrip
+              locale={locale}
+              state={state}
+              dispatch={dispatch}
+              onFirstUnionCreated={() => undefined}
+              compact
+              showAdd
+              narrow={false}
+            />
+          </span>
+        </>
+      )}
       {showUnionHint && (
         <div
           style={{
@@ -594,8 +720,8 @@ export function PackageNav({
  * Redesign (2026-09-21): package-level navigation, винесена з тіла
  * `PackageNav` — той самий `assembleBatch`/`SET_ACTIVE_BATCH`/
  * `ADD_BATCH_QUERY`/`REMOVE_BATCH_QUERY`, жодних нових actions. Два режими:
- * inline (сегментована група `NavMemberChip` — до `PACKAGE_INLINE_LIMIT`/
- * wide container) і compact (`n/total ‹ ›` у тому самому `CONTROL_BOX`, що й
+ * inline (сегментована група `NavMemberChip`, доки вона реально поміщається
+ * у wide container) і compact (`n/total ‹ ›` у тому самому `CONTROL_BOX`, що й
  * UNION-версія нижче — свідомо ОДНАКОВА interaction grammar, щоб Package і
  * UNION відчувались частинами однієї системи, §6/§11).
  */
@@ -835,10 +961,10 @@ function PackageNavOverflowMenu({
  *
  * Коли union ще немає (queryList.length<=1) — компактна secondary-дія
  * (merge-іконка + текст у тому самому `CONTROL_BOX`, §7 explicit
- * requirement "not a large disabled-looking grey text"). Коли є 2-4 SELECT
- * (і достатньо широкий контейнер) — сегментована група `NavMemberChip`,
- * той самий primitive, що й Package. Понад {@link UNION_INLINE_LIMIT} АБО
- * на medium/narrow container width (`compact` prop від `PackageNav`) —
+ * requirement "not a large disabled-looking grey text"). Коли є кілька
+ * SELECT і вони поміщаються у доступну ширину — сегментована група
+ * `NavMemberChip`, той самий primitive, що й Package. Коли виміряної ширини
+ * бракує або container medium/narrow (`compact` prop від `PackageNav`) —
  * стиснуто в `n/total ‹ ›`.
  *
  * Ключове слово між чипами i-1 та i визначається `queryList[i].distinct`
