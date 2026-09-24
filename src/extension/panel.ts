@@ -13,6 +13,7 @@ import type { HostMsg, WebviewMsg } from '../shared/messages';
 import type { MetadataModel } from '../core/metadata/types';
 import type { QueryModel } from '../core/query/queryModel';
 import { normalizeLocale } from '../shared/locale';
+import { moveDesignerToCompactWindow } from './designerWindow';
 
 function nonce(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -217,17 +218,16 @@ export function createDesignerPanel(
     }
   });
 
-  // 7.8.3: по запросу открываем конструктор в ОТДЕЛЬНОМ окне (а не во вкладке-панели
-  // внутри основного окна VS Code). Свежесозданный webview становится активным
-  // редактором, поэтому штатная команда «Переместить редактор в новое окно»
-  // выносит его в плавающее окно. Фича доступна с VS Code 1.85; на платформах без
-  // поддержки команда просто игнорируется (ошибку гасим).
+  // 7.8.3: по запросу открываем конструктор в отдельном компактном окне VS Code.
+  // Сначала штатная команда переносит активный webview и фокусирует новое окно;
+  // только после этого включаем compact mode именно для него. На платформах без
+  // поддержки любой из команд конструктор продолжает работать в обычной вкладке
+  // или в обычном отдельном окне.
   const cfg = vscode.workspace.getConfiguration('queryConsole');
-  if (cfg.get<boolean>('openInNewWindow') !== false) {
-    Promise.resolve(
-      vscode.commands.executeCommand('workbench.action.moveEditorToNewWindow')
-    ).then(undefined, () => { /* команда недоступна — остаёмся во вкладке */ });
-  }
+  void moveDesignerToCompactWindow(
+    cfg.get<boolean>('openInNewWindow') !== false,
+    command => vscode.commands.executeCommand(command)
+  );
 
   return panel;
 }

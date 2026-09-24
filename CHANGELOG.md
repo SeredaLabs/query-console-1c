@@ -5,6 +5,12 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+### Changed
+
+- Query Designer windows now enter VS Code's compact auxiliary-window mode
+  immediately after opening when the host supports it. The main VS Code
+  window is not affected.
+
 ## 0.1.87 - 2026-09-24
 
 ### Fixed

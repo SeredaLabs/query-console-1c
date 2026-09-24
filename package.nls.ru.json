@@ -10,7 +10,7 @@
   "configuration.title": "Query Console 1C",
   "configuration.metadataPath.description": "Абсолютный путь к XML-выгрузке конфигурации 1C. Оставьте пустым для автоматического поиска в рабочей области.",
   "configuration.parserOutputPath.description": "Каталог для сгенерированных файлов метаданных. Относительные пути разрешаются от корня рабочей области.",
-  "configuration.openInNewWindow.description": "Перемещать Конструктор запросов в отдельное окно VS Code вместо текущего окна.",
+  "configuration.openInNewWindow.description": "Перемещать Конструктор запросов в отдельное окно VS Code и включать компактный режим, если он поддерживается.",
   "configuration.queryTextEditorV2.description": "Включить экспериментальное окно Query Text v2 с панелью инструментов, структурой, параметрами и проверкой.",
   "configuration.queryDiagnosticsEnabled.description": "Показывать предупреждение на литерале текста запроса, который не может разобрать Конструктор запросов. Отключите, если это даёт ложные срабатывания для запросов, собираемых конкатенацией строк.",
   "configuration.enableNewBuilderPreview.description": "Показывать команду «Новый конструктор (Preview)». Этот визуальный интерфейс ещё находится в разработке и по умолчанию отключён."
