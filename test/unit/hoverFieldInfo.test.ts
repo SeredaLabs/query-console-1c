@@ -235,39 +235,53 @@ describe('describeChain', () => {
   });
 });
 
-/**
- * Semantic Core v1 Freeze Audit — the one confirmed real gap: the parser and
- * QueryState track temp-table (`ПОМЕСТИТЬ`) schemas/lifetimes for their own
- * flows, but `describeChain` has no shared position-aware temp-table schema in
- * its resolution path — the hover/completion metadata resolver
- * (`getMetadataResolver`, built from the XML config) never learns about a temp
- * table created mid-batch.
- * This locks in the CURRENT, safe behavior (fail-open on the FIELD, no fallback
- * onto unrelated metadata) so a future "helpful" fallback added to
- * `resolveHeadTable` (the same shape of change that added the virtual-table
- * fallback) can't start guessing wrong for temp tables without this test
- * catching it first. NOT a fix — a regression lock on today's contract.
- */
-describe('describeChain: temp-table source alias field hover (Semantic Core v1 Freeze Audit)', () => {
+describe('describeChain/resolveCompletionTarget: package temp-table semantics', () => {
   const NOMENKLATURA: MetaTable = {
     kind: 'Справочник', name: 'Номенклатура', fullName: 'Справочник.Номенклатура',
     fields: [{ name: 'Код', kind: 'standard', types: [{ primitive: 'Строка' }] }],
   };
   const resolver = buildResolverFromTables([NOMENKLATURA]);
 
-  it('поле аліасу тимчасової таблиці (ПОМЕСТИТЬ) не резолвиться — fail-open, без підстановки чужих метаданих', () => {
+  it('resolves a field and completion schema after ПОМЕСТИТЬ', () => {
     const text =
       'ВЫБРАТЬ Т.Код КАК Код ПОМЕСТИТЬ ВТ_Товары ИЗ Справочник.Номенклатура КАК Т; ' +
       'ВЫБРАТЬ Т2.Код ИЗ ВТ_Товары КАК Т2';
     const headPosition = text.lastIndexOf('ИЗ');
 
     const r = describeChain(text, resolver, ['Т2', 'Код'], headPosition);
-    // Ім'я самої тимчасової таблиці — чесна інформація (alias дійсно на неї
-    // вказує), тому tableFullName присутній; головне — resolution ВІДСУТНІЙ:
-    // схема ВТ ніде не відома цьому резолверу, тож ПОЛЕ не резолвиться взагалі
-    // (а не підміняється якоюсь випадковою реальною таблицею з тим самим ім'ям).
     expect(r.tableFullName).toBe('ВТ_Товары');
-    expect(r.resolution).toBeUndefined();
+    expect(r.resolution?.resolved[0].field.name).toBe('Код');
+
+    const completion = resolveCompletionTarget(text, resolver, ['Т2'], headPosition);
+    expect(completion?.meta.fields.map(f => f.name)).toEqual(['Код']);
+  });
+
+  it('does not leak a dropped schema and uses the recreated lifetime', () => {
+    const text =
+      'ВЫБРАТЬ Т.Код КАК Старое ПОМЕСТИТЬ ВТ_Товары ИЗ Справочник.Номенклатура КАК Т; ' +
+      'УНИЧТОЖИТЬ ВТ_Товары; ' +
+      'ВЫБРАТЬ Т.Код КАК Новое ПОМЕСТИТЬ ВТ_Товары ИЗ Справочник.Номенклатура КАК Т; ' +
+      'ВЫБРАТЬ Т2.Новое ИЗ ВТ_Товары КАК Т2';
+    const headPosition = text.lastIndexOf('Т2.Новое');
+
+    expect(describeChain(text, resolver, ['Т2', 'Новое'], headPosition).resolution?.resolved[0].field.name).toBe('Новое');
+    expect(describeChain(text, resolver, ['Т2', 'Старое'], headPosition).resolution?.stoppedReason).toBe('fieldNotFound');
+  });
+
+  it('fails open after drop and for an incomplete star-derived schema', () => {
+    const afterDrop =
+      'ВЫБРАТЬ Т.Код КАК Код ПОМЕСТИТЬ ВТ_Товары ИЗ Справочник.Номенклатура КАК Т; ' +
+      'УНИЧТОЖИТЬ ВТ_Товары; ВЫБРАТЬ Т2.Код ИЗ ВТ_Товары КАК Т2';
+    const afterDropPosition = afterDrop.lastIndexOf('Т2.Код');
+    expect(describeChain(afterDrop, resolver, ['Т2', 'Код'], afterDropPosition).resolution).toBeUndefined();
+    expect(resolveCompletionTarget(afterDrop, resolver, ['Т2'], afterDropPosition)).toBeUndefined();
+
+    const incomplete =
+      'ВЫБРАТЬ Н.* ПОМЕСТИТЬ ВТ_Товары ИЗ НеизвестнаяТаблица КАК Н; ' +
+      'ВЫБРАТЬ Т2.Код ИЗ ВТ_Товары КАК Т2';
+    const incompletePosition = incomplete.lastIndexOf('Т2.Код');
+    expect(describeChain(incomplete, resolver, ['Т2', 'Код'], incompletePosition).resolution).toBeUndefined();
+    expect(resolveCompletionTarget(incomplete, resolver, ['Т2'], incompletePosition)).toBeUndefined();
   });
 });
 

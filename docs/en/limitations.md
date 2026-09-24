@@ -1,5 +1,5 @@
 <!--
-source_version: 4
+source_version: 5
 translation_status: canonical
 -->
 
@@ -23,9 +23,11 @@ dot-navigation chain, or platform-specific construct is valid.
 When the designer opens or applies a query, field names are checked against
 the metadata in the select list, grouping, ordering, indexing, join
 conditions, and the simple conditions of the top-level query. Fields of
-temporary tables, conditions inside subqueries, and custom expressions are
-not checked. Editor diagnostics report syntax errors only; a missing field
-is reported by the designer, not underlined in the editor.
+package temporary tables are also checked after `ПОМЕСТИТЬ` when their inferred
+output schema is complete. Unknown/ad-hoc temporary tables and producers with
+an unresolved `*`, conditions inside subqueries, and custom expressions are
+not checked. Editor diagnostics report syntax errors only; a missing field is
+reported by the designer, not underlined in the editor.
 
 ## ⛔ Round-trip exclusions
 

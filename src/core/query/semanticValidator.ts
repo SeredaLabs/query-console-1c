@@ -16,13 +16,12 @@
  *   дорожной карты валидатора — см. docs/development/query-model.md, §5).
  *
  * Простые квалифицированные поля выборки (`Алиас.Реквизит[.Реквизит…]`) ПРОВЕРЯЮТСЯ
- * на существование по метаданным (`checkFieldPaths`, semantic-core hardening) — но
- * ТОЛЬКО когда источник резолвится в РЕАЛЬНУЮ (не временную) таблицу метаданных:
- * состав колонок временных таблиц — эвристический вывод (`sdblParser.ts`'s
- * `registerTempTables`/`inferUndefinedTempTables`), заведомо может быть неполон, и
- * ложное «поле не найдено» там было бы хуже отсутствия проверки. Произвольные
- * выражения, поля без явного псевдонима-квалификации и подзапросы-источники не
- * проверяются вовсе.
+ * на существование по метаданным (`checkFieldPaths`, semantic-core hardening).
+ * Для пакетной ВТ после `ПОМЕСТИТЬ` используется позиционная lifecycle-схема и
+ * проверка выполняется только при доказуемо полном списке выходных колонок.
+ * Неизвестная/ad-hoc ВТ либо ВТ с неразвёрнутой `*` остаётся fail-open: ложное
+ * «поле не найдено» хуже отсутствия проверки. Произвольные выражения, поля без
+ * явного псевдонима-квалификации и подзапросы-источники не проверяются вовсе.
  */
 import type { BatchDocument } from './batchModel';
 import type { QueryDocument } from './unionModel';
@@ -33,6 +32,11 @@ import { tokenize } from './sdblLexer';
 import type { Token } from './sdblLexer';
 import { isStructurallyValidExpression } from './expressionSyntaxCheck';
 import { resolveFieldPath } from './fieldPathResolver';
+import { deriveTempTableLifetimes, visibleTempTableAt } from './tempTableSemantics';
+
+const EMPTY_METADATA_RESOLVER: MetadataResolver = {
+  tableByFullName: () => undefined,
+};
 
 export interface SemanticError {
   message: string;
@@ -104,6 +108,7 @@ export function validateBatchSemantics(
 ): SemanticError[] {
   const tokens = tokenize(text);
   const errors: SemanticError[] = [];
+  const tempTableLifetimes = deriveTempTableLifetimes(doc);
 
   const checkTable = (table: SelectedTable): void => {
     // Fail-open: без резолвера (кэш не построен) существование таблицы не
@@ -163,9 +168,8 @@ export function validateBatchSemantics(
    * `'targetUnresolved'` (пробел метаданных — ссылка резолвится, но целевая таблица
    * не в кэше) НИКОГДА не считается ошибкой (unknown != invalid).
    */
-  const checkFieldPaths = (model: QueryModel, topLevel: boolean): void => {
-    if (!resolver) return;
-    const r = resolver;
+  const checkFieldPaths = (model: QueryModel, topLevel: boolean, statementIndex: number): void => {
+    const r = resolver ?? EMPTY_METADATA_RESOLVER;
     const idToTable = new Map<string, SelectedTable>();
     for (const t of model.tables) idToTable.set(t.id, t);
 
@@ -192,10 +196,12 @@ export function validateBatchSemantics(
     const checkOne = (tableId: string, path: string): void => {
       const src = idToTable.get(tableId);
       if (!src || src.subquery || !src.fullName || src.fullName.startsWith('&')) return;
-      const meta = r.tableByFullName(src.fullName);
-      // Временные таблицы: состав колонок — эвристический вывод, может быть
-      // неполон — не проверяем (см. файловый комментарий выше).
-      if (!meta || meta.kind === 'ВременнаяТаблица') return;
+      const tempSchema = visibleTempTableAt(tempTableLifetimes, statementIndex, src.fullName);
+      // A package-derived schema is authoritative only when every producer
+      // output name is known. Incomplete `*` and external/manual temp metadata
+      // retain the previous fail-open behavior.
+      const meta = tempSchema?.complete ? tempSchema.table : r.tableByFullName(src.fullName);
+      if (!meta || (meta.kind === 'ВременнаяТаблица' && !tempSchema?.complete)) return;
 
       let segs = path.split('.');
       let base = meta;
@@ -356,9 +362,9 @@ export function validateBatchSemantics(
     }
   };
 
-  const walkConditions = (conditions: Condition[] | undefined): void => {
+  const walkConditions = (conditions: Condition[] | undefined, statementIndex: number): void => {
     for (const c of conditions ?? []) {
-      if (c.subquery) walkDocument(c.subquery, false);
+      if (c.subquery) walkDocument(c.subquery, false, statementIndex);
     }
   };
 
@@ -380,25 +386,27 @@ export function validateBatchSemantics(
     }
   };
 
-  const walkModel = (model: QueryModel, topLevel: boolean): void => {
+  const walkModel = (model: QueryModel, topLevel: boolean, statementIndex: number): void => {
     for (const t of model.tables) {
-      if (t.subquery) walkDocument(t.subquery, false);
+      if (t.subquery) walkDocument(t.subquery, false, statementIndex);
       else checkTable(t);
     }
     checkDuplicateAliases(model);
     checkDuplicateSourceAliases(model);
-    checkFieldPaths(model, topLevel);
-    walkConditions(model.conditions);
-    walkConditions(model.having);
+    checkFieldPaths(model, topLevel, statementIndex);
+    walkConditions(model.conditions, statementIndex);
+    walkConditions(model.having, statementIndex);
   };
 
   /** `topLevel` — члены ОБЪЕДИНЕНИЯ самого оператора пакета (без объемлющего запроса). */
-  function walkDocument(qdoc: QueryDocument, topLevel: boolean): void {
+  function walkDocument(qdoc: QueryDocument, topLevel: boolean, statementIndex: number): void {
     checkUnionColumnCount(qdoc);
-    for (const member of qdoc.members) walkModel(member.model, topLevel);
+    for (const member of qdoc.members) walkModel(member.model, topLevel, statementIndex);
   }
 
-  for (const member of doc.members) walkDocument(member, true);
+  for (let statementIndex = 0; statementIndex < doc.members.length; statementIndex++) {
+    walkDocument(doc.members[statementIndex], true, statementIndex);
+  }
 
   return errors;
 }

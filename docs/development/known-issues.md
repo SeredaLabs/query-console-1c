@@ -45,13 +45,13 @@
   references in the select list, grouping, ordering, indexing, standard join
   conditions (any level) and standard `ГДЕ`/`ИМЕЮЩИЕ` conditions of the
   top-level query. Not checked: custom expressions, `ИТОГИ` aggregates,
-  virtual-table parameters, fields of temporary tables (their columns are
-  inferred heuristically), and conditions inside subqueries -- see the next
-  item. Editor diagnostics run syntax checks only, and hover/completion on a
-  temporary-table alias have no field schema to show. The parser and QueryState
-  track temporary-table schemas/lifetimes for their own flows, but no shared
-  position-aware schema currently connects them to hover, completion, or field
-  validation.
+  virtual-table parameters, unknown/ad-hoc temporary tables, package temporary
+  tables whose producer still contains an unresolved `*`, and conditions
+  inside subqueries -- see the next item. Package temporary tables with a
+  complete inferred output schema are position-aware in field validation,
+  hover, and completion (including drop/recreate lifetimes). Their inferred
+  columns intentionally carry no reference types, so deeper dot navigation
+  remains fail-open. Editor diagnostics still run syntax checks only.
 - A bare field in a standard condition of a sole-source subquery is bound by
   the parser to that source even when the source lacks the field and the
   field really belongs to an enclosing query (a valid correlated reference):

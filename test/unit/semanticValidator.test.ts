@@ -537,6 +537,52 @@ describe('validateBatchSemantics (8.4)', () => {
   });
 });
 
+describe('validateBatchSemantics: package temp-table fields', () => {
+  it('validates known fields and reports a missing field from a complete inferred schema', () => {
+    const valid =
+      'ВЫБРАТЬ Валюты.Код КАК Код ПОМЕСТИТЬ ВТ_Данные ИЗ Справочник.Валюты КАК Валюты; ' +
+      'ВЫБРАТЬ ВТ.Код ИЗ ВТ_Данные КАК ВТ';
+    expect(errs(valid)).toEqual([]);
+
+    const invalid = valid.replace('ВТ.Код ИЗ ВТ_Данные', 'ВТ.НетТакогоПоля ИЗ ВТ_Данные');
+    expect(errs(invalid).map(e => e.message)).toContain('Поле "НетТакогоПоля" не найдено в "ВТ_Данные"');
+  });
+
+  it('works without external metadata when the temp schema itself is exact', () => {
+    const text =
+      'ВЫБРАТЬ 1 КАК Код ПОМЕСТИТЬ ВТ_Данные; ' +
+      'ВЫБРАТЬ ВТ.НетТакогоПоля ИЗ ВТ_Данные КАК ВТ';
+    expect(validateBatchSemantics(parseBatch(text), undefined, text).map(e => e.message))
+      .toContain('Поле "НетТакогоПоля" не найдено в "ВТ_Данные"');
+  });
+
+  it('fails open before create, after drop, and for an incomplete star-derived schema', () => {
+    const beforeCreate =
+      'ВЫБРАТЬ ВТ.НетТакогоПоля ИЗ ВТ_Данные КАК ВТ; ' +
+      'ВЫБРАТЬ 1 КАК Код ПОМЕСТИТЬ ВТ_Данные';
+    expect(validateBatchSemantics(parseBatch(beforeCreate), undefined, beforeCreate)).toEqual([]);
+
+    const afterDrop =
+      'ВЫБРАТЬ 1 КАК Код ПОМЕСТИТЬ ВТ_Данные; УНИЧТОЖИТЬ ВТ_Данные; ' +
+      'ВЫБРАТЬ ВТ.НетТакогоПоля ИЗ ВТ_Данные КАК ВТ';
+    expect(validateBatchSemantics(parseBatch(afterDrop), undefined, afterDrop)).toEqual([]);
+
+    const incomplete =
+      'ВЫБРАТЬ Н.* ПОМЕСТИТЬ ВТ_Данные ИЗ НеизвестнаяТаблица КАК Н; ' +
+      'ВЫБРАТЬ ВТ.НетТакогоПоля ИЗ ВТ_Данные КАК ВТ';
+    expect(validateBatchSemantics(parseBatch(incomplete), undefined, incomplete)).toEqual([]);
+  });
+
+  it('validates against the recreated schema, not the dropped one', () => {
+    const text =
+      'ВЫБРАТЬ 1 КАК Старое ПОМЕСТИТЬ ВТ_Данные; УНИЧТОЖИТЬ ВТ_Данные; ' +
+      'ВЫБРАТЬ 2 КАК Новое ПОМЕСТИТЬ ВТ_Данные; ' +
+      'ВЫБРАТЬ ВТ.Старое ИЗ ВТ_Данные КАК ВТ';
+    expect(validateBatchSemantics(parseBatch(text), undefined, text).map(e => e.message))
+      .toContain('Поле "Старое" не найдено в "ВТ_Данные"');
+  });
+});
+
 describe('findUnsafeVirtualTables (PR-05, ТЗ §54 P0.5)', () => {
   it('безопасная ВТ (≤2 аргумента) — пустой результат', () => {
     const text = 'ВЫБРАТЬ Т.Период ИЗ РегистрСведений.КурсыВалют.СрезПоследних(&Дата, ИСТИНА) КАК Т';

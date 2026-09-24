@@ -67,6 +67,22 @@ describe('Extension Host: автодоповнення полів після к�
     assert.strictEqual(valuta.kind, vscode.CompletionItemKind.Reference, '"Валюта" — посилальне поле');
   });
 
+  it('пропонує виведені поля пакетної ВТ після ПОМЕСТИТЬ', async function () {
+    this.timeout(20000);
+
+    const queryText =
+      'ВЫБРАТЬ Т.Активен КАК Активен ПОМЕСТИТЬ ВТ_Тест ИЗ Справочник.Тест КАК Т; ' +
+      'ВЫБРАТЬ ВТ. ИЗ ВТ_Тест КАК ВТ';
+    const content = `Запрос.Текст = "${queryText}";\n`;
+    const doc = await vscode.workspace.openTextDocument({ language: 'plaintext', content });
+    const offset = content.lastIndexOf('ВТ.') + 'ВТ.'.length;
+
+    const items = await makeProvider().provideCompletionItems(doc, doc.positionAt(offset));
+    assert.ok(items, 'очікувались поля пакетної ВТ');
+    const labels = items!.map(item => item.label as string);
+    assert.deepStrictEqual(labels, ['Активен']);
+  });
+
   it('НЕ пропонує варіантів, якщо перед крапкою невідомий псевдонім (fail-open)', async function () {
     this.timeout(20000);
 

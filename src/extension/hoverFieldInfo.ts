@@ -36,6 +36,7 @@ import { isOutputAliasReference } from '../core/semantic/resolveOutputAliasRefer
 import { describeVirtualTableArgAt, type VirtualTableArgDescription } from '../core/semantic/describeVirtualTableArg';
 import { keywordValuesForRole, type VirtualParamRole } from '../core/metadata/virtualTableSignatures';
 import { describeVirtualTableOutputField, type VirtualTableOutputFieldInfo } from '../core/metadata/virtualTableOutputField';
+import { deriveTempTableLifetimes, visibleTempTableAt } from '../core/query/tempTableSemantics';
 
 export interface FieldChainSegment {
   /** Текст сегмента как написано в исходнике. */
@@ -170,7 +171,8 @@ export function findChainForCompletion(text: string, offset: number): FieldChain
 export interface ChainDescription {
   /** Полное имя метаданных таблицы, на которую ссылается голова цепочки —
    * `undefined`, если псевдоним не найден или таблица не резолвится по метаданным
-   * (параметр `&Имя`, подзапрос, ВТ, пробел в метаданных — unknown != invalid). */
+   * (параметр `&Имя`, подзапрос, неизвестная/неполная ВТ, пробел в метаданных —
+   * unknown != invalid). */
   tableFullName?: string;
   /** Резолюция сегментов ПОСЛЕ головы через `resolveFieldPath` — `undefined`, если
    * таблица головы не резолвится (см. выше) или цепочка состоит из одной головы. */
@@ -242,7 +244,25 @@ function resolveHeadTable(
   // `meta` came back `undefined` for every virtual source, regardless of
   // this roadmap's other work. Long-standing gap, not a regression from any
   // specific phase.
-  const meta = resolver.tableByFullName(table.fullName) ?? resolver.virtualTableByFullName?.(table.fullName);
+  let meta = resolver.tableByFullName(table.fullName) ?? resolver.virtualTableByFullName?.(table.fullName);
+  // Output columns are trustworthy only for a fully parsed snapshot. A
+  // recovered snapshot deliberately replaces broken SELECT lists with
+  // placeholders, so deriving a temp schema from it would look plausible but
+  // be wrong. The source alias itself may still resolve above; only field
+  // metadata stays fail-open in that case.
+  if (!meta && snapshot.completeness === 'complete') {
+    const batchSegment = resolution.value.ref.path.find(segment => segment.kind === 'batch');
+    if (batchSegment?.kind === 'batch') {
+      const temp = visibleTempTableAt(
+        deriveTempTableLifetimes(snapshot.model),
+        batchSegment.index,
+        table.fullName,
+      );
+      // Incomplete output (most importantly an unresolved `*`) is not a safe
+      // completion set and cannot support negative field conclusions.
+      if (temp?.complete) meta = temp.table;
+    }
+  }
   return { table, meta };
 }
 

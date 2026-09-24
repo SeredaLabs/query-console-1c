@@ -82,6 +82,22 @@ describe('Extension Host: hover на цепочці поля запиту', () =
     assert.ok(value.includes('Активен'), `hover мав згадувати назву поля, отримано: ${value}`);
   });
 
+  it('provideHover резолвить поле пакетної ВТ після ПОМЕСТИТЬ', async function () {
+    this.timeout(20000);
+
+    const queryText =
+      'ВЫБРАТЬ Т.Активен КАК Активен ПОМЕСТИТЬ ВТ_Тест ИЗ Справочник.Тест КАК Т; ' +
+      'ВЫБРАТЬ ВТ.Активен ИЗ ВТ_Тест КАК ВТ';
+    const content = `Запрос.Текст = "${queryText}";\n`;
+    const doc = await vscode.workspace.openTextDocument({ language: 'plaintext', content });
+    const offset = content.lastIndexOf('ВТ.Активен') + 'ВТ.'.length;
+
+    const hover = await makeProvider().provideHover(doc, doc.positionAt(offset));
+    assert.ok(hover, 'очікувався hover для поля пакетної ВТ');
+    const value = (hover!.contents[0] as vscode.MarkdownString).value;
+    assert.ok(value.includes('Активен'), `hover мав згадувати поле ВТ, отримано: ${value}`);
+  });
+
   it('provideHover повертає undefined поза межами будь-якого літерала запиту', async function () {
     this.timeout(20000);
 

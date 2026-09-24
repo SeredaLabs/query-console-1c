@@ -5387,7 +5387,15 @@ function isScalarLiteralExpr(expr: string | undefined): boolean {
 
 function registerTempTables(doc: QueryDocument, tempTables: Map<string, MetaTable>): void {
   const m0 = doc.members[0]?.model;
-  if (!m0 || m0.queryType !== 'createTemp' || !m0.tempTableName) return;
+  if (!m0 || !m0.tempTableName) return;
+  // `УНИЧТОЖИТЬ` closes the package lifetime. Leaving the old entry here made
+  // a later statement expand `ВТ.*` using columns of a table that no longer
+  // exists (and could also leak them into a later recreate with the same name).
+  if (m0.queryType === 'dropTemp') {
+    tempTables.delete(m0.tempTableName.toUpperCase());
+    return;
+  }
+  if (m0.queryType !== 'createTemp') return;
   const cols: { alias: string; scalar: boolean }[] = [];
   const seen = new Set<string>();
   for (const f of m0.fields) {

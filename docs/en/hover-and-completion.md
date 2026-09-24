@@ -1,5 +1,5 @@
 <!--
-source_version: 2
+source_version: 3
 translation_status: canonical
 -->
 
@@ -21,11 +21,16 @@ Query Designer first. They read the same metadata export as the designer
   yet shown in hover; autocomplete already shows it).
 - A field on a virtual table (`Остатки`, `Обороты`, and similar) shows which
   base register resource it comes from.
+- A field on a package temporary table shows its inferred output column when
+  the table was created earlier by `ПОМЕСТИТЬ` and the producer schema is
+  complete.
 - A `&Параметр` reference shows it as a query parameter.
 
 ## ⌨️ Autocomplete
 
 - Typing `.` after a table alias suggests its fields.
+- The same works for a visible package temporary table with a complete inferred
+  schema; `УНИЧТОЖИТЬ` and a later recreation are respected by position.
 - Typing `&` suggests parameter names already used elsewhere in the same query.
 - Inside a virtual-table argument for `Периодичность`/`МетодДополнения`,
   suggests the valid keyword values.
@@ -45,6 +50,7 @@ as Query Designer. Without metadata — or whenever these resolvers cannot
 confidently identify something — they show nothing rather than a guess; see
 [⚠️ limitations](limitations.md).
 
-Temporary-table names are position-aware in the package, but their inferred
-column schema is not yet connected to hover or field completion. Therefore an
-alias whose source is a temporary table currently has no field hover/list.
+Unknown/ad-hoc temporary tables and producers with an unresolved `*` stay
+fail-open: field hover and completion show nothing rather than presenting a
+partial schema as complete. Inferred temporary-table columns do not carry
+reference types, so deeper dot navigation through them is also not guessed.

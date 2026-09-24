@@ -920,6 +920,19 @@ describe('parseQuery 6.2.C — временные таблицы (round-trip)', 
     });
   });
 
+  it('parseBatch: УНИЧТОЖИТЬ очищает реестр колонок для последующей звезды', () => {
+    const batch = parseBatch(
+      'ВЫБРАТЬ 1 КАК Старое ПОМЕСТИТЬ ВремТаб; ' +
+      'УНИЧТОЖИТЬ ВремТаб; ' +
+      'ВЫБРАТЬ ВТ.* ИЗ ВремТаб КАК ВТ',
+    );
+    const consumer = batch.members[2].members[0].model;
+    expect(consumer.fields).toEqual([{
+      tableId: '', path: '', expression: 'ВТ.*', alias: 'Поле1',
+    }]);
+    expect(consumer.fields.some(field => field.path === 'Старое')).toBe(false);
+  });
+
   it('appendTemp: ДОБАВИТЬ', () => {
     roundTrip({
       tables: [{ id: 't1', fullName: 'Справочник.Валюты' }],
