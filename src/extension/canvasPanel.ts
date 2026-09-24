@@ -20,6 +20,7 @@ export function createCanvasPanel(
     viewType: '1c.queryConstructorCanvas',
     title: vscode.l10n.t('1C: Query Builder (Preview)'),
     script: 'canvasApp.js',
+    hasInlineTitleIcon: true,
     queryTextEditorV2: () => false,
   }, savedEditor, initialQueryText);
   channel.appendLine(vscode.l10n.t('[1C Query] New Builder (Preview) panel opened.'));

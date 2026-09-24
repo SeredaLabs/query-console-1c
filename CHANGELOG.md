@@ -13,6 +13,9 @@ All notable changes are recorded here. The project uses
 - Canvas Package and UNION member numbers now stay expanded whenever they fit
   the actual navigation-bar width; their `current/total` pagers appear only
   when space is genuinely constrained.
+- Query Designer now uses a dedicated theme-aware identity icon: Classic shows
+  it in the editor tab, while Canvas shows it beside the in-panel title without
+  duplicating the icon when compact window mode is disabled.
 
 ## 0.1.87 - 2026-09-24
 

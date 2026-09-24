@@ -43,6 +43,8 @@ export interface DesignerPanelKind {
   title: string;
   /** Bundle under `out/webview/`. */
   script: string;
+  /** The webview renders the Query Designer icon beside its own title. */
+  hasInlineTitleIcon?: boolean;
   /** `init` message's `queryTextEditorV2` flag, read on every `ready`. */
   queryTextEditorV2: () => boolean;
 }
@@ -87,6 +89,19 @@ export function createDesignerPanel(
       retainContextWhenHidden: true,
     }
   );
+  // Canvas already renders this identity mark inside its document bar. VS Code
+  // otherwise adds either our icon or its generic webview icon to the editor
+  // tab, leaving two visible glyphs whenever compact mode is disabled. Keep its
+  // tab icon intentionally transparent; Classic has no inline identity mark and
+  // therefore keeps the themed editor-tab icon.
+  if (kind.hasInlineTitleIcon) {
+    panel.iconPath = vscode.Uri.joinPath(context.extensionUri, 'assets', 'images', 'transparent.svg');
+  } else {
+    panel.iconPath = {
+      light: vscode.Uri.joinPath(context.extensionUri, 'assets', 'images', 'query-builder-schema-light.svg'),
+      dark: vscode.Uri.joinPath(context.extensionUri, 'assets', 'images', 'query-builder-schema-dark.svg'),
+    };
+  }
 
   const scriptUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', kind.script);
   const codiconCssUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', 'codicon.css');

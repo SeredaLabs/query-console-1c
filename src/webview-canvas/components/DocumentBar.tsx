@@ -42,6 +42,43 @@ const TITLE_STYLE: React.CSSProperties = {
   color: TOKENS.text,
 };
 
+function QueryBuilderGlyph(): React.ReactElement {
+  return (
+    <svg
+      data-testid="query-builder-glyph"
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      style={{
+        display: 'block',
+        flexShrink: 0,
+        width: 20,
+        height: 20,
+        color: TOKENS.text,
+        opacity: 0.9,
+      }}
+    >
+      <ellipse cx="6.5" cy="5" rx="4" ry="2" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M2.5 5v8c0 1.1 1.79 2 4 2s4-.9 4-2V5M2.5 9c0 1.1 1.79 2 4 2s4-.9 4-2"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10.5 10h3.5V6h2.5M14 10v8h2.5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect x="16.5" y="3.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.7" />
+      <rect x="16.5" y="15.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
 /**
  * "CANVAS" --- informational tag (§3), НЕ кнопка/перемикач: лише показує,
  * що зараз відкритий New Builder UI, а не Classic. Той самий "тихий accent"
@@ -126,6 +163,7 @@ export function DocumentBar({
   return (
     <div style={BAR_STYLE}>
       <div style={IDENTITY_GROUP}>
+        <QueryBuilderGlyph />
         <span style={TITLE_STYLE}>{t(locale, 'title')}</span>
         <span style={CANVAS_BADGE}>CANVAS</span>
       </div>

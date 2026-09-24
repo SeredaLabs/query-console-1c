@@ -53,6 +53,14 @@ describe.skipIf(!built)('VSIX packaging (out/ allowlist, real vsce ls)', () => {
   it('never packages a nested extension copy (regression: out/canvas-preview-extension)', () => {
     expect(packaged.some(f => f.includes('canvas-preview-extension'))).toBe(false);
   });
+
+  it('packages both themed Query Designer window icons', () => {
+    expect(packaged).toEqual(expect.arrayContaining([
+      'assets/images/query-builder-schema-dark.svg',
+      'assets/images/query-builder-schema-light.svg',
+      'assets/images/transparent.svg',
+    ]));
+  });
 });
 
 if (!built) {
