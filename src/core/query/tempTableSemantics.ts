@@ -87,20 +87,8 @@ export function inferCreatedTempTableSchema(doc: QueryDocument): TempTableSchema
 export function deriveTempTableLifetimes(batch: BatchDocument): TempTableLifetimes {
   const byName = new Map<string, TempTableLifetime[]>();
 
-  const openAt = (upperName: string, statementIndex: number): TempTableLifetime | undefined => {
-    const list = byName.get(upperName);
-    if (!list) return undefined;
-    for (let i = list.length - 1; i >= 0; i--) {
-      const lifetime = list[i];
-      if (
-        lifetime.createIndex < statementIndex &&
-        (lifetime.dropIndex === null || lifetime.dropIndex >= statementIndex)
-      ) {
-        return lifetime;
-      }
-    }
-    return undefined;
-  };
+  const openAt = (upperName: string, statementIndex: number): TempTableLifetime | undefined =>
+    newestLifetimeAt(byName.get(upperName), statementIndex);
 
   for (let statementIndex = 0; statementIndex < batch.members.length; statementIndex++) {
     const doc = batch.members[statementIndex];
@@ -138,7 +126,14 @@ export function visibleTempTableAt(
   statementIndex: number,
   fullName: string,
 ): TempTableSchema | undefined {
-  const list = lifetimes.get(fullName.toUpperCase());
+  return newestLifetimeAt(lifetimes.get(fullName.toUpperCase()), statementIndex)?.schema;
+}
+
+/** The newest lifetime created before `statementIndex` and not yet dropped. */
+function newestLifetimeAt(
+  list: readonly TempTableLifetime[] | undefined,
+  statementIndex: number,
+): TempTableLifetime | undefined {
   if (!list) return undefined;
   for (let i = list.length - 1; i >= 0; i--) {
     const lifetime = list[i];
@@ -146,7 +141,7 @@ export function visibleTempTableAt(
       lifetime.createIndex < statementIndex &&
       (lifetime.dropIndex === null || lifetime.dropIndex >= statementIndex)
     ) {
-      return lifetime.schema;
+      return lifetime;
     }
   }
   return undefined;

@@ -16,6 +16,17 @@ All notable changes are recorded here. The project uses
 - Query Designer now uses a dedicated theme-aware identity icon: Classic shows
   it in the editor tab, while Canvas shows it beside the in-panel title without
   duplicating the icon when compact window mode is disabled.
+- Package temporary tables now take part in query field semantics: after
+  `ПОМЕСТИТЬ`, hover and completion know the table's output columns, and
+  opening or applying a query in a designer reports a field missing from such
+  a table. `УНИЧТОЖИТЬ` ends that visibility and a later `ПОМЕСТИТЬ` with the
+  same name starts a new schema. A table whose producer contains an unresolved
+  `*` stays unchecked.
+
+### Fixed
+
+- `ВТ.*` after `УНИЧТОЖИТЬ ВТ` no longer expands to the columns of the
+  dropped temporary table.
 
 ## 0.1.87 - 2026-09-24
 

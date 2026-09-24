@@ -123,6 +123,18 @@ calc-register base-register parsing for an unrelated reason, revisit this
 boundary — but do not attempt a partial/best-guess implementation of
 either in the meantime.
 
+## Intentional technical debt: two temporary-table models
+
+Package temporary tables are modeled in two places. `registerTempTables`
+(`sdblParser.ts`) keeps a parse-time column registry used to expand `ВТ.*`
+while parsing; `tempTableSemantics.ts` derives position-aware lifetimes and
+output schemas for validation, hover, and completion. Both follow the same
+create/`ДОБАВИТЬ`/`УНИЧТОЖИТЬ` rules and, across the 560 complete temporary
+tables of the golden corpus, the semantic schema matches the column names
+printed by the real 1C constructor exactly. A change to temporary-table
+lifetime or column naming must update both models together until they are
+unified in a separate task.
+
 ## Resolved: hover/autocomplete alias scoping
 
 Hover (`describeChain`) and autocomplete (`resolveCompletionTarget`), both in
