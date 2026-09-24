@@ -1,6 +1,6 @@
 # New Builder --- Target UX Roadmap
 
-## Current implementation checkpoint (2026-09-23)
+## Current implementation checkpoint (2026-09-24)
 
 This file remains the target sequence, but implementation has not followed the
 phase numbers strictly. The repository and
@@ -11,7 +11,8 @@ behavior.
 - The baseline UI for Phases 7--11 is implemented. Deliberately deferred gaps
   remain: totals, grouping sets, HAVING, indexes and sort-priority reorder.
 - Phase 12 is complete, including package navigation and position-aware
-  temporary-table lifecycle/continuity.
+  temporary-table lifecycle/continuity. Package/UNION navigation now compacts
+  from measured available width rather than a fixed member-count threshold.
 - STOP 2 has not been formally completed. A real Canvas browser E2E and a
   recorded Classic/Canvas semantic-parity pass are still required.
 - Phase 13 is the next main implementation phase. Manual temporary-table

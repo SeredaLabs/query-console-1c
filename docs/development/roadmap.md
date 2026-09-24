@@ -8,7 +8,9 @@ This page records direction, not committed release scope.
 2. Improve metadata discovery and cache freshness diagnostics without risking
    user-owned directories.
 3. Strengthen user-facing diagnostics and accessibility across all locales.
-4. Keep performance and corpus gates reproducible.
+4. Keep performance and corpus gates reproducible, and turn the currently
+   optional tree-sitter SDBL oracle into an explicit CI gate only when its
+   grammar artifact can be built reproducibly.
 
 Features such as query execution, database connections, result grids, history,
 and transport are not implemented. They require separate product and security

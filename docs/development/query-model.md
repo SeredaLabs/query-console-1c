@@ -15,9 +15,13 @@ For a supported syntax change, cover:
 4. relevant comments and batches;
 5. WebView behavior when user-visible.
 
-Do not treat a successful parse as certification by the 1C platform. The optional
-tree-sitter oracle strengthens local validation when its WASM fixture is present,
-but the repository parser and regression corpus remain separate evidence.
+Do not treat a successful parse as certification by the 1C platform. The
+tree-sitter oracle strengthens local validation when its WASM fixture is
+present, but `test/fixtures/tree-sitter-sdbl.wasm` is not committed and the
+normal CI workflow does not build it. In an ordinary checkout the helper emits
+an explicit skip warning and only the repository parser/structural checks and
+regression corpus run. Making the independent grammar oracle reproducible in
+CI is still verification work, not an already active gate.
 
 ## Section order
 

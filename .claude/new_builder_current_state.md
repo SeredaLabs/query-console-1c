@@ -1,6 +1,6 @@
 # New Builder --- Current State
 
-> Updated against repository HEAD on 2026-09-23. The concise capability
+> Updated against repository HEAD on 2026-09-24. The concise capability
 > matrix lives in `.claude/new_builder_capability_map.md`; this document keeps
 > the implementation detail and invariants.
 
@@ -70,6 +70,19 @@ selection); - `SdblDock` (низ, collapsible).
 Додатково (`settings-gear`) --- усі шість мають реальний вміст (Phase
 7-11, див. §10; оновлено 2026-09-23). Ключ `workspacePlaceholder` лишився
 в i18n, але ніде не рендериться.
+
+`PackageNav` вимірює фактичні DOM-ширини, а не перемикається за наперед
+заданою кількістю запитів: повні номери Package/UNION лишаються видимими,
+доки реально вміщуються, і тільки тоді переходять у pager `current/total`.
+Package має пріоритет доступної ширини перед внутрішньою UNION-навігацією.
+
+Спільний host Classic/Canvas при `queryConsole.openInNewWindow=true`
+best-effort переносить панель у допоміжне вікно VS Code і відразу вмикає його
+compact mode; якщо команда хоста недоступна, конструктор просто лишається у
+звичайній вкладці. Canvas показує власний монохромний database/query glyph у
+`DocumentBar` і використовує прозору tab-icon, щоб у некомпактному режимі не
+було двох однакових identity-маркерів. Classic не має inline-маркера, тому
+зберігає theme-aware SVG у вкладці редактора.
 
 **Важливо (bug-fix, актуально для будь-якої майбутньої вкладки):**
 `Workspace.tsx` монтує `StructureWorkspace` ЗАВЖДИ (приховує через
@@ -555,7 +568,7 @@ Classic і New Builder ділять ЦІЛКОМ ці семантики (жод
 `isPackageTempTableName`/`allTables`/`compoundCarrierOf` викликаються з
 обох `src/webview/` і `src/webview-canvas/` без розбіжностей.
 
-## 11. Відомі обмеження / gaps (оновлено 2026-09-23)
+## 11. Відомі обмеження / gaps (оновлено 2026-09-24)
 
 **Поточний milestone:** baseline Phases 0--12 реалізований; STOP 2 ще не
 зафіксований; наступна основна фаза --- Phase 13. Phase 14 виконана
@@ -651,8 +664,8 @@ information-model без explicit approval). Це фактично закрив�
 частину Phase 18 (Final Polish) для TableCard/Structure заздалегідь ---
 типографіка, іконки, hover/selected/focus, dark/light theme вже
 консистентні; те, що з Phase 18 залишається на потім, --- accessibility
-audit і будь-яка полірування НОВИХ екранів (Fields/Conditions/...), яких
-ще немає.
+audit і системне полірування вже реалізованих Fields/Conditions/Grouping/
+Sorting/Additional та майбутніх екранів.
 
 Phase 6 (Joins Overview) --- **завершено** (2026-09-18):
 `JoinsOverview.tsx` (станом на 2026-09-23 окремого файлу немає --- список
@@ -694,13 +707,13 @@ JOIN'ів через UI (Source Browser search + JoinManagerPopover create/list
 інтегруються без спеціальних багів чи винятків у типовій перевірці
 (`fieldTypeCompat`).
 
-Відоме, свідомо прийняте обмеження (вже задокументоване в roadmap,
-підтверджене цим прогоном, НЕ регресія): фіксований grid-layout
-(auto-layout) не topology-aware, тож у хаб-таблиць (3+ вхідних зв'язки з
-різних рядків сітки) лінії йдуть діагонально через незв'язані картки ---
-читабельно завдяки kind-кольору, але візуально "гучно" при повному огляді
-складного графа. Roadmap прямо забороняє force-directed layout (§ Phase
-3) --- це узгоджений trade-off, не bug.
+Історична примітка до цього STOP 1-прогону: тоді JOIN-лінії були простими
+діагоналями й могли проходити через незв'язані картки. Цей конкретний gap
+закрито у 0.1.87: `edgeRouter.ts` будує obstacle-aware ортогональні маршрути,
+розводить паралельні ребра та порти хабів, а minimap використовує ту саму
+геометрію. Auto-layout вузлів усе ще лишається детермінованим BFS, а router не
+гарантує усунення кожного перетину у довільному циклічному графі; це вже
+вужче активне обмеження, не старе проходження ліній крізь картки.
 
 Дрібний polish-момент (не блокер): повторний клік "Авто-компоновка" при
 активному selection іноді змінює zoom/pan фокус на несподіване значення

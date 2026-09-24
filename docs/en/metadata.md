@@ -1,5 +1,5 @@
 <!--
-source_version: 3
+source_version: 4
 translation_status: canonical
 -->
 
@@ -13,10 +13,11 @@ translation_status: canonical
 1C XML export. When empty, the extension first checks each workspace's `src/cf`
 and then searches for `Configuration.xml` to a maximum depth of six directories.
 
-The parser recognizes the supported configuration-object kinds and common
-attributes, then writes a derived YAML representation and a JSON cache under
-`queryConsole.parserOutputPath`. The JSON snapshot is the normal loading path;
-YAML is the compatibility fallback.
+The primary importer reads the supported configuration-object kinds and common
+attributes directly from XML and commits a consolidated JSON snapshot under
+`queryConsole.parserOutputPath`; it does not create intermediate YAML. If that
+path fails, the extension transparently rebuilds through the older YAML
+pipeline. YAML is a compatibility fallback, not the normal loading path.
 
 ## 🔄 Build or refresh the cache
 
@@ -30,6 +31,12 @@ replaced through a sync tool that preserves file timestamps).
 The generated output is disposable and must not replace the original XML export.
 The importer stages a new generation before switching to it and avoids deleting
 an output directory it does not own.
+
+If both the direct importer and YAML fallback fail, the extension can use the
+last non-empty model saved in VS Code's extension storage. A scan that completes
+successfully with zero tables is shown honestly for that call instead of being
+silently replaced with older data; it does not overwrite the saved
+last-known-good model, and the next load scans the source again.
 
 ## 🔍 Search behavior
 

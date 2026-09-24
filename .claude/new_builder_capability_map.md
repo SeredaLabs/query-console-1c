@@ -1,6 +1,6 @@
 # New Builder — Current Capability Map
 
-> STATUS: refreshed against repository HEAD `3dba603`, 2026-09-23.
+> STATUS: refreshed against repository HEAD `86ab4eb`, 2026-09-24.
 >
 > This replaces the historical audit from HEAD `efc0a78`, where
 > `src/webview-canvas/` did not yet exist. Do not use the old “Canvas: N/A”
@@ -38,6 +38,7 @@ semantics.
 | Capability | Shared domain/core | Canvas UI | Status / remaining work |
 |---|---|---|---|
 | Open query under cursor | `tryOpenBatch` → `LOAD_BATCH` | Shared `useDesignerSession`, loading and blocking error overlays | Implemented |
+| Window/shell integration | Shared panel host owns new-window behavior and tab identity | Compact auxiliary window, responsive Package/UNION navigation, single Canvas identity glyph | Implemented; compact mode is best-effort on hosts that expose the VS Code command |
 | Save to source document | `computeBatchTextSafe`, shared apply gate, `insertResult` guards | Document Bar Save | Implemented |
 | Add/remove sources | `SelectedTable`, `ADD_TABLE`, `REMOVE_TABLE` | Source Browser + Structure cards | Implemented |
 | Reference-field expansion | Host supports `expandRef` | No Canvas control wired | UI missing |
@@ -96,9 +97,9 @@ semantics.
 
 Available guards include typecheck/build coverage for Canvas, pure geometry,
 layout and edge-router regression tests (obstacles, hub ports, parallel edges,
-crossing pressure, label placement and determinism), reducer/core tests,
-preview packaging checks, shared apply-gate tests, and
-load-failure/source-wiring tests.
+crossing pressure, label placement and determinism), responsive Package/UNION
+layout tests, designer-window/icon tests, reducer/core tests, preview packaging
+checks, shared apply-gate tests, and load-failure/source-wiring tests.
 
 The remaining material gap is a real Canvas browser E2E. The current
 `npm run test:e2e` harness bundles Classic `out/webview/main.js` only. Before

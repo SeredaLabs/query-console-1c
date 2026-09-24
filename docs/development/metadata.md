@@ -33,11 +33,18 @@ triggers a rebuild rather than being served silently (`loadMetadataSafe.ts`).
 If both the direct path and its YAML fallback fail, `metadataLoader.ts` no longer falls
 back to a legacy parser limited to Catalogs/Documents. Instead it reads a
 last-known-good snapshot from `context.globalStorageUri`
-(`lastKnownGoodCache.ts`) — the last successfully built FULL model, written
-best-effort after every successful load. `globalStorageUri` is a different
+(`lastKnownGoodCache.ts`) — the last successfully built non-empty FULL model,
+written best-effort after trustworthy loads. `globalStorageUri` is a different
 failure domain from the workspace-relative output directory the snapshot/YAML
 paths write to: it stays writable even when that workspace directory does not
 (read-only mount, permission-restricted workspace). An empty model with no
 last-known-good is preferred over a silently incomplete one.
+
+A completed scan that returns zero tables is not classified as a load failure:
+the current caller receives that empty result (`unknown != invalid`) and the
+next call scans normally. It is deliberately not allowed to overwrite the
+last-known-good snapshot. Last-known-good substitution happens only after the
+normal direct/YAML paths actually fail, so it cannot make an empty or
+temporarily incomplete source look current forever.
 
 Performance fixtures and commands are described in [performance](performance.md).

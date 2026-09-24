@@ -409,9 +409,9 @@ All notable changes are recorded here. The project uses
 ### Fixed
 
 - Hovering over a field on a virtual-table source (e.g.
-  `Остатки.КоличествоОстаток`) now shows the field itself — its type, and for
-  накопления/бухгалтерии resource fields, which base register resource it
-  came from (`Количество`) — instead of only the source table name.
+  `Остатки.КоличествоОстаток`) now shows the field itself and, for
+  накопления/бухгалтерии resource fields, which base register resource it came
+  from (`Количество`) — instead of only the source table name.
 
 ## 0.1.55 - 2026-09-13
 

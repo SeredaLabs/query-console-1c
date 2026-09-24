@@ -48,8 +48,10 @@
   virtual-table parameters, fields of temporary tables (their columns are
   inferred heuristically), and conditions inside subqueries -- see the next
   item. Editor diagnostics run syntax checks only, and hover/completion on a
-  temporary-table alias show nothing (`tempTableVisibility.ts` exists but is
-  not wired into hover or the validator).
+  temporary-table alias have no field schema to show. The position-aware
+  lifetime helper in `tempTableVisibility.ts` is tested, but no consumer yet
+  connects the parser's inferred schema for those visible names to hover,
+  completion, or field validation.
 - A bare field in a standard condition of a sole-source subquery is bound by
   the parser to that source even when the source lacks the field and the
   field really belongs to an enclosing query (a valid correlated reference):
@@ -62,6 +64,26 @@
 
 These are documented user boundaries, not permission to weaken tests. Add a
 regression test when fixing one and update all three limitations pages.
+
+## Active verification limitation
+
+- The independent tree-sitter SDBL grammar oracle is not a standard CI gate.
+  `assertValidSdbl.ts` uses it only when
+  `test/fixtures/tree-sitter-sdbl.wasm` exists; that fixture is not committed
+  and `.github/workflows/release.yml` does not build it. Ordinary local/CI
+  runs emit a skip warning and rely on the repository parser, structural
+  checks, and committed corpus. `tooling/scripts/build-wasm.sh` is the current
+  opt-in local path, not evidence that the oracle ran in CI.
+
+## Intentional metadata fallback behavior
+
+- A direct/YAML metadata scan that completes successfully with zero tables
+  returns that empty model for the current call. It does not substitute the
+  last-known-good model, because a successful but unknown result is not
+  classified as an invalid one. The empty model cannot overwrite the saved
+  last-known-good snapshot, and the next call rescans normally, so this is not
+  the former persistent warm-cache failure. Last-known-good is used only when
+  the normal metadata paths actually fail.
 
 ## Permanent scope boundary: virtual-table `Субконто`/`Разрезы`/`Измерения*` hover and completion
 
@@ -107,7 +129,7 @@ Hover (`describeChain`) and autocomplete (`resolveCompletionTarget`), both in
 `hoverFieldInfo.ts`, used to resolve a table alias across the whole query
 batch, first-match -- a repeated alias for a different source elsewhere in
 the same batch could show/suggest the wrong table. As of the semantic-core
-roadmap's Phase 3d/3e (memory: project-semantic-core-roadmap), both share
+roadmap's Phase 3d/3e, both share
 `resolveHeadTable`, which uses only `resolveAliasAt`, a position-aware resolver
 that respects real JOIN-condition scoping and nearest-ancestor subquery
 correlation (live-verified against real 1C). The old flat `findAliasTable`

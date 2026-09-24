@@ -24,24 +24,24 @@ canonical output (`test/fixtures/corpus/golden.jsonl`), currently gated at
 exactly 1976/1976 matching queries in the fast, committed suite
 (`test/unit/corpusRegression.test.ts`), with a larger 17933-query corpus run
 available via `npm run accept:oracle` for changes that need broader
-confidence than the committed subset. Any reader/writer of `QueryModel` that
-matters for user-visible correctness (semantic validation, hover, completion,
-the read-only analysis service backing the "Structure"/"Parameters" panels
-and status bar) MUST go through the same `tryOpenBatch`/`parseBatch` entry
-point as the real Apply path — never a second, parallel parse — so that
-what's shown to the user can never diverge from what Apply will actually do
-(`queryAnalysisService.ts`'s `analyze()` docstring states this explicitly and
-is the enforcement point).
+confidence than the committed subset. Surfaces that decide whether a model can
+be applied, or present strict model-derived analysis, MUST reuse the production
+parse and validation path rather than implement a parallel parser. Apply and
+the read-only Query Text analysis service use `tryOpenBatch`. Advisory editor
+features such as hover and completion share the `parseBatch`-backed semantic
+snapshot, but may use its explicit recovery path so that useful assistance can
+survive temporarily incomplete text. They must not introduce a separate grammar
+or change the generated query contract.
 
 ## Consequences
 
 - A syntax or generation change is not "done" until it passes a full corpus
   run, not just the specific case that motivated it — narrow gates against a
   stale or hand-picked golden subset have previously masked regressions.
-- Any new "read the query for informational purposes" feature (a future
-  hover/analysis/lint-style feature, for example) must reuse
-  `tryOpenBatch`/`parseBatch`, not implement its own parse, or it risks
-  showing something Apply would not actually produce.
+- A new read-only feature must choose its contract deliberately: strict
+  Apply-parity uses `tryOpenBatch`; advisory editor assistance may use
+  `buildSemanticSnapshotFromText` and expose its incomplete/fail-open result.
+  Both paths reuse the repository parser rather than introducing a second one.
 - Full test-direction requirements (text→model, model→text, round-trip,
   comments/batches, WebView behavior) are enumerated in
   [`query-model.md`](../query-model.md); this record is about the contract's

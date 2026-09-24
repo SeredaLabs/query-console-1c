@@ -17,6 +17,13 @@ Vitest covers core, extension helpers, locale selection, and regression corpus.
 Playwright covers the WebView harness. `@vscode/test-electron` covers command
 registration, editor insertion, and metadata flow inside a real Extension Host.
 
+The independent tree-sitter SDBL grammar is currently an opt-in local check,
+not part of the standard gate: `test/fixtures/tree-sitter-sdbl.wasm` is not
+committed and CI does not build it. `assertValidSdbl` prints a warning and
+falls back to the committed corpus/structural checks when the fixture is
+absent. `tooling/scripts/build-wasm.sh` documents the current local build path;
+do not report the grammar oracle as executed unless the fixture was present.
+
 Snapshot, corpus, or generated-output changes require an explanation of affected
 case counts and representative transitions. Never update them blindly.
 

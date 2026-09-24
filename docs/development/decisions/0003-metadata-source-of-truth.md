@@ -33,6 +33,12 @@ in order:
    empty model with no last-known-good is preferred over silently serving an
    incomplete one.
 
+A completed direct/YAML scan that returns zero tables is an honest result for
+that call, not a failure that triggers last-known-good substitution. It does
+not overwrite an existing last-known-good snapshot, and a later call scans the
+source again. This preserves the `unknown != invalid` boundary without
+creating a warm-cache trap.
+
 Both the JSON-snapshot and YAML generations build in a staging directory and
 switch over only after successful completion (`generationStore.ts`), guarded
 by an ownership marker that prevents deleting a directory this extension
