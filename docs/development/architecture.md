@@ -47,9 +47,10 @@ together and cover both directions. Keep VS Code and browser dependencies out of
 `src/core`.
 
 `src/extension/metadataLoader.ts` owns asynchronous metadata loading and
-last-known-good caching; `panel.ts` (Classic) and `canvasPanel.ts` (Canvas) own
-their message bridges. Changes there require Extension Host coverage as well as
-WebView tests.
+last-known-good caching. `panel.ts` owns the shared designer-panel host and the
+entire message bridge for both Classic and Canvas; `canvasPanel.ts` is only a
+thin Canvas-specific configuration wrapper around that host. Changes to the
+shared bridge require Extension Host coverage as well as both WebView paths.
 
 ## Known internal coupling
 

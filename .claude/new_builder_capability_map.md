@@ -69,7 +69,7 @@ semantics.
 | UNION / UNION ALL members | Existing union document/actions | Responsive UnionStrip | Implemented |
 | Positional UNION mapping | `deriveUnionColumns`, alias and move actions | Union mapping dialog | Implemented without an invented explicit-mapping object |
 | Generated SDBL | Shared generator | Read-only highlighted CodeMirror dock, copy, resize, collapse | Implemented |
-| Workspace ↔ SDBL cross-highlight | Source maps exist in core, but no approved Canvas mapping contract | None | Remaining Phase 15 work |
+| Workspace ↔ SDBL cross-highlight | Parser-input source maps exist for semantic lookups; the generator does not emit QueryState-to-generated-text ranges, and no Canvas mapping contract is approved | None | Remaining Phase 15 work |
 | Table alias editing | `SelectedTable.alias` exists, but no reducer action | Read-only display | Requires an approved reducer addition |
 | Query execution/results | Not part of the product boundary | None | Explicitly out of scope |
 
