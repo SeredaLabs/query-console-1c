@@ -7,7 +7,7 @@ import type { QueryAction, QueryState } from '../../webview/state/queryStore';
 import { allTables } from '../../webview/state/queryStore';
 import { MetaKindIcon } from '../../webview/components/MetaKindIcon';
 import { JoinKindPicker } from '../structure/JoinKindPicker';
-import { joinKindLabel, joinKindVisual } from '../structure/joinKind';
+import { joinKindLabel } from '../structure/joinKind';
 import type { StructureSelection } from '../structure/StructureWorkspace';
 import { t } from '../i18n';
 import { groupLabel } from '../../webview/metadataTreeModel';
@@ -71,21 +71,6 @@ const BADGE: React.CSSProperties = {
   padding: '1px 6px',
   marginTop: 4,
   marginRight: 4,
-};
-
-const SOURCE_PILL: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 600,
-  color: TOKENS.text,
-  background: TOKENS.surface2,
-  border: `1px solid ${TOKENS.border}`,
-  borderRadius: 6,
-  padding: '4px 10px',
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  flex: '1 1 0',
-  minWidth: 0,
 };
 
 /** Dark-themed `<select>` — рідний браузерний білий select дуже сильно

@@ -236,17 +236,17 @@ describe('describeChain', () => {
 });
 
 /**
- * Semantic Core v1 Freeze Audit — the one confirmed real gap: temp-table
- * (`ПОМЕСТИТЬ`) source visibility is computed by `tempTableVisibility.ts`
- * (Phase 2c), but that computation has NO consumer anywhere in `describeChain`'s
- * resolution path — the hover/completion metadata resolver (`getMetadataResolver`,
- * built from the XML config) never learns about a temp table created mid-batch.
+ * Semantic Core v1 Freeze Audit — the one confirmed real gap: the parser and
+ * QueryState track temp-table (`ПОМЕСТИТЬ`) schemas/lifetimes for their own
+ * flows, but `describeChain` has no shared position-aware temp-table schema in
+ * its resolution path — the hover/completion metadata resolver
+ * (`getMetadataResolver`, built from the XML config) never learns about a temp
+ * table created mid-batch.
  * This locks in the CURRENT, safe behavior (fail-open on the FIELD, no fallback
  * onto unrelated metadata) so a future "helpful" fallback added to
  * `resolveHeadTable` (the same shape of change that added the virtual-table
  * fallback) can't start guessing wrong for temp tables without this test
- * catching it first. NOT a fix, NOT a change to `computeTempTableVisibility`
- * (still unwired) — a regression lock on today's contract.
+ * catching it first. NOT a fix — a regression lock on today's contract.
  */
 describe('describeChain: temp-table source alias field hover (Semantic Core v1 Freeze Audit)', () => {
   const NOMENKLATURA: MetaTable = {

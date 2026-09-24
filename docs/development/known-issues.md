@@ -48,10 +48,10 @@
   virtual-table parameters, fields of temporary tables (their columns are
   inferred heuristically), and conditions inside subqueries -- see the next
   item. Editor diagnostics run syntax checks only, and hover/completion on a
-  temporary-table alias have no field schema to show. The position-aware
-  lifetime helper in `tempTableVisibility.ts` is tested, but no consumer yet
-  connects the parser's inferred schema for those visible names to hover,
-  completion, or field validation.
+  temporary-table alias have no field schema to show. The parser and QueryState
+  track temporary-table schemas/lifetimes for their own flows, but no shared
+  position-aware schema currently connects them to hover, completion, or field
+  validation.
 - A bare field in a standard condition of a sole-source subquery is bound by
   the parser to that source even when the source lacks the field and the
   field really belongs to an enclosing query (a valid correlated reference):

@@ -40,4 +40,19 @@ describe('Canvas reuses Classic code instead of copying it', () => {
     expect(src).toContain('createDesignerPanel(');
     expect(src).not.toMatch(/onDidReceiveMessage|function getHtml|function nonce/);
   });
+
+  it('query generation stays local to the WebView instead of using a dead host round-trip', () => {
+    const messages = read('shared/messages.ts');
+    const panel = read('extension/panel.ts');
+    expect(messages).not.toMatch(/generatedText|type:\s*'generate'/);
+    expect(panel).not.toMatch(/sdblGenerator|msg\.type === 'generate'/);
+  });
+
+  it('condition-mode controls do not create a Toolbar/JoinManagerPopover import cycle', () => {
+    const popover = read('webview-canvas/structure/JoinManagerPopover.tsx');
+    const toggle = read('webview-canvas/structure/ConditionModeToggle.tsx');
+    expect(popover).toContain("from './ConditionModeToggle'");
+    expect(popover).not.toContain("from './Toolbar'");
+    expect(toggle).not.toMatch(/from '\.\/(?:Toolbar|JoinManagerPopover)'/);
+  });
 });

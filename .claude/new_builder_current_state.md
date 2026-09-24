@@ -199,7 +199,7 @@ Inspector тепер мають ОДНАКОВУ структуровану фо
 icon+color на кожен тип (INNER=`chartBlue`/`arrow-swap`,
 LEFT=`chartOrange`/`arrow-left`, FULL=`chartPurple`/`combine` —
 навмисно НЕ accent/success, щоб не конфліктувати з selection/inclusion
-семантикою). `ConditionModeToggle` (`structure/Toolbar.tsx`, exported)
+семантикою). `ConditionModeToggle` (`structure/ConditionModeToggle.tsx`, exported)
 — перемикач "Поле"/"Довільний вираз", відкриває доступ до вже існуючих
 `SET_JOIN_CUSTOM`/`SET_JOIN_EXPRESSION` (раніше в UI не було входу,
 хоча reducer підтримував). Редагування в Inspector — лише для

@@ -216,44 +216,6 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
 }
 
 /**
- * Ставит перенос строки перед каждым ВЕРХНЕУРОВНЕВЫМ оператором И/ИЛИ (вне скобок и
- * строк; `И` диапазона `МЕЖДУ a И b` не трогает). Если условие уже многострочное,
- * существующие переносы сохраняются (повторных не добавляем). Используется для
- * разбивки составного условия виртуальной таблицы по конъюнктам.
- */
-function splitTopLevelBool(expr: string): string {
-  const n = expr.length;
-  const isWordChar = (c: string | undefined): boolean => c !== undefined && /[\p{L}\p{N}_]/u.test(c);
-  let depth = 0;
-  let inStr = false;
-  let betweenPending = 0;
-  let out = '';
-  for (let i = 0; i < n; i++) {
-    const c = expr[i];
-    if (inStr) { out += c; if (c === '"') inStr = false; continue; }
-    if (c === '"') { inStr = true; out += c; continue; }
-    if (c === '(') { depth++; out += c; continue; }
-    if (c === ')') { depth--; out += c; continue; }
-    if (depth === 0 && !isWordChar(expr[i - 1])) {
-      const up = expr.slice(i, i + 6).toUpperCase();
-      if (up.startsWith('МЕЖДУ') && !isWordChar(expr[i + 5])) { betweenPending++; out += c; continue; }
-      const isIli = up.startsWith('ИЛИ') && !isWordChar(expr[i + 3]);
-      const isI = expr[i].toUpperCase() === 'И' && !isWordChar(expr[i + 1]);
-      if (isI && betweenPending > 0) { betweenPending--; out += c; continue; }
-      if (isIli || isI) {
-        // Заменяем предшествующий пробел/перенос на ровно один перенос строки
-        // (существующий перенос многострочного ввода не удваиваем).
-        out = out.replace(/[ \t\n]*$/u, '') + '\n';
-        out += c;
-        continue;
-      }
-    }
-    out += c;
-  }
-  return out;
-}
-
-/**
  * Печатает параметры виртуальной таблицы. Если условие (последний параметр) —
  * СОСТАВНОЕ (есть верхнеуровневый И/ИЛИ), конструктор 1С разбивает все параметры
  * по строкам: `Имя(\n\t\t\tП1,\n\t\t\t<условие>...)` с параметрами на bodyTabs+2,
@@ -1716,7 +1678,6 @@ function isConstGroupExpr(expression: string | undefined): boolean {
  * запросе); при `suppress` не вызывается.
  */
 function renderTabProjection(
-  model: QueryModel,
   tsf: SelectedTabSectionField,
   aliases: Map<string, string>,
   opts: { suppress: boolean; outerAlias?: (name: string, explicit: string | undefined) => string }
@@ -1921,7 +1882,7 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
   };
 
   const tsLine = (tsf: SelectedTabSectionField): string =>
-    renderTabProjection(model, tsf, aliases, {
+    renderTabProjection(tsf, aliases, {
       suppress: false,
       // Дедупликация псевдонима всей ТЧ (как раньше): явный — как есть, авто — через
       // наименьший целый суффикс при коллизии.
@@ -2414,7 +2375,6 @@ function buildUnionBlocksScalar(members: UnionMember[]): string[] {
 function buildUnionBlocksWithTabSection(members: UnionMember[]): string[] {
   const memberEls = members.map(m => orderedSelectElements(m.model));
   const width = memberEls.reduce((w, els) => Math.max(w, els.length), 0);
-  const head = memberEls[0] ?? [];
   return members.map((m, i) => {
     const aliases = resolveAliases(m.model.tables);
     const fieldLines: string[] = [];
@@ -2422,7 +2382,7 @@ function buildUnionBlocksWithTabSection(members: UnionMember[]): string[] {
       const el = memberEls[i][ci];
       if (el === undefined) { fieldLines.push('\tNULL'); continue; }
       if (el.kind === 'ts') {
-        fieldLines.push(renderTabProjection(m.model, el.tsf, aliases, { suppress: i !== 0 }));
+        fieldLines.push(renderTabProjection(el.tsf, aliases, { suppress: i !== 0 }));
         continue;
       }
       const expr = fieldExpr(m.model, el.field);

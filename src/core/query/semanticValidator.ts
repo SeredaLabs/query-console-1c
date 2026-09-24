@@ -25,7 +25,7 @@
  * проверяются вовсе.
  */
 import type { BatchDocument } from './batchModel';
-import type { QueryDocument, UnionMember } from './unionModel';
+import type { QueryDocument } from './unionModel';
 import { orderedSelectElements } from './unionModel';
 import type { QueryModel, SelectedTable, Condition } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';

@@ -16,9 +16,10 @@ without the compiler catching the other.
 `src/shared/messages.ts` is the ONLY channel contract between the extension
 host and the WebView, and it is small and closed by construction: a
 discriminated union `HostMsg` (host → WebView: `init`, `metadataTree`,
-`refFields`, `generatedText`, `refreshResult`, `loadModel`) and a
+`refFields`, `refreshResult`, `loadModel`) and a
 discriminated union `WebviewMsg` (WebView → host: `ready`, `expandRef`,
-`generate`, `insertText`, `cancel`, `refreshCache`). Both sides import these
+`insertText`, `cancel`, `refreshCache`). Query generation stays inside the
+WebView and does not cross this boundary. Both sides import these
 types instead of hand-rolling ad hoc message shapes; `panel.ts`
 (`postMessage`/`onDidReceiveMessage`) and `src/webview/bridge.ts`
 (`postToHost`/`onHostMessage`) are the only two files that touch the raw

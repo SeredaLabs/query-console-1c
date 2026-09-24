@@ -2651,7 +2651,7 @@ class ArithReprinter {
       const op = this.next().value;
       const right = this.parseTerm();
       left = {
-        text: `${this.wrap(left, 1, 'left', op)} ${op} ${this.wrap(right, 1, 'right', op)}`,
+        text: `${this.wrap(left, 1, 'left')} ${op} ${this.wrap(right, 1, 'right')}`,
         prec: 1,
         bareCast: false,
       };
@@ -2665,7 +2665,7 @@ class ArithReprinter {
       const op = this.next().value;
       const right = this.parseUnary();
       left = {
-        text: `${this.wrap(left, 2, 'left', op)} ${op} ${this.wrap(right, 2, 'right', op)}`,
+        text: `${this.wrap(left, 2, 'left')} ${op} ${this.wrap(right, 2, 'right')}`,
         prec: 2,
         bareCast: false,
       };
@@ -2775,7 +2775,7 @@ class ArithReprinter {
    *   - prec < parentPrec → нужны скобки (защита приоритета).
    *   - prec == parentPrec и правый операнд под `- /` (non-assoc) → скобки.
    */
-  private wrap(n: ArithNode, parentPrec: number, side: 'left' | 'right', op: string): string {
+  private wrap(n: ArithNode, parentPrec: number, side: 'left' | 'right'): string {
     if (n.bareCast) return `(${n.text})`;
     if (n.prec < parentPrec) return `(${n.text})`;
     // Правый операнд при равном приоритете ВСЕГДА сохраняет скобки: конструктор 1С
@@ -3304,11 +3304,6 @@ class Parser {
   }
   private atEof(): boolean {
     return this.peek().type === 'eof';
-  }
-
-  /** Срез исходной строки [from, to) с обрезкой хвостовых пробелов. */
-  private slice(from: number, to: number): string {
-    return this.raw.slice(from, to).replace(/\s+$/u, '');
   }
 
   /**

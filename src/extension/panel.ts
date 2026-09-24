@@ -6,12 +6,10 @@ import { createMetadataRepository } from '../core/metadata/metadataRepository';
 import { resolveOutPath, loadMetadata, isTrustworthyForLastKnownGood } from './metadataLoader';
 import { setMetadataResolver } from './metadataResolverCache';
 import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
-import { generate } from '../core/query/sdblGenerator';
 import { insertResult } from './insertResult';
 import type { SavedEditorState } from './insertResult';
 import type { HostMsg, WebviewMsg } from '../shared/messages';
 import type { MetadataModel } from '../core/metadata/types';
-import type { QueryModel } from '../core/query/queryModel';
 import { normalizeLocale } from '../shared/locale';
 import { moveDesignerToCompactWindow } from './designerWindow';
 
@@ -67,7 +65,7 @@ export function createPanel(
 /**
  * The designer panel host shared by Classic (`createPanel`) and Canvas
  * (`canvasPanel.ts`): HTML/CSP, metadata loading, the whole message bridge
- * (init/metadataTree/loadModel, expandRef, generate, insertText, cancel,
+ * (init/metadataTree/loadModel, expandRef, insertText, cancel,
  * refreshCache) and the new-window option. Both UIs speak the same protocol
  * (`shared/messages.ts`), so the host side is not duplicated per UI.
  */
@@ -147,14 +145,6 @@ export function createDesignerPanel(
       const repository = createMetadataRepository(metadataModel.tables);
       const table = repository.findTable(ref.kind, ref.name);
       const reply: HostMsg = { type: 'refFields', ref, fields: table?.fields ?? [] };
-      panel.webview.postMessage(reply);
-    } else if (msg.type === 'generate') {
-      const text = generate(msg.model as QueryModel);
-      if (!text) {
-        vscode.window.showInformationMessage(vscode.l10n.t('Select at least one table and one field.'));
-        return;
-      }
-      const reply: HostMsg = { type: 'generatedText', text };
       panel.webview.postMessage(reply);
     } else if (msg.type === 'insertText') {
       await insertResult(msg.text, savedEditor);

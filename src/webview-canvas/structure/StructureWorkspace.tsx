@@ -427,7 +427,6 @@ export function StructureWorkspace({
               routes={joinGeometry}
               positions={positions}
               cardSize={cardSize}
-              content={contentBox}
               viewportWorld={viewportWorld}
               scaleTransform={minimapScaleTransform}
               onPanTo={handlePanTo}

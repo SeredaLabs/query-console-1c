@@ -7,7 +7,6 @@ import type { Pos, Size } from './layout';
 
 const MAP_WIDTH = 160;
 const MAP_HEIGHT = 100;
-const PADDING = 6;
 
 /**
  * Навігаційний minimap (Phase 3C) — НЕ domain representation, читає ті самі
@@ -21,7 +20,6 @@ export function Minimap({
   routes,
   positions,
   cardSize,
-  content,
   viewportWorld,
   scaleTransform,
   onPanTo,
@@ -30,7 +28,6 @@ export function Minimap({
   routes: ReadonlyArray<{ points: readonly Point[] } | null>;
   positions: Record<string, Pos>;
   cardSize: (id: string) => Size;
-  content: Rect;
   viewportWorld: Rect;
   scaleTransform: { scale: number; offsetX: number; offsetY: number };
   onPanTo: (worldPoint: Point) => void;

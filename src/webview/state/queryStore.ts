@@ -3,7 +3,7 @@ import type { SelectedTable, SelectedField, SelectedTabSectionField, VirtualPara
 import { defaultTableAlias } from '../../core/query/queryModel';
 import type { RefId } from '../../shared/messages';
 import type { MetaField } from '../../core/metadata/types';
-import { fieldAlias, deriveUnionColumns, type UnionMember, type QueryDocument } from '../../core/query/unionModel';
+import { fieldAlias, deriveUnionColumns, type QueryDocument } from '../../core/query/unionModel';
 import type { BatchDocument } from '../../core/query/batchModel';
 import {
   assembleBatch,

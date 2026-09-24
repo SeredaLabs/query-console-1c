@@ -2649,7 +2649,6 @@ const EXPR_TERMINATOR_WORDS = new Set<string>([
 function qualifyBareFieldsInExpression(
   tokens: Token[],
   source: string,
-  aliasToId: Map<string, string>,
   aliasSpelling: Map<string, string>,
   soleAlias: string | undefined
 ): string {
@@ -2921,7 +2920,7 @@ function interpretCondition(
   // к объявленному. Без единственного источника — дословный срез, как раньше.
   const customText = (): string =>
     soleSource && aliasSpelling
-      ? qualifyBareFieldsInExpression(tokens, source, aliasToId, aliasSpelling, soleSource.alias)
+      ? qualifyBareFieldsInExpression(tokens, source, aliasSpelling, soleSource.alias)
       : sliceSource(source, tokens);
   // Скобки вокруг условия-параметра целиком (`И (&ТекстУсловия)` → `И &ТекстУсловия`):
   // конструктор 1С снимает скобки, когда всё условие ГДЕ — единственный голый
@@ -3085,7 +3084,7 @@ function trySimpleCondition(
     ? (aliasSpelling?.get(lhs[0].text.toUpperCase()) ?? lhs[0].text)
     : soleSource!.alias;
   const rhsText = aliasSpelling
-    ? qualifyBareFieldsInExpression(paramTokens, source, aliasToId, aliasSpelling, soleSource?.alias)
+    ? qualifyBareFieldsInExpression(paramTokens, source, aliasSpelling, soleSource?.alias)
     : param;
   const expr = `${lhsAlias}.${ref.path} ${renderOperatorRhs(op, normalizeLeafCase(rhsText))}`;
   // Консервативный гейт: выражение, заводящее форматер (ВЫБОР/ИЛИ/НЕ-группа),
@@ -4544,7 +4543,7 @@ interface RawUnionMember {
  * корректно определял конец. Позиции токенов абсолютны относительно исходного
  * текста — сырые срезы (`sliceSource`) работают без модификаций.
  */
-function splitUnionMembers(tokens: Token[], source: string): RawUnionMember[] {
+function splitUnionMembers(tokens: Token[]): RawUnionMember[] {
   const members: RawUnionMember[] = [];
   let current: Token[] = [];
   let nextDistinct = false; // distinct участника 0 — false по соглашению.
@@ -4730,7 +4729,7 @@ function parseDocumentInner(
   sourceMap?: SourceMapSink,
 ): QueryDocument {
   const tokens = tokenize(text);
-  const raw = splitUnionMembers(tokens, text);
+  const raw = splitUnionMembers(tokens);
 
   // Контекст секций (УПОРЯДОЧИТЬ/ИТОГИ/ИНДЕКС) первого участника: секции стоят
   // после последнего участника, но конструктор 1С резолвит их по участнику 0.

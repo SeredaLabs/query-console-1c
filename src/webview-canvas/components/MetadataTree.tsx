@@ -8,7 +8,7 @@ import type { SupportedLocale } from '../../shared/locale';
 import { t } from '../i18n';
 import {
   GROUP_KINDS, groupLabel, tokenizeSearch, buildRenderModel,
-  type RenderField, type RenderTs, type RenderTable,
+  type RenderTs, type RenderTable,
 } from '../../webview/metadataTreeModel';
 import { TOKENS } from '../theme';
 

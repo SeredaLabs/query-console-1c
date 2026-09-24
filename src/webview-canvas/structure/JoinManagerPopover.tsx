@@ -5,7 +5,7 @@ import { defaultTableAlias, type ConditionOperator, type Join, type SelectedTabl
 import type { SupportedLocale } from '../../shared/locale';
 import { t } from '../i18n';
 import { SECTION_LABEL, TOKENS } from '../theme';
-import { ConditionModeToggle, type ConditionMode } from './Toolbar';
+import { ConditionModeToggle, type ConditionMode } from './ConditionModeToggle';
 import { JoinKindPicker } from './JoinKindPicker';
 import { joinKindLabel, type JoinKindLabel } from './joinKind';
 import { CONDITION_OPERATORS } from '../../webview/conditionOperators';

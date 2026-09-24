@@ -321,7 +321,6 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
             onFocusTable={fullName => dispatch({ type: 'FOCUS_DB_TABLE', fullName })}
             onFocusField={(tableFullName, fieldPath) => dispatch({ type: 'FOCUS_DB_FIELD', tableFullName, fieldPath })}
             onExpandRef={ref => onExpandRef(ref)}
-            onAddTable={table => dispatch({ type: 'ADD_TABLE', table })}
             onAddField={(_tableFullName, _fieldPath) => { /* drag to FieldsPanel instead */ }}
           />
         </div>

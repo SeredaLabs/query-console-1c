@@ -22,9 +22,7 @@ const HEADER_STYLE: React.CSSProperties = {
 /**
  * SDBL dock (Phase 7): реальний `generate()`, той самий client-side шлях, що
  * й Classic (`computeBatchTextSafe` — `assembleBatch` + `generateBatch`, без
- * жодного host round-trip; `type: 'generate'`/`'generatedText'` у
- * messages.ts/panel.ts — мертвий шлях, Classic ним теж не користується,
- * генерація завжди локальна в webview). Раніше тут була статична Phase-1
+ * жодного host round-trip; генерація завжди локальна в webview). Раніше тут була статична Phase-1
  * заглушка — тепер `text`/`error` приходять з `computeBatchTextSafe(state)`
  * в App.tsx.
  *

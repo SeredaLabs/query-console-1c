@@ -8,7 +8,6 @@
  *   node out/cli/oracleDiff.js --reason mismatch --grep "ПО (" --limit 10
  */
 import * as fs from 'fs';
-import * as path from 'path';
 import { parseBatch } from '../core/query/sdblParser';
 import { generateBatch } from '../core/query/sdblGenerator';
 import { getConfig, goldenPath } from './corpusConfig';

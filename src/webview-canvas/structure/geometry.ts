@@ -87,36 +87,6 @@ export function anchorPoints(a: Rect, b: Rect): { a: Point; b: Point } {
     : { a: { x: ca.x, y: a.y }, b: { x: cb.x, y: b.y + b.height } }; // a нижче → a.top, b.bottom
 }
 
-/**
- * Плавна вигнута JOIN-лінія (gap analysis: "можна лінію робити плавнішою
- * вигнутішою в залежності від розміщення джерел") — cubic bezier, а не
- * пряма. Контрольні точки зсунені вздовж ДОМІНУЮЧОЇ осі з'єднання (тієї ж,
- * яку вже визначає `anchorPoints` — горизонтальної для left/right anchors,
- * вертикальної для top/bottom), тож крива завжди "виходить"/"заходить" у
- * картку вздовж цієї осі, а не під довільним кутом. Коли anchor-точки
- * лежать на одній лінії вздовж домінуючої осі — контрольні точки
- * збігаються з самими точками, і крива вироджується в пряму (як і було
- * раніше); чим більший перпендикулярний зсув — тим виразніший S-вигин.
- * `mid` — точка РІВНО на цій кривій (t=0.5, кубічна формула), а не проста
- * лінійна середина `(a+b)/2` — інакше badge/маркери "плавали" б поза
- * лінією для вигнутих з'єднань.
- */
-export function joinCurve(a: Point, b: Point): { d: string; mid: Point } {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const horizontal = Math.abs(dx) >= Math.abs(dy);
-  const bend = Math.min(horizontal ? Math.abs(dx) : Math.abs(dy), 80) * 0.5;
-  const c1: Point = horizontal ? { x: a.x + (dx >= 0 ? bend : -bend), y: a.y } : { x: a.x, y: a.y + (dy >= 0 ? bend : -bend) };
-  const c2: Point = horizontal ? { x: b.x - (dx >= 0 ? bend : -bend), y: b.y } : { x: b.x, y: b.y - (dy >= 0 ? bend : -bend) };
-  const d = `M ${a.x} ${a.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${b.x} ${b.y}`;
-  // Кубічна безьє в t=0.5: 0.125·P0 + 0.375·P1 + 0.375·P2 + 0.125·P3.
-  const mid: Point = {
-    x: 0.125 * a.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * b.x,
-    y: 0.125 * a.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * b.y,
-  };
-  return { d, mid };
-}
-
 /** Об'єднана bounding box набору прямокутників; null якщо порожньо. */
 export function boundingBox(rects: Rect[]): Rect | null {
   if (rects.length === 0) return null;

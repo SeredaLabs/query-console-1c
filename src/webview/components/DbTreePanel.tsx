@@ -20,7 +20,6 @@ interface Props {
   onFocusTable: (fullName: string) => void;
   onFocusField: (tableFullName: string, fieldPath: string) => void;
   onExpandRef: (ref: RefId) => void;
-  onAddTable: (table: MetaTable) => void;
   onAddField: (tableFullName: string, fieldPath: string) => void;
   /** 7.8.17: временные таблицы, доступные активному запросу пакета (отдельная группа). */
   tempTables?: MetaTable[];
@@ -189,7 +188,7 @@ function TabularSectionNode({ ts, fields, expandedRefs, collapsedRefs, onToggleC
   );
 }
 
-export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focusedFieldPath, onFocusTable, onFocusField, onExpandRef, onAddTable, onAddField, tempTables = [] }: Props): React.ReactElement {
+export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focusedFieldPath, onFocusTable, onFocusField, onExpandRef, onAddField, tempTables = [] }: Props): React.ReactElement {
   const [expandedGroups, setExpandedGroups] = React.useState<Set<TableKind>>(new Set());
   const [expandedTables, setExpandedTables] = React.useState<Set<string>>(new Set());
   const [expandedTsSections, setExpandedTsSections] = React.useState<Set<string>>(new Set());
