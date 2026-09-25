@@ -2,6 +2,7 @@ import en from './en.json';
 import uk from './uk.json';
 import ru from './ru.json';
 import type { SupportedLocale } from '../../shared/locale';
+import type { FieldNotFoundDetails, FieldValidationSection } from '../../core/query/semanticValidator';
 
 type Messages = typeof en;
 export type MessageKey = keyof Messages;
@@ -42,6 +43,27 @@ export function localizeDiagnostic(message: string): string {
   if (match) return t('diagnostic.fieldNotFound', { field: match[1], table: match[2] });
   if (activeLocale !== 'ru' && /[А-Яа-яЁё]/.test(message)) return t('diagnostic.unknownCoreError');
   return message;
+}
+
+const FIELD_SECTION_KEYS: Record<FieldValidationSection, MessageKey> = {
+  select: 'diagnostic.section.select',
+  grouping: 'diagnostic.section.grouping',
+  order: 'diagnostic.section.order',
+  totals: 'diagnostic.section.totals',
+  indexing: 'diagnostic.section.indexing',
+  join: 'diagnostic.section.join',
+  where: 'diagnostic.section.where',
+  having: 'diagnostic.section.having',
+};
+
+/** Additional context for a field error; the stable core message remains separate. */
+export function localizeFieldNotFoundContext(details: FieldNotFoundDetails): string {
+  return t('diagnostic.fieldContext', {
+    query: details.statementIndex + 1,
+    section: t(FIELD_SECTION_KEYS[details.section]),
+    source: details.sourceAlias ?? details.sourceFullName,
+    path: details.requestedPath,
+  });
 }
 
 function localizeCoreDetail(detail: string): string {

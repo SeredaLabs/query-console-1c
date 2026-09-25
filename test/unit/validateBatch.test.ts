@@ -259,6 +259,20 @@ describe('tryOpenBatch: structured diagnostic (plumbing refactor — structured 
     expect(r.diagnostic?.col).toBeUndefined();
   });
 
+  it('несуществующее поле передаёт structured details, не меняя старый error string', () => {
+    const r = tryOpenBatch('ВЫБРАТЬ Т.Цена ИЗ Справочник.Валюты КАК Т', resolver);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error).toBe('Поле "Цена" не найдено в "Справочник.Валюты"');
+    expect(r.diagnostic?.details).toMatchObject({
+      kind: 'fieldNotFound',
+      statementIndex: 0,
+      section: 'select',
+      sourceAlias: 'Т',
+      requestedPath: 'Цена',
+    });
+  });
+
   it('синтаксическая ошибка → без структурированного diagnostic (compatibility path парсера не расширяется)', () => {
     const r = tryOpenBatch('ВЫБРАТЬ ИЗ ИЗ', resolver);
     expect(r.ok).toBe(false);

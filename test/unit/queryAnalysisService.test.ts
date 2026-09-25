@@ -85,6 +85,23 @@ describe('analyze: разбор полей/источников/соединен
 });
 
 describe('analyze: structured diagnostic plumbing (structured → string → regex устранён)', () => {
+  it('fieldNotFound details доходят до текстового редактора без выдуманной позиции', () => {
+    const resolver = buildResolverFromTables([
+      { fullName: 'Справочник.Валюты', kind: 'Справочник', name: 'Валюты', fields: [{ name: 'Код', kind: 'standard', types: [] }] } as MetaTable,
+    ]);
+    const r = analyze('ВЫБРАТЬ Т.Цена ИЗ Справочник.Валюты КАК Т', resolver);
+    expect(r.diagnostics).toHaveLength(1);
+    expect(r.diagnostics[0].line).toBeUndefined();
+    expect(r.diagnostics[0].col).toBeUndefined();
+    expect(r.diagnostics[0].details).toMatchObject({
+      kind: 'fieldNotFound',
+      section: 'select',
+      sourceAlias: 'Т',
+      sourceFullName: 'Справочник.Валюты',
+      requestedPath: 'Цена',
+    });
+  });
+
   it('ошибка без позиции (дубликат псевдонима) → diagnostics без line/col, без исключения', () => {
     const resolver = buildResolverFromTables([
       { fullName: 'Справочник.Валюты', kind: 'Справочник', name: 'Валюты', fields: [{ name: 'Код', kind: 'standard', types: [] }] } as MetaTable,

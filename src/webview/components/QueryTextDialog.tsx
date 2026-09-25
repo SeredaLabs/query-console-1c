@@ -2,7 +2,7 @@ import * as React from 'react';
 import { CodeEditor, type CodeEditorHandle } from './CodeEditor';
 import { IconButton } from './IconButton';
 import { BTN, BTN_SECONDARY } from '../sharedStyles';
-import { localizeDiagnostic, localizeLintWarning, t } from '../i18n';
+import { localizeDiagnostic, localizeFieldNotFoundContext, localizeLintWarning, t } from '../i18n';
 import { analyze, type QueryAnalysisResult, type QueryDiagnostic, type TextRange } from '../../core/query/queryAnalysisService';
 import { formatQueryText } from '../../core/query/queryTextFormatter';
 import { QueryStructurePanel } from './QueryStructurePanel';
@@ -101,8 +101,12 @@ function lineColToOffset(text: string, line: number, col: number): number {
 }
 
 function toCmDiagnostics(text: string, diagnostics: QueryDiagnostic[]): Diagnostic[] {
-  return diagnostics.map(d => {
-    const from = d.line != null && d.col != null ? lineColToOffset(text, d.line, d.col) : 0;
+  return diagnostics.flatMap(d => {
+    // A document-level semantic error without a proven source position must not
+    // underline the first character: that falsely points the user at unrelated
+    // text. It remains visible in the status bar below.
+    if (d.line == null || d.col == null) return [];
+    const from = lineColToOffset(text, d.line, d.col);
     return { from, to: Math.min(text.length, from + 1), severity: 'error', message: localizeDiagnostic(d.message) };
   });
 }
@@ -332,17 +336,27 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
             {checkPending ? (
               <span style={{ color: 'var(--vscode-descriptionForeground)' }}>● {t('dialog.queryText.pendingChanges')}</span>
             ) : firstDiagnostic ? (
-              <span
-                role="button"
-                onClick={handleJumpToError}
-                style={{
-                  color: 'var(--vscode-errorForeground, #f44747)',
-                  cursor: firstDiagnostic.line != null ? 'pointer' : 'default',
-                  textDecoration: firstDiagnostic.line != null ? 'underline' : 'none',
-                }}
-              >
-                {localizeDiagnostic(firstDiagnostic.message)}
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span
+                  role="button"
+                  onClick={handleJumpToError}
+                  style={{
+                    color: 'var(--vscode-errorForeground, #f44747)',
+                    cursor: firstDiagnostic.line != null ? 'pointer' : 'default',
+                    textDecoration: firstDiagnostic.line != null ? 'underline' : 'none',
+                  }}
+                >
+                  {localizeDiagnostic(firstDiagnostic.message)}
+                </span>
+                {firstDiagnostic.details?.kind === 'fieldNotFound' && (
+                  <span
+                    data-testid="query-text-diagnostic-context"
+                    style={{ color: 'var(--vscode-descriptionForeground)' }}
+                  >
+                    {localizeFieldNotFoundContext(firstDiagnostic.details)}
+                  </span>
+                )}
+              </div>
             ) : checked.result.result === null ? (
               // Пустой/из одних пробелов текст `tryOpenBatch` считает валидным пустым
               // пакетом (0 diagnostics) — но применять тут нечего (см. handleApplyQueryEdit

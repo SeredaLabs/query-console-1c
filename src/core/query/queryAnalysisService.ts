@@ -6,6 +6,7 @@ import { extractQueryParamNames } from './resultProcessingTemplate';
 import { getBatchStatementSpans } from './sdblParser';
 import type { QueryModel, Condition } from './queryModel';
 import { lintBatch, type LintWarning } from './queryLinter';
+import type { SemanticErrorDetails } from './semanticValidator';
 
 /** Диапазон в СЫРОМ тексте запроса — см. `getBatchStatementSpans`. */
 export interface TextRange {
@@ -24,6 +25,7 @@ export interface QueryDiagnostic {
   message: string;
   line?: number;
   col?: number;
+  details?: SemanticErrorDetails;
 }
 
 export interface QueryAnalysisField {
@@ -181,7 +183,15 @@ export function analyze(text: string, resolver?: MetadataResolver): QueryAnalysi
     // используется напрямую. Синтаксическая ошибка её не несёт (см.
     // `parseSyntaxErrorPosition`) — единственный оставшийся compatibility-путь.
     const pos = r.diagnostic ?? parseSyntaxErrorPosition(r.error);
-    return { ...EMPTY_RESULT, diagnostics: [{ message: r.error, line: pos.line, col: pos.col }] };
+    return {
+      ...EMPTY_RESULT,
+      diagnostics: [{
+        message: r.error,
+        line: pos.line,
+        col: pos.col,
+        ...(r.diagnostic?.details ? { details: r.diagnostic.details } : {}),
+      }],
+    };
   }
 
   const spans = getBatchStatementSpans(text);

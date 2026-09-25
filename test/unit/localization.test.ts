@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { normalizeLocale } from '../../src/shared/locale';
-import { localizeDiagnostic, localizeLintWarning, setLocale, t } from '../../src/webview/i18n';
+import { localizeDiagnostic, localizeFieldNotFoundContext, localizeLintWarning, setLocale, t } from '../../src/webview/i18n';
 
 afterEach(() => setLocale('en'));
 
@@ -39,6 +39,25 @@ describe('localization', () => {
     setLocale('uk');
     expect(localizeDiagnostic('Поле "Цена" не найдено в "Справочник.Валюты"'))
       .toBe('Поле "Цена" не знайдено в "Справочник.Валюты"');
+  });
+
+  it('localizes structured field context without parsing the core message', () => {
+    const details = {
+      kind: 'fieldNotFound' as const,
+      statementIndex: 1,
+      section: 'where' as const,
+      sourceAlias: 'В',
+      sourceFullName: 'Справочник.Валюты',
+      requestedPath: 'Ссылка.Цена',
+      invalidSegment: 'Цена',
+      ownerFullName: 'Справочник.Валюты',
+    };
+    setLocale('en');
+    expect(localizeFieldNotFoundContext(details))
+      .toBe('Query 2 · WHERE · source "В" · path "Ссылка.Цена"');
+    setLocale('uk');
+    expect(localizeFieldNotFoundContext(details))
+      .toBe('Запит 2 · ДЕ · джерело "В" · шлях "Ссылка.Цена"');
   });
 
   it('localizes linter warnings by stable code', () => {

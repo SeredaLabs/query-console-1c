@@ -12,7 +12,7 @@ import { parseBatch } from './sdblParser';
 import type { ParseOptions } from './sdblParser';
 import type { BatchDocument } from './batchModel';
 import type { MetadataResolver } from './metadataResolver';
-import { validateBatchSemantics } from './semanticValidator';
+import { validateBatchSemantics, type SemanticErrorDetails } from './semanticValidator';
 
 /**
  * Позиция ошибки, уже структурированная её источником (`SemanticError` из
@@ -25,6 +25,7 @@ export interface ErrorDiagnostic {
   line?: number;
   col?: number;
   fullName?: string;
+  details?: SemanticErrorDetails;
 }
 
 export type ParseAttempt =
@@ -64,8 +65,8 @@ export function tryOpenBatch(
   if (!r.ok) return r;
   const errors = validateBatchSemantics(r.doc, resolver, text);
   if (errors.length > 0) {
-    const { message, line, col, fullName } = errors[0];
-    return { ok: false, error: message, diagnostic: { line, col, fullName } };
+    const { message, line, col, fullName, details } = errors[0];
+    return { ok: false, error: message, diagnostic: { line, col, fullName, details } };
   }
   return r;
 }

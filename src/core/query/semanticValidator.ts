@@ -43,7 +43,37 @@ export interface SemanticError {
   line?: number;
   col?: number;
   fullName?: string;
+  details?: SemanticErrorDetails;
 }
+
+export type FieldValidationSection =
+  | 'select'
+  | 'grouping'
+  | 'order'
+  | 'totals'
+  | 'indexing'
+  | 'join'
+  | 'where'
+  | 'having';
+
+/**
+ * Machine-readable context for a proven missing field. Kept separate from
+ * `message` so existing Apply/open contracts and message localization remain
+ * stable while richer UIs can explain where the failure came from.
+ */
+export interface FieldNotFoundDetails {
+  kind: 'fieldNotFound';
+  /** Zero-based `BatchDocument.members` index. */
+  statementIndex: number;
+  section: FieldValidationSection;
+  sourceAlias?: string;
+  sourceFullName: string;
+  requestedPath: string;
+  invalidSegment: string;
+  ownerFullName: string;
+}
+
+export type SemanticErrorDetails = FieldNotFoundDetails;
 
 /**
  * Распознаваемые префиксы видов метаданных (ВЕРХ-регистр). Источник проверяется на
@@ -193,7 +223,7 @@ export function validateBatchSemantics(
      * список `errors` не должен содержать дублей.
      */
     const reportedFieldNotFound = new Set<string>();
-    const checkOne = (tableId: string, path: string): void => {
+    const checkOne = (tableId: string, path: string, section: FieldValidationSection): void => {
       const src = idToTable.get(tableId);
       if (!src || src.subquery || !src.fullName || src.fullName.startsWith('&')) return;
       const tempSchema = visibleTempTableAt(tempTableLifetimes, statementIndex, src.fullName);
@@ -231,6 +261,16 @@ export function validateBatchSemantics(
       reportedFieldNotFound.add(dedupKey);
       errors.push({
         message: `Поле "${badSegment}" не найдено в "${ownerMeta.fullName}"`,
+        details: {
+          kind: 'fieldNotFound',
+          statementIndex,
+          section,
+          sourceAlias: src.alias,
+          sourceFullName: src.fullName,
+          requestedPath: path,
+          invalidSegment: badSegment,
+          ownerFullName: ownerMeta.fullName,
+        },
       });
     };
 
@@ -241,7 +281,7 @@ export function validateBatchSemantics(
     for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
       if (f.expression !== undefined) continue;
       if (!f.qualified && !f.funcOperandQualified) continue;
-      checkOne(f.tableId, f.path);
+      checkOne(f.tableId, f.path, 'select');
     }
 
     // `grouping.groupFields` (СГРУППИРОВАТЬ ПО): `parseGroupFieldRef`
@@ -252,7 +292,7 @@ export function validateBatchSemantics(
     // нет и не должно быть.
     for (const f of model.grouping?.groupFields ?? []) {
       if (f.expression !== undefined) continue;
-      checkOne(f.tableId, f.path);
+      checkOne(f.tableId, f.path, 'grouping');
     }
 
     // `grouping.groupSets` (СГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ) — тот же
@@ -263,7 +303,7 @@ export function validateBatchSemantics(
     for (const set of model.grouping?.groupSets ?? []) {
       for (const f of set) {
         if (f.expression !== undefined) continue;
-        checkOne(f.tableId, f.path);
+        checkOne(f.tableId, f.path, 'grouping');
       }
     }
 
@@ -275,18 +315,18 @@ export function validateBatchSemantics(
     for (const f of model.order?.fields ?? []) {
       if (f.expression !== undefined) continue;
       if (!f.qualified) continue;
-      checkOne(f.tableId, f.path);
+      checkOne(f.tableId, f.path, 'order');
     }
     for (const f of model.totals?.groupFields ?? []) {
       if (f.expression !== undefined) continue;
       if (!f.qualified) continue;
-      checkOne(f.tableId, f.path);
+      checkOne(f.tableId, f.path, 'totals');
     }
     for (const idx of model.indexing?.indexes ?? []) {
       for (const f of idx.fields) {
         if (f.expression !== undefined) continue;
         if (!f.qualified) continue;
-        checkOne(f.tableId, f.path);
+        checkOne(f.tableId, f.path, 'indexing');
       }
     }
 
@@ -298,8 +338,8 @@ export function validateBatchSemantics(
     for (const j of model.joins ?? []) {
       for (const c of j.conditions ?? [j]) {
         if (c.custom) continue;
-        if (c.leftTableId && c.leftPath) checkOne(c.leftTableId, c.leftPath);
-        if (c.rightTableId && c.rightPath) checkOne(c.rightTableId, c.rightPath);
+        if (c.leftTableId && c.leftPath) checkOne(c.leftTableId, c.leftPath, 'join');
+        if (c.rightTableId && c.rightPath) checkOne(c.rightTableId, c.rightPath, 'join');
       }
     }
 
@@ -310,9 +350,13 @@ export function validateBatchSemantics(
     // модель не хранит, было ли поле квалифицировано в тексте — проверка там
     // дала бы ложное «не найдено». На верхнем уровне объемлющего запроса нет.
     if (topLevel) {
-      for (const c of [...(model.conditions ?? []), ...(model.having ?? [])]) {
+      for (const c of model.conditions ?? []) {
         if (c.custom || c.expression !== undefined || !c.tableId || !c.path) continue;
-        checkOne(c.tableId, c.path);
+        checkOne(c.tableId, c.path, 'where');
+      }
+      for (const c of model.having ?? []) {
+        if (c.custom || c.expression !== undefined || !c.tableId || !c.path) continue;
+        checkOne(c.tableId, c.path, 'having');
       }
     }
   };

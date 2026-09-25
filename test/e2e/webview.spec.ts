@@ -385,6 +385,24 @@ test.describe('Query Constructor Webview', () => {
     await expect(editor).toBeFocused();
   });
 
+  test('Текст запроса v2: невідоме поле показує контекст без хибного маркера на початку', async ({ page }) => {
+    await page.goto(BASE);
+    await enableQueryTextV2(page);
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+    await page.locator('button:has-text("Запрос")').click();
+
+    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+    await editor.fill('ВЫБРАТЬ Валюты.НетТакогоПоля ИЗ Справочник.Валюты КАК Валюты');
+    await page.locator('button[title="Проверить сейчас"]').click();
+
+    await expect(page.locator('[data-testid="query-text-status"]')).toContainText('Поле "НетТакогоПоля" не найдено');
+    await expect(page.locator('[data-testid="query-text-diagnostic-context"]'))
+      .toContainText('Запрос 1 · ВЫБРАТЬ · источник "Валюты" · путь "НетТакогоПоля"');
+    await expect(page.locator('[data-testid="query-text-editor"] .cm-lintRange-error')).toHaveCount(0);
+  });
+
   // Стадия 5 плана «Текст запроса v2»: «Форматировать» переносит секции на отдельные
   // строки, и один Ctrl/Cmd+Z полностью откатывает результат (design-док, раздел 5).
   test('Текст запроса v2: «Форматировать» переносит секции, Ctrl/Cmd+Z откатывает одним шагом', async ({ page }) => {

@@ -3,6 +3,19 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+
+- Query Text v2 now shows structured context for a missing field: the package
+  query number, query section, source alias and requested field path.
+
+### Fixed
+
+- Positionless semantic diagnostics no longer underline the first character of
+  the query as if the error were located there; the error remains visible in
+  the status bar until exact parser source ranges are available.
+
 ## 0.1.88 - 2026-09-24
 
 ### Changed
