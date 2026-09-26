@@ -96,11 +96,3 @@ reproducible bugs and feature proposals. Do not attach proprietary configuration
 
 MIT — see [LICENSE](LICENSE). Third-party attributions are listed in
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
-
-This project began in August 2026 as a fork of
-[AlekseyUAM/query_console_vscode](https://github.com/AlekseyUAM/query_console_vscode).
-Since then the query engine, metadata model, and validation have been rewritten,
-and an entirely new semantic layer—hover and autocomplete—was added, alongside
-independently rewritten diagnostics and validation, none of which existed in
-the original. It is now an independent project,
-maintained by SeredaLabs.

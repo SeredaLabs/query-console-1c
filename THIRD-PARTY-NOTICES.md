@@ -1,7 +1,23 @@
 # Third-party notices
 
-This project includes third-party assets distributed under their respective
-licenses.
+This project includes third-party code and assets distributed under their
+respective licenses.
+
+## query_console_vscode
+
+Portions of this project are derived from `query_console_vscode`.
+
+- Source: https://github.com/AlekseyUAM/query_console_vscode (imported at
+  v0.1.1 as the first commit of this repository)
+- License: MIT License, Copyright (c) 2026 Aleksey Yudanov.
+- Derived portions include, in modified form, the SDBL lexer, parser, generator
+  and expression formatter (`src/core/query/`), the metadata loader
+  (`src/core/metadata/`), the CLI tools (`src/cli/`) and the classic
+  constructor webview (`src/webview/`).
+- Modifications and new code: Copyright (c) 2026 SeredaLabs.
+
+The full MIT copyright and permission notice covering this code is in
+[LICENSE](LICENSE), which lists both copyright holders.
 
 ## @vscode/codicons
 
