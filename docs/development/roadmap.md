@@ -94,6 +94,97 @@ separate concerns above are still separate, and the corpus,
 validator-corpus, and oracle checks pass. Any change in golden output must be
 explained case by case.
 
+## Planned, deferred
+
+Agreed direction, not started. Pick up as separate tasks; do not fold into
+unrelated work.
+
+### Expression type inference
+
+**Why.** The Classic "Custom expression" dialog shows a result type only when
+the whole expression is a single resolved field; anything else is "unknown".
+The same missing capability blocks type-aware completion ranking
+(`КОГДА |` → boolean candidates) and a type column for expression fields in
+Canvas.
+
+**Current state.** Custom expressions are strings — there is no expression AST
+in core. `isStructurallyValidExpression` (`expressionSyntaxCheck.ts`) only
+accepts or rejects. `MetaType` plus `describeOne`/`describeFieldTypes` already
+represent and render types; fields resolve through `resolveFieldPath`, aliases
+through `resolveAliasAt` (query text) or the dialog's source list.
+`FUNCTION_CATALOG` has no return-type data.
+
+**Target API** (pure core, no UI dependencies):
+
+```ts
+// src/core/query/expressionType.ts
+type InferredType = { kind: 'known'; types: MetaType[] } | { kind: 'unknown' };
+function inferExpressionType(
+  text: string,
+  resolveChain: (segments: string[]) => MetaField | undefined,
+): InferredType;
+```
+
+The caller injects chain resolution (dialog sources, or `resolveAliasAt` for
+query text), so one algorithm serves both. Fail-open: an unknown field,
+parameter or function makes the result `unknown`, except for operators whose
+result does not depend on operand types (comparisons are always `Булево`).
+
+**First-version rules** (anything contested stays `unknown` or drops
+qualifiers until step 1 confirms it):
+
+| Construct | Type |
+|---|---|
+| number / string literal, `ДАТАВРЕМЯ(...)`, `ИСТИНА`/`ЛОЖЬ` | Число / Строка / Дата / Булево |
+| `Alias.Field…` | metadata field types, qualifiers kept |
+| comparisons, `И ИЛИ НЕ`, `ПОДОБНО`, `В`, `МЕЖДУ`, `ЕСТЬ NULL`, `ССЫЛКА` | Булево |
+| `+ - * /` on numbers | Число without qualifiers (until oracle-verified) |
+| `Строка + Строка` | Строка |
+| `ВЫБОР … ТОГДА a … ИНАЧЕ b` | union of branches; no `ИНАЧЕ` adds NULL |
+| `ЕСТЬNULL(a, b)` | union of a and b without NULL |
+| `ВЫРАЗИТЬ(x КАК T)` | T (`Строка(N)`, `Число(p,s)`, `Справочник.X`) |
+| `ЗНАЧЕНИЕ(Справочник.X.Y)` | reference to `Справочник.X` |
+| catalog functions | per catalog return descriptor (step 2) |
+
+**Steps**, each its own reviewable task:
+
+1. **Oracle check.** Collect 30–50 contested expressions and record their real
+   result types from 1C through the existing oracle tooling (`harvestOracle` /
+   MCP): arithmetic precision (`Число(15,2) * Число(15,3)`), `ВЫБОР` with
+   branches of different precision, `МАКСИМУМ` over a reference,
+   `РАЗНОСТЬДАТ`, `СТРОКА(...)`, `Строка + Число` (error or coercion). First
+   verify the tooling can read result column types at all — this is the
+   riskiest step.
+2. **Return descriptors in `FUNCTION_CATALOG`.** Add a result descriptor per
+   leaf (`{ type: 'Строка' }`, `{ sameAsArg: 0 }` for `МАКСИМУМ`/`МИНИМУМ`,
+   `{ unionOfArgs: [0, 1] }` for `ЕСТЬNULL`, `'unknown'`) — extend the single
+   source of truth, no parallel table. A test requires an explicit descriptor
+   on every function leaf.
+3. **Core module.** A separate token walker following the same grammar as
+   `expressionSyntaxCheck`; do **not** modify the structural check that gates
+   Apply. Tests: rule table; a corpus differential test (the walker accepts
+   exactly what `isStructurallyValidExpression` accepts and never throws);
+   golden values only for oracle-verified expressions.
+4. **Dialog status.** Replace the single-field rule in `analyzeExpression`
+   (`src/webview/expressionEditor/expressionContext.ts`) with
+   `inferExpressionType`; render via `describeOne`, unions as `Число | NULL`,
+   at most three variants plus "…". E2E for `ВЫБОР`, an aggregate, a date
+   function and `ВЫРАЗИТЬ`.
+5. **Optional follow-ups**, separate tasks: `КОГДА |` completion ranking by
+   `Булево`; a type column for expression fields in the Canvas Fields grid.
+
+**Out of scope.** Temporary-table schemas, `inferUndefinedTempTables` and the
+parser's literal typing (see "Unify the temporary-table models" above); any
+effect on SDBL generation, Apply or validation — types are display-only first,
+with no blocking checks built on them; a new expression AST or a parser
+rewrite.
+
+**Risks.** 1C precision and coercion rules (hence oracle first; contested
+cases stay unknown or unqualified). Composite types and NULL (the result type
+is a union from the start). Grammar duplication between the structural check
+and the walker, contained by the corpus differential test; merging them into
+one walker is a later task (introduce → validate → switch → remove old).
+
 ## Explicitly considered and not planned
 
 Evaluated and deliberately not pursued, so they don't need re-litigating from
