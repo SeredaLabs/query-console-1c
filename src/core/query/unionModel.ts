@@ -5,6 +5,7 @@ import { synthesizedFieldAlias } from './queryModelUtils';
 // операция, см. `queryModelUtils.ts`) — единственная оставшаяся зависимость
 // unionModel → sdblGenerator, обоснованная (не misplaced logic).
 import { fieldExpr } from './sdblGenerator';
+import { exprAutoAlias } from './exprAutoAlias';
 
 /** Один запрос-участник объединения. */
 export interface UnionMember {
@@ -67,6 +68,22 @@ export function fieldAlias(field: SelectedField, model?: QueryModel): string {
 }
 
 /**
+ * Псевдонимы столбцов выборки так, как их напечатает генератор (`buildFieldLines`):
+ * произвольное поле БЕЗ псевдонима (добавлено в UI, парсер такие поля не оставляет)
+ * получает автопсевдоним генератора — имя голого параметра, `<Поле>Представление`
+ * или сквозной `Поле{n}` (нумерация только по таким полям, как в генераторе);
+ * остальные — `fieldAlias`. Нужен там, где псевдоним ВИДЕН или ПЕЧАТАЕТСЯ как
+ * имя колонки (заголовки объединения, колонки ВТ), — `fieldAlias` отдаёт для
+ * такого поля сам текст выражения (это ключ совпадения, а не имя колонки).
+ */
+export function selectColumnAliases(fields: SelectedField[], model?: QueryModel): string[] {
+  let n = 0;
+  return fields.map(f => (f.expression && f.alias === undefined
+    ? exprAutoAlias(f.expression, () => `Поле${++n}`)
+    : fieldAlias(f, model)));
+}
+
+/**
  * Список элементов выборки участника в ИСХОДНОМ порядке выборки: скалярные поля
  * (`model.fields`), проекции ТЧ (`tabSectionFields`) и хвостовые поля
  * (`trailingFields`), упорядоченные по `selectOrder`. Голова (`model.fields`) идёт
@@ -109,12 +126,13 @@ export function orderedSelectElements(model: QueryModel): SelectElement[] {
 export function deriveUnionColumns(members: UnionMember[]): UnionColumn[] {
   const width = members.reduce((w, m) => Math.max(w, m.model.fields.length), 0);
   const head = members[0]?.model.fields ?? [];
+  const headAliases = members[0] ? selectColumnAliases(head, members[0].model) : [];
 
   const columns: UnionColumn[] = [];
   for (let i = 0; i < width; i++) {
     const headField = head[i];
     columns.push({
-      alias: headField ? fieldAlias(headField, members[0].model) : `Поле${i + 1}`,
+      alias: headField ? headAliases[i] : `Поле${i + 1}`,
       cells: members.map(m => {
         const f = m.model.fields[i];
         return f ? fieldExpr(m.model, f) : null;
@@ -147,6 +165,13 @@ export function unionHasTrailing(members: UnionMember[]): boolean {
 
 /** Псевдоним столбца-элемента участника-головы (поле → fieldAlias; ТЧ → её псевдоним). */
 export function elementAlias(el: SelectElement, model: QueryModel): string {
-  if (el.kind === 'field') return fieldAlias(el.field, model);
+  if (el.kind === 'field') {
+    if (el.field.expression && el.field.alias === undefined) {
+      const all = [...model.fields, ...(model.trailingFields ?? [])];
+      const idx = all.indexOf(el.field);
+      if (idx >= 0) return selectColumnAliases(all, model)[idx];
+    }
+    return fieldAlias(el.field, model);
+  }
   return el.tsf.alias ?? el.tsf.tsName;
 }

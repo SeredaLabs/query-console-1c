@@ -121,3 +121,36 @@ describe('deriveUnionColumns', () => {
     expect(cols[0].cells).toEqual(['СУММА(А.Кол)']);
   });
 });
+
+// Регрессия (2026-09-26): произвольное поле, добавленное в UI без `КАК`, показывалось
+// во вкладке «Объединения/Псевдонимы» с ТЕКСТОМ выражения в роли псевдонима, а в
+// объединении генератор печатал `… КАК ВЫБОР КОГДА …` (недопустимый SDBL). Заголовок
+// колонки обязан совпадать с автопсевдонимом генератора.
+describe('deriveUnionColumns: автопсевдоним произвольного поля без КАК', () => {
+  const model = (fields: QueryModel['fields']): QueryModel => ({ tables: [{ id: 't1', fullName: 'Справочник.Валюты' }], fields });
+
+  it('Поле{n} со сквозной нумерацией только по полям без псевдонима', () => {
+    const cols = deriveUnionColumns([member('Запрос 1', model([
+      { tableId: 't1', path: 'Код' },
+      { tableId: 't1', path: '', expression: 'ВЫБОР КОГДА Валюты.Код = "1" ТОГДА ИСТИНА ИНАЧЕ ЛОЖЬ КОНЕЦ' },
+      { tableId: 't1', path: '', expression: 'Валюты.Код + "x"', alias: 'Явный' },
+      { tableId: 't1', path: '', expression: '1 + 1' },
+    ]))]);
+    expect(cols.map(c => c.alias)).toEqual(['Код', 'Поле1', 'Явный', 'Поле2']);
+  });
+
+  it('голый параметр → имя параметра; ПРЕДСТАВЛЕНИЕ(поле) → <Поле>Представление', () => {
+    const cols = deriveUnionColumns([member('Запрос 1', model([
+      { tableId: 't1', path: '', expression: '&Дата' },
+      { tableId: 't1', path: '', expression: 'ПРЕДСТАВЛЕНИЕ(Валюты.Ссылка)' },
+    ]))]);
+    expect(cols.map(c => c.alias)).toEqual(['Дата', 'СсылкаПредставление']);
+  });
+
+  it('уже присвоенный парсером Поле{n} не перенумеровывается', () => {
+    const cols = deriveUnionColumns([member('Запрос 1', model([
+      { tableId: 't1', path: '', expression: '1 + 1', alias: 'Поле3' },
+    ]))]);
+    expect(cols[0].alias).toBe('Поле3');
+  });
+});

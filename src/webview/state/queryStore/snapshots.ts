@@ -1,6 +1,6 @@
 import type { MetaField, MetaTable } from '../../../core/metadata/types';
 import type { Grouping, Indexing, Order, QueryModel, QueryType, ReportBuilder, SelectedField, Totals } from '../../../core/query/queryModel';
-import { compoundCarrierOf, fieldAlias, type QueryDocument, type UnionMember } from '../../../core/query/unionModel';
+import { compoundCarrierOf, selectColumnAliases, type QueryDocument, type UnionMember } from '../../../core/query/unionModel';
 import type { BatchDocument } from '../../../core/query/batchModel';
 import type { BatchSnapshot, QueryState, SavedQuery } from '../queryStore';
 
@@ -152,7 +152,7 @@ export function batchMemberInfo(state: QueryState, i: number): BatchMemberInfo {
   return {
     name,
     queryType: first.queryType,
-    fieldNames: first.selectedFields.map(f => fieldAlias(f)),
+    fieldNames: selectColumnAliases(first.selectedFields),
     tablesCount: first.selectedTables.length,
     conditionsCount: first.conditions.length,
     memberCount,
@@ -251,8 +251,8 @@ function deriveTempTableLifetimes(members: QueryDocument[]): Map<string, TempTab
       const model = members[i].members[0]?.model;
       const cols: string[] = [];
       const seenCols = new Set<string>();
-      for (const f of model?.fields ?? []) {
-        const a = fieldAlias(f, model!);
+      const colAliases = selectColumnAliases(model?.fields ?? [], model);
+      for (const a of colAliases) {
         if (!a || a === '*') continue;
         let alias = a;
         let n = 0;

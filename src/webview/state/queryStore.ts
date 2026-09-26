@@ -3,7 +3,7 @@ import type { SelectedTable, SelectedField, SelectedTabSectionField, VirtualPara
 import { defaultTableAlias } from '../../core/query/queryModel';
 import type { RefId } from '../../shared/messages';
 import type { MetaField } from '../../core/metadata/types';
-import { fieldAlias, deriveUnionColumns, type QueryDocument } from '../../core/query/unionModel';
+import { deriveUnionColumns, selectColumnAliases, type QueryDocument } from '../../core/query/unionModel';
 import type { BatchDocument } from '../../core/query/batchModel';
 import {
   assembleBatch,
@@ -501,8 +501,11 @@ function totalOperandAlias(state: QueryState, tableId: string, path: string): st
  * поэтому у переименованного поля комментарии снимаются.
  */
 function applyColumnAlias(fields: SelectedField[], alias: string, newAlias: string): SelectedField[] {
-  return fields.map(f =>
-    fieldAlias(f) === alias
+  // Те же псевдонимы, что в заголовках вкладки (deriveUnionColumns): произвольное
+  // поле без КАК адресуется своим автопсевдонимом (`Поле1`), а не текстом выражения.
+  const current = selectColumnAliases(fields);
+  return fields.map((f, i) =>
+    current[i] === alias
       ? (() => { const { commentLeading, commentTrailing, ...rest } = f; return { ...rest, alias: newAlias }; })()
       : f
   );

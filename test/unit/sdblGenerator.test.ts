@@ -922,6 +922,17 @@ describe('generate — дополнительно (фаза 5.3)', () => {
       const text = generateDocument(doc);
       expect(text).not.toContain('ПОМЕСТИТЬ');
     });
+
+    it('произвольное поле без КАК у участника 0 получает автопсевдоним Поле{n}, а не текст выражения', () => {
+      const m0 = valuteMember();
+      m0.model.fields = [
+        { tableId: 't1', path: 'Ссылка', alias: 'Ссылка' },
+        { tableId: 't1', path: '', expression: 'ВЫБОР КОГДА Валюты.Код = "1" ТОГДА ИСТИНА ИНАЧЕ ЛОЖЬ КОНЕЦ' },
+      ];
+      const text = generateDocument({ members: [m0, variantMember()] });
+      expect(text).toContain('КОНЕЦ КАК Поле1');
+      expect(text).not.toMatch(/КАК ВЫБОР/);
+    });
   });
 });
 

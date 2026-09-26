@@ -7,6 +7,7 @@ import { parseDocument } from './sdblParser';
 import { resolveAliases, isTabularSectionSource, qualifiedAutoAlias, synthesizedFieldAlias, joinKeyword } from './queryModelUtils';
 import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpression, formatJoinConjunct, normalizeLeafCase, stripNegatedFieldParens, stripNotFieldParens, stripRedundantLeafParens, appendIsNotNullTrailingSpace, renderOperatorRhs, flattenMultilineLeaf, reindentLeafSubquery, reindentLeafCase, reindentLeafBool, wrapBareCastOperand, reprintLeafArithmetic, canonicalizeComparisonOperands, setInlineSubqueryReflow, tightenLeafInOperator } from './exprFormatter';
 import { tokenize } from './sdblLexer';
+import { BARE_PARAM, exprAutoAlias, representationAutoAlias } from './exprAutoAlias';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
 
 // Регистрируем в exprFormatter канонический ре-рендер инлайн-подзапроса членства
@@ -1648,9 +1649,6 @@ function buildQueryBlock(
   ].join('\n');
 }
 
-/** Голый параметр выборки `&Имя` (без вызова/индексации/прочего). */
-const BARE_PARAM = /^&([A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*)$/u;
-
 /** Выражение — это ТОЛЬКО голый параметр `&Имя` (для отбраковки в группировке). */
 function isBareParamExpr(expression: string | undefined): boolean {
   return expression !== undefined && BARE_PARAM.test(expression.trim());
@@ -1752,35 +1750,6 @@ function renderTabProjection(
   if (opts.suppress) return body;
   const tsAlias = opts.outerAlias ? opts.outerAlias(tsf.tsName, tsf.alias) : (tsf.alias ?? tsf.tsName);
   return `${body} КАК ${tsAlias}`;
-}
-
-/**
- * Автопсевдоним произвольного поля выборки без явного `КАК`. Конструктор 1С
- * для голого параметра `&Имя` ставит псевдоним = имени параметра (без `&`),
- * для остального — сквозной `Поле{n}`. Возвращает выбранный псевдоним; для
- * варианта `Поле{n}` инкрементирует переданный счётчик.
- */
-function exprAutoAlias(expression: string, next: () => string): string {
-  const m = BARE_PARAM.exec(expression.trim());
-  if (m) return m[1];
-  const repr = representationAutoAlias(expression);
-  return repr ?? next();
-}
-
-/**
- * Автопсевдоним вызова `ПРЕДСТАВЛЕНИЕ(<поле>)` / `ПРЕДСТАВЛЕНИЕССЫЛКИ(<поле>)` без
- * явного `КАК`: конструктор 1С даёт ему `<ПоследнийСегмент>Представление`
- * (`ПРЕДСТАВЛЕНИЕ(T.Номенклатура)` → `НоменклатураПредставление`,
- * `ПРЕДСТАВЛЕНИЕССЫЛКИ(Сотрудники.Ставка)` → `СтавкаПредставление`). Узко: ровно
- * один аргумент-поле (последовательность сегментов через точку, без иных символов).
- * Возвращает `undefined`, если выражение не подходит. Фаза 6.16.73.
- */
-function representationAutoAlias(expression: string): string | undefined {
-  const m = /^(?:ПРЕДСТАВЛЕНИЕ|ПРЕДСТАВЛЕНИЕССЫЛКИ)\s*\(\s*([A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_.]*)\s*\)$/iu
-    .exec(expression.trim());
-  if (!m) return undefined;
-  const lastSeg = m[1].split('.').pop();
-  return lastSeg ? `${lastSeg}Представление` : undefined;
 }
 
 /**

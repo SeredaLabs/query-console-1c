@@ -622,6 +622,16 @@ describe('queryStore — union document layer (multiple sub-queries)', () => {
       expect(cols[0].alias).toBe('Идентификатор');
       expect(cols[0].cells.every(c => c !== null)).toBe(true);
     });
+
+    it('renames an expression field without КАК by its generated auto alias (Поле1)', () => {
+      let s = withField(initialState(), 'Справочник.Валюты', 'Код');
+      const tableId = s.selectedTables[0].id;
+      s = reducer(s, { type: 'ADD_EXPRESSION_FIELD', tableId, expression: 'ВЫБОР КОГДА ИСТИНА ТОГДА 1 ИНАЧЕ 0 КОНЕЦ' });
+      expect(deriveUnionColumns(assembleMembers(s))[1].alias).toBe('Поле1');
+      s = reducer(s, { type: 'SET_COLUMN_ALIAS', alias: 'Поле1', newAlias: 'Флаг' });
+      expect(s.selectedFields[1].alias).toBe('Флаг');
+      expect(s.selectedFields[0].alias).toBeUndefined();
+    });
   });
 
   describe('existing actions still operate on the active query', () => {
