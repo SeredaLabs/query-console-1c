@@ -3,7 +3,7 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.1.89 - 2026-09-26
 
 ### Changed
 
@@ -30,6 +30,11 @@ All notable changes are recorded here. The project uses
   opens the Custom expression editor for the selected field, like double-click.
 - The Unions/Aliases field list highlights column expressions with the same
   token colours as the Custom expression editor.
+- Editor diagnostics now also warn on a query-text literal that parses but
+  contains a syntactically broken custom condition or expression (for example
+  an unfinished `ЕСТЬNULL(` that swallows the rest of the query), which the
+  designer would refuse to apply. Such warnings use the diagnostic code
+  `designer-malformed-expression`.
 
 ### Fixed
 
@@ -49,6 +54,10 @@ All notable changes are recorded here. The project uses
 - Positionless semantic diagnostics no longer underline the first character of
   the query as if the error were located there; the error remains visible in
   the status bar until exact parser source ranges are available.
+- A package temporary table whose `ПОМЕСТИТЬ` query has a syntactically broken
+  column expression no longer gets a schema claimed as complete: completion
+  no longer offers its guessed columns as the full list, and hover no longer
+  reports "field not found" for its fields.
 
 ## 0.1.88 - 2026-09-24
 
