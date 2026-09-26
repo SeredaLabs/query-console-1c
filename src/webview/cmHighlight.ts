@@ -1,7 +1,7 @@
 import { ViewPlugin, Decoration, EditorView } from '@codemirror/view';
 import type { DecorationSet, ViewUpdate } from '@codemirror/view';
 import { RangeSetBuilder } from '@codemirror/state';
-import { highlightSegments } from './queryHighlight';
+import { highlightSegments, type HighlightTokenType } from './queryHighlight';
 
 /**
  * Подсветка синтаксиса языка запросов для CodeMirror — тот же подход, что
@@ -44,14 +44,20 @@ export const sdblHighlight = ViewPlugin.fromClass(
  * выходил жирным, но не цветным). `--vscode-charts-*` создан именно для
  * заведомо различимых между собой цветов (легенда графиков) — то, что
  * реально нужно тут. `EditorView.theme` (не `baseTheme`) — чтобы это точно
- * не проигрывало по приоритету другим стилям редактора.
+ * не проигрывало по приоритету другим стилям редактора. Та же таблица красит
+ * фрагменты кода вне редактора (справка/примеры в «Произвольном выражении»),
+ * чтобы подсветка там не расходилась с редактором.
  */
-export const sdblHighlightTheme = EditorView.theme({
-  '.cm-qc-keyword': { color: 'var(--vscode-charts-purple, #c586c0)', fontWeight: '600' },
-  '.cm-qc-function': { color: 'var(--vscode-charts-yellow, #dcdcaa)' },
-  '.cm-qc-string': { color: 'var(--vscode-charts-orange, #ce9178)' },
-  '.cm-qc-date': { color: 'var(--vscode-charts-orange, #ce9178)' },
-  '.cm-qc-number': { color: 'var(--vscode-charts-green, #b5cea8)' },
-  '.cm-qc-param': { color: 'var(--vscode-charts-blue, #9cdcfe)' },
-  '.cm-qc-comment': { color: 'var(--vscode-descriptionForeground, #6a9955)', fontStyle: 'italic' },
-});
+export const HIGHLIGHT_TOKEN_STYLE: Record<Exclude<HighlightTokenType, 'plain'>, { color: string; fontWeight?: string; fontStyle?: string }> = {
+  keyword: { color: 'var(--vscode-charts-purple, #c586c0)', fontWeight: '600' },
+  function: { color: 'var(--vscode-charts-yellow, #dcdcaa)' },
+  string: { color: 'var(--vscode-charts-orange, #ce9178)' },
+  date: { color: 'var(--vscode-charts-orange, #ce9178)' },
+  number: { color: 'var(--vscode-charts-green, #b5cea8)' },
+  param: { color: 'var(--vscode-charts-blue, #9cdcfe)' },
+  comment: { color: 'var(--vscode-descriptionForeground, #6a9955)', fontStyle: 'italic' },
+};
+
+export const sdblHighlightTheme = EditorView.theme(
+  Object.fromEntries(Object.entries(HIGHLIGHT_TOKEN_STYLE).map(([type, style]) => [`.cm-qc-${type}`, style])),
+);

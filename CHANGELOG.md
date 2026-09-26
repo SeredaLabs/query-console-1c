@@ -9,9 +9,18 @@ All notable changes are recorded here. The project uses
 
 - Query Text v2 now shows structured context for a missing field: the package
   query number, query section, source alias and requested field path.
+- The Classic "Custom expression" dialog was redesigned: a fields tree grouped
+  by source with types, a categorized functions/operators panel with inline
+  help, a command bar (undo/redo, format, word wrap, suggestions, templates,
+  maximize editor), source-aware autocompletion after `Alias.`, snippet
+  insertion with Tab/Shift+Tab placeholders, and a compact status line
+  (validity, result type when provable, line/character counts). Esc closes
+  suggestions first and asks before discarding an edited expression.
 
 ### Fixed
 
+- Diagnostics set on the rich query/expression editor are no longer wiped by
+  the empty background linter about 750 ms after each edit.
 - Positionless semantic diagnostics no longer underline the first character of
   the query as if the error were located there; the error remains visible in
   the status bar until exact parser source ranges are available.

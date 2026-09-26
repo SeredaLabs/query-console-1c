@@ -22,6 +22,13 @@ export function t(key: MessageKey, args: Record<string, string | number> = {}): 
   );
 }
 
+/** Translation for a key assembled at runtime (per-function help in the expression
+ * editor); `undefined` when no locale — not even `en` — defines it. */
+export function tIfExists(key: string): string | undefined {
+  const k = key as MessageKey;
+  return dictionaries[activeLocale][k] ?? en[k];
+}
+
 /** Translate stable outer forms emitted by the language-independent query core. */
 export function localizeDiagnostic(message: string): string {
   if (message.startsWith('Запрос содержит ошибку: ')) {

@@ -15,7 +15,7 @@ import { TotalsTab } from './TotalsTab';
 import { BuilderTab } from './BuilderTab';
 import { BatchTab } from './BatchTab';
 import { VirtualTableParamsDialog } from './VirtualTableParamsDialog';
-import { ExpressionBuilder } from './ExpressionBuilder';
+import { ExpressionBuilder, type ExpressionSource } from './ExpressionBuilder';
 import { TempTableDialog } from './TempTableDialog';
 import { ResizeHandle } from './ResizeHandle';
 import { CodeEditor } from './CodeEditor';
@@ -69,7 +69,9 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   const [queryModalError, setQueryModalError] = useState<string | null>(null);
   const [vtDialogTableId, setVtDialogTableId] = useState<string | null>(null);
   const [exprBuilder, setExprBuilder] = useState<null | {
-    fields: string[];
+    sources: ExpressionSource[];
+    /** false — поля без псевдоніма (умова параметрів віртуальної таблиці). */
+    qualified: boolean;
     initial: string;
     onOk: (text: string) => void;
   }>(null);
@@ -152,23 +154,23 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
   // qualified=true → 'Alias.Поле' (для произвольного поля в SELECT);
   // qualified=false → 'Поле' (для условия внутри скобок виртуальной таблицы).
-  function fieldsForTable(tableId: string, qualified: boolean): string[] {
+  // Джерело полів для «Произвольное выражение»: вибрана таблиця під своїм псевдонімом
+  // (+ поля періоду оборотних віртуальних таблиць — як і раніше у плоскому списку).
+  function expressionSourceForTable(tableId: string): ExpressionSource | undefined {
     const sel = state.selectedTables.find(t => t.id === tableId);
-    if (!sel) return [];
+    if (!sel) return undefined;
     const meta: MetaTable | undefined = tables.find(m => m.fullName === sel.fullName);
-    if (!meta) return [];
-    const alias = defaultTableAlias(sel);
+    if (!meta) return undefined;
     const periodFields: MetaField[] =
       meta.virtual && ['Обороты', 'ОборотыДтКт', 'ОстаткиИОбороты'].includes(meta.virtual.slice)
         ? accumPeriodFields(sel.virtual?.periodicity)
         : [];
-    return [...periodFields, ...meta.fields].map((f: MetaField) => qualified ? `${alias}.${f.name}` : f.name);
+    return { alias: defaultTableAlias(sel), meta: periodFields.length ? { ...meta, fields: [...periodFields, ...meta.fields] } : meta };
   }
 
-  // Квалифицированные поля (Alias.Поле) по всем выбранным таблицам — для
-  // конструктора произвольного условия.
-  function qualifiedFieldsAllTables(): string[] {
-    return state.selectedTables.flatMap(t => fieldsForTable(t.id, true));
+  // Усі вибрані таблиці (поля адресуються `Псевдоним.Поле`) — для полів/умов/зв'язків.
+  function expressionSourcesAllTables(): ExpressionSource[] {
+    return state.selectedTables.map(t => expressionSourceForTable(t.id)).filter((s): s is ExpressionSource => !!s);
   }
 
   // Выбранная таблица для окна «Параметры виртуальной таблицы» (null, если строка
@@ -382,7 +384,8 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
               const tableId = state.focusedSelectedTableId ?? state.selectedTables[0]?.id;
               if (!tableId) return;
               setExprBuilder({
-                fields: qualifiedFieldsAllTables(),
+                sources: expressionSourcesAllTables(),
+                qualified: true,
                 initial: '',
                 onOk: text => {
                   if (text.trim()) dispatch({ type: 'ADD_EXPRESSION_FIELD', tableId, expression: text.trim() });
@@ -397,7 +400,8 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
               const table = state.selectedTables.find(t => t.id === f.tableId);
               const initial = f.expression ?? (table ? `${defaultTableAlias(table)}.${f.path}` : f.path);
               setExprBuilder({
-                fields: qualifiedFieldsAllTables(),
+                sources: expressionSourcesAllTables(),
+                qualified: true,
                 initial,
                 onOk: text => {
                   if (text.trim()) dispatch({ type: 'SET_FIELD_EXPRESSION', fieldIdx: idx, expression: text.trim() });
@@ -432,7 +436,8 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           onSetOperator={(index, operator, condIndex) => dispatch({ type: 'SET_JOIN_OPERATOR', index, operator, condIndex })}
           onOpenExpressionBuilder={(index, currentText, condIndex) => {
             setExprBuilder({
-              fields: qualifiedFieldsAllTables(),
+              sources: expressionSourcesAllTables(),
+              qualified: true,
               initial: currentText,
               onOk: text => {
                 dispatch({ type: 'SET_JOIN_EXPRESSION', index, expression: text, condIndex });
@@ -476,7 +481,8 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           onSetParam={(index, param) => dispatch({ type: 'SET_CONDITION_PARAM', index, param })}
           onOpenExpressionBuilder={(index, currentText) => {
             setExprBuilder({
-              fields: qualifiedFieldsAllTables(),
+              sources: expressionSourcesAllTables(),
+              qualified: true,
               initial: currentText,
               onOk: text => {
                 dispatch({ type: 'SET_CONDITION_EXPRESSION', index, expression: text });
@@ -628,7 +634,8 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           initial={vtSel.virtual ?? {}}
           onOpenConditionBuilder={(current, apply) => {
             setExprBuilder({
-              fields: fieldsForTable(vtDialogTableId, false),
+              sources: [expressionSourceForTable(vtDialogTableId)].filter((s): s is ExpressionSource => !!s),
+              qualified: false,
               initial: current,
               onOk: text => { apply(text); setExprBuilder(null); },
             });
@@ -644,7 +651,9 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
       {/* Expression builder modal */}
       {exprBuilder && (
         <ExpressionBuilder
-          availableFields={exprBuilder.fields}
+          sources={exprBuilder.sources}
+          qualified={exprBuilder.qualified}
+          resolver={queryModalResolver}
           initialText={exprBuilder.initial}
           onOk={exprBuilder.onOk}
           onCancel={() => setExprBuilder(null)}

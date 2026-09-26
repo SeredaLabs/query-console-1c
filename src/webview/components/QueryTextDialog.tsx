@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { CodeEditor, type CodeEditorHandle } from './CodeEditor';
 import { IconButton } from './IconButton';
+import { ToolbarButton, TOOLBAR_SEPARATOR as SEPARATOR } from './ToolbarButton';
 import { BTN, BTN_SECONDARY } from '../sharedStyles';
 import { localizeDiagnostic, localizeFieldNotFoundContext, localizeLintWarning, t } from '../i18n';
 import { analyze, type QueryAnalysisResult, type QueryDiagnostic, type TextRange } from '../../core/query/queryAnalysisService';
@@ -20,57 +21,6 @@ export interface QueryTextDialogProps {
   onChange: (text: string) => void;
   onApply: () => void;
   onClose: () => void;
-}
-
-const SEPARATOR: React.CSSProperties = { width: 1, alignSelf: 'stretch', background: 'var(--qc-border)', margin: '4px 4px' };
-
-interface ToolbarButtonProps {
-  /** Имя codicon без префикса (см. node_modules/@vscode/codicons для полного списка). */
-  icon: string;
-  label?: string;
-  active?: boolean;
-  disabled?: boolean;
-  title: string;
-  onClick?: () => void;
-  /** Разворот глифа (нет отдельной иконки «отменить» в codicons — берём «redo» зеркально). */
-  mirrorIcon?: boolean;
-}
-
-/**
- * Кнопка тулбара «иконка (+ подпись)» в стиле нативных VS Code toolbar-кнопок —
- * тот же hover-фон, что и у `IconButton`, плюс `active`-подсветка для кнопок-тумблеров
- * (Параметры/Структура). Раньше тулбар был из голого текста — по просьбе пользователя
- * заменён на codicon-иконки, как в остальном UI конструктора.
- */
-function ToolbarButton({ icon, label, active, disabled, title, onClick, mirrorIcon }: ToolbarButtonProps): React.ReactElement {
-  const [hover, setHover] = React.useState(false);
-  return (
-    <button
-      title={title}
-      disabled={disabled}
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 5,
-        background: active
-          ? 'var(--vscode-toolbar-activeBackground, rgba(90,93,94,0.55))'
-          : hover && !disabled ? 'var(--vscode-toolbar-hoverBackground, rgba(90,93,94,0.4))' : 'transparent',
-        border: 'none',
-        borderRadius: 4,
-        padding: '4px 8px',
-        fontSize: 12,
-        color: disabled ? 'var(--vscode-disabledForeground, #6b6b6b)' : 'var(--vscode-foreground, #ccc)',
-        cursor: disabled ? 'default' : 'pointer',
-      }}
-    >
-      <span
-        className={`codicon codicon-${icon}`}
-        style={{ fontSize: 14, transform: mirrorIcon ? 'scaleX(-1)' : undefined }}
-      />
-      {label && <span>{label}</span>}
-    </button>
-  );
 }
 
 const DEBOUNCE_MS = 400;

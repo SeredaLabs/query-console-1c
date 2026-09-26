@@ -896,3 +896,272 @@ test.describe('Query Constructor Webview', () => {
     await expect(err).toContainText('Ошибка разбора 5:'); // строка с `?ВТ`
   });
 });
+
+/** Відкриває «Произвольное выражение» для нового поля з таблицею Справочник.Валюты (псевдонім «Валюты»). */
+async function openExpressionForNewField(page: Page): Promise<void> {
+  await page.goto(BASE);
+  await page.locator('text=Справочники').click();
+  await dragTableToPanel(page, 'Справочник.Валюты');
+  await page.locator('button[title="Добавить поле (произвольное выражение)"]').click();
+  await expect(page.locator('[data-testid="expr-dialog"]')).toBeVisible();
+}
+
+const EXPR_CONTENT = '[data-testid="expr-editor"] .cm-content';
+
+async function exprText(page: Page): Promise<string> {
+  return page.locator(EXPR_CONTENT).evaluate(el => Array.from(el.querySelectorAll('.cm-line')).map(l => l.textContent).join('\n'));
+}
+
+test.describe('Произвольное выражение (редактор выражений)', () => {
+  test('open → OK без изменений сохраняет выражение; Отмена не меняет его', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await page.locator(EXPR_CONTENT).fill('ЕСТЬNULL(Валюты.Код, "-")');
+    await page.locator('[data-testid="expr-ok"]').click();
+    await expect(page.locator('[data-field-idx="0"]')).toContainText('ЕСТЬNULL(Валюты.Код, "-")');
+
+    await page.locator('[data-field-idx="0"]').dblclick();
+    expect(await exprText(page)).toBe('ЕСТЬNULL(Валюты.Код, "-")');
+    await page.locator('[data-testid="expr-ok"]').click();
+    await expect(page.locator('[data-field-idx="0"]')).toContainText('ЕСТЬNULL(Валюты.Код, "-")');
+
+    await page.locator('[data-field-idx="0"]').dblclick();
+    await page.locator(EXPR_CONTENT).fill('1');
+    await page.locator('[data-testid="expr-cancel"]').click();
+    await expect(page.locator('[data-testid="expr-dialog"]')).toHaveCount(0);
+    await expect(page.locator('[data-field-idx="0"]')).toContainText('ЕСТЬNULL(Валюты.Код, "-")');
+  });
+
+  test('поля: дерево по источнику с типами; вставка в позицию курсора и поверх выделения', async ({ page }) => {
+    await openExpressionForNewField(page);
+    const codeRow = page.locator('[data-row-key="s:Валюты/Код"]');
+    await expect(codeRow).toContainText('Строка');
+    await codeRow.dblclick();
+    expect(await exprText(page)).toBe('Валюты.Код');
+
+    await page.keyboard.type(' + ');
+    await page.locator('[data-row-key="s:Валюты/Наименование"]').dblclick();
+    expect(await exprText(page)).toBe('Валюты.Код + Валюты.Наименование');
+
+    await page.locator(EXPR_CONTENT).click();
+    await page.keyboard.press('ControlOrMeta+a');
+    await codeRow.dblclick();
+    expect(await exprText(page)).toBe('Валюты.Код');
+  });
+
+  test('функции: сниппет с полями, Tab переходит к следующему полю', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await page.locator('[data-row-key="c:conditional/ЕСТЬNULL"]').dblclick();
+    expect(await exprText(page)).toBe('ЕСТЬNULL(Выражение, ЗначениеЗамены)');
+    expect(await page.evaluate(() => window.getSelection()?.toString())).toBe('Выражение');
+    await page.keyboard.type('Валюты.Код');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('0');
+    expect(await exprText(page)).toBe('ЕСТЬNULL(Валюты.Код, 0)');
+    // Докуметація вибраної функції — в тій самій панелі.
+    await expect(page.locator('[data-testid="expr-function-doc"]')).toContainText('ЕСТЬNULL(<Выражение>, <ЗначениеЗамены>)');
+  });
+
+  test('шаблоны: меню вставляет ВЫБОР многострочным сниппетом', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await page.locator('[data-testid="expr-templates"]').click();
+    await page.locator('[data-testid="expr-templates-menu"] >> text=ВЫБОР').click();
+    expect(await exprText(page)).toBe('ВЫБОР\n\tКОГДА Условие ТОГДА Значение\n\tИНАЧЕ Значение\nКОНЕЦ');
+    expect(await page.evaluate(() => window.getSelection()?.toString())).toBe('Условие');
+  });
+
+  test('автодополнение после «Псевдоним.» — поля этого источника; Enter принимает', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await page.locator(EXPR_CONTENT).click();
+    await page.keyboard.type('Валюты.', { delay: 40 });
+    const popup = page.locator('.cm-tooltip-autocomplete');
+    await expect(popup).toBeVisible();
+    await expect(popup).toContainText('Наименование');
+    await expect(popup).toContainText('ЗагружаетсяИзИнтернета');
+    await page.keyboard.type('Наим', { delay: 40 });
+    await page.waitForTimeout(100);
+    await page.keyboard.press('Enter');
+    expect(await exprText(page)).toBe('Валюты.Наименование');
+  });
+
+  test('Ctrl+Space открывает подсказку; кнопка ✨ — тоже', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await page.locator(EXPR_CONTENT).fill('Вал');
+    await page.locator(EXPR_CONTENT).press('End');
+    await page.keyboard.press('Control+Space');
+    await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('Валюты');
+    await page.waitForTimeout(100); // CM ігнорує Enter перші 75мс після показу підказки (interactionDelay)
+    await page.keyboard.press('Enter');
+    expect(await exprText(page)).toBe('Валюты');
+    await page.keyboard.type('.');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
+    await page.locator('[data-testid="expr-suggest"]').click();
+    await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('Код');
+  });
+
+  test('отмена/повтор, форматирование и перенос строк не теряют историю', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await page.locator('[data-row-key="s:Валюты/Код"]').dblclick();
+    await page.locator('[data-testid="expr-undo"]').click();
+    expect(await exprText(page)).toBe('');
+    await page.locator('[data-testid="expr-redo"]').click();
+    expect(await exprText(page)).toBe('Валюты.Код');
+
+    await page.locator(EXPR_CONTENT).fill('ВЫБОР КОГДА Валюты.Код = "1" ТОГДА 1 ИНАЧЕ 0 КОНЕЦ');
+    await expect(page.locator('[data-testid="expr-format"]')).toBeEnabled();
+    await page.locator('[data-testid="expr-format"]').click();
+    expect(await exprText(page)).toBe('ВЫБОР\n\tКОГДА Валюты.Код = "1"\n\t\tТОГДА 1\n\tИНАЧЕ 0\nКОНЕЦ');
+
+    const wrap = page.locator('[data-testid="expr-wrap"]');
+    await expect(wrap).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator(EXPR_CONTENT)).toHaveClass(/cm-lineWrapping/);
+    await wrap.click();
+    await expect(wrap).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator(EXPR_CONTENT)).not.toHaveClass(/cm-lineWrapping/);
+    // Перемикач не пересоздав редактор: форматування все ще відкочується одним кроком.
+    await page.locator('[data-testid="expr-undo"]').click();
+    expect(await exprText(page)).toBe('ВЫБОР КОГДА Валюты.Код = "1" ТОГДА 1 ИНАЧЕ 0 КОНЕЦ');
+  });
+
+  test('форматирование недоступно для незавершённого выражения (не дописывает токены)', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await page.locator(EXPR_CONTENT).fill('ВЫБОР КОГДА Валюты.Код = "1"');
+    await expect(page.locator('[data-testid="expr-status-state"]')).toContainText('Синтаксическая ошибка');
+    await expect(page.locator('[data-testid="expr-format"]')).toBeDisabled();
+    expect(await exprText(page)).toBe('ВЫБОР КОГДА Валюты.Код = "1"');
+  });
+
+  test('развернуть редактор и вернуть раскладку без потери текста', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await page.locator(EXPR_CONTENT).fill('Валюты.Код + Валюты.Наименование');
+    await page.locator('[data-testid="expr-maximize-editor"]').click();
+    await expect(page.locator('[data-testid="expr-top-area"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="expr-status"]')).toBeVisible();
+    await expect(page.locator('[data-testid="expr-ok"]')).toBeVisible();
+    expect(await exprText(page)).toBe('Валюты.Код + Валюты.Наименование');
+    await page.locator('[data-testid="expr-maximize-editor"]').click();
+    await expect(page.locator('[data-testid="expr-top-area"]')).toBeVisible();
+    expect(await exprText(page)).toBe('Валюты.Код + Валюты.Наименование');
+    await page.locator('[data-testid="expr-undo"]').click();
+    expect(await exprText(page)).toBe('');
+  });
+
+  test('статус: корректно + тип; синтаксическая ошибка; неизвестное поле подсвечено', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await expect(page.locator('[data-testid="expr-status-state"]')).toContainText('Выражение пустое');
+    await page.locator(EXPR_CONTENT).fill('Валюты.Код');
+    await expect(page.locator('[data-testid="expr-status-state"]')).toContainText('Выражение корректно');
+    await expect(page.locator('[data-testid="expr-result-type"]')).toContainText('Строка');
+    await expect(page.locator('[data-testid="expr-counts"]')).toContainText('Строк: 1');
+    await expect(page.locator('[data-testid="expr-counts"]')).toContainText('Символов: 10');
+
+    await page.locator(EXPR_CONTENT).fill('Валюты.Код +');
+    await expect(page.locator('[data-testid="expr-status-state"]')).toContainText('Синтаксическая ошибка');
+    await expect(page.locator('[data-testid="expr-result-type"]')).toContainText('неизвестен');
+
+    await page.locator(EXPR_CONTENT).fill('Валюты.Нет = "1"');
+    await expect(page.locator('[data-testid="expr-status-state"]')).toContainText('Проблем: 1');
+    await expect(page.locator('.cm-lintRange-warning')).toHaveText('Нет');
+    // Маркер не затирається пустим автоматичним linter-опитуванням (~750мс після правки).
+    await page.waitForTimeout(1000);
+    await expect(page.locator('.cm-lintRange-warning')).toHaveText('Нет');
+    // Діагностика не блокує OK (поточна форма не мала блокуючих правил).
+    await page.locator('[data-testid="expr-ok"]').click();
+    await expect(page.locator('[data-field-idx="0"]')).toContainText('Валюты.Нет = "1"');
+  });
+
+  test('поиск полей и функций; навигация клавиатурой по дереву', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await page.locator('[data-testid="expr-fields-search"]').fill('наим');
+    await expect(page.locator('[data-row-key="s:Валюты/Наименование"]')).toBeVisible();
+    await expect(page.locator('[data-row-key="s:Валюты/Код"]')).toHaveCount(0);
+    await page.locator('[data-testid="expr-fields-search"]').press('ArrowDown');
+    await expect(page.locator('[data-testid="expr-fields-tree"]')).toBeFocused();
+    await page.keyboard.press('Enter');
+    expect(await exprText(page)).toBe('Валюты.Наименование');
+
+    await page.locator('[data-testid="expr-functions-search"]').fill('добав');
+    await expect(page.locator('[data-row-key="c:date/ДОБАВИТЬКДАТЕ"]')).toBeVisible();
+    await expect(page.locator('[data-row-key="c:conditional/ВЫБОР"]')).toHaveCount(0);
+
+    await page.locator('[data-testid="expr-functions-search"]').fill('');
+    const tree = page.locator('[data-testid="expr-functions-tree"]');
+    await tree.focus();
+    // Активний за замовчуванням — ВЫБОР; ← до категорії, ← згорнути, → розгорнути.
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('[data-row-key="c:conditional"]')).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('[data-row-key="c:conditional/ВЫБОР"]')).toHaveCount(0);
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('[data-row-key="c:conditional/ЕСТЬNULL"]')).toHaveAttribute('aria-selected', 'true');
+    await page.locator(EXPR_CONTENT).click();
+    await page.keyboard.press('End');
+    await tree.focus();
+    await page.keyboard.press('Enter');
+    expect(await exprText(page)).toBe('Валюты.НаименованиеЕСТЬNULL(Выражение, ЗначениеЗамены)');
+  });
+
+  test('Ctrl/Cmd+F вне редактора фокусирует поиск своей панели', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await page.locator('[data-testid="expr-functions-tree"]').focus();
+    await page.keyboard.press('ControlOrMeta+f');
+    await expect(page.locator('[data-testid="expr-functions-search"]')).toBeFocused();
+    await page.locator('[data-testid="expr-fields-tree"]').focus();
+    await page.keyboard.press('ControlOrMeta+f');
+    await expect(page.locator('[data-testid="expr-fields-search"]')).toBeFocused();
+  });
+
+  test('Esc: сначала закрывает подсказку; с изменённым текстом — спрашивает; без изменений — закрывает', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await page.locator(EXPR_CONTENT).click();
+    await page.keyboard.type('Валюты.', { delay: 40 });
+    await expect(page.locator('.cm-tooltip-autocomplete')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
+    await expect(page.locator('[data-testid="expr-dialog"]')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-testid="expr-unsaved-confirm"]')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-testid="expr-unsaved-confirm"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="expr-dialog"]')).toBeVisible();
+    await page.locator('[data-testid="expr-cancel"]').click();
+
+    await page.locator('button[title="Добавить поле (произвольное выражение)"]').click();
+    await expect(page.locator('[data-testid="expr-dialog"]')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-testid="expr-dialog"]')).toHaveCount(0);
+    await expect(page.locator('[data-field-idx="0"]')).toHaveCount(0);
+  });
+
+  test('справка функции: сбоку при широкой панели, компактная полоса при узкой', async ({ page }) => {
+    await openExpressionForNewField(page);
+    const panel = page.locator('[data-testid="expr-functions-panel"]');
+    await expect(panel).toHaveAttribute('data-doc-placement', 'side');
+    await expect(page.locator('[data-testid="expr-function-doc"]')).toContainText('Пример');
+    await page.locator('[data-testid="expr-dialog"]').evaluate(el => { (el as HTMLElement).style.width = '760px'; });
+    await expect(panel).toHaveAttribute('data-doc-placement', 'strip');
+    // Згорнуто — лише опис і явне посилання на детальну довідку.
+    await expect(page.locator('[data-testid="expr-function-doc-strip"]')).toContainText('Условная конструкция');
+    await expect(page.locator('[data-testid="expr-function-doc-strip"]')).not.toContainText('КОГДА');
+    await expect(page.locator('[data-testid="expr-doc-toggle"]')).toHaveText('Синтаксис и пример');
+    await expect(page.locator('[data-testid="expr-function-doc"]')).toHaveCount(0);
+    await page.locator('[data-testid="expr-doc-toggle"]').click();
+    await expect(page.locator('[data-testid="expr-doc-toggle"]')).toHaveText('Свернуть');
+    await expect(page.locator('[data-testid="expr-function-doc"]')).toContainText('Пример');
+    await page.locator('[data-testid="expr-doc-toggle"]').click();
+    await expect(page.locator('[data-testid="expr-function-doc"]')).toHaveCount(0);
+  });
+
+  test('узкая ширина: Поля/Функции сворачиваются во вкладки, редактор остаётся', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await expect(page.locator('[data-testid="expr-dialog"]')).toHaveAttribute('data-layout', 'wide');
+    await page.locator('[data-testid="expr-dialog"]').evaluate(el => { (el as HTMLElement).style.width = '480px'; });
+    await expect(page.locator('[data-testid="expr-dialog"]')).toHaveAttribute('data-layout', 'narrow');
+    await expect(page.locator('[data-testid="expr-fields-pane"]')).toBeVisible();
+    await expect(page.locator('[data-testid="expr-functions-pane"]')).toHaveCount(0);
+    await page.locator('[data-testid="expr-tab-functions"]').click();
+    await expect(page.locator('[data-testid="expr-functions-pane"]')).toBeVisible();
+    await expect(page.locator('[data-testid="expr-editor"]')).toBeVisible();
+  });
+});

@@ -1,9 +1,9 @@
 import * as React from 'react';
-import { EditorState, type Extension } from '@codemirror/state';
+import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
 import { defaultKeymap, historyKeymap, history, undo as cmUndo, redo as cmRedo, isolateHistory } from '@codemirror/commands';
 import { bracketMatching, foldGutter, codeFolding, foldKeymap } from '@codemirror/language';
-import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
+import { closeBrackets, closeBracketsKeymap, snippet, startCompletion as cmStartCompletion } from '@codemirror/autocomplete';
 import { search, searchKeymap, openSearchPanel } from '@codemirror/search';
 import { linter, lintGutter, setDiagnostics } from '@codemirror/lint';
 import type { Diagnostic } from '@codemirror/lint';
@@ -30,6 +30,14 @@ export interface CodeEditorHandle {
   /** Переносит курсор на символьное смещение в тексте и прокручивает к нему —
    * клик по ошибке в статус-панели/диагностике (стадия 4 плана). */
   moveCursorTo: (offset: number) => void;
+  /** Вставляє шаблон `snippet()` CodeMirror (`${Имя}` — поля, Tab/Shift+Tab між
+   * ними) замість виділення; курсор/виділення стає на перше поле. */
+  insertSnippet: (template: string) => void;
+  /** Відкриває автодоповнення в позиції курсора (як Ctrl+Space) — no-op, якщо
+   * `extensions` не містять `autocompletion()`. */
+  startCompletion: () => void;
+  /** Поточна позиція курсора (голова основного виділення). */
+  getCursor: () => number;
 }
 
 interface Props {
@@ -57,6 +65,10 @@ interface Props {
    * і `onChange` ніколи не викликається. Опційно — інші місця використання не
    * зачеплені. */
   readOnly?: boolean;
+  /** Додаткові розширення CodeMirror (напр. автодоповнення редактора довільних
+   * виразів). Читаються один раз при створенні редактора — передавайте стабільний
+   * масив. */
+  extensions?: Extension[];
 }
 
 /**
@@ -68,7 +80,7 @@ interface Props {
  * токенизатора (queryHighlight.ts), без Lezer-грамматики.
  */
 export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function CodeEditor(
-  { value, onChange, onDragOver, onDrop, spellCheck, testId, wrapperStyle, textStyle, richFeatures, readOnly },
+  { value, onChange, onDragOver, onDrop, spellCheck, testId, wrapperStyle, textStyle, richFeatures, readOnly, extensions: extraExtensions },
   forwardedRef
 ) {
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -77,6 +89,9 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
   onChangeRef.current = onChange;
 
   const wrapLines = textStyle.whiteSpace === 'pre-wrap';
+  // Перенос рядків — через Compartment, а не пересоздання EditorView: перемикач
+  // «Перенос рядків» у редакторі виразів не повинен губити undo-історію/виділення.
+  const wrapCompartmentRef = React.useRef(new Compartment());
 
   React.useImperativeHandle(forwardedRef, () => ({
     insertAtCursor(snippet: string) {
@@ -114,6 +129,22 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
       const pos = Math.max(0, Math.min(offset, view.state.doc.length));
       view.dispatch({ selection: { anchor: pos }, scrollIntoView: true });
       view.focus();
+    },
+    insertSnippet(template: string) {
+      const view = viewRef.current;
+      if (!view) return;
+      const { from, to } = view.state.selection.main;
+      snippet(template)(view, null, from, to);
+      view.focus();
+    },
+    startCompletion() {
+      const view = viewRef.current;
+      if (!view) return;
+      view.focus();
+      cmStartCompletion(view);
+    },
+    getCursor() {
+      return viewRef.current?.state.selection.main.head ?? 0;
     },
   }), []);
 
@@ -215,6 +246,50 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
         opacity: 1,
         color: 'var(--vscode-foreground, #fff)',
       },
+      // Автодоповнення/сніпети/лінт-тултіпи (лише коли відповідні розширення
+      // підключені через `extensions`/`richFeatures`) — у тонах VS Code suggest-віджета,
+      // а не світлим дефолтним скіном CodeMirror.
+      '.cm-tooltip': {
+        background: 'var(--vscode-editorSuggestWidget-background, var(--vscode-editorWidget-background, #252526))',
+        color: 'var(--vscode-editorSuggestWidget-foreground, var(--vscode-editorWidget-foreground, #ccc))',
+        border: '1px solid var(--vscode-editorSuggestWidget-border, var(--qc-border, #454545))',
+        borderRadius: '4px',
+      },
+      '.cm-tooltip.cm-tooltip-autocomplete > ul': {
+        fontFamily: 'var(--vscode-font-family, sans-serif)',
+        maxHeight: '16em',
+        minWidth: '280px',
+      },
+      '.cm-tooltip.cm-tooltip-autocomplete > ul > li': {
+        display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 8px',
+      },
+      '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+        background: 'var(--vscode-editorSuggestWidget-selectedBackground, var(--vscode-list-activeSelectionBackground, #04395e))',
+        color: 'var(--vscode-editorSuggestWidget-selectedForeground, var(--vscode-list-activeSelectionForeground, #fff))',
+      },
+      '.cm-completionDetail': {
+        marginLeft: 'auto', paddingLeft: '16px', fontStyle: 'normal',
+        color: 'var(--vscode-descriptionForeground, #9d9d9d)',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '50%',
+      },
+      '.cm-completionMatchedText': {
+        textDecoration: 'none', fontWeight: 'bold',
+        color: 'var(--vscode-editorSuggestWidget-highlightForeground, #2aaaff)',
+      },
+      '.cm-tooltip.cm-completionInfo': {
+        padding: '8px 10px', maxWidth: '360px', boxSizing: 'border-box',
+        fontFamily: 'var(--vscode-font-family, sans-serif)', fontSize: '12px',
+        // Довгі імена метаданих (`РегистрНакопления.X.Остатки`) переносяться, а не
+        // розтягують картку за межі вільного місця.
+        overflowWrap: 'anywhere',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+      },
+      '.cm-tooltip.cm-completionInfo.qc-info-side.cm-completionInfo-right': { marginLeft: '4px' },
+      '.cm-tooltip.cm-completionInfo.qc-info-side.cm-completionInfo-left': { marginRight: '4px' },
+      '.cm-snippetField': {
+        background: 'var(--vscode-editor-snippetTabstopHighlightBackground, rgba(124,124,124,0.3))',
+      },
+      '.cm-snippetFieldPosition': { borderLeft: '1px solid var(--vscode-editorCursor-foreground, #aeafad)' },
     });
 
     const extensions: Extension[] = [
@@ -236,7 +311,7 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
       }),
       EditorView.contentAttributes.of({ spellcheck: spellCheck === false ? 'false' : 'true' }),
     ];
-    if (wrapLines) extensions.push(EditorView.lineWrapping);
+    extensions.push(wrapCompartmentRef.current.of(wrapLines ? EditorView.lineWrapping : []));
     if (readOnly) extensions.push(EditorState.readOnly.of(true), EditorView.contentAttributes.of({ 'aria-readonly': 'true' }));
     if (richFeatures) {
       extensions.push(
@@ -248,13 +323,16 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
         codeFolding(),
         foldGutter(),
         search(),
-        // Пустой источник — реальные диагностики приходят через handle.setDiagnostics()
-        // (стадия 4), а не через встроенный автоматический опрос `linter()`.
-        linter(() => []),
+        // Без источника (`null` — только конфигурация): реальные диагностики приходят
+        // через handle.setDiagnostics() (стадия 4). Пустой источник `() => []` здесь
+        // нельзя — `linter()` вызывает его после каждой правки (~750мс простоя) и
+        // затирает уже выставленные маркеры пустым списком.
+        linter(null),
         lintGutter(),
         keymap.of([...closeBracketsKeymap, ...searchKeymap, ...foldKeymap])
       );
     }
+    if (extraExtensions) extensions.push(...extraExtensions);
 
     const view = new EditorView({
       state: EditorState.create({ doc: value, extensions }),
@@ -262,10 +340,17 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, Props>(function Cod
     });
     viewRef.current = view;
     return () => view.destroy();
-    // Пересоздаём редактор при смене режима переноса строк или набора расширений —
-    // остальные пропсы (onChange/цвета/spellCheck) читаются через рефы/статичные стили.
+    // Пересоздаём редактор при смене набора расширений — остальные пропсы
+    // (onChange/цвета/spellCheck/extensions) читаются через рефы/статичные стили;
+    // перенос строк переключается эффектом ниже без пересоздания.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wrapLines, richFeatures, readOnly]);
+  }, [richFeatures, readOnly]);
+
+  React.useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({ effects: wrapCompartmentRef.current.reconfigure(wrapLines ? EditorView.lineWrapping : []) });
+  }, [wrapLines]);
 
   // Синхронизация извне (сброс текста при повторном открытии диалога, кнопка
   // «Форматировать» — стадия 5 плана) — свои же изменения (через onChange выше) сюда
