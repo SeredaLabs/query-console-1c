@@ -82,18 +82,37 @@ export function stagingDirFor(outPath: string): string {
   return `${base}.building-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-/** Подчищает staging/discard-каталоги, оставшиеся от прежних прерванных сборок.
- * Это безопасно удалить рекурсивно: имя однозначно порождено НАМИ (см.
- * `stagingDirFor`/discard-именование в `commitGeneration`), не пользовательский
- * unowned каталог — §7 запрещает удалять чужое, а не наши временные артефакты.
- *
- * Post-release RE-audit (P1 №5, двойной сбой): `commitGeneration` теперь
- * пытается откатить `.previous-*` обратно в `target`, если второй rename
- * падает — но если ТОТ откат тоже не удался (например, ФС стала недоступна на
- * запись в обоих направлениях), `target` остаётся ОТСУТСТВУЮЩИМ, а
- * `.previous-*` — единственной уцелевшей копией. Такой `.previous-*` НЕ
- * удаляем — только те, у которых `target` уже существует (значит, коммит
- * когда-то успешно прошёл, и это просто обычный хвост, безопасный для очистки).
+/** Cleanup must not borrow ownership from a symlink's target. */
+function isOwnedDirectory(dir: string): boolean {
+  try {
+    return fs.lstatSync(dir).isDirectory() && isOwnedGeneration(dir);
+  } catch {
+    return false;
+  }
+}
+
+function stagingProcessExited(name: string): boolean {
+  const match = /^cf\.building-([1-9]\d*)-\d+-[a-z0-9]+$/.exec(name);
+  if (!match) return false;
+  const pid = Number(match[1]);
+  if (!Number.isSafeInteger(pid)) return false;
+  try {
+    // Signal 0 checks existence without terminating the process. A reused PID
+    // or an inconclusive check must preserve the directory, not guess its age.
+    process.kill(pid, 0);
+    return false;
+  } catch (e) {
+    return (e as NodeJS.ErrnoException | undefined)?.code === 'ESRCH';
+  }
+}
+
+/** Clean only explicitly owned siblings, checking process liveness for staging.
+ * Names select candidates; they never establish ownership. Unmarked staging
+ * from builds interrupted before finalizeStaging is intentionally preserved.
+ * A finalized staging directory can still be awaiting commit in another
+ * process, so remove it only when that process is confirmed gone.
+ * Preserve .previous-* if no owned current generation exists: it may be the
+ * only recoverable copy after both commit and rollback failed.
  */
 export function cleanupStaleSiblings(outPath: string): void {
   const base = path.join(outPath, 'cf');
@@ -102,12 +121,15 @@ export function cleanupStaleSiblings(outPath: string): void {
   const baseName = path.basename(base);
   for (const entry of fs.readdirSync(parent)) {
     if (entry === baseName || entry === baseName + MANAGED_SUFFIX) continue;
+    const candidate = path.join(parent, entry);
     if (entry.startsWith(`${baseName}.building-`)) {
-      fs.rmSync(path.join(parent, entry), { recursive: true, force: true });
+      if (isOwnedDirectory(candidate) && stagingProcessExited(entry)) {
+        fs.rmSync(candidate, { recursive: true, force: true });
+      }
       continue;
     }
-    if (entry.startsWith(`${baseName}.previous-`) && fs.existsSync(path.join(parent, baseName))) {
-      fs.rmSync(path.join(parent, entry), { recursive: true, force: true });
+    if (entry.startsWith(`${baseName}.previous-`) && isOwnedDirectory(candidate) && isOwnedDirectory(base)) {
+      fs.rmSync(candidate, { recursive: true, force: true });
     }
   }
 }

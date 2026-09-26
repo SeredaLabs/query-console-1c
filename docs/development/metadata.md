@@ -22,6 +22,13 @@ after successful completion (`generationStore.ts`). An ownership marker
 prevents deletion of arbitrary directories. Preserve those properties when
 changing the pipeline.
 
+Sibling cleanup requires an ownership marker; a `cf.building-*` or
+`cf.previous-*` name alone is never sufficient. Staging is removed only when
+its creating process is confirmed to have exited. Unknown process status,
+symlinks, and unmarked staging left before finalization are preserved.
+Previous generations are retained unless an owned current generation exists,
+so cleanup cannot remove the only recovery copy after a failed rollback.
+
 ## Extension flow
 
 `metadataLoader.ts` (used by both the Classic `panel.ts` and the Canvas

@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -10,6 +10,7 @@ import {
 let tmpDir: string;
 
 afterEach(() => {
+  vi.restoreAllMocks();
   if (tmpDir && fs.existsSync(tmpDir)) fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
@@ -182,19 +183,137 @@ describe('resolveManagedCfDir', () => {
 });
 
 describe('cleanupStaleSiblings', () => {
-  it('удаляет только .building-*/.previous-* siblings, не трогает cf/cf-managed/чужие каталоги', () => {
+  it('preserves unowned directories even when their names match staging/discard prefixes', () => {
     const outPath = freshOutPath();
     const cf = path.join(outPath, 'cf');
     fs.mkdirSync(cf, { recursive: true });
+    finalizeStaging(cf);
     fs.mkdirSync(cf + '-managed', { recursive: true });
-    fs.mkdirSync(cf + '.building-1234', { recursive: true });
-    fs.mkdirSync(cf + '.previous-5678', { recursive: true });
+    const staging = makeStagingWithContent(outPath, false);
+    const previous = cf + '.previous-5678';
+    fs.mkdirSync(previous, { recursive: true });
+    fs.writeFileSync(path.join(previous, 'user-content.txt'), 'user backup');
     fs.mkdirSync(path.join(outPath, 'unrelated-dir'), { recursive: true });
 
     cleanupStaleSiblings(outPath);
 
     const remaining = fs.readdirSync(outPath).sort();
-    expect(remaining).toEqual(['cf', 'cf-managed', 'unrelated-dir']);
+    expect(remaining).toEqual(['cf', 'cf-managed', path.basename(staging), path.basename(previous), 'unrelated-dir'].sort());
+    expect(fs.readFileSync(path.join(staging, 'configuration.yaml'), 'utf8')).toBe('version: 1\n');
+    expect(fs.readFileSync(path.join(previous, 'user-content.txt'), 'utf8')).toBe('user backup');
+  });
+
+  it.each([
+    '{not json',
+    'null',
+    JSON.stringify({ owner: 'someone.else', formatVersion: 1 }),
+    JSON.stringify({ owner: OWNER_ID }),
+  ])('preserves both sibling kinds with an invalid ownership marker: %s', marker => {
+    const outPath = freshOutPath();
+    commitGeneration(makeStagingWithContent(outPath), outPath);
+    const siblings = [makeStagingWithContent(outPath), path.join(outPath, 'cf.previous-1234')];
+    for (const dir of siblings) {
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, '.owner.json'), marker);
+      fs.writeFileSync(path.join(dir, 'user-content.txt'), 'preserve');
+    }
+
+    cleanupStaleSiblings(outPath);
+
+    for (const dir of siblings) expect(fs.readFileSync(path.join(dir, 'user-content.txt'), 'utf8')).toBe('preserve');
+  });
+
+  it('removes owned staging only when its process is confirmed gone', () => {
+    const outPath = freshOutPath();
+    const staging = makeStagingWithContent(outPath);
+    const probe = vi.spyOn(process, 'kill').mockImplementation(() => {
+      throw Object.assign(new Error('process gone'), { code: 'ESRCH' });
+    });
+
+    cleanupStaleSiblings(outPath);
+
+    expect(probe).toHaveBeenCalledWith(process.pid, 0);
+    expect(fs.existsSync(staging)).toBe(false);
+  });
+
+  it('preserves finalized staging belonging to a live process', () => {
+    const outPath = freshOutPath();
+    const staging = makeStagingWithContent(outPath);
+    const probe = vi.spyOn(process, 'kill').mockReturnValue(true);
+
+    cleanupStaleSiblings(outPath);
+
+    expect(probe).toHaveBeenCalledWith(process.pid, 0);
+    expect(fs.readFileSync(path.join(staging, 'configuration.yaml'), 'utf8')).toBe('version: 1\n');
+  });
+
+  it.each(['EPERM', 'EACCES', undefined])('preserves staging when process status is uncertain (%s)', code => {
+    const outPath = freshOutPath();
+    const staging = makeStagingWithContent(outPath);
+    vi.spyOn(process, 'kill').mockImplementation(() => {
+      throw Object.assign(new Error('cannot check process'), { code });
+    });
+
+    cleanupStaleSiblings(outPath);
+
+    expect(fs.existsSync(staging)).toBe(true);
+  });
+
+  it('preserves owned staging when its name does not identify a process', () => {
+    const outPath = freshOutPath();
+    const staging = path.join(outPath, 'cf.building-backup');
+    fs.mkdirSync(staging);
+    finalizeStaging(staging);
+
+    cleanupStaleSiblings(outPath);
+
+    expect(fs.existsSync(staging)).toBe(true);
+  });
+
+  it('removes owned previous generations when an owned current generation exists', () => {
+    const outPath = freshOutPath();
+    commitGeneration(makeStagingWithContent(outPath), outPath);
+    const previous = path.join(outPath, 'cf.previous-1234');
+    fs.renameSync(makeStagingWithContent(outPath), previous);
+
+    cleanupStaleSiblings(outPath);
+
+    expect(fs.existsSync(previous)).toBe(false);
+    expect(isOwnedGeneration(path.join(outPath, 'cf'))).toBe(true);
+  });
+
+  it('preserves owned previous generations when the current directory is unowned', () => {
+    const outPath = freshOutPath();
+    fs.mkdirSync(path.join(outPath, 'cf'));
+    const previous = path.join(outPath, 'cf.previous-1234');
+    fs.renameSync(makeStagingWithContent(outPath), previous);
+
+    cleanupStaleSiblings(outPath);
+
+    expect(fs.readFileSync(path.join(previous, 'configuration.yaml'), 'utf8')).toBe('version: 1\n');
+  });
+
+  it('does not follow a sibling symlink to establish ownership', () => {
+    const outPath = freshOutPath();
+    commitGeneration(makeStagingWithContent(outPath), outPath);
+    const link = path.join(outPath, 'cf.previous-1234');
+    fs.symlinkSync(path.join(outPath, 'cf'), link, 'junction');
+
+    cleanupStaleSiblings(outPath);
+
+    expect(fs.lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(isOwnedGeneration(path.join(outPath, 'cf'))).toBe(true);
+  });
+
+  it('preserves the recovery copy when the current generation is only a symlink', () => {
+    const outPath = freshOutPath();
+    const previous = path.join(outPath, 'cf.previous-1234');
+    fs.renameSync(makeStagingWithContent(outPath), previous);
+    fs.symlinkSync(previous, path.join(outPath, 'cf'), 'junction');
+
+    cleanupStaleSiblings(outPath);
+
+    expect(fs.readFileSync(path.join(previous, 'configuration.yaml'), 'utf8')).toBe('version: 1\n');
   });
 
   it('post-release RE-audit P1 №5 (двойной сбой): НЕ удаляет .previous-*, у которого target отсутствует', () => {
@@ -204,6 +323,7 @@ describe('cleanupStaleSiblings', () => {
     // вообще, а .previous-* — единственная уцелевшая копия.
     fs.mkdirSync(path.join(outPath, 'cf.previous-9999'), { recursive: true });
     fs.writeFileSync(path.join(outPath, 'cf.previous-9999', 'configuration.yaml'), 'last-surviving-copy');
+    finalizeStaging(path.join(outPath, 'cf.previous-9999'));
 
     cleanupStaleSiblings(outPath);
 
