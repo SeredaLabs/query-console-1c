@@ -24,7 +24,7 @@ import * as vscode from 'vscode';
 import { computeQueryParseProblems, type QueryParseProblem } from './queryDiagnostics';
 
 const DIAGNOSTIC_SOURCE = 'queryConsole1c';
-const DIAGNOSTIC_CODE = 'designer-parse';
+const DIAGNOSTIC_CODE = { parse: 'designer-parse', malformedExpression: 'designer-malformed-expression' } as const;
 const DEBOUNCE_MS = 400;
 
 function isQueryDocument(document: vscode.TextDocument): boolean {
@@ -37,13 +37,12 @@ function isEnabled(): boolean {
 
 function toDiagnostic(document: vscode.TextDocument, problem: QueryParseProblem, source: string): vscode.Diagnostic {
   const range = new vscode.Range(document.positionAt(problem.start), document.positionAt(problem.end));
-  const diagnostic = new vscode.Diagnostic(
-    range,
-    vscode.l10n.t('Query Designer cannot parse this query: {error}', { error: problem.message }),
-    vscode.DiagnosticSeverity.Warning
-  );
+  const message = problem.kind === 'parse'
+    ? vscode.l10n.t('Query Designer cannot parse this query: {error}', { error: problem.message })
+    : vscode.l10n.t('Query Designer will not apply this query: a custom condition or expression appears to be syntactically broken.');
+  const diagnostic = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Warning);
   diagnostic.source = source;
-  diagnostic.code = DIAGNOSTIC_CODE;
+  diagnostic.code = DIAGNOSTIC_CODE[problem.kind];
   return diagnostic;
 }
 

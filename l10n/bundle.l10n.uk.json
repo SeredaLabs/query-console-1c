@@ -43,6 +43,7 @@
   "Open in Query Designer": "Відкрити в конструкторі запитів",
   "[1C Query] Completion: metadata unavailable: {error}": "[1C Query] Автодоповнення: метадані недоступні: {error}",
   "Query Designer cannot parse this query: {error}": "Конструктор запитів не може розібрати цей запит: {error}",
+  "Query Designer will not apply this query: a custom condition or expression appears to be syntactically broken.": "Конструктор запитів не застосує цей запит: довільна умова або вираз виглядає синтаксично некоректним.",
   "1C: Query Builder (Preview)": "1C: Новий конструктор (Preview)",
   "[1C Query] New Builder (Preview) panel opened.": "[1C Query] Відкрито панель «Новий конструктор (Preview)»."
 }

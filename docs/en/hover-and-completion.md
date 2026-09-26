@@ -38,7 +38,9 @@ Query Designer first. They read the same metadata export as the designer
 ## ⚠️ Diagnostics
 
 A query-text literal that Query Designer cannot parse is flagged with a
-warning directly in the editor, without opening the designer. Disable this
+warning directly in the editor, without opening the designer. So is a literal
+that parses but contains a syntactically broken custom condition or
+expression, which the designer would refuse to apply. Disable this
 with `queryConsole.queryDiagnosticsEnabled` if it produces false positives for
 queries built by string concatenation.
 

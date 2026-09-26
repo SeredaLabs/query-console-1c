@@ -49,6 +49,29 @@ describe('computeQueryParseProblems', () => {
     expect(problems[0].end).toBeLessThan(source.length);
   });
 
+  it('reports a query that parses but that Apply would block for a broken raw expression', () => {
+    // The tolerant parser swallows the rest of the query into the unfinished
+    // ЕСТЬNULL(...) field, so parsing "succeeds" with no tables at all.
+    const source = 'Х = "ВЫБРАТЬ ЕСТЬNULL(Т.Код, ИЗ Справочник.Т КАК Т";';
+    const problems = computeQueryParseProblems(source);
+    expect(problems).toHaveLength(1);
+    expect(problems[0].kind).toBe('malformedExpression');
+    const kwStart = source.indexOf('ВЫБРАТЬ');
+    expect(problems[0].start).toBe(kwStart);
+    expect(problems[0].end).toBe(kwStart + 'ВЫБРАТЬ'.length);
+  });
+
+  it('reports a broken condition the same way', () => {
+    const source = 'Х = "ВЫБРАТЬ Т.Поле ИЗ Справочник.Т КАК Т ГДЕ Т.";';
+    const problems = computeQueryParseProblems(source);
+    expect(problems.map(p => p.kind)).toEqual(['malformedExpression']);
+  });
+
+  it('keeps reporting a parse failure as such', () => {
+    const problems = computeQueryParseProblems('Х = "ВЫБРАТЬ ИЗ Справочник.Т КАК Т";');
+    expect(problems.map(p => p.kind)).toEqual(['parse']);
+  });
+
   it('is a known, accepted false positive for a query built by string concatenation', () => {
     // Задокументоване в дизайні обмеження: запит, зібраний конкатенацією рядків
     // (перший фрагмент — сам по собі неповний, валідний лише разом з наступним),

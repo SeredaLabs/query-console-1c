@@ -51,7 +51,9 @@
   complete inferred output schema are position-aware in field validation,
   hover, and completion (including drop/recreate lifetimes). Their inferred
   columns intentionally carry no reference types, so deeper dot navigation
-  remains fail-open. Editor diagnostics still run syntax checks only.
+  remains fail-open. Editor diagnostics run the parser plus the structural
+  expression check that gates Apply (`findMalformedCustomExpressions`); they
+  do not check metadata (unknown fields or tables).
 - A bare field in a standard condition of a sole-source subquery is bound by
   the parser to that source even when the source lacks the field and the
   field really belongs to an enclosing query (a valid correlated reference):

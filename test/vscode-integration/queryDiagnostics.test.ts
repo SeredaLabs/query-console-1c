@@ -53,6 +53,20 @@ describe('Extension Host: діагностика запитів, які не р�
     assert.strictEqual(doc.getText(range), 'ВЫБРАТЬ', `діапазон мав вказувати на ключове слово, отримано: "${doc.getText(range)}"`);
   });
 
+  it('показує попередження на запиті, який розбирається, але Apply заблокує через зламаний вираз', async function () {
+    this.timeout(20000);
+    const content = 'Запрос.Текст = "ВЫБРАТЬ ЕСТЬNULL(Т.Активен, ИЗ Справочник.Тест КАК Т";\n';
+    const doc = await openLooseBsl(content);
+
+    const found = await waitUntil(() => ourDiagnostics(doc.uri).length > 0, 5000);
+    assert.ok(found, 'очікувалась діагностика від queryConsole1c');
+
+    const diag = ourDiagnostics(doc.uri)[0];
+    assert.strictEqual(diag.severity, vscode.DiagnosticSeverity.Warning);
+    assert.strictEqual(diag.code, 'designer-malformed-expression');
+    assert.strictEqual(doc.getText(diag.range), 'ВЫБРАТЬ');
+  });
+
   it('не показує нічого для коректного запиту', async function () {
     this.timeout(20000);
     const content = 'Запрос.Текст = "ВЫБРАТЬ Т.Активен ИЗ Справочник.Тест КАК Т";\n';

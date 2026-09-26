@@ -43,6 +43,7 @@
   "Open in Query Designer": "Open in Query Designer",
   "[1C Query] Completion: metadata unavailable: {error}": "[1C Query] Completion: metadata unavailable: {error}",
   "Query Designer cannot parse this query: {error}": "Query Designer cannot parse this query: {error}",
+  "Query Designer will not apply this query: a custom condition or expression appears to be syntactically broken.": "Query Designer will not apply this query: a custom condition or expression appears to be syntactically broken.",
   "1C: Query Builder (Preview)": "1C: Query Builder (Preview)",
   "[1C Query] New Builder (Preview) panel opened.": "[1C Query] New Builder (Preview) panel opened."
 }
