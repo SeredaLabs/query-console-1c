@@ -60,4 +60,16 @@ describe('temp-table semantic lifetimes', () => {
     );
     expect(schema).toMatchObject({ complete: false, table: { fields: [] } });
   });
+
+  it('marks a schema incomplete when a producer column expression is structurally invalid', () => {
+    const schema = visible(
+      'ВЫБРАТЬ 1 КАК Код, ВЫБОР КОГДА ИСТИНА ПОМЕСТИТЬ ВТ_Данные; ' +
+      'ВЫБРАТЬ ВТ.Код ИЗ ВТ_Данные КАК ВТ',
+      1,
+    );
+    // Column names stay what the other two temp-table models also derive;
+    // only the negative-validation guarantee is withdrawn.
+    expect(schema).toMatchObject({ complete: false });
+    expect(schema?.table.fields.map(f => f.name)).toEqual(['Код', 'Поле1']);
+  });
 });

@@ -283,6 +283,25 @@ describe('describeChain/resolveCompletionTarget: package temp-table semantics', 
     expect(describeChain(incomplete, resolver, ['Т2', 'Код'], incompletePosition).resolution).toBeUndefined();
     expect(resolveCompletionTarget(incomplete, resolver, ['Т2'], incompletePosition)).toBeUndefined();
   });
+
+  it('fails open for a producer whose SELECT list holds a structurally invalid expression', () => {
+    // The tolerant parser accepts the unfinished `ВЫБОР КОГДА` as raw text with
+    // the auto alias `Поле1`, so the producer's real columns are unknown.
+    const text =
+      'ВЫБРАТЬ Т.Код КАК Код, ВЫБОР КОГДА Т.Код ПОМЕСТИТЬ ВТ_Товары ИЗ Справочник.Номенклатура КАК Т; ' +
+      'ВЫБРАТЬ Т2.Код ИЗ ВТ_Товары КАК Т2';
+    const headPosition = text.lastIndexOf('Т2.Код');
+    expect(describeChain(text, resolver, ['Т2', 'Наименование'], headPosition).resolution).toBeUndefined();
+    expect(resolveCompletionTarget(text, resolver, ['Т2'], headPosition)).toBeUndefined();
+  });
+
+  it('keeps the schema while the consumer statement itself is being typed (`ГДЕ Т2.`)', () => {
+    const text =
+      'ВЫБРАТЬ Т.Код КАК Код ПОМЕСТИТЬ ВТ_Товары ИЗ Справочник.Номенклатура КАК Т; ' +
+      'ВЫБРАТЬ Т2.Код ИЗ ВТ_Товары КАК Т2 ГДЕ Т2.';
+    const headPosition = text.lastIndexOf('Т2.');
+    expect(resolveCompletionTarget(text, resolver, ['Т2'], headPosition)?.meta.fields.map(f => f.name)).toEqual(['Код']);
+  });
 });
 
 describe('findChainForCompletion', () => {

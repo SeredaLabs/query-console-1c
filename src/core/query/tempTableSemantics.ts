@@ -7,11 +7,13 @@
  *
  * This module deliberately infers only output column names. Their types are
  * unknown (`types: []`), so consumers may resolve a positive field-name match
- * but must not guess reference navigation. An unresolved `*` makes the schema
- * incomplete; negative validation is safe only when `complete === true`.
+ * but must not guess reference navigation. An unresolved `*` or a structurally
+ * invalid column expression makes the schema incomplete; negative validation
+ * is safe only when `complete === true`.
  */
 import type { MetaField, MetaTable } from '../metadata/types';
 import type { BatchDocument } from './batchModel';
+import { isStructurallyValidExpression } from './expressionSyntaxCheck';
 import {
   compoundCarrierOf,
   elementAlias,
@@ -64,6 +66,17 @@ export function inferCreatedTempTableSchema(doc: QueryDocument): TempTableSchema
     if (!baseAlias || baseAlias === '*') {
       complete = false;
       continue;
+    }
+    // The tolerant parser keeps unfinished text (`ВЫБОР КОГДА Т.Код`) as a raw
+    // expression with an auto alias; it may even have swallowed later columns.
+    // Keep the column name (the parser and designer derive the same one), but
+    // the schema no longer proves which columns are missing.
+    if (
+      element.kind === 'field' &&
+      element.field.expression !== undefined &&
+      !isStructurallyValidExpression(element.field.expression)
+    ) {
+      complete = false;
     }
     let alias = baseAlias;
     let suffix = 0;
