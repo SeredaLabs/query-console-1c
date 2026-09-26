@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { IconButton } from './IconButton';
-import { SECTION_HEADER, panelBox } from '../sharedStyles';
+import { PanelHeader } from './PanelHeader';
+import { COLUMN_HEADER, GRID_ROW_BORDER, ROW_PADDING_Y, panelBox } from '../sharedStyles';
 import { t } from '../i18n';
 
 interface Props {
@@ -12,16 +13,12 @@ interface Props {
   onSetActive: (index: number) => void;
 }
 
-const TH: React.CSSProperties = {
-  ...SECTION_HEADER,
-  textAlign: 'left',
-  whiteSpace: 'nowrap',
-};
+const TH: React.CSSProperties = COLUMN_HEADER;
 
 const TD: React.CSSProperties = {
   fontSize: 12,
-  padding: '3px 6px',
-  borderBottom: '1px solid var(--qc-border)',
+  padding: `${ROW_PADDING_Y}px 6px`,
+  borderBottom: GRID_ROW_BORDER,
 };
 
 export function BatchTab({
@@ -44,8 +41,7 @@ export function BatchTab({
   return (
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
       <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
-        <div style={SECTION_HEADER}>{t('batch.title')}</div>
-        <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
+        <PanelHeader title={t('batch.title')}>
           <IconButton icon="add" tone="add" title={t('actions.add')} onClick={onAdd} />
           <IconButton
             icon="close"
@@ -56,8 +52,8 @@ export function BatchTab({
           />
           <IconButton icon="arrow-up" title={t('actions.moveUp')} onClick={() => move('up')} />
           <IconButton icon="arrow-down" title={t('actions.moveDown')} onClick={() => move('down')} />
-        </div>
-        <div style={{ overflow: 'auto', flex: 1 }}>
+        </PanelHeader>
+        <div className="qc-list" tabIndex={-1} style={{ overflow: 'auto', flex: 1 }}>
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>
@@ -70,20 +66,22 @@ export function BatchTab({
                   key={i}
                   onClick={() => setSelectedRow(i)}
                   onDoubleClick={() => onSetActive(i)}
-                  style={{
-                    cursor: 'pointer',
-                    background: i === activeIndex
-                      ? 'var(--vscode-list-activeSelectionBackground, #094771)'
-                      : i === selectedRow
-                        ? 'var(--vscode-list-inactiveSelectionBackground, #37373d)'
-                        : 'transparent',
-                  }}
+                  // Выделенная строка — общий стиль выделения списков; активный
+                  // (редактируемый) запрос пакета — полужирным и точкой-маркером,
+                  // а не вторым цветом заливки, который спорил с выделением.
+                  className={i === selectedRow ? 'qc-row qc-row--selected' : 'qc-row'}
+                  aria-selected={i === selectedRow}
+                  aria-current={i === activeIndex || undefined}
+                  style={{ cursor: 'pointer' }}
                 >
                   <td style={{
                     ...TD,
-                    fontWeight: i === activeIndex ? 'bold' : 'normal',
+                    fontWeight: i === activeIndex ? 600 : 'normal',
                   }}>
-                    {name}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <span className={`codicon codicon-${i === activeIndex ? 'circle-filled' : 'blank'}`} style={{ fontSize: 10, color: 'var(--vscode-focusBorder, #007fd4)' }} />
+                      {name}
+                    </span>
                   </td>
                 </tr>
               ))}

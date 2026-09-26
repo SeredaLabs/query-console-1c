@@ -4,9 +4,10 @@ import type { SelectedTable, SelectedField, Totals, TotalGroupField, TotalField,
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { findMetaField, isRefField } from './GroupingTab';
-import { ResizeHandle } from './ResizeHandle';
+import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
+import { RowRemoveButton } from './RowRemoveButton';
 import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
-import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox, ROW_PADDING_Y } from '../sharedStyles';
+import { SECTION_HEADER, ROW, INPUT, EMPTY_HINT, panelBox, ROW_PADDING_Y, TREE_ROW_GAP } from '../sharedStyles';
 import { t, type MessageKey } from '../i18n';
 
 interface Props {
@@ -89,21 +90,22 @@ export function TotalsTab(props: Props): React.ReactElement {
               data-field-item
               draggable
               onDragStart={e => dragStart(e, f.tableId, f.path!)}
-              style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start', gap: 4 }}
+              className="qc-row"
+              style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start', gap: TREE_ROW_GAP }}
             >
               <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
               <span>{labelFor(f.tableId, f.path!)}</span>
             </div>
           ))}
           {sourceFields.length === 0 && (
-            <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
+            <div style={EMPTY_HINT}>
               {t('empty.noFieldsAdd')}
             </div>
           )}
         </div>
       </div>
 
-      <ResizeHandle onResize={d => setLeftWidth(w => Math.max(140, w + d))} />
+      <ResizeHandle onResize={d => setLeftWidth(w => clampPaneWidth(w + d, 140, 320))} />
 
       {/* Правая колонка */}
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gap: 4 }}>
@@ -126,8 +128,8 @@ export function TotalsTab(props: Props): React.ReactElement {
             {totals.groupFields.map((g: TotalGroupField) => {
               const isRef = isRefField(findMetaField(metaTables, selectedTables, g.tableId, g.path));
               return (
-                <div key={`${g.tableId}:${g.path}`} style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 6px`, gap: 4 }}>
-                  <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div key={`${g.tableId}:${g.path}`} className="qc-row" style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 4px ${ROW_PADDING_Y}px 8px`, gap: 4 }}>
+                  <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP }}>
                     <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                     {labelFor(g.tableId, g.path)}
                   </span>
@@ -149,12 +151,13 @@ export function TotalsTab(props: Props): React.ReactElement {
                     onChange={e => onSetGroupAlias(g.tableId, g.path, e.target.value)}
                     style={{ ...INPUT, width: 150, flexShrink: 0 }}
                   />
-                  <button style={REMOVE_BTN} title={t('actions.remove')} onClick={() => onRemoveGroupField(g.tableId, g.path)}>✕</button>
+                  <RowRemoveButton title={t('actions.remove')} onClick={() => onRemoveGroupField(g.tableId, g.path)} />
                 </div>
               );
             })}
+            {totals.groupFields.length === 0 && <div style={EMPTY_HINT}>{t('empty.dropFieldsHere')}</div>}
           </div>
-          <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', padding: '4px 6px', borderTop: '1px solid var(--qc-border)' }}>
+          <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '4px 8px', borderTop: '1px solid var(--qc-border-subtle)' }}>
             <input
               type="checkbox"
               checked={totals.grand}
@@ -182,7 +185,7 @@ export function TotalsTab(props: Props): React.ReactElement {
             }}
           >
             {totals.totalFields.map((f: TotalField, idx) => (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 6px`, gap: 4 }}>
+              <div key={idx} className="qc-row" style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 4px ${ROW_PADDING_Y}px 8px`, gap: 4 }}>
                 <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                 <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={totalFieldLabel(f)}>
                   {totalFieldLabel(f)}
@@ -205,9 +208,10 @@ export function TotalsTab(props: Props): React.ReactElement {
                     {f.expression}
                   </span>
                 )}
-                <button style={REMOVE_BTN} title={t('actions.remove')} onClick={() => onRemoveTotalField(idx)}>✕</button>
+                <RowRemoveButton title={t('actions.remove')} onClick={() => onRemoveTotalField(idx)} />
               </div>
             ))}
+            {totals.totalFields.length === 0 && <div style={EMPTY_HINT}>{t('empty.dropFieldsHere')}</div>}
           </div>
         </div>
       </div>

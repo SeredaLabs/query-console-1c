@@ -5,7 +5,8 @@ import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
 import { IconButton } from './IconButton';
 import { highlightMatches } from './highlightMatches';
-import { SECTION_HEADER, ROW_PADDING_Y } from '../sharedStyles';
+import { describeFieldTypes } from '../../core/metadata/describeType';
+import { SECTION_HEADER, ROW_PADDING_Y, TREE_ROW_GAP, EMPTY_HINT, CONTROL_HEIGHT } from '../sharedStyles';
 import { t } from '../i18n';
 import {
   GROUP_KINDS, GROUP_LABEL_KEYS, tokenizeSearch, buildRenderModel, collectMatchKeys,
@@ -51,6 +52,7 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
   const fetched = refKey ? expandedRefs.has(refKey) : false;
   const expanded = fetched && refKey ? !collapsedRefs.has(refKey) : false;
   const isFocused = focusedTableFullName === tableFullName && focusedFieldPath === fieldPath;
+  const typeText = describeFieldTypes(field);
 
   function handleExpandToggle(e: React.MouseEvent) {
     e.stopPropagation();
@@ -72,25 +74,29 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
       <div
         data-field-path={fieldPath}
         draggable
-        className="qc-row"
+        className={isFocused ? 'qc-row qc-row--selected' : 'qc-row'}
+        aria-selected={isFocused}
+        title={typeText ? `${fieldPath}\n${typeText}` : fieldPath}
         onDragStart={handleDragStart}
         onClick={() => onFocusField(tableFullName, fieldPath)}
         style={{
           paddingLeft: 8 + depth * 16,
+          paddingRight: 8,
           paddingTop: ROW_PADDING_Y,
           paddingBottom: ROW_PADDING_Y,
           cursor: 'default',
-          background: isFocused ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined,
-          color: isFocused ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit',
           display: 'flex',
           alignItems: 'center',
-          gap: 4,
+          gap: TREE_ROW_GAP,
           userSelect: 'none',
+          whiteSpace: 'nowrap',
         }}
       >
         {ref ? <Chevron expanded={expanded} onClick={handleExpandToggle} /> : <span style={{ width: 14, flexShrink: 0 }} />}
         <span className={`codicon codicon-${ref ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
-        <span>{highlightText(field.name, tokens)}</span>
+        {/* Имя поля — основное; тип — вторичный, приглушённый, первым уходит в многоточие. */}
+        <span style={{ flexShrink: 0, maxWidth: typeText ? '70%' : undefined, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{highlightText(field.name, tokens)}</span>
+        {typeText && <span className="qc-row-detail">{typeText}</span>}
       </div>
       {expanded && refKey && expandedRefs.get(refKey)?.map(subField => (
         <FieldNode
@@ -157,9 +163,8 @@ function TabularSectionNode({ ts, fields, expandedRefs, collapsedRefs, onToggleC
           cursor: 'default',
           display: 'flex',
           alignItems: 'center',
-          gap: 4,
+          gap: TREE_ROW_GAP,
           userSelect: 'none',
-          color: 'var(--vscode-descriptionForeground, #aaa)',
         }}
       >
         <Chevron expanded={expanded} />
@@ -330,11 +335,12 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
       <div style={SECTION_HEADER}>{t('tree.database')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 4, gap: 4 }}>
       <div
+        className="qc-search"
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 2,
-          height: 24,
+          height: CONTROL_HEIGHT,
           boxSizing: 'border-box',
           padding: '0 6px',
           background: 'var(--vscode-input-background, #3c3c3c)',
@@ -374,7 +380,9 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
         <IconButton icon="chevron-down" title={t('tree.nextResult')} disabled={totalMatches === 0} onClick={() => goToMatch(1)} />
         {query && <IconButton icon="close" title={t('actions.clear')} onClick={() => setQuery('')} />}
       </div>
-      <div ref={treeRef} style={{ overflowY: 'auto', flex: 1, minHeight: 0, fontSize: 13 }}>
+      {/* tabIndex=-1: список получает фокус по клику (не по Tab) — от этого
+          зависит активное/неактивное выделение строки (.qc-list:focus-within). */}
+      <div ref={treeRef} className="qc-list qc-tree-scope" tabIndex={-1} style={{ overflowY: 'auto', flex: 1, minHeight: 0, fontSize: 13 }}>
       {renderModel.map(group => {
         if (isSearching && group.tables.length === 0) return null;
         const isExpanded = expandedGroups.has(group.kind);
@@ -383,7 +391,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
             <div
               className="qc-row"
               onClick={() => toggleGroup(group.kind)}
-              style={{ padding: '3px 8px', fontWeight: 600, cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
+              style={{ padding: `${ROW_PADDING_Y}px 8px`, cursor: 'default', display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP, userSelect: 'none' }}
             >
               <Chevron expanded={isExpanded} />
               <MetaKindIcon kind={group.kind} />
@@ -405,7 +413,8 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                     data-table-fullname={rt.table.fullName}
                     data-search-key={rt.key}
                     draggable
-                    className="qc-row"
+                    className={isFocused && !isTableActiveMatch ? 'qc-row qc-row--selected' : 'qc-row'}
+                    aria-selected={isFocused}
                     onDragStart={handleTableDragStart}
                     onClick={() => { toggleTable(rt.table.fullName); onFocusTable(rt.table.fullName); }}
                     style={{
@@ -413,11 +422,11 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                       paddingTop: ROW_PADDING_Y,
                       paddingBottom: ROW_PADDING_Y,
                       cursor: 'default',
-                      background: isTableActiveMatch ? ACTIVE_MATCH_BG : (isFocused ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined),
-                      color: isTableActiveMatch ? 'inherit' : (isFocused ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit'),
+                      // Текущее совпадение поиска — поверх выделения (как в поиске редактора).
+                      background: isTableActiveMatch ? ACTIVE_MATCH_BG : undefined,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 4,
+                      gap: TREE_ROW_GAP,
                       userSelect: 'none',
                     }}
                   >
@@ -470,7 +479,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
       })}
 
       {isSearching && totalMatches === 0 && (
-        <div style={{ padding: '12px 8px', color: 'var(--vscode-descriptionForeground, #888)' }}>{t('tree.noMatches')}</div>
+        <div style={EMPTY_HINT}>{t('tree.noMatches')}</div>
       )}
 
       {/* 7.8.17: группа «Временные таблицы» — ВТ, созданные в предыдущих запросах пакета.
@@ -484,7 +493,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
               data-testid="temp-tables-group"
               className="qc-row"
               onClick={() => toggleGroup('ВременнаяТаблица')}
-              style={{ padding: '3px 8px', fontWeight: 600, cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
+              style={{ padding: `${ROW_PADDING_Y}px 8px`, cursor: 'default', display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP, userSelect: 'none' }}
             >
               <Chevron expanded={isExpanded} />
               <span className={`codicon codicon-folder${isExpanded ? '-opened' : ''}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
@@ -505,15 +514,16 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                       }));
                       e.dataTransfer.effectAllowed = 'copy';
                     }}
+                    className="qc-row"
                     onClick={() => toggleTable(table.fullName)}
-                    style={{ paddingLeft: 24, paddingTop: ROW_PADDING_Y, paddingBottom: ROW_PADDING_Y, cursor: 'default', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
+                    style={{ paddingLeft: 24, paddingTop: ROW_PADDING_Y, paddingBottom: ROW_PADDING_Y, cursor: 'default', display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP, userSelect: 'none' }}
                   >
                     <Chevron expanded={isTableExpanded} />
                     <MetaKindIcon kind={table.kind} />
                     <span>{table.name}</span>
                   </div>
                   {isTableExpanded && table.fields.map(field => (
-                    <div key={field.name} className="qc-row" style={{ paddingLeft: 48, paddingTop: ROW_PADDING_Y, paddingBottom: ROW_PADDING_Y, userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div key={field.name} className="qc-row" style={{ paddingLeft: 48, paddingTop: ROW_PADDING_Y, paddingBottom: ROW_PADDING_Y, userSelect: 'none', display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP }}>
                       <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                       {field.name}
                     </div>

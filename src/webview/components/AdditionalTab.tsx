@@ -1,8 +1,9 @@
 import * as React from 'react';
 import type { SelectedTable, Selection, QueryType } from '../../core/query/queryModel';
 import type { RefreshState } from '../App';
-import { BTN, FIELDSET, LEGEND, CHECK_LABEL, RADIO_LABEL, INPUT, SECTION_HEADER, REMOVE_BTN, ROW, panelBox } from '../sharedStyles';
+import { BTN, FIELDSET, LEGEND, CHECK_LABEL, RADIO_LABEL, INPUT, SECTION_HEADER, EMPTY_HINT, ROW, panelBox, TREE_ROW_GAP } from '../sharedStyles';
 import { MetaKindIcon } from './MetaKindIcon';
+import { RowRemoveButton } from './RowRemoveButton';
 import { t, type MessageKey } from '../i18n';
 
 interface Props {
@@ -199,7 +200,7 @@ export function AdditionalTab(props: Props): React.ReactElement {
         </label>
         <div style={{ display: 'flex', gap: 8, opacity: lockEnabled ? 1 : 0.5, pointerEvents: lockEnabled ? 'auto' : 'none' }}>
           {/* Таблицы */}
-          <div style={panelBox}>
+          <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
             <div style={SECTION_HEADER}>{t('common.tables')}</div>
             <div style={dropZone}>
               {availableTables.map(t => (
@@ -207,14 +208,15 @@ export function AdditionalTab(props: Props): React.ReactElement {
                   key={t.id}
                   draggable={lockEnabled}
                   onDragStart={e => dragStart(e, t.fullName)}
-                  style={{ ...ROW, cursor: lockEnabled ? 'grab' : 'default', justifyContent: 'flex-start', gap: 4 }}
+                  className="qc-row"
+                  style={{ ...ROW, cursor: lockEnabled ? 'grab' : 'default', justifyContent: 'flex-start', gap: TREE_ROW_GAP }}
                 >
                   <MetaKindIcon kind={t.fullName.split('.')[0] ?? null} />
                   <span>{objectName(t.fullName)}</span>
                 </div>
               ))}
               {availableTables.length === 0 && (
-                <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
+                <div style={EMPTY_HINT}>
                   {t('empty.noAvailableTables')}
                 </div>
               )}
@@ -223,7 +225,7 @@ export function AdditionalTab(props: Props): React.ReactElement {
 
           {/* Таблицы для изменения */}
           <div
-            style={panelBox}
+            style={{ ...panelBox, flex: 1, minWidth: 0 }}
             onDragOver={allowDrop}
             onDrop={e => {
               if (!lockEnabled) return;
@@ -235,22 +237,16 @@ export function AdditionalTab(props: Props): React.ReactElement {
             <div style={SECTION_HEADER}>{t('additional.updateTables')}</div>
             <div style={dropZone}>
               {lockForUpdate.map(fullName => (
-                <div key={fullName} style={{ ...ROW, gap: 4 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div key={fullName} className="qc-row" style={{ ...ROW, gap: 4, paddingRight: 4 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP }}>
                     <MetaKindIcon kind={fullName.split('.')[0] ?? null} />
                     {objectName(fullName)}
                   </span>
-                  <button
-                    style={REMOVE_BTN}
-                    title={t('actions.remove')}
-                    onClick={() => onRemoveLockTable(fullName)}
-                  >
-                    ✕
-                  </button>
+                  <RowRemoveButton title={t('actions.remove')} onClick={() => onRemoveLockTable(fullName)} />
                 </div>
               ))}
               {lockForUpdate.length === 0 && (
-                <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
+                <div style={EMPTY_HINT}>
                   {t('empty.dragTableHere')}
                 </div>
               )}
@@ -272,7 +268,8 @@ export function AdditionalTab(props: Props): React.ReactElement {
               {refreshState === 'loading' ? t('refresh.loading') : t('actions.refreshCache')}
             </button>
             {typeof refreshState === 'object' && refreshState != null && (
-              <span style={{ fontSize: 12, color: refreshState.ok ? 'var(--vscode-terminal-ansiGreen, #4caf50)' : 'var(--vscode-errorForeground, #f44747)' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: refreshState.ok ? 'var(--vscode-testing-iconPassed, #73c991)' : 'var(--vscode-errorForeground, #f44747)' }}>
+                <span className={`codicon codicon-${refreshState.ok ? 'pass-filled' : 'error'}`} style={{ fontSize: 14 }} />
                 {refreshState.message}
               </span>
             )}

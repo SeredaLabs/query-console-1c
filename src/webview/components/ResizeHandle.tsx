@@ -61,9 +61,20 @@ export function ResizeHandle({
   return (
     <div
       role="separator"
+      className="qc-sash"
       aria-orientation={axis === 'x' ? 'vertical' : 'horizontal'}
       onMouseDown={onMouseDown}
       style={style}
     />
   );
+}
+
+/**
+ * Ширина перетаскиваемой панели в пределах [min, ширина окна − reserved] — чтобы
+ * разделитель нельзя было утащить так далеко, что соседняя (flex:1) панель
+ * схлопнется до нуля. `reserved` — сколько места должно остаться остальным.
+ */
+export function clampPaneWidth(value: number, min: number, reserved: number): number {
+  const max = Math.max(min, window.innerWidth - reserved);
+  return Math.max(min, Math.min(value, max));
 }

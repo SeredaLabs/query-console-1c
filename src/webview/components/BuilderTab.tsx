@@ -3,11 +3,12 @@ import type { MetaTable } from '../../core/metadata/types';
 import type { SelectedTable, SelectedField, ReportBuilder, BuilderField } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { isRefField } from './GroupingTab';
-import { ResizeHandle } from './ResizeHandle';
+import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
+import { RowRemoveButton } from './RowRemoveButton';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
 import { IconButton } from './IconButton';
-import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox, ROW_PADDING_Y } from '../sharedStyles';
+import { SECTION_HEADER, ROW, INPUT, EMPTY_HINT, panelBox, ROW_PADDING_Y, TREE_ROW_GAP } from '../sharedStyles';
 import { t as i18nT, type MessageKey } from '../i18n';
 
 type Section = 'fields' | 'conditions' | 'order' | 'totals';
@@ -149,18 +150,24 @@ export function BuilderTab(props: Props): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: 4, gap: 4, overflow: 'hidden' }}>
       {/* Полоса под-вкладок */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--qc-border)', flexShrink: 0 }}>
+      <div role="tablist" style={{ display: 'flex', borderBottom: '1px solid var(--qc-border)', flexShrink: 0 }}>
         {SUB_TABS.map(st => {
           const isActive = st.key === active;
           return (
             <div
               key={st.key}
+              role="tab"
+              aria-selected={isActive}
+              tabIndex={0}
+              // Те же цвета/hover/фокус, что у основной полосы вкладок (.qc-tab в TabsBar).
+              className={isActive ? 'qc-tab qc-tab--active' : 'qc-tab'}
               onClick={() => setActive(st.key)}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActive(st.key); } }}
               style={{
-                padding: '4px 14px',
+                padding: '4px 12px',
                 cursor: 'pointer',
-                borderBottom: isActive ? '2px solid var(--vscode-focusBorder, #007fd4)' : '2px solid transparent',
-                color: isActive ? 'var(--vscode-tab-activeForeground, #fff)' : 'var(--vscode-tab-inactiveForeground, #999)',
+                userSelect: 'none',
+                borderBottom: isActive ? '2px solid var(--vscode-panelTitle-activeBorder, var(--vscode-focusBorder, #007fd4))' : '2px solid transparent',
                 fontSize: 13,
               }}
             >
@@ -186,9 +193,10 @@ export function BuilderTab(props: Props): React.ReactElement {
                   key={`sel:${f.tableId}:${f.path}:${i}`}
                   draggable
                   onDragStart={e => dragStart(e, { ref, isRef })}
-                  style={{ ...ROW, cursor: 'grab' }}
+                  className="qc-row"
+                  style={{ ...ROW, cursor: 'grab', paddingRight: 4 }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP }}>
                     <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                     {selectFieldLabel(t, f)}
                   </span>
@@ -200,7 +208,7 @@ export function BuilderTab(props: Props): React.ReactElement {
             {/* Группа 2: Все поля */}
             <div
               className="qc-row"
-              style={{ ...ROW, cursor: 'pointer', fontWeight: 600, gap: 4, justifyContent: 'flex-start' }}
+              style={{ ...ROW, cursor: 'pointer', gap: TREE_ROW_GAP, justifyContent: 'flex-start' }}
               onClick={() => setExpandAll(v => !v)}
             >
               <Chevron expanded={expandAll} />
@@ -214,7 +222,7 @@ export function BuilderTab(props: Props): React.ReactElement {
                 <div key={`all:${t.id}`}>
                   <div
                     className="qc-row"
-                    style={{ ...ROW, cursor: 'pointer', paddingLeft: 18, gap: 4, justifyContent: 'flex-start' }}
+                    style={{ ...ROW, cursor: 'pointer', paddingLeft: 24, gap: TREE_ROW_GAP, justifyContent: 'flex-start' }}
                     onClick={() => setExpandedTables(s => ({ ...s, [t.id]: !s[t.id] }))}
                   >
                     <Chevron expanded={open} />
@@ -229,9 +237,10 @@ export function BuilderTab(props: Props): React.ReactElement {
                         key={`all:${t.id}:${mf.name}`}
                         draggable
                         onDragStart={e => dragStart(e, { ref, isRef })}
-                        style={{ ...ROW, cursor: 'grab', paddingLeft: 34 }}
+                        className="qc-row"
+                        style={{ ...ROW, cursor: 'grab', paddingLeft: 40, paddingRight: 4 }}
                       >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP }}>
                           <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                           {ref}
                         </span>
@@ -244,14 +253,14 @@ export function BuilderTab(props: Props): React.ReactElement {
             })}
 
             {sourceFields.length === 0 && !expandAll && (
-              <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
+              <div style={EMPTY_HINT}>
                 {i18nT('empty.noFieldsAddOrAll')}
               </div>
             )}
           </div>
         </div>
 
-        <ResizeHandle onResize={d => setLeftWidth(w => Math.max(140, w + d))} />
+        <ResizeHandle onResize={d => setLeftWidth(w => clampPaneWidth(w + d, 140, 320))} />
 
         {/* Правый список: строки построителя */}
         <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
@@ -273,8 +282,8 @@ export function BuilderTab(props: Props): React.ReactElement {
             {rows.map((row: BuilderField, idx) => {
               const isRef = rowIsRef(row.ref);
               return (
-                <div key={`${active}:${idx}:${row.ref}`} style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 6px`, gap: 4 }}>
-                  <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div key={`${active}:${idx}:${row.ref}`} className="qc-row" style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 4px ${ROW_PADDING_Y}px 8px`, gap: 4 }}>
+                  <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP }}>
                     <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                     {row.ref}{row.child ? '.*' : ''}
                   </span>
@@ -294,10 +303,11 @@ export function BuilderTab(props: Props): React.ReactElement {
                     onChange={e => onSetAlias(active, idx, e.target.value)}
                     style={{ ...INPUT, width: 150, flexShrink: 0 }}
                   />
-                  <button style={REMOVE_BTN} title={i18nT('actions.remove')} onClick={() => onRemove(active, idx)}>✕</button>
+                  <RowRemoveButton title={i18nT('actions.remove')} onClick={() => onRemove(active, idx)} />
                 </div>
               );
             })}
+            {rows.length === 0 && <div style={EMPTY_HINT}>{i18nT('empty.dropFieldsHere')}</div>}
           </div>
         </div>
       </div>

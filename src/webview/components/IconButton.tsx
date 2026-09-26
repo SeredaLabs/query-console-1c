@@ -6,7 +6,8 @@ import * as React from 'react';
  * `subquery`/`tempTable` — создание отдельного вида источника (вложенный запрос /
  * временная таблица), а не «добавить элемент в список» — поэтому не зелёные, а
  * свои акцентные цвета (те же, что использует VS Code для графиков — тоже
- * тема-безопасные `--vscode-charts-*`). */
+ * тема-безопасные `--vscode-charts-*`). Цвета сознательно сохранены и при visual
+ * refinement Classic View (2026-09-26) — по решению пользователя. */
 export type IconButtonTone = 'default' | 'add' | 'remove' | 'edit' | 'subquery' | 'tempTable';
 
 const TONE_COLOR: Record<IconButtonTone, string> = {
@@ -40,6 +41,8 @@ export function IconButton({ icon, title, onClick, disabled, testId, tone = 'def
     <button
       className={`codicon codicon-${icon}`}
       title={title}
+      aria-label={title}
+      type="button"
       disabled={disabled}
       onClick={onClick}
       onMouseEnter={() => setHover(true)}

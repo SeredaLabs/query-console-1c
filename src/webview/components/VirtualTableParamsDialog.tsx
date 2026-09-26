@@ -4,7 +4,7 @@ import type { VirtualTableInfo, TableKind } from '../../core/metadata/types';
 import { PERIODICITY_VALUES, FILL_METHOD_VALUES } from '../../core/query/accumVirtualFields';
 import { accountingParamFields, type VtParamKey } from '../../core/query/accountingVirtualParams';
 import { IconButton } from './IconButton';
-import { BTN, BTN_SECONDARY, MODAL_INPUT } from '../sharedStyles';
+import { BTN, BTN_SECONDARY, MODAL_INPUT, DIALOG_PANEL, DIALOG_TITLE } from '../sharedStyles';
 import { t } from '../i18n';
 
 interface Props {
@@ -22,11 +22,34 @@ const OVERLAY: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 150,
 };
 const PANEL: React.CSSProperties = {
-  background: 'var(--vscode-editor-background, #1e1e1e)',
-  border: '1px solid var(--qc-border)',
-  borderRadius: 6, padding: 16, minWidth: 460,
+  ...DIALOG_PANEL,
+  padding: '10px 16px 16px', minWidth: 460,
   display: 'flex', flexDirection: 'column', gap: 10,
 };
+
+/** Общая «рамка» окна параметров: заголовок с кнопкой закрытия + Esc = Отмена
+ * (как у редактора выражений). Открытый поверх конструктор выражения — соседний
+ * элемент, его Esc сюда не всплывает. */
+function DialogFrame({ onCancel, children }: { onCancel: () => void; children: React.ReactNode }): React.ReactElement {
+  return (
+    <div style={OVERLAY} onClick={onCancel}>
+      <div
+        style={PANEL}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('dialog.virtual.title')}
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); onCancel(); } }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={DIALOG_TITLE}>{t('dialog.virtual.title')}</span>
+          <IconButton icon="close" title={t('actions.close')} onClick={onCancel} />
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
 function Row({ label, children }: { label: string; children: React.ReactNode }): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -72,9 +95,7 @@ function AccountingForm({ slice, correspondence, initial, onOpenConditionBuilder
   }
 
   return (
-    <div style={OVERLAY} onClick={onCancel}>
-      <div style={PANEL} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 'bold', fontSize: 13 }}>{t('dialog.virtual.title')}</div>
+    <DialogFrame onCancel={onCancel}>
         {fieldsDesc.map(f => (
           <Row key={f.key} label={paramLabel(f.key, f.label)}>
             {f.control === 'periodicity' ? (
@@ -102,8 +123,7 @@ function AccountingForm({ slice, correspondence, initial, onOpenConditionBuilder
           <button data-testid="vt-ok" style={BTN} onClick={handleOk}>{t('actions.ok')}</button>
           <button data-testid="vt-cancel" style={BTN_SECONDARY} onClick={onCancel}>{t('actions.cancel')}</button>
         </div>
-      </div>
-    </div>
+    </DialogFrame>
   );
 }
 
@@ -139,9 +159,7 @@ function LegacyForm({ slice, initial, onOpenConditionBuilder, onOk, onCancel }: 
   }
 
   return (
-    <div style={OVERLAY} onClick={onCancel}>
-      <div style={PANEL} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 'bold', fontSize: 13 }}>{t('dialog.virtual.title')}</div>
+    <DialogFrame onCancel={onCancel}>
         {!isRange && (
           <Row label={t('dialog.virtual.period')}>
             <input data-testid="vt-period" style={MODAL_INPUT} value={period} onChange={e => setPeriod(e.target.value)} />
@@ -180,7 +198,6 @@ function LegacyForm({ slice, initial, onOpenConditionBuilder, onOk, onCancel }: 
           <button data-testid="vt-ok" style={BTN} onClick={handleOk}>{t('actions.ok')}</button>
           <button data-testid="vt-cancel" style={BTN_SECONDARY} onClick={onCancel}>{t('actions.cancel')}</button>
         </div>
-      </div>
-    </div>
+    </DialogFrame>
   );
 }

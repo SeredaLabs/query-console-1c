@@ -2,7 +2,7 @@ import * as React from 'react';
 import type { MetaField } from '../../core/metadata/types';
 import type { RefId } from '../../shared/messages';
 import { Chevron } from './Chevron';
-import { ROW_PADDING_Y } from '../sharedStyles';
+import { ROW_PADDING_Y, TREE_ROW_GAP } from '../sharedStyles';
 
 interface Props {
   field: MetaField;
@@ -41,22 +41,23 @@ export function FieldTreeRow({ field, depth, expandedRefs, onExpandRef, onDragSt
         draggable
         onDragStart={e => onDragStart(e, path)}
         className="qc-row"
+        title={path}
         style={{
           paddingLeft: 8 + depth * 16,
+          paddingRight: 8,
           paddingTop: ROW_PADDING_Y,
           paddingBottom: ROW_PADDING_Y,
-          fontSize: 12,
-          color: 'var(--vscode-descriptionForeground, #aaa)',
           userSelect: 'none',
           cursor: 'grab',
           display: 'flex',
           alignItems: 'center',
-          gap: 4,
+          gap: TREE_ROW_GAP,
+          whiteSpace: 'nowrap',
         }}
       >
         {ref ? <Chevron expanded={expanded} onClick={handleToggle} /> : <span style={{ width: 14, flexShrink: 0 }} />}
         <span className={`codicon codicon-${ref ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
-        <span title={path}>{field.name}</span>
+        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{field.name}</span>
       </div>
       {expanded && refKey && expandedRefs.get(refKey)?.map(subField => (
         <FieldTreeRow

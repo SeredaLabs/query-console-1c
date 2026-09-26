@@ -2,9 +2,10 @@ import * as React from 'react';
 import type { SelectedTable, SelectedField, Order, OrderField, SortDirection } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
-import { ResizeHandle } from './ResizeHandle';
+import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
+import { RowRemoveButton } from './RowRemoveButton';
 import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
-import { SECTION_HEADER, REMOVE_BTN, ROW, panelBox, ROW_PADDING_Y } from '../sharedStyles';
+import { SECTION_HEADER, ROW, INPUT, EMPTY_HINT, panelBox, ROW_PADDING_Y, TREE_ROW_GAP } from '../sharedStyles';
 import { t } from '../i18n';
 
 interface Props {
@@ -48,21 +49,22 @@ export function OrderTab(props: Props): React.ReactElement {
                 data-field-item
                 draggable
                 onDragStart={e => dragStart(e, f.tableId, f.path!)}
-                style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start', gap: 4 }}
+                className="qc-row"
+                style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start', gap: TREE_ROW_GAP }}
               >
                 <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                 <span>{labelFor(f.tableId, f.path!)}</span>
               </div>
             ))}
             {sourceFields.length === 0 && (
-              <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
+              <div style={EMPTY_HINT}>
                 {t('empty.noFieldsAdd')}
               </div>
             )}
           </div>
         </div>
 
-        <ResizeHandle onResize={d => setLeftWidth(w => Math.max(140, w + d))} />
+        <ResizeHandle onResize={d => setLeftWidth(w => clampPaneWidth(w + d, 140, 320))} />
 
         {/* Правый список: Сортировка */}
         <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
@@ -80,35 +82,29 @@ export function OrderTab(props: Props): React.ReactElement {
             }}
           >
             {order.fields.map((f: OrderField) => (
-              <div key={`${f.tableId}:${f.path}`} style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 6px`, gap: 4 }}>
-                <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div key={`${f.tableId}:${f.path}`} className="qc-row" style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 4px ${ROW_PADDING_Y}px 8px`, gap: 4 }}>
+                <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP }}>
                   <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                   {labelFor(f.tableId, f.path)}
                 </span>
                 <select
                   value={f.direction}
                   onChange={e => onSetOrderDirection(f.tableId, f.path, e.target.value as SortDirection)}
-                  style={{
-                    width: 150,
-                    flexShrink: 0,
-                    background: 'var(--vscode-input-background, #3c3c3c)',
-                    color: 'var(--vscode-input-foreground, #ccc)',
-                    border: '1px solid var(--qc-border)',
-                    fontSize: 12,
-                  }}
+                  style={{ ...INPUT, width: 150, flexShrink: 0 }}
                 >
                   <option value="asc">{t('order.ascending')}</option>
                   <option value="desc">{t('order.descending')}</option>
                 </select>
-                <button style={REMOVE_BTN} title={t('actions.remove')} onClick={() => onRemoveOrderField(f.tableId, f.path)}>✕</button>
+                <RowRemoveButton title={t('actions.remove')} onClick={() => onRemoveOrderField(f.tableId, f.path)} />
               </div>
             ))}
+            {order.fields.length === 0 && <div style={EMPTY_HINT}>{t('empty.dropFieldsHere')}</div>}
           </div>
         </div>
       </div>
 
       {/* Автоупорядочивание */}
-      <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', padding: '2px 6px' }}>
+      <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '2px 8px' }}>
         <input
           type="checkbox"
           checked={order.auto}

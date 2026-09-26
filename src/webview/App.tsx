@@ -120,10 +120,13 @@ export function App(): React.ReactElement {
             gap: 12, padding: 24, textAlign: 'center', zIndex: 400,
           }}
         >
-          <div style={{ color: 'var(--vscode-errorForeground, #f44747)', fontSize: 14, fontWeight: 600 }}>
+          <span className="codicon codicon-error" style={{ fontSize: 24, color: 'var(--vscode-errorForeground, #f44747)' }} />
+          <div style={{ fontSize: 14, fontWeight: 600 }}>
             {t('constructor.openFailed')}
           </div>
-          <div style={{ color: 'var(--vscode-errorForeground, #f44747)', fontSize: 13, whiteSpace: 'pre-wrap', maxWidth: 640 }}>
+          {/* Что и где — текст диагностики с номером строки; что делать — «Закрыть»
+              и исправить текст запроса в редакторе. */}
+          <div style={{ color: 'var(--vscode-errorForeground, #f44747)', fontSize: 13, whiteSpace: 'pre-wrap', maxWidth: 640, fontFamily: 'var(--vscode-editor-font-family, monospace)' }}>
             {localizeDiagnostic(loadError)}
           </div>
           <button style={BTN} onClick={handleCancel}>{t('actions.close')}</button>
@@ -138,10 +141,12 @@ export function App(): React.ReactElement {
             position: 'fixed', inset: 0,
             background: 'var(--vscode-editor-background, #1e1e1e)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: 8,
             zIndex: 300,
-            color: 'var(--vscode-descriptionForeground, #888)', fontSize: 14,
+            color: 'var(--vscode-descriptionForeground, #888)', fontSize: 13,
           }}
         >
+          <span className="codicon codicon-loading codicon-modifier-spin" style={{ fontSize: 16 }} />
           {t('constructor.loading')}
         </div>
       )}

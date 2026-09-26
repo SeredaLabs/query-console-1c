@@ -4,11 +4,12 @@ import type { SelectedTable, Condition, ConditionOperator } from '../../core/que
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import type { RefId } from '../../shared/messages';
-import { ResizeHandle } from './ResizeHandle';
+import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
+import { RowRemoveButton } from './RowRemoveButton';
 import { MetaKindIcon } from './MetaKindIcon';
 import { FieldTreeRow } from './FieldTreeRow';
 import { IconButton } from './IconButton';
-import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox } from '../sharedStyles';
+import { SECTION_HEADER, COLUMN_HEADER, EMPTY_HINT, GRID_ROW_BORDER, ROW, INPUT, panelBox, TREE_ROW_GAP } from '../sharedStyles';
 import { t } from '../i18n';
 import { CONDITION_OPERATORS } from '../conditionOperators';
 
@@ -101,9 +102,9 @@ export function ConditionsTab(props: Props): React.ReactElement {
             const alias = defaultTableAlias(sel);
             return (
               <div key={sel.id} data-field-source={`conditions-source:${alias}`}>
-                <div style={{ ...ROW, justifyContent: 'flex-start', fontWeight: 600, color: 'var(--vscode-descriptionForeground, #aaa)', gap: 4 }}>
+                <div style={{ ...ROW, justifyContent: 'flex-start', gap: TREE_ROW_GAP, whiteSpace: 'nowrap' }} title={sel.fullName}>
                   <MetaKindIcon kind={meta.kind} />
-                  {alias}
+                  <span>{alias}</span>
                 </div>
                 {tableFields(meta, sel).map((f: MetaField) => (
                   <FieldTreeRow
@@ -119,24 +120,24 @@ export function ConditionsTab(props: Props): React.ReactElement {
             );
           })}
           {selectedTables.length === 0 && (
-            <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
+            <div style={EMPTY_HINT}>
               {t('empty.noTablesAdd')}
             </div>
           )}
         </div>
       </div>
 
-      <ResizeHandle onResize={d => setLeftWidth(w => Math.max(140, w + d))} />
+      <ResizeHandle onResize={d => setLeftWidth(w => clampPaneWidth(w + d, 140, 320))} />
 
       {/* Правая колонка: Условия */}
       <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
         {/* Тулбар */}
         <div style={SECTION_HEADER}>{t('tabs.conditions')}</div>
         {/* Заголовок столбцов */}
-        <div style={{ display: 'flex', ...SECTION_HEADER, padding: 0 }}>
-          <div style={{ width: 56, padding: '2px 6px', flexShrink: 0 }}>{t('conditions.number')}</div>
-          <div style={{ width: 28, padding: '2px 6px', flexShrink: 0 }}>C.</div>
-          <div style={{ flex: 1, padding: '2px 6px' }}>{t('dialog.virtual.condition')}</div>
+        <div style={{ display: 'flex', ...COLUMN_HEADER, padding: '0 8px', gap: 4 }}>
+          <div style={{ width: 56, padding: '3px 8px 3px 0', flexShrink: 0, textAlign: 'right', boxSizing: 'border-box' }}>{t('conditions.number')}</div>
+          <div style={{ width: 28, padding: '3px 0', flexShrink: 0, textAlign: 'center' }} title={t('conditions.custom')}>C.</div>
+          <div style={{ flex: 1, padding: '3px 0' }}>{t('dialog.virtual.condition')}</div>
         </div>
         <div
           style={dropZone}
@@ -148,8 +149,8 @@ export function ConditionsTab(props: Props): React.ReactElement {
           }}
         >
           {conditions.map((c, i) => (
-            <div key={i} style={{ ...ROW, borderBottom: '1px solid var(--qc-border)', gap: 4 }}>
-              <span style={{ width: 56, flexShrink: 0, textAlign: 'right', paddingRight: 8 }}>{i + 1}</span>
+            <div key={i} className="qc-row" style={{ ...ROW, borderBottom: GRID_ROW_BORDER, gap: 4 }}>
+              <span style={{ width: 56, flexShrink: 0, textAlign: 'right', paddingRight: 8, boxSizing: 'border-box', color: 'var(--vscode-descriptionForeground, #aaa)', fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span>
               <input
                 type="checkbox"
                 title={t('conditions.custom')}
@@ -194,9 +195,10 @@ export function ConditionsTab(props: Props): React.ReactElement {
                   />
                 </div>
               )}
-              <button style={REMOVE_BTN} title={t('conditions.delete')} onClick={() => onRemoveCondition(i)}>✕</button>
+              <RowRemoveButton title={t('conditions.delete')} onClick={() => onRemoveCondition(i)} />
             </div>
           ))}
+          {conditions.length === 0 && <div style={EMPTY_HINT}>{t('empty.dropFieldsHere')}</div>}
         </div>
       </div>
     </div>

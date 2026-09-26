@@ -752,6 +752,22 @@ test.describe('Query Constructor Webview', () => {
     await expect(page.locator('[data-field-idx="1"]')).toHaveCount(0);
   });
 
+  test('Поля: кнопка «Изменить» в заголовке панели правит выделенное поле', async ({ page }) => {
+    await page.goto(BASE);
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Наименование');
+    const edit = page.locator('[data-testid="edit-field"]');
+    await expect(edit).toBeDisabled();
+    await page.locator('[data-field-idx="1"]').click();
+    await edit.click();
+    await expect(page.locator('[data-testid="expr-dialog"]')).toBeVisible();
+    await expect(page.locator('[data-testid="expr-editor"] .cm-content')).toContainText('Валюты.Наименование');
+    await page.locator('[data-testid="expr-cancel"]').click();
+    await expect(page.locator('[data-field-idx]')).toHaveCount(2);
+  });
+
   // 7.8.6: перетаскивание таблицы в список «Поля» добавляет ВСЕ её поля.
   test('Поля: перетаскивание таблицы добавляет все её поля', async ({ page }) => {
     await page.goto(BASE);
@@ -1163,5 +1179,102 @@ test.describe('Произвольное выражение (редактор в�
     await page.locator('[data-testid="expr-tab-functions"]').click();
     await expect(page.locator('[data-testid="expr-functions-pane"]')).toBeVisible();
     await expect(page.locator('[data-testid="expr-editor"]')).toBeVisible();
+  });
+});
+
+// Visual refinement Classic View: регрессии для интерактивных состояний, которые
+// появились/изменились вместе с новым оформлением (раньше их просто не было).
+test.describe('Classic: состояния оформления', () => {
+  test('вкладки — tablist: ←/→ переключают вкладку и переносят на неё фокус', async ({ page }) => {
+    await page.goto(BASE);
+    await expect(page.locator('[data-testid="loading-overlay"]')).toBeHidden();
+    const first = page.locator('[data-tab="Таблицы и поля"]');
+    await expect(first).toHaveAttribute('role', 'tab');
+    await expect(first).toHaveAttribute('aria-selected', 'true');
+    await first.focus();
+    await page.keyboard.press('ArrowRight');
+    const next = page.locator('[data-tab="Группировка"]');
+    await expect(next).toHaveAttribute('aria-selected', 'true');
+    await expect(next).toBeFocused();
+    await page.keyboard.press('ArrowLeft');
+    await expect(first).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('пустые панели «Таблицы»/«Поля» показывают подсказку, которая исчезает после добавления', async ({ page }) => {
+    await page.goto(BASE);
+    await expect(page.locator('text=Перетащите сюда таблицу из дерева «База данных».')).toBeVisible();
+    await expect(page.locator('text=Перетащите сюда поля из дерева')).toBeVisible();
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await expect(page.locator('text=Перетащите сюда таблицу из дерева «База данных».')).toHaveCount(0);
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+    await expect(page.locator('text=Перетащите сюда поля из дерева')).toHaveCount(0);
+  });
+
+  test('выделение ≠ фокус: выделенное поле остаётся выделенным, но гаснет, когда фокус уходит в другой список', async ({ page }) => {
+    await page.goto(BASE);
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+    const field = page.locator('[data-field-idx="0"]');
+    await field.click();
+    await expect(field).toHaveAttribute('aria-selected', 'true');
+    const focusedBg = await field.evaluate(el => getComputedStyle(el).backgroundColor);
+    await page.locator('[data-table-fullname="Справочник.Валюты"]').click();
+    await expect(field).toHaveAttribute('aria-selected', 'true');
+    const unfocusedBg = await field.evaluate(el => getComputedStyle(el).backgroundColor);
+    expect(unfocusedBg).not.toBe(focusedBg);
+    expect(unfocusedBg).not.toBe('rgba(0, 0, 0, 0)');
+  });
+
+  test('кнопка удаления строки — codicon с подписью, удаляет поле', async ({ page }) => {
+    await page.goto(BASE);
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+    const remove = page.locator('[data-field-idx="0"] button[aria-label="Убрать поле"]');
+    await expect(remove).toHaveClass(/codicon-close/);
+    await remove.click();
+    await expect(page.locator('[data-field-idx]')).toHaveCount(0);
+  });
+
+  test('дерево «База данных»: у поля показан тип вторичной колонкой', async ({ page }) => {
+    await page.goto(BASE);
+    await page.locator('text=Справочники').click();
+    await page.locator('[data-table-fullname="Справочник.Валюты"]').click();
+    await expect(page.locator('[data-field-path="Код"] .qc-row-detail')).toHaveText('Строка');
+  });
+
+  test('окно «Временная таблица»: Esc и кнопка закрытия работают как «Отмена»', async ({ page }) => {
+    await page.goto(BASE);
+    await expect(page.locator('[data-testid="loading-overlay"]')).toBeHidden();
+    await page.locator('[data-testid="add-temp-table"]').click();
+    await page.locator('[data-testid="tt-name"]').focus();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-testid="tt-name"]')).toHaveCount(0);
+    await page.locator('[data-testid="add-temp-table"]').click();
+    await page.locator('[role="dialog"] button[title="Закрыть"]').click();
+    await expect(page.locator('[data-testid="tt-name"]')).toHaveCount(0);
+  });
+
+  test('разделитель панелей не схлопывает панель «Поля» до нуля', async ({ page }) => {
+    await page.setViewportSize({ width: 1200, height: 700 });
+    await page.goto(BASE);
+    await expect(page.locator('[data-testid="loading-overlay"]')).toBeHidden();
+    const sash = page.locator('[role="separator"]').first();
+    const box = (await sash.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 3000, box.y + box.height / 2, { steps: 5 });
+    await page.mouse.up();
+    // Зона приёма панели «Поля» — вторая «пунктирная» зона (см. dragFieldToPanel).
+    const fieldsWidth = await page.evaluate(() => {
+      const zones = Array.from(document.querySelectorAll('div')).filter(d => {
+        const s = (d as HTMLElement).style;
+        return s.overflowY === 'auto' && s.minHeight === '40px' && s.border.includes('dashed');
+      });
+      return zones[1].getBoundingClientRect().width;
+    });
+    expect(fieldsWidth).toBeGreaterThan(150);
   });
 });

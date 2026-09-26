@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { IconButton } from './IconButton';
-import { BTN, BTN_SECONDARY, REMOVE_BTN, MODAL_INPUT } from '../sharedStyles';
+import { RowRemoveButton } from './RowRemoveButton';
+import { BTN, BTN_SECONDARY, MODAL_INPUT, DIALOG_PANEL, DIALOG_TITLE } from '../sharedStyles';
 import { t } from '../i18n';
 
 export interface TempTableField {
@@ -19,9 +20,8 @@ const OVERLAY: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
 };
 const PANEL: React.CSSProperties = {
-  background: 'var(--vscode-editor-background, #1e1e1e)',
-  border: '1px solid var(--qc-border)',
-  borderRadius: 6, padding: 16, width: 460,
+  ...DIALOG_PANEL,
+  padding: '10px 16px 16px', width: 460,
   display: 'flex', flexDirection: 'column', gap: 10,
 };
 /** Окно «Временная таблица» (7.8.9): имя ВТ + список полей (без «Типа значения»). */
@@ -46,18 +46,28 @@ export function TempTableDialog({ onOk, onCancel, initial }: Props): React.React
 
   return (
     <div style={OVERLAY} onClick={onCancel}>
-      <div style={PANEL} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 'bold', fontSize: 13 }}>{t('dialog.tempTable.title')}</div>
+      <div
+        style={PANEL}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('dialog.tempTable.title')}
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); onCancel(); } }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={DIALOG_TITLE}>{t('dialog.tempTable.title')}</span>
+          <IconButton icon="close" title={t('actions.close')} onClick={onCancel} />
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <label style={{ width: 90, fontSize: 12 }}>{t('dialog.tempTable.name')}</label>
           <input data-testid="tt-name" style={MODAL_INPUT} value={name} onChange={e => setName(e.target.value)} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, fontWeight: 'bold' }}>{t('common.fields')}</span>
+          <span style={{ fontSize: 12, fontWeight: 600 }}>{t('common.fields')}</span>
           <IconButton testId="tt-add-row" icon="add" tone="add" title={t('dialog.tempTable.addField')} onClick={addRow} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: '40vh', overflowY: 'auto' }}>
-          <div style={{ display: 'flex', gap: 8, fontSize: 11, opacity: 0.7 }}>
+          <div style={{ display: 'flex', gap: 8, fontSize: 11, fontWeight: 600, color: 'var(--vscode-descriptionForeground, #aaa)' }}>
             <span style={{ flex: 1 }}>{t('common.name')}</span>
             <span style={{ width: 20 }} />
           </div>
@@ -69,7 +79,7 @@ export function TempTableDialog({ onOk, onCancel, initial }: Props): React.React
                 value={f.name}
                 onChange={e => setField(i, { name: e.target.value })}
               />
-              <button style={REMOVE_BTN} title={t('dialog.tempTable.removeField')} onClick={() => removeRow(i)}>✕</button>
+              <RowRemoveButton title={t('dialog.tempTable.removeField')} onClick={() => removeRow(i)} />
             </div>
           ))}
         </div>

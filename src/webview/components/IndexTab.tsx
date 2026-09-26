@@ -1,10 +1,11 @@
 import * as React from 'react';
 import type { SelectedField, Indexing, FieldRef } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
-import { ResizeHandle } from './ResizeHandle';
+import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
+import { PanelHeader } from './PanelHeader';
 import { IconButton } from './IconButton';
 import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
-import { SECTION_HEADER, panelBox, ROW } from '../sharedStyles';
+import { SECTION_HEADER, COLUMN_HEADER, EMPTY_HINT, panelBox, ROW } from '../sharedStyles';
 import { t } from '../i18n';
 
 interface Props {
@@ -21,8 +22,6 @@ interface Props {
   onClearFields: (index: number) => void;
   onMoveField: (index: number, tableId: string, path: string, dir: 'up' | 'down') => void;
 }
-
-const SELECTED_BG = 'var(--vscode-list-activeSelectionBackground, #094771)';
 
 function keyOf(tableId: string, path: string): string {
   return `${tableId}|${path}`;
@@ -69,11 +68,7 @@ export function IndexTab(props: Props): React.ReactElement {
 
   const { dragStart, parseDrop, allowDrop, dropZone } = useFieldDragDrop();
 
-  const emptyHint: React.CSSProperties = {
-    padding: 6,
-    color: 'var(--vscode-descriptionForeground, #888)',
-    fontSize: 12,
-  };
+  const emptyHint = EMPTY_HINT;
 
   function parseSel(key: string | null): { tableId: string; path: string } | null {
     if (!key) return null;
@@ -95,23 +90,25 @@ export function IndexTab(props: Props): React.ReactElement {
       <div style={{ display: 'flex', flex: 1, gap: 4, overflow: 'hidden' }}>
         {/* Панель 1: Индексы */}
         <div style={{ ...panelBox, width: leftWidth, flexShrink: 0 }}>
-          <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
+          <PanelHeader title={t('tabs.indexes')}>
             <IconButton icon="add" tone="add" title={t('indexes.add')} onClick={onAddIndex} />
             <IconButton icon="copy" title={t('indexes.copy')} disabled={currentIdx < 0} onClick={() => currentIdx >= 0 && onCopyIndex(currentIdx)} />
             <IconButton icon="close" tone="remove" title={t('indexes.delete')} disabled={currentIdx < 0} onClick={() => currentIdx >= 0 && onRemoveIndex(currentIdx)} />
             <IconButton icon="arrow-up" title={t('actions.moveUp')} disabled={currentIdx <= 0} onClick={() => { if (currentIdx > 0) { onMoveIndex(currentIdx, 'up'); setCurrent(currentIdx - 1); } }} />
             <IconButton icon="arrow-down" title={t('actions.moveDown')} disabled={currentIdx < 0 || currentIdx >= indexes.length - 1} onClick={() => { if (currentIdx >= 0 && currentIdx < indexes.length - 1) { onMoveIndex(currentIdx, 'down'); setCurrent(currentIdx + 1); } }} />
+          </PanelHeader>
+          <div style={{ display: 'flex', ...COLUMN_HEADER, padding: 0 }}>
+            <div style={{ flex: 1, padding: '3px 8px' }}>{t('common.name')}</div>
+            <div style={{ width: 90, flexShrink: 0, padding: '3px 0', textAlign: 'center' }}>{t('indexes.unique')}</div>
           </div>
-          <div style={{ display: 'flex' }}>
-            <div style={{ ...SECTION_HEADER, flex: 1 }}>{t('common.name')}</div>
-            <div style={{ ...SECTION_HEADER, width: 90, flexShrink: 0 }}>{t('indexes.unique')}</div>
-          </div>
-          <div style={dropZone}>
+          <div style={dropZone} className="qc-list" tabIndex={-1}>
             {indexes.map((idx, i) => (
               <div
                 key={i}
                 onClick={() => setCurrent(i)}
-                style={{ ...ROW, cursor: 'pointer', justifyContent: 'space-between', background: i === currentIdx ? SELECTED_BG : 'transparent' }}
+                className={i === currentIdx ? 'qc-row qc-row--selected' : 'qc-row'}
+                aria-selected={i === currentIdx}
+                style={{ ...ROW, cursor: 'pointer', justifyContent: 'space-between' }}
               >
                 <span style={{ flex: 1 }}>{t('indexes.number', { number: i + 1 })}</span>
                 <span style={{ width: 90, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
@@ -130,12 +127,12 @@ export function IndexTab(props: Props): React.ReactElement {
           </div>
         </div>
 
-        <ResizeHandle onResize={d => setLeftWidth(w => Math.max(140, w + d))} />
+        <ResizeHandle onResize={d => setLeftWidth(w => clampPaneWidth(w + d, 140, 420))} />
 
         {/* Панель 2: Поля */}
         <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
           <div style={SECTION_HEADER}>{t('common.fields')}</div>
-          <div style={dropZone} data-field-source="index-source">
+          <div style={dropZone} data-field-source="index-source" className="qc-list" tabIndex={-1}>
             {currentIndex && availableFields.map(f => {
               const k = keyOf(f.tableId, f.path);
               return (
@@ -145,7 +142,9 @@ export function IndexTab(props: Props): React.ReactElement {
                   draggable
                   onDragStart={e => dragStart(e, f.tableId, f.path)}
                   onClick={() => setMiddleSel(k)}
-                  style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start', background: k === middleSel ? SELECTED_BG : 'transparent' }}
+                  className={k === middleSel ? 'qc-row qc-row--selected' : 'qc-row'}
+                  aria-selected={k === middleSel}
+                  style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start' }}
                 >
                   <span>{labelFor(f.tableId, f.path)}</span>
                 </div>
@@ -194,7 +193,7 @@ export function IndexTab(props: Props): React.ReactElement {
 
         {/* Панель 3: Поле (поля индекса) */}
         <div style={{ ...panelBox, flex: 2, minWidth: 0 }}>
-          <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
+          <PanelHeader title={t('common.field')}>
             <IconButton
               icon="arrow-up"
               title={t('actions.moveUp')}
@@ -207,9 +206,10 @@ export function IndexTab(props: Props): React.ReactElement {
               disabled={!currentIndex || rightFieldIdx < 0 || (currentIndex !== null && rightFieldIdx >= currentIndex.fields.length - 1)}
               onClick={() => { if (currentIdx >= 0 && right) onMoveField(currentIdx, right.tableId, right.path, 'down'); }}
             />
-          </div>
-          <div style={SECTION_HEADER}>{t('common.field')}</div>
+          </PanelHeader>
           <div
+            className="qc-list"
+            tabIndex={-1}
             style={dropZone}
             onDragOver={allowDrop}
             onDrop={e => {
@@ -225,7 +225,9 @@ export function IndexTab(props: Props): React.ReactElement {
                 <div
                   key={k}
                   onClick={() => setRightSel(k)}
-                  style={{ ...ROW, cursor: 'pointer', justifyContent: 'flex-start', background: k === rightSel ? SELECTED_BG : 'transparent' }}
+                  className={k === rightSel ? 'qc-row qc-row--selected' : 'qc-row'}
+                  aria-selected={k === rightSel}
+                  style={{ ...ROW, cursor: 'pointer', justifyContent: 'flex-start' }}
                 >
                   <span>{labelFor(f.tableId, f.path)}</span>
                 </div>

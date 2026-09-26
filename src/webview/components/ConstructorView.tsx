@@ -17,7 +17,7 @@ import { BatchTab } from './BatchTab';
 import { VirtualTableParamsDialog } from './VirtualTableParamsDialog';
 import { ExpressionBuilder, type ExpressionSource } from './ExpressionBuilder';
 import { TempTableDialog } from './TempTableDialog';
-import { ResizeHandle } from './ResizeHandle';
+import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
 import { CodeEditor } from './CodeEditor';
 import { IconButton } from './IconButton';
 import { QueryTextDialog } from './QueryTextDialog';
@@ -35,7 +35,7 @@ import type { QueryDocument } from '../../core/query/unionModel';
 import { tryOpenBatch } from '../../core/query/validateBatch';
 import { buildResolverFromTables } from '../../core/metadata/buildModelResolver';
 import type { RefreshState } from '../App';
-import { BTN, BTN_SECONDARY, GLOBAL_FORM_CSS } from '../sharedStyles';
+import { BTN, BTN_SECONDARY, GLOBAL_FORM_CSS, DIALOG_PANEL, DIALOG_TITLE } from '../sharedStyles';
 import { localizeDiagnostic, t } from '../i18n';
 
 export interface ConstructorViewProps {
@@ -326,7 +326,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
             onAddField={(_tableFullName, _fieldPath) => { /* drag to FieldsPanel instead */ }}
           />
         </div>
-        <ResizeHandle onResize={d => setDbPanelWidth(w => Math.max(160, w + d))} />
+        <ResizeHandle onResize={d => setDbPanelWidth(w => clampPaneWidth(w + d, 160, tablesPanelWidth + 240))} />
         <div style={{ ...panelStyle, flex: 'none', width: tablesPanelWidth }}>
           <TablesPanel
             metaTables={tables}
@@ -360,7 +360,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
             })()}
           />
         </div>
-        <ResizeHandle onResize={d => setTablesPanelWidth(w => Math.max(160, w + d))} />
+        <ResizeHandle onResize={d => setTablesPanelWidth(w => clampPaneWidth(w + d, 160, dbPanelWidth + 240))} />
         <div style={panelStyle}>
           <FieldsPanel
             selectedTables={state.selectedTables}
@@ -613,11 +613,14 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
       </div>
 
       {/* Bottom bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderTop: '1px solid var(--qc-border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderTop: '1px solid var(--qc-border)', flexShrink: 0 }}>
         <button style={BTN_SECONDARY} onClick={handleShowQuery}>{t('common.query')}</button>
         {okError != null && (
-          <span data-testid="ok-error" style={{ color: 'var(--vscode-errorForeground, #f44747)', fontSize: 12 }}>
-            {okError}
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, color: 'var(--vscode-errorForeground, #f44747)', fontSize: 12 }}>
+            <span className="codicon codicon-error" style={{ fontSize: 14, flexShrink: 0 }} />
+            <span data-testid="ok-error" style={{ minWidth: 0 }}>
+              {okError}
+            </span>
           </span>
         )}
         <div style={{ flex: 1 }} />
@@ -727,10 +730,8 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
         >
           <div
             style={{
-              background: 'var(--vscode-editor-background, #1e1e1e)',
-              border: '1px solid var(--qc-border)',
-              borderRadius: 4,
-              padding: 16,
+              ...DIALOG_PANEL,
+              padding: '10px 16px 16px',
               minWidth: 400,
               width: '70vw',
               maxWidth: '70vw',
@@ -742,7 +743,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 'bold', fontSize: 13 }}>{t('dialog.queryText.title')}</span>
+              <span style={DIALOG_TITLE}>{t('dialog.queryText.title')}</span>
               <IconButton
                 icon="close"
                 title={t('actions.close')}

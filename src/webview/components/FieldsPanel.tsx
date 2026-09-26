@@ -4,7 +4,9 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import { IconButton } from './IconButton';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
-import { SECTION_HEADER, REMOVE_BTN, ROW_PADDING_Y } from '../sharedStyles';
+import { PanelHeader } from './PanelHeader';
+import { RowRemoveButton } from './RowRemoveButton';
+import { ROW_PADDING_Y, TREE_ROW_GAP, EMPTY_HINT } from '../sharedStyles';
 import { t } from '../i18n';
 
 interface Props {
@@ -86,9 +88,7 @@ export function FieldsPanel({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={SECTION_HEADER}>{t('common.fields')}</div>
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 4, gap: 4 }}>
-      <div style={{ display: 'flex', gap: 2 }}>
+      <PanelHeader title={t('common.fields')}>
         <IconButton
           icon="close"
           title={t('fields.remove')}
@@ -103,8 +103,21 @@ export function FieldsPanel({
           disabled={!canAddExpression}
           onClick={onAddExpression}
         />
-      </div>
+        {/* Та же команда, что двойной клик по полю, — для выделенного поля (как
+            «Редактировать источник» в панели «Таблицы»). */}
+        <IconButton
+          testId="edit-field"
+          icon="edit"
+          title={t('fields.edit')}
+          tone="edit"
+          disabled={focusedSelectedFieldIdx === null || !selectedFields[focusedSelectedFieldIdx]}
+          onClick={() => focusedSelectedFieldIdx !== null && onEditField(focusedSelectedFieldIdx)}
+        />
+      </PanelHeader>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 4 }}>
       <div
+        className="qc-list"
+        tabIndex={-1}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -131,12 +144,11 @@ export function FieldsPanel({
               onClick={() => onFocusField(i)}
               onDoubleClick={() => onEditField(i)}
               title={t('fields.editExpression')}
-              className="qc-row"
+              className={focusedSelectedFieldIdx === i ? 'qc-row qc-row--selected' : 'qc-row'}
+              aria-selected={focusedSelectedFieldIdx === i}
               style={{
-                padding: `${ROW_PADDING_Y}px 6px`,
+                padding: `${ROW_PADDING_Y}px 4px ${ROW_PADDING_Y}px 8px`,
                 cursor: 'default',
-                background: focusedSelectedFieldIdx === i ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined,
-                color: focusedSelectedFieldIdx === i ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit',
                 userSelect: 'none',
                 display: 'flex',
                 alignItems: 'center',
@@ -145,12 +157,12 @@ export function FieldsPanel({
             >
               <span
                 title={f.expression ?? label}
-                style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}
+                style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP }}
               >
                 <span className={`codicon codicon-${f.expression ? 'symbol-operator' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
-                {label}
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
               </span>
-              <button style={REMOVE_BTN} onClick={e => { e.stopPropagation(); onRemoveField(i); }}>✕</button>
+              <RowRemoveButton title={t('fields.remove')} onClick={e => { e.stopPropagation(); onRemoveField(i); }} />
             </div>
           );
         })}
@@ -167,57 +179,47 @@ export function FieldsPanel({
               <div
                 className="qc-row"
                 style={{
-                  padding: `${ROW_PADDING_Y}px 6px`,
+                  padding: `${ROW_PADDING_Y}px 4px ${ROW_PADDING_Y}px 8px`,
                   cursor: 'default',
                   userSelect: 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 4,
+                  gap: TREE_ROW_GAP,
                 }}
               >
                 <Chevron expanded={isExpanded} onClick={() => toggleTs(tsKey)} />
                 <MetaKindIcon kind="ТабличнаяЧасть" />
                 <span style={{ flex: 1 }}>{label}</span>
-                <button
-                  style={REMOVE_BTN}
-                  title={t('fields.removeTabularSection')}
-                  onClick={() => onRemoveTabSection(ts.tableId, ts.tsName)}
-                >
-                  ✕
-                </button>
+                <RowRemoveButton title={t('fields.removeTabularSection')} onClick={() => onRemoveTabSection(ts.tableId, ts.tsName)} />
               </div>
               {isExpanded && ts.fields.map(fieldName => (
                 <div
                   key={fieldName}
                   className="qc-row"
                   style={{
-                    paddingLeft: 24,
+                    paddingLeft: 28,
                     paddingTop: ROW_PADDING_Y,
                     paddingBottom: ROW_PADDING_Y,
-                    fontSize: 12,
-                    color: 'var(--vscode-descriptionForeground, #aaa)',
                     userSelect: 'none',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    paddingRight: 6,
+                    paddingRight: 4,
                   }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP }}>
                     <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                     {fieldName}
                   </span>
-                  <button
-                    style={REMOVE_BTN}
-                    onClick={() => onRemoveTabSectionSubField(ts.tableId, ts.tsName, fieldName)}
-                  >
-                    ✕
-                  </button>
+                  <RowRemoveButton title={t('fields.remove')} onClick={() => onRemoveTabSectionSubField(ts.tableId, ts.tsName, fieldName)} />
                 </div>
               ))}
             </div>
           );
         })}
+        {selectedFields.length === 0 && tabSectionFields.length === 0 && (
+          <div style={EMPTY_HINT}>{t('empty.fieldsDropHint')}</div>
+        )}
       </div>
       </div>
     </div>

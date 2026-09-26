@@ -16,9 +16,28 @@ All notable changes are recorded here. The project uses
   insertion with Tab/Shift+Tab placeholders, and a compact status line
   (validity, result type when provable, line/character counts). Esc closes
   suggestions first and asks before discarding an edited expression.
+- Classic constructor visual refinement (same tabs, panels and workflow):
+  panel-style tabs with keyboard navigation (←/→/Home/End), panel titles and
+  their command buttons merged into one header row, lighter column headers and
+  row separators, field types shown as a muted secondary column in the
+  Database tree, VS Code-like selection (inactive until the
+  list has focus), muted row delete buttons, compact empty-state hints,
+  visible resize handles that no longer collapse the neighbouring panel,
+  Esc/close button in the
+  temp-table and virtual-table dialogs, and visible button borders in
+  high-contrast themes.
+- The Fields panel header has an "Edit selected field" (pencil) command that
+  opens the Custom expression editor for the selected field, like double-click.
+- The Unions/Aliases field list highlights column expressions with the same
+  token colours as the Custom expression editor.
 
 ### Fixed
 
+- A custom-expression field added without an alias no longer uses its own
+  expression text as the column alias: the Unions/Aliases tab, column renaming,
+  the batch hover card and package temp-table columns now use the generator's
+  auto alias (`Поле{n}`, parameter name or `…Представление`), and a UNION no
+  longer generates invalid `… КАК ВЫБОР КОГДА …` for such a field.
 - Diagnostics set on the rich query/expression editor are no longer wiped by
   the empty background linter about 750 ms after each edit.
 - Positionless semantic diagnostics no longer underline the first character of

@@ -28,17 +28,33 @@ export function TabsBar({ tabs, active, onSelect }: Props): React.ReactElement {
   return (
     <div
       data-testid="tabsbar"
+      role="tablist"
       style={{
         display: 'flex',
+        flexShrink: 0,
         borderBottom: '1px solid var(--qc-border)',
         background: 'var(--vscode-editorGroupHeader-tabsBackground, #252526)',
         overflowX: 'auto',
         overflowY: 'hidden',
+        scrollbarWidth: 'thin',
       }}
     >
+      {/* Вкладки — как вкладки панелей VS Code (Problems/Output/Terminal): без
+          отдельного «бокса» на каждую, активная — цвет текста + акцентная черта
+          снизу. Вес шрифта не меняется, чтобы активная вкладка не «прыгала» по
+          ширине. Цвета — через CSS-классы, чтобы hover мог их перебить. */}
       <style>{`
-        .qc-tab { background: var(--vscode-tab-inactiveBackground, #2d2d2d); }
-        .qc-tab:hover { background: var(--vscode-tab-hoverBackground, rgba(255,255,255,0.06)); }
+        .qc-tab { color: var(--vscode-tab-inactiveForeground, #969696); }
+        .qc-tab:hover { color: var(--vscode-tab-activeForeground, #fff); background: var(--vscode-tab-hoverBackground, transparent); }
+        .qc-tab.qc-tab--active {
+          color: var(--vscode-tab-activeForeground, #fff);
+          outline: 1px dashed var(--vscode-contrastActiveBorder, transparent);
+          outline-offset: -3px;
+        }
+        .qc-tab:focus-visible, .qc-tab.qc-tab--active:focus-visible {
+          outline: 1px solid var(--vscode-focusBorder, #007fd4);
+          outline-offset: -1px;
+        }
       `}</style>
       {tabs.map(tab => {
         const isActive = tab === active;
@@ -46,34 +62,42 @@ export function TabsBar({ tabs, active, onSelect }: Props): React.ReactElement {
           <div
             key={tab}
             data-tab={tab}
+            role="tab"
+            aria-selected={isActive}
+            tabIndex={isActive ? 0 : -1}
             className={`qc-tab${isActive ? ' qc-tab--active' : ''}`}
             onClick={() => onSelect(tab)}
+            onKeyDown={e => {
+              // Клавиатура: ←/→/Home/End — между вкладками (roving tabindex, как
+              // tablist в VS Code), Enter/Space — выбрать сфокусированную.
+              const idx = tabs.indexOf(tab);
+              let next = -1;
+              if (e.key === 'ArrowRight') next = (idx + 1) % tabs.length;
+              else if (e.key === 'ArrowLeft') next = (idx - 1 + tabs.length) % tabs.length;
+              else if (e.key === 'Home') next = 0;
+              else if (e.key === 'End') next = tabs.length - 1;
+              else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(tab); return; }
+              if (next < 0) return;
+              e.preventDefault();
+              onSelect(tabs[next]);
+              const bar = e.currentTarget.parentElement;
+              requestAnimationFrame(() => bar?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus());
+            }}
             style={{
-              padding: '6px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              height: 32,
+              boxSizing: 'border-box',
+              padding: '0 12px',
               cursor: 'pointer',
               fontSize: 13,
               userSelect: 'none',
               whiteSpace: 'nowrap',
               flexShrink: 0,
-              transition: 'background-color 0.1s',
-              // Каждая вкладка — отдельный «бокс»: правый разделитель + рамка сверху.
-              borderRight: '1px solid var(--qc-border)',
-              borderTop: isActive
-                ? '3px solid var(--vscode-focusBorder, #007fd4)'
-                : '3px solid transparent',
-              // Активная вкладка — приподнятый, подсвеченный фон; неактивные — утопленные/темнее
-              // (фон неактивной задаёт CSS-класс выше, чтобы hover мог его перебить).
-              background: isActive ? 'var(--vscode-tab-activeBackground, #1e1e1e)' : undefined,
-              color: isActive
-                ? 'var(--vscode-tab-activeForeground, #fff)'
-                : 'var(--vscode-tab-inactiveForeground, #999)',
-              fontWeight: isActive ? 600 : 400,
-              // Активная вкладка визуально сливается с панелью контента снизу,
-              // неактивные сохраняют нижний разделитель.
               borderBottom: isActive
-                ? '1px solid var(--vscode-tab-activeBackground, #1e1e1e)'
-                : '1px solid var(--qc-border)',
-              marginBottom: -1,
+                ? '2px solid var(--vscode-panelTitle-activeBorder, var(--vscode-focusBorder, #007fd4))'
+                : '2px solid transparent',
+              borderTop: '2px solid transparent',
             }}
           >
             {t(TAB_LABELS[tab])}

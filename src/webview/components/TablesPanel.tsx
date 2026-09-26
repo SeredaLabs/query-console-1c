@@ -8,7 +8,8 @@ import { IconButton } from './IconButton';
 import { Chevron } from './Chevron';
 import { MetaKindIcon } from './MetaKindIcon';
 import { FieldTreeRow } from './FieldTreeRow';
-import { SECTION_HEADER, ROW_PADDING_Y } from '../sharedStyles';
+import { PanelHeader } from './PanelHeader';
+import { ROW_PADDING_Y, TREE_ROW_GAP, EMPTY_HINT } from '../sharedStyles';
 import { t as i18nT } from '../i18n';
 
 interface Props {
@@ -106,9 +107,7 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={SECTION_HEADER}>{i18nT('common.tables')}</div>
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 4, gap: 4 }}>
-      <div style={{ display: 'flex', gap: 2 }}>
+      <PanelHeader title={i18nT('common.tables')}>
         <IconButton
           icon="close"
           title={i18nT('tables.remove')}
@@ -144,8 +143,11 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
           disabled={!focusedIsEditable}
           onClick={() => focusedSelectedTableId && onEditTable(focusedSelectedTableId)}
         />
-      </div>
+      </PanelHeader>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 4 }}>
       <div
+        className="qc-list"
+        tabIndex={-1}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -176,21 +178,22 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                 }}
                 onClick={() => { onFocusTable(t.id); toggleExpand(t.id); }}
                 onDoubleClick={() => onActivateTable(t.id)}
-                className="qc-row"
+                className={isSelected ? 'qc-row qc-row--selected' : 'qc-row'}
+                aria-selected={isSelected}
+                title={t.fullName}
                 style={{
-                  padding: `${ROW_PADDING_Y}px 6px`,
+                  padding: `${ROW_PADDING_Y}px 8px`,
                   cursor: 'default',
-                  background: isSelected ? 'var(--vscode-list-activeSelectionBackground, #094771)' : undefined,
-                  color: isSelected ? 'var(--vscode-list-activeSelectionForeground, #fff)' : 'inherit',
                   userSelect: 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 4,
+                  gap: TREE_ROW_GAP,
+                  whiteSpace: 'nowrap',
                 }}
               >
                 <Chevron expanded={isExpanded} />
                 <MetaKindIcon kind={meta?.kind ?? null} />
-                <span title={t.fullName}>{defaultTableAlias(t)}</span>
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{defaultTableAlias(t)}</span>
               </div>
               {isExpanded && meta && (
                 <>
@@ -232,13 +235,11 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                             paddingLeft: 24,
                             paddingTop: ROW_PADDING_Y,
                             paddingBottom: ROW_PADDING_Y,
-                            fontSize: 12,
-                            color: 'var(--vscode-descriptionForeground, #888)',
                             userSelect: 'none',
                             cursor: 'default',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 4,
+                            gap: TREE_ROW_GAP,
                           }}
                         >
                           <Chevron expanded={isTsExpanded} />
@@ -258,17 +259,18 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                               e.dataTransfer.effectAllowed = 'copy';
                             }}
                             className="qc-row"
+                            title={field.name}
                             style={{
                               paddingLeft: 48,
+                              paddingRight: 8,
+                              whiteSpace: 'nowrap',
                               paddingTop: ROW_PADDING_Y,
                               paddingBottom: ROW_PADDING_Y,
-                              fontSize: 12,
-                              color: 'var(--vscode-descriptionForeground, #aaa)',
                               userSelect: 'none',
                               cursor: 'default',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: 4,
+                              gap: TREE_ROW_GAP,
                             }}
                           >
                             <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
@@ -283,6 +285,7 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
             </div>
           );
         })}
+        {selectedTables.length === 0 && <div style={EMPTY_HINT}>{i18nT('empty.tablesDropHint')}</div>}
       </div>
       </div>
     </div>

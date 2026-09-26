@@ -1,10 +1,12 @@
 import * as React from 'react';
 import type { QueryMeta } from '../state/queryStore';
 import type { UnionColumn } from '../../core/query/unionModel';
-import { ResizeHandle } from './ResizeHandle';
+import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
+import { PanelHeader } from './PanelHeader';
 import { IconButton } from './IconButton';
-import { BTN, SECTION_HEADER, panelBox, ROW_PADDING_Y } from '../sharedStyles';
+import { BTN, DIALOG_PANEL, COLUMN_HEADER, GRID_ROW_BORDER, panelBox, ROW_PADDING_Y } from '../sharedStyles';
 import { t } from '../i18n';
+import { highlightParts } from '../expressionEditor/highlightedCode';
 
 const ALIAS_RE = /^[A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*$/;
 
@@ -29,21 +31,21 @@ const INPUT: React.CSSProperties = {
   background: 'var(--vscode-input-background, #3c3c3c)',
   color: 'var(--vscode-input-foreground, #ccc)',
   border: '1px solid var(--qc-border)',
-  borderRadius: 2,
+  borderRadius: 3,
   fontSize: 12,
   padding: '1px 4px',
   width: '100%',
   boxSizing: 'border-box',
 };
 
-// Заголовок колонки таблицы — тот же SECTION_HEADER, что и блочные заголовки
-// панелей, разложенный по <th> (как в BatchTab), а не своя отдельная тема.
-const TH: React.CSSProperties = { ...SECTION_HEADER, textAlign: 'left', whiteSpace: 'nowrap' };
+// Заголовок колонки таблицы — общий COLUMN_HEADER (как в BatchTab/«Условиях»):
+// легче заголовка панели, чтобы шапка не спорила с содержимым.
+const TH: React.CSSProperties = { ...COLUMN_HEADER, fontWeight: 600 };
 
 const TD: React.CSSProperties = {
   fontSize: 12,
   padding: `${ROW_PADDING_Y}px 6px`,
-  borderBottom: '1px solid var(--qc-border)',
+  borderBottom: GRID_ROW_BORDER,
 };
 
 export function UnionsTab({
@@ -102,8 +104,7 @@ export function UnionsTab({
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
       {/* Список запросов */}
       <div style={{ ...panelBox, width: queryListWidth, flexShrink: 0 }}>
-        <div style={SECTION_HEADER}>{t('unions.queryList')}</div>
-        <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
+        <PanelHeader title={t('unions.queryList')}>
           <IconButton icon="add" tone="add" title={t('unions.addQuery')} onClick={onAddQuery} />
           <IconButton
             icon="close"
@@ -112,8 +113,8 @@ export function UnionsTab({
             disabled={queryList.length <= 1}
             onClick={() => onRemoveQuery(selectedRow)}
           />
-        </div>
-        <div style={{ overflow: 'auto', flex: 1 }}>
+        </PanelHeader>
+        <div className="qc-list" tabIndex={-1} style={{ overflow: 'auto', flex: 1 }}>
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>
@@ -126,10 +127,9 @@ export function UnionsTab({
                 <tr
                   key={i}
                   onClick={() => selectRow(i)}
-                  style={{
-                    cursor: 'pointer',
-                    background: i === selectedRow ? 'var(--vscode-list-activeSelectionBackground, #094771)' : 'transparent',
-                  }}
+                  className={i === selectedRow ? 'qc-row qc-row--selected' : 'qc-row'}
+                  aria-selected={i === selectedRow}
+                  style={{ cursor: 'pointer' }}
                 >
                   <td style={TD}>
                     <input
@@ -154,12 +154,11 @@ export function UnionsTab({
         </div>
       </div>
 
-      <ResizeHandle onResize={d => setQueryListWidth(w => Math.max(160, w + d))} />
+      <ResizeHandle onResize={d => setQueryListWidth(w => clampPaneWidth(w + d, 160, 320))} />
 
       {/* Список полей */}
       <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
-        <div style={SECTION_HEADER}>{t('unions.fieldList')}</div>
-        <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
+        <PanelHeader title={t('unions.fieldList')}>
           <IconButton
             icon="arrow-up"
             title={t('actions.moveUp')}
@@ -172,8 +171,8 @@ export function UnionsTab({
             disabled={selectedCol >= columns.length - 1}
             onClick={() => moveColumn('down')}
           />
-        </div>
-        <div style={{ overflow: 'auto', flex: 1 }}>
+        </PanelHeader>
+        <div className="qc-list" tabIndex={-1} style={{ overflow: 'auto', flex: 1 }}>
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>
@@ -191,10 +190,9 @@ export function UnionsTab({
                   <tr
                     key={col.alias}
                     onClick={() => setSelectedCol(colIdx)}
-                    style={{
-                      cursor: 'pointer',
-                      background: colIdx === selectedCol ? 'var(--vscode-list-activeSelectionBackground, #094771)' : 'transparent',
-                    }}
+                    className={colIdx === selectedCol ? 'qc-row qc-row--selected' : 'qc-row'}
+                    aria-selected={colIdx === selectedCol}
+                    style={{ cursor: 'pointer' }}
                   >
                     <td style={TD}>
                       <input
@@ -212,7 +210,11 @@ export function UnionsTab({
                     </td>
                     {col.cells.map((cell, i) => (
                       <td key={i} style={{ ...TD, color: cell === null ? 'var(--vscode-descriptionForeground, #888)' : 'inherit', fontStyle: cell === null ? 'italic' : 'normal' }}>
-                        {cell === null ? t('unions.missing') : cell}
+                        {/* Выражение колонки — тем же токенизатором и палитрой, что и в
+                            редакторе произвольного выражения (функции, операторы, литералы). */}
+                        {cell === null
+                          ? t('unions.missing')
+                          : highlightParts(cell).map((p, k) => (p.style ? <span key={k} style={p.style}>{p.text}</span> : p.text))}
                       </td>
                     ))}
                   </tr>
@@ -231,9 +233,7 @@ export function UnionsTab({
         >
           <div
             style={{
-              background: 'var(--vscode-editor-background, #1e1e1e)',
-              border: '1px solid var(--qc-border)',
-              borderRadius: 4,
+              ...DIALOG_PANEL,
               padding: 16,
               minWidth: 360,
               maxWidth: '60vw',

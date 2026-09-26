@@ -5,7 +5,9 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import { fieldsTypeCompatible } from '../../core/query/fieldTypeCompat';
 import { IconButton } from './IconButton';
-import { SECTION_HEADER, REMOVE_BTN, ROW, INPUT, panelBox } from '../sharedStyles';
+import { PanelHeader } from './PanelHeader';
+import { RowRemoveButton } from './RowRemoveButton';
+import { COLUMN_HEADER, EMPTY_HINT, GRID_ROW_BORDER, ROW, INPUT, panelBox } from '../sharedStyles';
 import { t } from '../i18n';
 import { CONDITION_OPERATORS } from '../conditionOperators';
 
@@ -125,20 +127,19 @@ export function ConnectionsTab(props: Props): React.ReactElement {
   return (
     <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
       <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
-        {/* Тулбар */}
-        <div style={{ display: 'flex', gap: 2, padding: '2px 4px', borderBottom: '1px solid var(--qc-border)' }}>
+        {/* Заголовок панели вместе с её командой (раньше — отдельная строка с «+» над ним). */}
+        <PanelHeader title={t('connections.title')}>
           <IconButton icon="add" tone="add" title={t('connections.add')} onClick={onAddJoin} />
-        </div>
-        <div style={SECTION_HEADER}>{t('connections.title')}</div>
-        {/* Заголовок столбцов */}
-        <div style={{ display: 'flex', ...SECTION_HEADER, padding: 0 }}>
-          <div style={{ width: W_NUM, padding: '2px 6px', flexShrink: 0, textAlign: 'right' }}>№</div>
-          <div style={{ width: W_TABLE, padding: '2px 6px', flexShrink: 0 }}>{t('connections.table1')}</div>
-          <div style={{ width: W_ALL, padding: '2px 2px', flexShrink: 0 }} title={t('connections.allTable1')}>{t('common.all')}</div>
-          <div style={{ width: W_TABLE, padding: '2px 6px', flexShrink: 0 }}>{t('connections.table2')}</div>
-          <div style={{ width: W_ALL, padding: '2px 2px', flexShrink: 0 }} title={t('connections.allTable2')}>{t('common.all')}</div>
-          <div style={{ width: W_CUSTOM, padding: '2px 2px', flexShrink: 0 }} title={t('connections.custom')}>C.</div>
-          <div style={{ flex: 1, padding: '2px 6px' }}>{t('connections.condition')}</div>
+        </PanelHeader>
+        {/* Заголовок столбцов — те же ширины/отступы, что у строк ниже. */}
+        <div style={{ display: 'flex', ...COLUMN_HEADER, padding: '3px 8px' }}>
+          <div style={{ width: W_NUM, paddingRight: 8, flexShrink: 0, textAlign: 'right' }}>№</div>
+          <div style={{ width: W_TABLE, paddingLeft: 6, flexShrink: 0, boxSizing: 'border-box' }}>{t('connections.table1')}</div>
+          <div style={{ width: W_ALL, flexShrink: 0, textAlign: 'center' }} title={t('connections.allTable1')}>{t('common.all')}</div>
+          <div style={{ width: W_TABLE, paddingLeft: 6, flexShrink: 0, boxSizing: 'border-box' }}>{t('connections.table2')}</div>
+          <div style={{ width: W_ALL, flexShrink: 0, textAlign: 'center' }} title={t('connections.allTable2')}>{t('common.all')}</div>
+          <div style={{ width: W_CUSTOM, flexShrink: 0, textAlign: 'center' }} title={t('connections.custom')}>C.</div>
+          <div style={{ flex: 1, paddingLeft: 6 }}>{t('connections.condition')}</div>
         </div>
         <div style={dropZone}>
           {joins.map((j, i) => {
@@ -150,8 +151,8 @@ export function ConnectionsTab(props: Props): React.ReactElement {
               const leftTableId = c.leftTableId ?? j.leftTableId;
               const rightTableId = c.rightTableId ?? j.rightTableId;
               return (
-                <div key={`${i}.${ci}`} style={{ ...ROW, borderBottom: '1px solid var(--qc-border)' }}>
-                  <span style={{ width: W_NUM, flexShrink: 0, textAlign: 'right', paddingRight: 8 }}>
+                <div key={`${i}.${ci}`} className="qc-row" style={{ ...ROW, borderBottom: GRID_ROW_BORDER }}>
+                  <span style={{ width: W_NUM, flexShrink: 0, textAlign: 'right', paddingRight: 8, color: 'var(--vscode-descriptionForeground, #aaa)', fontVariantNumeric: 'tabular-nums' }}>
                     {ci === 0 ? i + 1 : ''}
                   </span>
                   {tableSelect(i, ci, 'left', leftTableId)}
@@ -213,19 +214,16 @@ export function ConnectionsTab(props: Props): React.ReactElement {
                     title={t('connections.addCondition')}
                     onClick={() => onAddJoinCondition(i)}
                   />
-                  <button
-                    style={REMOVE_BTN}
+                  <RowRemoveButton
                     title={multi ? t('connections.deleteCondition') : t('connections.deleteJoin')}
                     onClick={() => multi ? onRemoveJoinCondition(i, ci) : onRemoveJoin(i)}
-                  >
-                    ✕
-                  </button>
+                  />
                 </div>
               );
             });
           })}
           {joins.length === 0 && (
-            <div style={{ padding: 6, color: 'var(--vscode-descriptionForeground, #888)', fontSize: 12 }}>
+            <div style={EMPTY_HINT}>
               {t('connections.addHint')}
             </div>
           )}
