@@ -38,6 +38,12 @@ All notable changes are recorded here. The project uses
   the batch hover card and package temp-table columns now use the generator's
   auto alias (`Поле{n}`, parameter name or `…Представление`), and a UNION no
   longer generates invalid `… КАК ВЫБОР КОГДА …` for such a field.
+- Auto aliases of unaliased custom-expression fields no longer collide with
+  explicit aliases or with each other (`Поле2` instead of a second `Поле1`,
+  `Дата1`, `СсылкаПредставление1`); previously such a query was generated with
+  a duplicate alias and rejected by the constructor's own validation.
+- In a narrow designer window (600–800 px) the Fields panel no longer collapses
+  on the Tables and fields tab.
 - Diagnostics set on the rich query/expression editor are no longer wiped by
   the empty background linter about 750 ms after each edit.
 - Positionless semantic diagnostics no longer underline the first character of

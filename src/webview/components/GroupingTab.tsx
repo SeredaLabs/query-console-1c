@@ -108,7 +108,7 @@ export function GroupingTab(props: Props): React.ReactElement {
         </div>
       </div>
 
-      <ResizeHandle onResize={d => setLeftWidth(w => clampPaneWidth(w + d, 140, 320))} />
+      <ResizeHandle onResize={d => setLeftWidth(w => clampPaneWidth(w + d, 140, 320, w))} />
 
       {/* Правая колонка */}
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gap: 4 }}>

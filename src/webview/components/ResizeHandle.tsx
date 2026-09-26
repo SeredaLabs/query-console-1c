@@ -73,8 +73,11 @@ export function ResizeHandle({
  * Ширина перетаскиваемой панели в пределах [min, ширина окна − reserved] — чтобы
  * разделитель нельзя было утащить так далеко, что соседняя (flex:1) панель
  * схлопнется до нуля. `reserved` — сколько места должно остаться остальным.
+ * Верхняя граница только НЕ ДАЁТ РАСТИ: если панель уже шире её (узкое окно),
+ * перетаскивание вправо не «прыгает» к границе, а просто ничего не меняет.
  */
-export function clampPaneWidth(value: number, min: number, reserved: number): number {
-  const max = Math.max(min, window.innerWidth - reserved);
-  return Math.max(min, Math.min(value, max));
+export function clampPaneWidth(value: number, min: number, reserved: number, current = value): number {
+  const max = window.innerWidth - reserved;
+  if (value <= max) return Math.max(min, value);
+  return Math.max(min, Math.min(value, Math.max(max, current)));
 }

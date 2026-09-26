@@ -158,11 +158,25 @@ export function BuilderTab(props: Props): React.ReactElement {
               key={st.key}
               role="tab"
               aria-selected={isActive}
-              tabIndex={0}
-              // Те же цвета/hover/фокус, что у основной полосы вкладок (.qc-tab в TabsBar).
+              tabIndex={isActive ? 0 : -1}
+              data-subtab={st.key}
+              // Те же цвета/hover/фокус и клавиатура, что у основной полосы вкладок
+              // (.qc-tab и roving tabindex в TabsBar): ←/→/Home/End, Enter/Space.
               className={isActive ? 'qc-tab qc-tab--active' : 'qc-tab'}
               onClick={() => setActive(st.key)}
-              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActive(st.key); } }}
+              onKeyDown={e => {
+                const idx = SUB_TABS.findIndex(x => x.key === st.key);
+                let next = -1;
+                if (e.key === 'ArrowRight') next = (idx + 1) % SUB_TABS.length;
+                else if (e.key === 'ArrowLeft') next = (idx - 1 + SUB_TABS.length) % SUB_TABS.length;
+                else if (e.key === 'Home') next = 0;
+                else if (e.key === 'End') next = SUB_TABS.length - 1;
+                else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActive(st.key); return; }
+                if (next < 0) return;
+                e.preventDefault();
+                setActive(SUB_TABS[next].key);
+                e.currentTarget.parentElement?.querySelector<HTMLElement>(`[data-subtab="${SUB_TABS[next].key}"]`)?.focus();
+              }}
               style={{
                 padding: '4px 12px',
                 cursor: 'pointer',
@@ -260,7 +274,7 @@ export function BuilderTab(props: Props): React.ReactElement {
           </div>
         </div>
 
-        <ResizeHandle onResize={d => setLeftWidth(w => clampPaneWidth(w + d, 140, 320))} />
+        <ResizeHandle onResize={d => setLeftWidth(w => clampPaneWidth(w + d, 140, 320, w))} />
 
         {/* Правый список: строки построителя */}
         <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>

@@ -80,8 +80,10 @@ export function TabsBar({ tabs, active, onSelect }: Props): React.ReactElement {
               if (next < 0) return;
               e.preventDefault();
               onSelect(tabs[next]);
-              const bar = e.currentTarget.parentElement;
-              requestAnimationFrame(() => bar?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus());
+              // Фокус — сразу (все вкладки уже в DOM), а не в следующем кадре: иначе
+              // быстрое следующее нажатие уходило бы ещё на прежнюю вкладку.
+              e.currentTarget.parentElement
+                ?.querySelector<HTMLElement>(`[data-tab="${CSS.escape(tabs[next])}"]`)?.focus();
             }}
             style={{
               display: 'flex',

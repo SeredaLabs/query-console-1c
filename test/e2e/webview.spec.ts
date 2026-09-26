@@ -1278,3 +1278,138 @@ test.describe('Classic: состояния оформления', () => {
     expect(fieldsWidth).toBeGreaterThan(150);
   });
 });
+
+// Финальный regression-hardening (2026-09-26): покрытие поведения, которое раньше
+// не было зафиксировано тестами, и регрессии, найденные при проверке.
+test.describe('Hardening: клавиатура, ширины, редактор выражений', () => {
+  test('вкладки: быстрые End → Home → → → Enter не «отстают» от фокуса', async ({ page }) => {
+    await page.goto(BASE);
+    await expect(page.locator('[data-testid="loading-overlay"]')).toBeHidden();
+    await page.locator('[data-tab="Таблицы и поля"]').focus();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('[data-testid="tabsbar"] [aria-selected="true"]')).toHaveAttribute('data-tab', 'Группировка');
+    await expect(page.locator('[data-tab="Группировка"]')).toBeFocused();
+  });
+
+  test('«Построитель»: подвкладки — ←/→/Home/End с переносом фокуса, Enter/Space', async ({ page }) => {
+    await page.goto(BASE);
+    await expect(page.locator('[data-testid="loading-overlay"]')).toBeHidden();
+    await page.locator('[data-tab="Построитель"]').click();
+    const sub = (name: string) => page.locator('[role="tablist"]').nth(1).locator(`[role="tab"]:has-text("${name}")`);
+    await sub('Поля').focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(sub('Условия')).toHaveAttribute('aria-selected', 'true');
+    await expect(sub('Условия')).toBeFocused();
+    await page.keyboard.press('End');
+    await expect(sub('Итоги')).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(sub('Поля')).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('Home');
+    await expect(sub('Поля')).toBeFocused();
+    await sub('Порядок').focus();
+    await page.keyboard.press('Space');
+    await expect(sub('Порядок')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  for (const width of [600, 700, 800]) {
+    test(`ширина окна ${width}px: «Поля» не схлопывается, разделитель не «прыгает»`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 600 });
+      await page.goto(BASE);
+      await expect(page.locator('[data-testid="loading-overlay"]')).toBeHidden();
+      const zoneWidths = () => page.evaluate(() => Array.from(document.querySelectorAll('div'))
+        .filter(d => { const s = (d as HTMLElement).style; return s.overflowY === 'auto' && s.minHeight === '40px' && s.border.includes('dashed'); })
+        .map(e => e.getBoundingClientRect().width));
+      expect((await zoneWidths())[1]).toBeGreaterThan(180);
+      const dbPanel = page.locator('text=База данных').first().locator('xpath=../..');
+      const before = (await dbPanel.boundingBox())!.width;
+      const sash = (await page.locator('[role="separator"]').first().boundingBox())!;
+      await page.mouse.move(sash.x + 3, sash.y + 100);
+      await page.mouse.down();
+      await page.mouse.move(sash.x + 13, sash.y + 100, { steps: 2 });
+      await page.mouse.up();
+      // Тянули вправо — панель не может стать уже, а «Поля» не уходят в ноль.
+      expect((await dbPanel.boundingBox())!.width).toBeGreaterThanOrEqual(before - 1);
+      expect((await zoneWidths())[1]).toBeGreaterThan(180);
+    });
+  }
+
+  test('удаление поля двойным кликом по крестику не открывает редактор выражения', async ({ page }) => {
+    await page.goto(BASE);
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    for (const f of ['Код', 'Наименование', 'Ссылка']) await dragFieldToPanel(page, 'Справочник.Валюты', f);
+    await page.locator('[data-field-idx="0"] button[aria-label="Убрать поле"]').dblclick();
+    await expect(page.locator('[data-testid="expr-dialog"]')).toHaveCount(0);
+  });
+
+  test('диагностика: предупреждение держится >1с и исчезает после исправления; синтаксис — без ложного маркера', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await page.locator(EXPR_CONTENT).fill('Валюты.Код +');
+    await expect(page.locator('[data-testid="expr-status-state"]')).toContainText('Синтаксическая ошибка');
+    await page.waitForTimeout(1200);
+    await expect(page.locator('.cm-lintRange-error, .cm-lintRange-warning')).toHaveCount(0);
+    await page.locator(EXPR_CONTENT).fill('Валюты.Нет = 1');
+    await expect(page.locator('.cm-lintRange-warning')).toHaveText('Нет');
+    await page.waitForTimeout(1500);
+    await expect(page.locator('.cm-lintRange-warning')).toHaveText('Нет');
+    await page.locator(EXPR_CONTENT).fill('Валюты.Код = 1');
+    await expect(page.locator('[data-testid="expr-status-state"]')).toContainText('Выражение корректно');
+    await expect(page.locator('.cm-lintRange-error, .cm-lintRange-warning')).toHaveCount(0);
+    await page.waitForTimeout(1200);
+    await expect(page.locator('.cm-lintRange-error, .cm-lintRange-warning')).toHaveCount(0);
+  });
+
+  test('перенос строк не сбрасывает выделение и курсор', async ({ page }) => {
+    await openExpressionForNewField(page);
+    await page.locator(EXPR_CONTENT).fill('ABCDEF');
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Shift+ArrowRight');
+    await page.keyboard.press('Shift+ArrowRight');
+    await page.locator('[data-testid="expr-wrap"]').click();
+    await page.locator(EXPR_CONTENT).focus();
+    await page.keyboard.type('Z');
+    expect(await exprText(page)).toBe('ABZEF');
+    await page.locator('[data-testid="expr-wrap"]').click();
+    await page.locator(EXPR_CONTENT).focus();
+    await page.keyboard.type('Y');
+    expect(await exprText(page)).toBe('ABZYEF');
+  });
+
+  for (const incomplete of ['ЕСТЬNULL(', 'Валюты.', '"незакрытая строка', 'Валюты.Код = "abc']) {
+    test(`форматирование недоступно и текст не меняется: ${incomplete}`, async ({ page }) => {
+      await openExpressionForNewField(page);
+      await page.locator(EXPR_CONTENT).fill(incomplete);
+      await expect(page.locator('[data-testid="expr-status-state"]')).toContainText('Синтаксическая ошибка');
+      await expect(page.locator('[data-testid="expr-format"]')).toBeDisabled();
+      expect(await exprText(page)).toBe(incomplete);
+    });
+  }
+
+  test('Esc с изменённым выражением: «Продолжить» сохраняет текст, «Закрыть без сохранения» не меняет поле', async ({ page }) => {
+    await page.goto(BASE);
+    await page.locator('text=Справочники').click();
+    await dragTableToPanel(page, 'Справочник.Валюты');
+    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
+    await page.locator('[data-field-idx="0"]').dblclick();
+    await expect(page.locator('[data-testid="expr-dialog"]')).toBeVisible();
+    await page.locator(EXPR_CONTENT).click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' + 1');
+    await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
+    await page.waitForTimeout(400); // отложенная (невидимая) подсказка CodeMirror забирает Esc первой — это задуманный порядок
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-testid="expr-unsaved-confirm"]')).toBeVisible();
+    await page.locator('button:has-text("Продолжить редактирование")').click();
+    await expect(page.locator('[data-testid="expr-unsaved-confirm"]')).toHaveCount(0);
+    expect(await exprText(page)).toBe('Валюты.Код + 1');
+    await page.keyboard.press('Escape');
+    await page.locator('button:has-text("Закрыть без сохранения")').click();
+    await expect(page.locator('[data-testid="expr-dialog"]')).toHaveCount(0);
+    await expect(page.locator('[data-field-idx="0"]')).toHaveText(/Валюты\.Код$/);
+  });
+});

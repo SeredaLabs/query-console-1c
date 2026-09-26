@@ -154,7 +154,7 @@ export function UnionsTab({
         </div>
       </div>
 
-      <ResizeHandle onResize={d => setQueryListWidth(w => clampPaneWidth(w + d, 160, 320))} />
+      <ResizeHandle onResize={d => setQueryListWidth(w => clampPaneWidth(w + d, 160, 320, w))} />
 
       {/* Список полей */}
       <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>

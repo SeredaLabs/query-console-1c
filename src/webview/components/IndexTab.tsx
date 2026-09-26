@@ -127,7 +127,7 @@ export function IndexTab(props: Props): React.ReactElement {
           </div>
         </div>
 
-        <ResizeHandle onResize={d => setLeftWidth(w => clampPaneWidth(w + d, 140, 420))} />
+        <ResizeHandle onResize={d => setLeftWidth(w => clampPaneWidth(w + d, 140, 420, w))} />
 
         {/* Панель 2: Поля */}
         <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>

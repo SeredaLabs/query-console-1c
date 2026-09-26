@@ -313,7 +313,9 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflow: 'hidden' }}>
       {activeTab === 'Таблицы и поля' && (
       <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, overflow: 'hidden' }}>
-        <div style={{ ...panelStyle, flex: 'none', width: dbPanelWidth }}>
+        {/* Узкое окно (600–800px): «База данных»/«Таблицы» ужимаются от своей ширины
+            до 160px, а «Поля» не уходят в ноль (раньше при 600px — 2px шириной). */}
+        <div style={{ ...panelStyle, flex: '0 1 auto', width: dbPanelWidth, minWidth: 160 }}>
           <DbTreePanel
             tables={tables}
             tempTables={availableTempTables(state)}
@@ -326,8 +328,8 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
             onAddField={(_tableFullName, _fieldPath) => { /* drag to FieldsPanel instead */ }}
           />
         </div>
-        <ResizeHandle onResize={d => setDbPanelWidth(w => clampPaneWidth(w + d, 160, tablesPanelWidth + 240))} />
-        <div style={{ ...panelStyle, flex: 'none', width: tablesPanelWidth }}>
+        <ResizeHandle onResize={d => setDbPanelWidth(w => clampPaneWidth(w + d, 160, tablesPanelWidth + 240, w))} />
+        <div style={{ ...panelStyle, flex: '0 1 auto', width: tablesPanelWidth, minWidth: 160 }}>
           <TablesPanel
             metaTables={tables}
             selectedTables={state.selectedTables}
@@ -360,8 +362,8 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
             })()}
           />
         </div>
-        <ResizeHandle onResize={d => setTablesPanelWidth(w => clampPaneWidth(w + d, 160, dbPanelWidth + 240))} />
-        <div style={panelStyle}>
+        <ResizeHandle onResize={d => setTablesPanelWidth(w => clampPaneWidth(w + d, 160, dbPanelWidth + 240, w))} />
+        <div style={{ ...panelStyle, minWidth: 200 }}>
           <FieldsPanel
             selectedTables={state.selectedTables}
             selectedFields={state.selectedFields}

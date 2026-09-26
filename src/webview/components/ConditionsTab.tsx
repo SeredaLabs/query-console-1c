@@ -127,7 +127,7 @@ export function ConditionsTab(props: Props): React.ReactElement {
         </div>
       </div>
 
-      <ResizeHandle onResize={d => setLeftWidth(w => clampPaneWidth(w + d, 140, 320))} />
+      <ResizeHandle onResize={d => setLeftWidth(w => clampPaneWidth(w + d, 140, 320, w))} />
 
       {/* Правая колонка: Условия */}
       <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
