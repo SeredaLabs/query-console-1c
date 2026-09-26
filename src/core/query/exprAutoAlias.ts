@@ -34,3 +34,30 @@ export function representationAutoAlias(expression: string): string | undefined 
   const lastSeg = m[1].split('.').pop();
   return lastSeg ? `${lastSeg}Представление` : undefined;
 }
+
+/**
+ * Автопсевдонимы для произвольных полей БЕЗ `КАК` одного списка выборки, не
+ * совпадающие с уже занятыми (`reserved` — явные псевдонимы этого списка;
+ * сравнение без учёта регистра, как в языке запросов): `Поле{n}` берёт
+ * следующий свободный номер, имя параметра / `…Представление` при совпадении
+ * получает наименьший числовой суффикс (как дедупликация простых полей в
+ * генераторе). Без коллизий результат совпадает с `exprAutoAlias` + сквозным
+ * счётчиком. Один экземпляр — на один список выборки, в порядке печати.
+ */
+export function createExprAutoAliaser(reserved: Iterable<string>): (expression: string) => string {
+  const taken = new Set(Array.from(reserved, a => a.toUpperCase()));
+  let n = 0;
+  return expression => {
+    let alias = exprAutoAlias(expression, () => {
+      do n++; while (taken.has(`ПОЛЕ${n}`));
+      return `Поле${n}`;
+    });
+    if (taken.has(alias.toUpperCase())) {
+      let k = 1;
+      while (taken.has(`${alias}${k}`.toUpperCase())) k++;
+      alias = `${alias}${k}`;
+    }
+    taken.add(alias.toUpperCase());
+    return alias;
+  };
+}

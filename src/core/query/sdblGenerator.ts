@@ -7,7 +7,7 @@ import { parseDocument } from './sdblParser';
 import { resolveAliases, isTabularSectionSource, qualifiedAutoAlias, synthesizedFieldAlias, joinKeyword } from './queryModelUtils';
 import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpression, formatJoinConjunct, normalizeLeafCase, stripNegatedFieldParens, stripNotFieldParens, stripRedundantLeafParens, appendIsNotNullTrailingSpace, renderOperatorRhs, flattenMultilineLeaf, reindentLeafSubquery, reindentLeafCase, reindentLeafBool, wrapBareCastOperand, reprintLeafArithmetic, canonicalizeComparisonOperands, setInlineSubqueryReflow, tightenLeafInOperator } from './exprFormatter';
 import { tokenize } from './sdblLexer';
-import { BARE_PARAM, exprAutoAlias, representationAutoAlias } from './exprAutoAlias';
+import { BARE_PARAM, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
 
 // Регистрируем в exprFormatter канонический ре-рендер инлайн-подзапроса членства
@@ -1768,9 +1768,13 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
   const aggregateFunc = (tableId: string, path: string): AggregateFunction | undefined =>
     fieldsCarryFunc ? undefined : aggregates.find(a => a.tableId === tableId && a.path === path)?.func;
 
-  // Счётчик автопсевдонимов произвольных полей. Не проверяет коллизии с явными
-  // псевдонимами — допустимо для фазы 4.2 (UI не смешивает их с полями «Поле{n}»).
-  let exprCounter = 0;
+  // Автопсевдонимы произвольных полей без КАК (их создаёт только UI — парсер
+  // присваивает псевдоним всегда): `Поле{n}`/имя параметра/`…Представление`, но
+  // не совпадающие с явными псевдонимами этого списка выборки — иначе печатался
+  // дубль, и собственный текст не открывался («Повторяющийся псевдоним»).
+  const exprAutoAliasFor = createExprAutoAliaser(
+    [...model.fields, ...(model.trailingFields ?? [])].flatMap(f => (f.alias !== undefined ? [f.alias] : [])),
+  );
 
   // Дедупликация автопсевдонимов простых полей (фаза 6.16, сверено MCP): при
   // коллизии вычисленного автопсевдонима с уже занятым именем конструктор 1С
@@ -1809,7 +1813,7 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
       // `Поле{n}`) сохраняется как есть.
       const autoExpr = f.alias === undefined || /^Поле\d+$/u.test(f.alias);
       const repr = autoExpr ? representationAutoAlias(f.expression) : undefined;
-      const alias = repr ?? f.alias ?? exprAutoAlias(f.expression, () => `Поле${++exprCounter}`);
+      const alias = f.alias === undefined ? exprAutoAliasFor(f.expression) : (repr ?? f.alias);
       usedAliases.add(alias);
       return `\t${formatSelectExpression(f.expression)} КАК ${alias}`;
     }

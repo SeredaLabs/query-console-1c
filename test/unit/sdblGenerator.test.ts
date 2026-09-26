@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { generate, generateDocument, generateBatch, formatAsBslString } from '../../src/core/query/sdblGenerator';
 import type { QueryDocument, UnionMember } from '../../src/core/query/unionModel';
+import { deriveUnionColumns } from '../../src/core/query/unionModel';
+import { tryOpenBatch } from '../../src/core/query/validateBatch';
 import type { BatchDocument } from '../../src/core/query/batchModel';
 import type { QueryModel } from '../../src/core/query/queryModel';
 import { findQueryAt } from '../../src/extension/queryAtCursor';
@@ -1784,4 +1786,28 @@ describe('formatAsBslString', () => {
     expect(hit).not.toBeNull();
     expect(hit!.text).toBe(text);
   });
+});
+
+// Регрессия (2026-09-26): автопсевдоним произвольного поля без КАК (такие поля
+// создаёт только UI; парсер всегда присваивает псевдоним) не должен совпадать с
+// уже занятым псевдонимом — иначе генератор печатал дубли, и его же текст не
+// открывался («Повторяющийся псевдоним»).
+describe('автопсевдоним произвольного поля: без коллизий с занятыми псевдонимами', () => {
+  const m = (fields: QueryModel['fields']): QueryModel => ({ tables: [{ id: 't1', fullName: 'Справочник.Валюты' }], fields });
+  const cases: Array<[string, QueryModel['fields'], string[]]> = [
+    ['явный Поле1 раньше', [{ tableId: 't1', path: '', expression: '1 + 1', alias: 'Поле1' }, { tableId: 't1', path: '', expression: '2 + 2' }], ['Поле1', 'Поле2']],
+    ['явный Поле1 позже', [{ tableId: 't1', path: '', expression: '2 + 2' }, { tableId: 't1', path: '', expression: '1 + 1', alias: 'поле1' }], ['Поле2', 'поле1']],
+    ['простое поле КАК Поле1', [{ tableId: 't1', path: 'Код', alias: 'Поле1' }, { tableId: 't1', path: '', expression: '2 + 2' }], ['Поле1', 'Поле2']],
+    ['параметр дважды', [{ tableId: 't1', path: '', expression: '&Дата' }, { tableId: 't1', path: '', expression: '&Дата' }], ['Дата', 'Дата1']],
+    ['ПРЕДСТАВЛЕНИЕ дважды', [{ tableId: 't1', path: '', expression: 'ПРЕДСТАВЛЕНИЕ(Валюты.Ссылка)' }, { tableId: 't1', path: '', expression: 'ПРЕДСТАВЛЕНИЕ(Валюты.Ссылка)' }], ['СсылкаПредставление', 'СсылкаПредставление1']],
+  ];
+  for (const [name, fields, aliases] of cases) {
+    it(name, () => {
+      const text = generate(m(fields));
+      const printed = [...text.matchAll(/ КАК ([^\s,]+)/g)].map(x => x[1]).filter(a => a !== 'Валюты');
+      expect(printed).toEqual(aliases);
+      expect(tryOpenBatch(text, undefined, {}).ok).toBe(true);
+      expect(deriveUnionColumns([{ name: 'З', distinct: false, model: m(fields) }]).map(c => c.alias)).toEqual(aliases);
+    });
+  }
 });

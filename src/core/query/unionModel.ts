@@ -5,7 +5,7 @@ import { synthesizedFieldAlias } from './queryModelUtils';
 // операция, см. `queryModelUtils.ts`) — единственная оставшаяся зависимость
 // unionModel → sdblGenerator, обоснованная (не misplaced logic).
 import { fieldExpr } from './sdblGenerator';
-import { exprAutoAlias } from './exprAutoAlias';
+import { createExprAutoAliaser } from './exprAutoAlias';
 
 /** Один запрос-участник объединения. */
 export interface UnionMember {
@@ -77,10 +77,9 @@ export function fieldAlias(field: SelectedField, model?: QueryModel): string {
  * такого поля сам текст выражения (это ключ совпадения, а не имя колонки).
  */
 export function selectColumnAliases(fields: SelectedField[], model?: QueryModel): string[] {
-  let n = 0;
-  return fields.map(f => (f.expression && f.alias === undefined
-    ? exprAutoAlias(f.expression, () => `Поле${++n}`)
-    : fieldAlias(f, model)));
+  const reserved = [...fields, ...(model?.trailingFields ?? [])].flatMap(f => (f.alias !== undefined ? [f.alias] : []));
+  const autoAlias = createExprAutoAliaser(reserved);
+  return fields.map(f => (f.expression && f.alias === undefined ? autoAlias(f.expression) : fieldAlias(f, model)));
 }
 
 /**
