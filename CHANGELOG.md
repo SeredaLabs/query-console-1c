@@ -3,6 +3,27 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## 0.1.91 - 2026-09-27
+
+### Fixed
+
+- Opening a query with a boolean condition in parentheses no longer changes
+  its meaning when the constructor writes it back. `(A ИЛИ B) И C` in a
+  virtual table condition, `НЕ (A И B)` in a select field and doubled
+  parentheses such as `((A ИЛИ B)) И C` keep their grouping; previously the
+  written query could return different rows.
+- A field referenced by the table's full name (`Справочник.Валюты.Код` over
+  `ИЗ Справочник.Валюты`) is no longer written as
+  `Валюты.Справочник.Валюты.Код` in conditions, ordering, grouping and totals.
+- `УПОРЯДОЧИТЬ ПО … ИЕРАРХИЯ УБЫВ` is now accepted and written in the order
+  1C requires; previously the constructor rejected it and could write the
+  invalid `УБЫВ ИЕРАРХИЯ`.
+- Parameters named like keywords (`&И`, `&ИЛИ`, `&МЕЖДУ`, `&ВЫБОР`) are kept
+  intact in virtual table and join conditions.
+- Queries with `ПУСТАЯТАБЛИЦА.(…)` in the select list can now be applied and
+  are written the way the 1C query wizard writes them
+  (`ПУСТАЯТАБЛИЦА.( КАК Код,  КАК Наименование)`).
+
 ## 0.1.90 - 2026-09-27
 
 ### Documentation
