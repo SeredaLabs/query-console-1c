@@ -3,8 +3,9 @@
 Investigation date: 2026-09-27. Correctness baseline:
 `b6286c57cfa64ff8cb9f937347c376d4b98d55c8`. Checkout:
 `23188a414984a599dc12a037bd54fec2a2973504` (only changelog/package version differs).
-The working tree was clean before this documentation-only task. No commits,
-production edits, new regression tests, fixture updates or implementation stages.
+The working tree was clean before this documentation-only task. No production
+edits, new regression tests, fixture updates or implementation stages; the
+documentation was committed as `8dd270c`.
 
 This is a fixed evidence record. The [technical-debt ledger](../technical-debt.md)
 is the sole current status authority; [roadmap](../roadmap.md) owns ordering and
@@ -27,10 +28,10 @@ is the sole current status authority; [roadmap](../roadmap.md) owns ordering and
   Markdown is corrected; source comments remain untouched and tracked by D1.
   Historical assertions, missing status and duplication are counted separately.
 
-Stage names differ between the request and repository: Boolean grouping is
-Stage 1B.3 in `booleanGroupingSemantics.test.ts` (request: 1B.2a/RP13a), while
-`emptyTableColumns.test.ts` says Stage 1B.4 (request: 1B.3). Identity is based on
-behavior/tests, not numbering. This is not a reason to rewrite test history.
+Stage names match the accepted work list: Boolean grouping (also referred to as
+RP13a) is Stage 1B.3 in `booleanGroupingSemantics.test.ts`, and RP14 is Stage 1B.4
+in `emptyTableColumns.test.ts`. Identity is still based on behavior/tests, not
+numbering.
 
 ## RP01–RP25 reconciliation
 
@@ -201,7 +202,7 @@ recorded here without modifying them, as required by task scope.
 | `architecture.md` | No current snapshot-field/expression-boundary summary | Types alone invite overinterpretation | MISSING CURRENT STATUS: add actual producers/consumers and ADR compatibility |
 | `corpus-testing.md` | Positive golden/optional oracle described without full provenance and negative/English boundary | Tests are still correct; description could imply stronger evidence | MISSING CURRENT STATUS: distinguish recorded/live and generator-derived evidence |
 | `test/fixtures/oracle/0078-…json`, `oracleGolden.test.ts` | Expected hierarchy omission; curated fixture suite | Fixture conflicts with recorded live case in no-resolver mode; no build-attested universal result | Preserve baseline; C3/V1 review, not blind refresh |
-| `booleanGroupingSemantics.test.ts`, `emptyTableColumns.test.ts` | Stage 1B.3 / 1B.4 labels | Differ from request numbering, identify correct behavior | HISTORICAL — KEEP; mapping recorded above |
+| `booleanGroupingSemantics.test.ts`, `emptyTableColumns.test.ts` | Stage 1B.3 / 1B.4 labels | Match the accepted stage numbering (1B.3 = Boolean grouping/RP13a, 1B.4 = RP14) | STILL CORRECT; mapping recorded above |
 | `sdblParser.fixtures.test.ts` | Fixtures are generator-produced canonical texts | No-resolver equality passes; does not establish resolver-mode or platform correctness | STILL CORRECT with evidence limit now explicit |
 | `decisions/0001–0004`, metadata fallback, runtime-parser boundary | Pure query core, message contract, XML→YAML→LKG, platform-canonical contract | Matches current code; private-corpus history is not a new run | STILL CORRECT; no ADR decision revised |
 
@@ -219,6 +220,11 @@ npx --no-install tsx docs/development/audits/stage-0/probes/applyGate.ts "$PWD" 
 npx --no-install tsx /tmp/query-debt-probe.ts > /tmp/query-debt-current.json
 npx --no-install tsx /tmp/query-debt-accounting.ts > /tmp/query-debt-accounting.jsonl
 ```
+
+The last two commands ran scratch scripts that are not kept in the repository.
+Their procedure is described at the end of this section and their outputs are
+recorded in [reconciliation-b6286c57.jsonl](reconciliation-b6286c57.jsonl); the
+resolver-dependent fixture can be reproduced with the portable snippet below.
 
 Typecheck: all three projects passed. Unit: **131 files, 3162 tests passed**,
 including 1976-entry corpus regression, classification, semantic-validator corpus
@@ -267,8 +273,9 @@ changes documentation only. Recommended engineering order is maintained once in
 
 ## Documentation changes and Git state
 
-All paths below are documentation. LOC is additions/deletions for tracked files,
-or total new lines for untracked artifacts. No source/test changes or commits.
+All paths below are documentation. LOC is additions/deletions for files that
+already existed, or total lines for new files. No source/test changes; all of
+them were committed together as `8dd270c`.
 
 | File | Reason | LOC |
 |---|---|---|
@@ -286,7 +293,7 @@ or total new lines for untracked artifacts. No source/test changes or commits.
 | `docs/development/audits/reconciliation-b6286c57.md` | Fixed reconciliation, drift, evidence and verification | 292 new |
 | `docs/development/audits/reconciliation-b6286c57.jsonl` | Local reproduction evidence; no historical outputs overwritten | 91 new |
 
-`git diff --stat` excludes these three untracked additions. `git status --short`
-shows ten modified Markdown files plus those three `??` paths. Original Stage 0
+Before the commit, `git status --short` showed ten modified Markdown files plus
+the three new files above. Original Stage 0
 body equality was checked after removing only the banner; `src/`, `test/`,
 package files, tooling and all historical audit data remain unchanged.
