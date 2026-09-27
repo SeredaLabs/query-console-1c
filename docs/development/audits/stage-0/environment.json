@@ -1,0 +1,71 @@
+{
+  "stage": "0a + 0b",
+  "date": "2026-09-27",
+  "repository": {
+    "name": "SeredaLabs/query-console-1c",
+    "sha": "35c9c6aaae1fe28d107343fd53e9f862626b125b",
+    "branch": "main",
+    "workingTreeAtStart": "clean",
+    "version": "0.1.90"
+  },
+  "runtime": {
+    "nodeLocal": "v25.8.2",
+    "npmLocal": "11.11.1",
+    "nodeCi": "20 (.github/workflows/release.yml)",
+    "localToolsAbsent": [
+      "tree-sitter CLI",
+      "emcc (emscripten)",
+      "docker"
+    ]
+  },
+  "dependencies": {
+    "web-tree-sitter": {
+      "declared": "^0.22.6",
+      "installed": "0.22.6",
+      "languageAbiRange": "13-14 (tree-sitter v0.22.6 lib/include/tree_sitter/api.h:29,35)"
+    },
+    "typescript": "5.9.3",
+    "vitest": "1.6.1",
+    "esbuild": "0.21.5",
+    "tsx": "4.23.15 (npx, used only to run audit probes)"
+  },
+  "externalRepositories": {
+    "1c-syntax/bsl-parser": "a89b827bee085d3f0c280629dea53d2bc0afba6b",
+    "alkoleft/tree-sitter-bsl": {
+      "sha": "5752667f4d40879a533c4ffe3005da10ff0b5e29",
+      "commitDate": "2026-05-26",
+      "packageVersion": "0.1.7",
+      "treeSitterCli": "0.25.10 (devDependency)",
+      "sdblParserAbi": "15 (grammars/sdbl/src/parser.c:17)",
+      "sdblCorpusFiles": [
+        "catalog.sdbl (4 cases)",
+        "real-query-acceptance.sdbl (6 cases)",
+        "select.sdbl (36 cases)"
+      ]
+    },
+    "tormozit/Query-language-grammar-for-1C": "8f10ef72b2e44f04921ec3876ad644c4c41e0fee",
+    "1c-syntax/codemirror-lang-bsl": "303503f74bf87c137dfa0d145ef63a246a37149f (pinned; usefulness to be decided in 0b)"
+  },
+  "npmLatestObserved": {
+    "web-tree-sitter": "0.27.0",
+    "tree-sitter-cli": "0.27.0"
+  },
+  "commands": {
+    "typecheck": "npm run typecheck",
+    "unit": "npx vitest run",
+    "corpusSizes": "npx tsx docs/development/audits/stage-0/probes/corpusSizes.ts $PWD > docs/development/audits/stage-0/corpus-sizes.json",
+    "recoveryProbes": "npx tsx docs/development/audits/stage-0/probes/recoveryProbes.ts $PWD > docs/development/audits/stage-0/recovery-probes.json",
+    "vtOverflow": "npx tsx docs/development/audits/stage-0/probes/vtOverflow.ts $PWD > docs/development/audits/stage-0/vt-overflow.jsonl",
+    "externalShas": "git ls-remote https://github.com/<repo> HEAD",
+    "differential": "TS_CLI=<scratch>/node_modules/.bin/tree-sitter TS_CONFIG=<config.json with parser-directories> TREE_SITTER_LIBDIR=<scratch> AUDIT_WORK=<scratch> EXT_TS_CORPUS=<tree-sitter-bsl>/grammars/sdbl/test/corpus EXT_ANTLR_CORPUS=<bsl-parser>/src/test/resources/sdbl npx tsx docs/development/audits/stage-0/probes/differential.ts $PWD",
+    "applyGate": "npx tsx docs/development/audits/stage-0/probes/applyGate.ts $PWD > docs/development/audits/stage-0/apply-gate.jsonl",
+    "reprobeQueue": "npx tsx docs/development/audits/stage-0/probes/buildReprobeQueue.ts $PWD",
+    "summary": "npx tsx docs/development/audits/stage-0/probes/summarize.ts $PWD"
+  },
+  "stage0bTooling": {
+    "treeSitterCli": "0.25.10 (npm, scratch only; removed after the run)",
+    "grammar": "alkoleft/tree-sitter-bsl@5752667f4d40879a533c4ffe3005da10ff0b5e29 grammars/sdbl, compiled natively (Apple clang 15.0.0) into TREE_SITTER_LIBDIR (scratch)",
+    "wasm": "not built",
+    "smokeCheck": "SHA match; RU+EN parse clean; ERROR and MISSING detected; 5/5 identical outputs after dropping the timing column"
+  }
+}

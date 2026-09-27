@@ -324,6 +324,14 @@ function qualifyExpression(raw: string, ctx: OwnerContext): string {
           continue;
         }
       }
+      // `ПУСТАЯТАБЛИЦА.(Код, …)` — список ИМЁН колонок пустой таблицы, не поля
+      // источника: квалификация дала бы `Вал.Код` («Invalid alias», live 1C, RP14).
+      const beforeDot = sig[i - 2];
+      if (head && head.type === 'punct' && head.value === '.'
+          && beforeDot && beforeDot.type === 'ident' && up(beforeDot.text) === 'ПУСТАЯТАБЛИЦА') {
+        const close = matchCloseIndex(sig, i);
+        if (close > i) { i = close; continue; }
+      }
       depth++;
       if (headV === 'ЗНАЧЕНИЕ' || headV === 'ТИП') metaCallDepths.push(depth);
       continue;

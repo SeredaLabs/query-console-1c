@@ -378,6 +378,40 @@ function isAsteriskField(tokens: Token[]): boolean {
 const TEMPLATE_MARKER_CHARS = /[%#@[\]]/;
 
 /**
+ * Поле выборки `ПУСТАЯТАБЛИЦА.(<колонки>)` — пустая таблица (live 1C 8.3, RP14).
+ * В скобках — список ИМЁН колонок, а не выражений: каждый элемент `Имя` или
+ * канонический ` КАК Имя`, пустой список допустим. Платформа отвергает `Вал.Код`,
+ * `Имя КАК Псевдоним`, `&Параметр`, арифметику, вызовы и зарезервированные слова.
+ * Возвращает имена колонок, если ВЕСЬ `text` — эта конструкция (голова в любом
+ * регистре), иначе undefined. Допустима только в списке выборки: в условиях
+ * платформа её не принимает, поэтому `isStructurallyValidExpression` её не знает.
+ */
+export function parseEmptyTableColumns(text: string): string[] | undefined {
+  let toks: Token[];
+  try {
+    toks = tokenize(text).filter(t => t.type !== 'eof');
+  } catch {
+    return undefined;
+  }
+  const head = toks[0];
+  if (!head || head.type !== 'ident' || head.text.toUpperCase() !== 'ПУСТАЯТАБЛИЦА') return undefined;
+  if (!isPunct(toks[1], '.') || !isPunct(toks[2], '(') || !isPunct(toks[toks.length - 1], ')')) return undefined;
+  const items = toks.slice(3, -1);
+  const names: string[] = [];
+  for (let k = 0; k < items.length; ) {
+    if (items[k].type === 'keyword' && items[k].value === 'КАК') k++;
+    const name = items[k];
+    if (!name || name.type !== 'ident') return undefined;
+    names.push(name.text);
+    k++;
+    if (k === items.length) break;
+    if (!isPunct(items[k], ',') || k + 1 === items.length) return undefined;
+    k++;
+  }
+  return names;
+}
+
+/**
  * true, если `text` целиком (без остатка) разбирается как одно SDBL-значение/
  * условие, либо как поле выборки "все поля" (см. `isAsteriskField`), либо
  * содержит символы-маркеры шаблонной подстановки (см. `TEMPLATE_MARKER_CHARS`

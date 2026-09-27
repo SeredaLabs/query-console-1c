@@ -1,0 +1,582 @@
+{
+ "unit": "query package (statement and union-member totals reported separately)",
+ "packagesBySource": {
+  "golden": 1976,
+  "meta1c": 133,
+  "queries": 28,
+  "oracle": 181,
+  "ext-tree-sitter-bsl": 46,
+  "ext-bsl-parser": 9
+ },
+ "statementsBySource": {
+  "golden": 2536,
+  "meta1c": 133,
+  "queries": 30,
+  "oracle": 188,
+  "ext-tree-sitter-bsl": 47,
+  "ext-bsl-parser": 14
+ },
+ "unionMembersBySource": {
+  "golden": 2740,
+  "meta1c": 133,
+  "queries": 32,
+  "oracle": 191,
+  "ext-tree-sitter-bsl": 46,
+  "ext-bsl-parser": 7
+ },
+ "acceptance": {
+  "total": {
+   "both": 2264,
+   "ours-only": 103,
+   "competitor-only": 5,
+   "neither": 1
+  },
+  "bySource": {
+   "golden": {
+    "both": 1894,
+    "ours-only": 82
+   },
+   "meta1c": {
+    "both": 133
+   },
+   "queries": {
+    "both": 18,
+    "ours-only": 10
+   },
+   "oracle": {
+    "both": 173,
+    "ours-only": 8
+   },
+   "ext-tree-sitter-bsl": {
+    "both": 41,
+    "competitor-only": 4,
+    "ours-only": 1
+   },
+   "ext-bsl-parser": {
+    "neither": 1,
+    "both": 5,
+    "ours-only": 2,
+    "competitor-only": 1
+   }
+  }
+ },
+ "roundTrip": {
+  "total": {
+   "unchanged": 1257,
+   "canonical-confirmed": 915,
+   "structural-difference-candidate": 45,
+   "structural-equivalent": 133,
+   "unknown": 23
+  },
+  "bySource": {
+   "golden": {
+    "unchanged (golden)": 1061,
+    "canonical-confirmed (golden)": 915
+   },
+   "meta1c": {
+    "unchanged (text-identity)": 133
+   },
+   "queries": {
+    "unchanged (text-identity)": 28
+   },
+   "oracle": {
+    "structural-difference-candidate (structural-tree)": 28,
+    "structural-equivalent (structural-tree)": 108,
+    "unchanged (text-identity)": 35,
+    "unknown (structural-tree)": 10
+   },
+   "ext-tree-sitter-bsl": {
+    "structural-equivalent (structural-tree)": 22,
+    "structural-difference-candidate (structural-tree)": 16,
+    "unknown (structural-tree)": 4,
+    "unknown (none)": 4
+   },
+   "ext-bsl-parser": {
+    "unknown (none)": 2,
+    "structural-difference-candidate (structural-tree)": 1,
+    "unknown (structural-tree)": 3,
+    "structural-equivalent (structural-tree)": 3
+   }
+  }
+ },
+ "idempotence": {
+  "textNotIdempotent": [
+   "oracle:0163-where-subquery-bare-source-qualifies-fields.json",
+   "oracle:0164-negated-where-hierarchy-subquery-qualifies.json"
+  ],
+  "modelNotIdempotent": [
+   "oracle:0163-where-subquery-bare-source-qualifies-fields.json",
+   "oracle:0164-negated-where-hierarchy-subquery-qualifies.json"
+  ],
+  "checked": 2367
+ },
+ "detectorCalibrationOnGoldenCanonicalChanges": {
+  "structural-equivalent": 739,
+  "structural-difference-candidate": 115,
+  "unknown": 61
+ },
+ "structure": {
+  "total": {
+   "partially-structured": 1682,
+   "structured": 685,
+   "unsupported": 6
+  },
+  "bySource": {
+   "golden": {
+    "partially-structured": 1378,
+    "structured": 598
+   },
+   "meta1c": {
+    "structured": 14,
+    "partially-structured": 119
+   },
+   "queries": {
+    "structured": 14,
+    "partially-structured": 14
+   },
+   "oracle": {
+    "structured": 46,
+    "partially-structured": 135
+   },
+   "ext-tree-sitter-bsl": {
+    "partially-structured": 29,
+    "structured": 13,
+    "unsupported": 4
+   },
+   "ext-bsl-parser": {
+    "unsupported": 2,
+    "partially-structured": 7
+   }
+  }
+ },
+ "goldenOpaque": {
+  "corpusRecoveredEntries": 1375,
+  "partiallyStructuredPackages": 1378,
+  "totalOpaqueSpans": 6341,
+  "slots": {
+   "where": {
+    "packages": 950,
+    "spans": 1967
+   },
+   "selectField": {
+    "packages": 755,
+    "spans": 2021
+   },
+   "join": {
+    "packages": 317,
+    "spans": 831
+   },
+   "joinCondition": {
+    "packages": 306,
+    "spans": 1341
+   },
+   "having": {
+    "packages": 36,
+    "spans": 45
+   },
+   "groupBy": {
+    "packages": 24,
+    "spans": 43
+   },
+   "orderBy": {
+    "packages": 20,
+    "spans": 21
+   },
+   "totalsField": {
+    "packages": 12,
+    "spans": 55
+   },
+   "virtualParam.condition": {
+    "packages": 7,
+    "spans": 7
+   },
+   "virtualParam.period": {
+    "packages": 6,
+    "spans": 6
+   },
+   "indexBy": {
+    "packages": 2,
+    "spans": 2
+   },
+   "where.leftExpr": {
+    "packages": 1,
+    "spans": 1
+   },
+   "tabSectionExpr": {
+    "packages": 1,
+    "spans": 1
+   }
+  },
+  "constructs": {
+   "literal": {
+    "packages": 870,
+    "occurrences": 2510
+   },
+   "comparison": {
+    "packages": 777,
+    "occurrences": 3051
+   },
+   "parameter": {
+    "packages": 597,
+    "occurrences": 1526
+   },
+   "NOT": {
+    "packages": 409,
+    "occurrences": 819
+   },
+   "AND": {
+    "packages": 308,
+    "occurrences": 716
+   },
+   "VALUE() predefined": {
+    "packages": 254,
+    "occurrences": 444
+   },
+   "CASE": {
+    "packages": 213,
+    "occurrences": 439
+   },
+   "ISNULL()": {
+    "packages": 181,
+    "occurrences": 506
+   },
+   "IN": {
+    "packages": 175,
+    "occurrences": 365
+   },
+   "field-path-only": {
+    "packages": 167,
+    "occurrences": 201
+   },
+   "OR": {
+    "packages": 149,
+    "occurrences": 277
+   },
+   "IS NULL": {
+    "packages": 149,
+    "occurrences": 244
+   },
+   "aggregate": {
+    "packages": 143,
+    "occurrences": 254
+   },
+   "VALUETYPE()": {
+    "packages": 115,
+    "occurrences": 292
+   },
+   "arithmetic": {
+    "packages": 100,
+    "occurrences": 167
+   },
+   "subquery": {
+    "packages": 74,
+    "occurrences": 121
+   },
+   "TYPE()": {
+    "packages": 73,
+    "occurrences": 189
+   },
+   "CAST": {
+    "packages": 68,
+    "occurrences": 161
+   },
+   "DATETIME literal": {
+    "packages": 55,
+    "occurrences": 131
+   },
+   "function:ПРЕДСТАВЛЕНИЕ": {
+    "packages": 41,
+    "occurrences": 66
+   },
+   "LIKE": {
+    "packages": 36,
+    "occurrences": 51
+   },
+   "SPECIALCHAR": {
+    "packages": 33,
+    "occurrences": 48
+   },
+   "function:СТРОКА": {
+    "packages": 26,
+    "occurrences": 53
+   },
+   "function:ЧИСЛО": {
+    "packages": 19,
+    "occurrences": 68
+   },
+   "function:ДОБАВИТЬКДАТЕ": {
+    "packages": 17,
+    "occurrences": 64
+   },
+   "function:ПОДСТРОКА": {
+    "packages": 11,
+    "occurrences": 21
+   },
+   "function:РАЗНОСТЬДАТ": {
+    "packages": 9,
+    "occurrences": 31
+   },
+   "REFERENCE": {
+    "packages": 7,
+    "occurrences": 11
+   },
+   "function:КОГДА": {
+    "packages": 6,
+    "occurrences": 9
+   },
+   "function:ПРЕДСТАВЛЕНИЕССЫЛКИ": {
+    "packages": 6,
+    "occurrences": 7
+   },
+   "function:КОНЕЦПЕРИОДА": {
+    "packages": 5,
+    "occurrences": 5
+   },
+   "BETWEEN": {
+    "packages": 5,
+    "occurrences": 10
+   },
+   "function:ГОД": {
+    "packages": 3,
+    "occurrences": 8
+   },
+   "function:ISNULL": {
+    "packages": 3,
+    "occurrences": 3
+   },
+   "function:НАЧАЛОПЕРИОДА": {
+    "packages": 2,
+    "occurrences": 2
+   },
+   "function:ДЕНЬНЕДЕЛИ": {
+    "packages": 2,
+    "occurrences": 3
+   },
+   "function:ТОГДА": {
+    "packages": 2,
+    "occurrences": 2
+   },
+   "function:КВАРТАЛ": {
+    "packages": 1,
+    "occurrences": 2
+   },
+   "function:МЕСЯЦ": {
+    "packages": 1,
+    "occurrences": 2
+   },
+   "function:ИНАЧЕ": {
+    "packages": 1,
+    "occurrences": 1
+   },
+   "function:РАЗМЕРХРАНИМЫХДАННЫХ": {
+    "packages": 1,
+    "occurrences": 1
+   }
+  }
+ },
+ "competitorRejectsRepoPackages": {
+  "packages": 100,
+  "multiLabelCategories": {
+   "identifier starting with a keyword (Ссылка…/Значение…)": 27,
+   "template #-marker": 26,
+   "ВЫРАЗИТЬ(...).field": 12,
+   "unclassified": 11,
+   "УНИЧТОЖИТЬ": 10,
+   "report-builder braces {}": 8,
+   "selection modifier order": 4,
+   "accounting VT omitted args": 4,
+   "ИТОГИ ... ОБЩИЕ": 3,
+   "trailing ;": 2,
+   "ГРУППИРУЮЩИМ/ИНДЕКСИРОВАТЬ ПО НАБОРАМ": 2
+  }
+ },
+ "unsafeVirtualTablePackages": [
+  "ext-ts:select.sdbl#Select virtual table source omitted parameters",
+  "ext-antlr:select02.sdbl"
+ ],
+ "probes": {
+  "total": 113,
+  "acceptance": {
+   "both": 98,
+   "ours-only": 9,
+   "neither": 2,
+   "competitor-only": 4
+  },
+  "roundTrip": {
+   "unchanged": 74,
+   "unknown": 11,
+   "structural-equivalent": 12,
+   "structural-difference-candidate": 16
+  },
+  "keyInOpaqueSpan": [
+   "probe:J08",
+   "probe:W03",
+   "probe:W04",
+   "probe:W05",
+   "probe:W06",
+   "probe:E01",
+   "probe:E06",
+   "probe:E07",
+   "probe:E08",
+   "probe:E09",
+   "probe:E10",
+   "probe:E11",
+   "probe:E12",
+   "probe:E13",
+   "probe:E14",
+   "probe:E17",
+   "probe:E18",
+   "probe:E19",
+   "probe:E20",
+   "probe:E21",
+   "probe:E22",
+   "probe:E23",
+   "probe:E24",
+   "probe:E25",
+   "probe:E26",
+   "probe:E27",
+   "probe:E28",
+   "probe:E30",
+   "probe:E31",
+   "probe:E32",
+   "probe:E34",
+   "probe:P03",
+   "probe:V09",
+   "probe:K01",
+   "probe:K02",
+   "probe:K03",
+   "probe:K04",
+   "probe:K05",
+   "probe:R01",
+   "probe:R02",
+   "probe:R03",
+   "probe:R05"
+  ],
+  "notIdempotent": [
+   "probe:E30",
+   "probe:K01",
+   "probe:K02",
+   "probe:K04",
+   "probe:K05",
+   "probe:R02",
+   "probe:R03",
+   "probe:R05"
+  ]
+ },
+ "applyGate": [
+  {
+   "id": "probe:R01",
+   "staticBlocker": null,
+   "finalCheck": "ok",
+   "applyWouldWrite": true
+  },
+  {
+   "id": "probe:R02",
+   "staticBlocker": null,
+   "finalCheck": "ok",
+   "applyWouldWrite": true
+  },
+  {
+   "id": "probe:R03",
+   "staticBlocker": null,
+   "finalCheck": "ok",
+   "applyWouldWrite": true
+  },
+  {
+   "id": "probe:R05",
+   "staticBlocker": null,
+   "finalCheck": "ok",
+   "applyWouldWrite": true
+  },
+  {
+   "id": "probe:K01",
+   "staticBlocker": "malformedCustom",
+   "finalCheck": "ok",
+   "applyWouldWrite": false
+  },
+  {
+   "id": "probe:K02",
+   "staticBlocker": "malformedCustom",
+   "finalCheck": "ok",
+   "applyWouldWrite": false
+  },
+  {
+   "id": "probe:K04",
+   "staticBlocker": "malformedCustom",
+   "finalCheck": "ok",
+   "applyWouldWrite": false
+  },
+  {
+   "id": "probe:K05",
+   "staticBlocker": null,
+   "finalCheck": "invalid",
+   "applyWouldWrite": false
+  },
+  {
+   "id": "probe:V05",
+   "staticBlocker": null,
+   "finalCheck": "ok",
+   "applyWouldWrite": true
+  },
+  {
+   "id": "probe:V06",
+   "staticBlocker": null,
+   "finalCheck": "ok",
+   "applyWouldWrite": true
+  },
+  {
+   "id": "probe:V07",
+   "staticBlocker": null,
+   "finalCheck": "ok",
+   "applyWouldWrite": true
+  },
+  {
+   "id": "probe:V08",
+   "staticBlocker": "unsafeVirtualTable",
+   "finalCheck": "ok",
+   "applyWouldWrite": false
+  },
+  {
+   "id": "probe:V10",
+   "staticBlocker": "unsafeVirtualTable",
+   "finalCheck": "ok",
+   "applyWouldWrite": false
+  },
+  {
+   "id": "probe:P03",
+   "staticBlocker": "malformedCustom",
+   "finalCheck": "ok",
+   "applyWouldWrite": false
+  },
+  {
+   "id": "probe:E30",
+   "staticBlocker": null,
+   "finalCheck": "invalid",
+   "applyWouldWrite": false
+  },
+  {
+   "id": "reprobe:RP17 INDEX BY without ПОМЕСТИТЬ",
+   "staticBlocker": null,
+   "finalCheck": "ok",
+   "applyWouldWrite": true
+  },
+  {
+   "id": "reprobe:RP18 НЕ (arith > n)",
+   "staticBlocker": null,
+   "finalCheck": "ok",
+   "applyWouldWrite": true
+  },
+  {
+   "id": "oracle:0163 expected (second pass)",
+   "staticBlocker": null,
+   "finalCheck": "ok",
+   "applyWouldWrite": true
+  },
+  {
+   "id": "oracle:0164 expected (second pass)",
+   "staticBlocker": null,
+   "finalCheck": "ok",
+   "applyWouldWrite": true
+  }
+ ]
+}

@@ -20,6 +20,7 @@ This is the canonical developer documentation.
 - [Known issues](known-issues.md)
 - [Roadmap](roadmap.md)
 - [Architecture decisions](decisions/README.md)
+- [Stage 0 SDBL audit](audits/stage-0.md)
 
 English is canonical for developer documentation. User documentation is mirrored
 in English, Ukrainian, and Russian.

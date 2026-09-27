@@ -30,7 +30,7 @@ import type { QueryModel, SelectedTable, Condition } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import { tokenize } from './sdblLexer';
 import type { Token } from './sdblLexer';
-import { isStructurallyValidExpression } from './expressionSyntaxCheck';
+import { isStructurallyValidExpression, parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { resolveFieldPath } from './fieldPathResolver';
 import { deriveTempTableLifetimes, visibleTempTableAt } from './tempTableSemantics';
 
@@ -534,7 +534,10 @@ export interface MalformedCustomHit {
 export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCustomHit[] {
   const hits: MalformedCustomHit[] = [];
   const check = (text: string | undefined, kind: MalformedCustomHit['kind']): void => {
-    if (text !== undefined && !isStructurallyValidExpression(text)) hits.push({ kind, text });
+    if (text === undefined || isStructurallyValidExpression(text)) return;
+    // `ПУСТАЯТАБЛИЦА.(<колонки>)` платформа принимает только как поле списка выборки (RP14).
+    if ((kind === 'field' || kind === 'trailingField') && parseEmptyTableColumns(text) !== undefined) return;
+    hits.push({ kind, text });
   };
   const walkConditions = (conditions: Condition[] | undefined): void => {
     for (const c of conditions ?? []) {

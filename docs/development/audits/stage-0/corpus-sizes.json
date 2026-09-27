@@ -1,0 +1,45 @@
+{
+ "stats": {
+  "golden": {
+   "packages": 1976,
+   "parsed": 1976,
+   "failed": 0,
+   "statementsSpan": 2536,
+   "statementsModel": 2536,
+   "unionMembers": 2740,
+   "multiStatementPackages": 285,
+   "unionPackages": 144
+  },
+  "meta1c": {
+   "packages": 133,
+   "parsed": 133,
+   "failed": 0,
+   "statementsSpan": 133,
+   "statementsModel": 133,
+   "unionMembers": 133,
+   "multiStatementPackages": 0,
+   "unionPackages": 0
+  },
+  "queries": {
+   "packages": 28,
+   "parsed": 28,
+   "failed": 0,
+   "statementsSpan": 30,
+   "statementsModel": 30,
+   "unionMembers": 32,
+   "multiStatementPackages": 1,
+   "unionPackages": 1
+  },
+  "oracle": {
+   "packages": 181,
+   "parsed": 181,
+   "failed": 0,
+   "statementsSpan": 188,
+   "statementsModel": 188,
+   "unionMembers": 191,
+   "multiStatementPackages": 7,
+   "unionPackages": 3
+  }
+ },
+ "failures": []
+}

@@ -7,6 +7,7 @@ import { parseDocument } from './sdblParser';
 import { resolveAliases, isTabularSectionSource, qualifiedAutoAlias, synthesizedFieldAlias, joinKeyword } from './queryModelUtils';
 import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpression, formatJoinConjunct, normalizeLeafCase, stripNegatedFieldParens, stripNotFieldParens, stripRedundantLeafParens, appendIsNotNullTrailingSpace, renderOperatorRhs, flattenMultilineLeaf, reindentLeafSubquery, reindentLeafCase, reindentLeafBool, wrapBareCastOperand, reprintLeafArithmetic, canonicalizeComparisonOperands, setInlineSubqueryReflow, tightenLeafInOperator } from './exprFormatter';
 import { tokenize } from './sdblLexer';
+import { parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { BARE_PARAM, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
 
@@ -239,7 +240,7 @@ function wrapDcsBraceParam(text: string): string {
     if (!c.startsWith('&')) return whole;
     if (c.startsWith('(')) return whole;
     // Верхнеуровневая запятая или `КАК` → не одиночный параметр, не трогаем.
-    if (hasTopLevelComma(c) || /(^|[^\p{L}\p{N}_])КАК([^\p{L}\p{N}_]|$)/iu.test(c)) return whole;
+    if (hasTopLevelComma(c) || /(^|[^\p{L}\p{N}_&])КАК([^\p{L}\p{N}_]|$)/iu.test(c)) return whole;
     return `{(${c})}`;
   });
 }
@@ -257,7 +258,7 @@ function aliasDcsBraceExprs(text: string, state: { k: number }): string {
   return text.replace(/\{([^{}]*)\}/gu, (whole, inner: string) => {
     const c = inner.trim();
     // Уже с псевдонимом — не трогаем (но всё равно считаем выражением-слотом).
-    if (/(^|[^\p{L}\p{N}_])КАК([^\p{L}\p{N}_]|$)/iu.test(c)) { state.k += 1; return whole; }
+    if (/(^|[^\p{L}\p{N}_&])КАК([^\p{L}\p{N}_]|$)/iu.test(c)) { state.k += 1; return whole; }
     // Должна быть одиночная охватывающая пара скобок `( … )`.
     if (!c.startsWith('(') || !c.endsWith(')')) return whole;
     // Внутреннее содержимое.
@@ -373,7 +374,7 @@ function renderVirtualParams(fullName: string, positions: string[], condition: s
   // hasSubquery его не ловит — детектируем по `В (ВЫБРАТЬ` (тот же гейт, что у inlineCond).
   const hasInlineSubquery =
     !!condition &&
-    /(?:^|[^\p{L}\p{N}_])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/iu.test(condition);
+    /(?:^|[^\p{L}\p{N}_&])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/iu.test(condition);
   if (!condition || (!hasBool && !hasSubquery && !hasInlineSubquery)) {
     return `${fullName}(${positions.join(', ')})`;
   }
@@ -416,14 +417,14 @@ function renderVirtualParams(fullName: string, positions: string[], condition: s
     // корпус СдельныйНаряд), либо НАЧИНАЕТСЯ им (селекторный `ВЫБОР &Парам …` или
     // условный `ВЫБОР КОГДА …`, корпус ПланФактныйАнализПродаж). В обоих случаях это
     // лист-CASE на отступе строки параметра (КОНЕЦ на base), не подзапрос.
-    (/(^|[^\p{L}\p{N}_])ВЫБОР\s*$/u.test(condFirstLine0) ||
+    (/(^|[^\p{L}\p{N}_&])ВЫБОР\s*$/u.test(condFirstLine0) ||
       /^ВЫБОР(?:[^\p{L}\p{N}_]|$)/u.test(condition.trim()));
   // Чистое условие-членство `Поле В (ВЫБРАТЬ … ИЗ …)`, набранное ИНЛАЙН: перепарсиваем
   // внутренний запрос и рендерим канонически (`(ВЫБРАТЬ` на base+1, тело глубже), как
   // оракул. reindentLeafSubquery инлайн-подзапрос не раскладывает (фаза 6.16).
   const inlineCond =
     !hasBool && !isCaseValueParam &&
-    /(?:^|[^\p{L}\p{N}_])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/iu.test(condition)
+    /(?:^|[^\p{L}\p{N}_&])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/iu.test(condition)
       ? reflowInlineMembershipSubquery(condition.trim(), base, base + 1, '')
       : null;
   if (inlineCond) {
@@ -472,6 +473,18 @@ function renderAccountingParams(fullName: string, positions: string[], _conditio
 }
 
 /**
+ * Предыдущий символ, при котором слово НЕ начинает ключевое слово: середина
+ * идентификатора (буква/цифра/`_`) либо `&` — префикс параметра. Имя параметра —
+ * произвольный идентификатор, в т.ч. совпадающий с ключевым словом (`&И`, `&ИЛИ`,
+ * `&МЕЖДУ`, `&ВЫБОР`, `&КАК` — live 1C, RP13); лексер требует имя сразу после `&`.
+ * Левая граница ключевого слова в регулярках этого модуля — `[^\p{L}\p{N}_&]`
+ * по той же причине.
+ */
+function blocksKeywordStart(c: string | undefined): boolean {
+  return c !== undefined && /[\p{L}\p{N}_&]/u.test(c);
+}
+
+/**
  * Делит условие на ВЕРХНЕУРОВНЕВЫЕ конъюнкты по И/ИЛИ (вне скобок и строк; `И`
  * диапазона `МЕЖДУ a И b` не считается), сохраняя оператор-разделитель. Первый
  * элемент несёт op=''. В отличие от splitTopLevelAnd учитывает и ИЛИ.
@@ -488,7 +501,7 @@ function splitTopLevelBoolConjuncts(expr: string): { op: string; text: string }[
     if (c === '(') { depth++; continue; }
     if (c === ')') { depth--; continue; }
     if (depth !== 0) continue;
-    if (!isWordChar(expr[i - 1])) {
+    if (!blocksKeywordStart(expr[i - 1])) {
       const up = expr.slice(i, i + 6).toUpperCase();
       // ВЫБОР…КОНЕЦ — сбалансированная область: `И`/`ИЛИ` ВНУТРИ CASE (продолжение
       // условия КОГДА или значения ТОГДА) не является границей верхнеуровневого
@@ -537,9 +550,8 @@ function splitTopLevelBoolConjuncts(expr: string): { op: string; text: string }[
  * выражение НЕ целиком в одной внешней паре скобок — возвращаем true.
  */
 function bodyHasUnwrappedBoolOr(inner: string): boolean {
-  const secRe = /(?:^|[^\p{L}\p{N}_])(ГДЕ|ИМЕЮЩИЕ)(?![\p{L}\p{N}_])/gu;
-  const nextSec = /(?:^|[^\p{L}\p{N}_])(?:СГРУППИРОВАТЬ|ИМЕЮЩИЕ|УПОРЯДОЧИТЬ|ИНДЕКСИРОВАТЬ|ОБЪЕДИНИТЬ|ИТОГИ|ГДЕ)(?![\p{L}\p{N}_])/u;
-  const isW = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}_]/u.test(c);
+  const secRe = /(?:^|[^\p{L}\p{N}_&])(ГДЕ|ИМЕЮЩИЕ)(?![\p{L}\p{N}_])/gu;
+  const nextSec = /(?:^|[^\p{L}\p{N}_&])(?:СГРУППИРОВАТЬ|ИМЕЮЩИЕ|УПОРЯДОЧИТЬ|ИНДЕКСИРОВАТЬ|ОБЪЕДИНИТЬ|ИТОГИ|ГДЕ)(?![\p{L}\p{N}_])/u;
   let m: RegExpExecArray | null;
   while ((m = secRe.exec(inner)) !== null) {
     let seg = inner.slice(m.index + m[0].length);
@@ -555,7 +567,7 @@ function bodyHasUnwrappedBoolOr(inner: string): boolean {
       if (ch === '"') { inStr = true; continue; }
       if (ch === '(') { depth++; continue; }
       if (ch === ')') { depth--; continue; }
-      if (depth === 0 && (ch === 'И' || ch === 'и') && !isW(seg[i - 1]) && /^ИЛИ(?![\p{L}\p{N}_])/iu.test(seg.slice(i))) { topOr = true; break; }
+      if (depth === 0 && (ch === 'И' || ch === 'и') && !blocksKeywordStart(seg[i - 1]) && /^ИЛИ(?![\p{L}\p{N}_])/iu.test(seg.slice(i))) { topOr = true; break; }
     }
     if (!topOr) continue;
     // ИЛИ верхнеуровневый ⇒ выражение НЕ обёрнуто в одну внешнюю пару (иначе ИЛИ был бы
@@ -645,7 +657,7 @@ function reflowInlineMembershipSubquery(
         .test(innerText);
       const isCanonical =
         innerText.includes('\n') &&
-        !/(?:^|[^\p{L}\p{N}_])ИЗ[ \t]+\S/u.test(innerText) &&
+        !/(?:^|[^\p{L}\p{N}_&])ИЗ[ \t]+\S/u.test(innerText) &&
         !gluedJoin;
       // ИСКЛЮЧЕНИЕ из canonical-bail (фаза 6.16): тело СО ВНЕШНЕ-канонической геометрией,
       // но с секцией `ГДЕ`/`ИМЕЮЩИЕ`, чья ВЕРХНЕУРОВНЕВАЯ ИЛИ-цепочка НЕ обёрнута во
@@ -661,7 +673,7 @@ function reflowInlineMembershipSubquery(
       // же ВКЛАДЫВАЕТ внутренний CASE структурно. Перепарсиваем и рендерим канонически.
       // Признак: строка-значение `ТОГДА`/`ИНАЧЕ`, ОКАНЧИВАЮЩАЯСЯ голым словом ВЫБОР.
       const hasNestedCaseValue =
-        /(?:^|[^\p{L}\p{N}_])(?:ТОГДА|ИНАЧЕ)[ \t]+ВЫБОР[ \t]*(?:\r?\n|$)/u.test(innerText);
+        /(?:^|[^\p{L}\p{N}_&])(?:ТОГДА|ИНАЧЕ)[ \t]+ВЫБОР[ \t]*(?:\r?\n|$)/u.test(innerText);
       if (isCanonical && !bodyHasUnwrappedBoolOr(innerText) && !hasNestedCaseValue) return null;
       let doc: QueryDocument;
       try { doc = parseDocument(innerText); }
@@ -699,7 +711,7 @@ function reflowInlineMembershipSubquery(
 function breakInlineParenGroup(text: string): string {
   const t = text.trimStart();
   if (!t.startsWith('(')) return text;
-  if (/(?:^|[^\p{L}\p{N}_])(?:ВЫБРАТЬ|ВЫБОР)(?:[^\p{L}\p{N}_]|$)/u.test(t)) return text;
+  if (/(?:^|[^\p{L}\p{N}_&])(?:ВЫБРАТЬ|ВЫБОР)(?:[^\p{L}\p{N}_]|$)/u.test(t)) return text;
   const lead = text.slice(0, text.length - t.length);
   let depth = 0;
   let inStr = false;
@@ -714,7 +726,7 @@ function breakInlineParenGroup(text: string): string {
     if (ch === '(') { depth++; out += ch; continue; }
     if (ch === ')') { depth--; out += ch; continue; }
     // Слово `МЕЖДУ` на верхнем уровне группы — следующее `И` диапазонное.
-    if ((ch === 'М' || ch === 'м') && !/[\p{L}\p{N}_]/u.test(t[i - 1] ?? '')) {
+    if ((ch === 'М' || ch === 'м') && !blocksKeywordStart(t[i - 1])) {
       const mm = /^МЕЖДУ(?![\p{L}\p{N}_])/iu.exec(t.slice(i));
       if (mm) { betweenPending++; out += t.slice(i, i + mm[0].length); i += mm[0].length - 1; continue; }
     }
@@ -722,13 +734,13 @@ function breakInlineParenGroup(text: string): string {
     if (depth === 1 && (ch === 'И' || ch === 'и')) {
       const prev = t[i - 1];
       const m = /^(И|ИЛИ)(?![\p{L}\p{N}_])/u.exec(t.slice(i));
-      if (m && m[1] === 'И' && betweenPending > 0 && (prev === undefined || !/[\p{L}\p{N}_]/u.test(prev))) {
+      if (m && m[1] === 'И' && betweenPending > 0 && !blocksKeywordStart(prev)) {
         betweenPending--;
         out += m[1];
         i += m[1].length - 1;
         continue;
       }
-      if (m && (prev === undefined || !/[\p{L}\p{N}_]/u.test(prev))) {
+      if (m && !blocksKeywordStart(prev)) {
         // Срезаем уже накопленный пробел перед оператором, ставим перенос.
         out = out.replace(/[ \t]+$/u, '') + '\n' + m[1] + ' ';
         i += m[1].length;
@@ -789,7 +801,7 @@ function reindentVtCondition(condition: string, base: number): string {
     // подзапрос ИНЛАЙН (`В (ВЫБРАТЬ` подряд) и закрывается в конце конъюнкта — иначе
     // прежний путь (фаза 6.16).
     const inlineReflow =
-      /(?:^|[^\p{L}\p{N}_])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/iu.test(c.text)
+      /(?:^|[^\p{L}\p{N}_&])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/iu.test(c.text)
         ? reflowInlineMembershipSubquery(c.text, ind, base + 2, prefix)
         : null;
     // Конъюнкт — CASE (`ВЫБОР … КОНЕЦ`), В ТЕЛЕ которого есть подзапрос `В (ВЫБРАТЬ …)`
@@ -826,7 +838,7 @@ function reindentVtCondition(condition: string, base: number): string {
         if (adj) r[q] = '\t'.repeat(base);
       }
       out.push(...r);
-    } else if (c.text.includes('\n') && /(?:^|[^\p{L}\p{N}_])ВЫБОР(?:[^\p{L}\p{N}_]|$)/u.test(c.text)) {
+    } else if (c.text.includes('\n') && /(?:^|[^\p{L}\p{N}_&])ВЫБОР(?:[^\p{L}\p{N}_]|$)/u.test(c.text)) {
       // Конъюнкт-ВЫБОР: КОНЕЦ на base+1, КОГДА на base+2 (АБСОЛЮТНО относительно base,
       // не зависит от номера конъюнкта — проверено на корпусе). Строка ВЫБОР (line 0)
       // остаётся на ind конъюнкта.
@@ -937,7 +949,7 @@ function hasTopLevelBooleanOp(expr: string): boolean {
     if (depth !== 0) continue;
     // Граница слова на глубине 0: проверяем И и ИЛИ (регистронезависимо).
     // `И` диапазона `МЕЖДУ a И b` — не булев оператор (фаза 6.15.8).
-    if (!isWordChar(expr[i - 1])) {
+    if (!blocksKeywordStart(expr[i - 1])) {
       const up = expr.slice(i, i + 6).toUpperCase();
       if (up.startsWith('МЕЖДУ') && !isWordChar(expr[i + 5])) { betweenPending++; continue; }
       if (up.startsWith('ИЛИ') && !isWordChar(expr[i + 3])) return true;
@@ -987,7 +999,7 @@ function renderArbitraryConjunct(expr: string, depth = 0, caseEndBase?: number, 
   // подзапроса (`(ВЫБРАТЬ` на 4+depth, тело глубже), как оракул. reindentLeafSubquery
   // инлайн не раскладывает. Обёртка `(…)` конъюнкта добавляется ниже (фаза 6.16).
   const inlineConj =
-    /(?:^|[^\p{L}\p{N}_])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/iu.test(flatExpr)
+    /(?:^|[^\p{L}\p{N}_&])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/iu.test(flatExpr)
       ? reflowInlineMembershipSubquery(flatExpr, 0, 4 + depth, '')
       : null;
   if (inlineConj) {
@@ -1005,8 +1017,8 @@ function renderArbitraryConjunct(expr: string, depth = 0, caseEndBase?: number, 
     const bodyLines = body.split('\n');
     const firstLine = bodyLines[0];
     const secondLine = (bodyLines.find((l, i) => i > 0 && l.trim() !== '') ?? '');
-    const oneCase = (body.match(/(^|[^\p{L}\p{N}_])КОНЕЦ(?=[^\p{L}\p{N}_]|$)/gu) ?? []).length === 1;
-    const opensCase = /(^|[^\p{L}\p{N}_])ВЫБОР\s*$/u.test(firstLine) ||
+    const oneCase = (body.match(/(^|[^\p{L}\p{N}_&])КОНЕЦ(?=[^\p{L}\p{N}_]|$)/gu) ?? []).length === 1;
+    const opensCase = /(^|[^\p{L}\p{N}_&])ВЫБОР\s*$/u.test(firstLine) ||
       (/[=<>]\s*$/u.test(firstLine) && /^[\t ]*ВЫБОР(?:[^\p{L}\p{N}_]|$)/u.test(secondLine));
     if (oneCase && opensCase) {
       body = reindentLeafCase(body, caseEndBase);
@@ -1197,7 +1209,7 @@ function splitTopLevelAnd(expr: string): string[] {
     if (c === '(') { depth++; continue; }
     if (c === ')') { depth--; continue; }
     if (depth !== 0) continue;
-    if (!isWordChar(expr[i - 1])) {
+    if (!blocksKeywordStart(expr[i - 1])) {
       const up = expr.slice(i, i + 5).toUpperCase();
       if (up.startsWith('МЕЖДУ') && !isWordChar(expr[i + 5])) { betweenPending++; continue; }
       if (expr[i].toUpperCase() === 'И' && !isWordChar(expr[i + 1])) {
@@ -1233,7 +1245,7 @@ function expandAndChainConjuncts(conditions: NonNullable<Join['conditions']>): N
   const out: NonNullable<Join['conditions']> = [];
   for (const c of conditions) {
     const e = (c.expression ?? '').trim();
-    if (c.custom && e && hasTopLevelBooleanOp(e) && !/(^|[^\p{L}\p{N}_])(ИЛИ|ВЫБОР)([^\p{L}\p{N}_]|$)/iu.test(e)) {
+    if (c.custom && e && hasTopLevelBooleanOp(e) && !/(^|[^\p{L}\p{N}_&])(ИЛИ|ВЫБОР)([^\p{L}\p{N}_]|$)/iu.test(e)) {
       const parts = splitTopLevelAnd(e);
       if (parts.length > 1) {
         // Помечаем пьесы как полученные расщеплением И-цепочки (фаза 6.16.78):
@@ -1469,7 +1481,7 @@ function builderBlock(keyword: string, fields: BuilderField[]): string[] {
     // относительном табе 1, охватывающая `(` даёт +1 → КОНЕЦ на 2), а НЕ сохраняет
     // абсолютный отступ исходника (фаза 6.16.fmt, корпус СтатистикаЧековПоЧасам).
     const isMultilineCase = f.condition && f.ref.includes('\n') &&
-      /(^|[^\p{L}\p{N}_])ВЫБОР(?:[^\p{L}\p{N}_]|$)/u.test(f.ref);
+      /(^|[^\p{L}\p{N}_&])ВЫБОР(?:[^\p{L}\p{N}_]|$)/u.test(f.ref);
     // Многострочное БУЛЕВО условие построителя без ВЫБОР (`(A >= &X И (B ИЛИ C))`),
     // набранное разработчиком плоско: конструктор раскладывает его по конъюнктам
     // относительно позиции поля (поле на относительном табе 1 — база reindentLeafBool=1;
@@ -1477,10 +1489,10 @@ function builderBlock(keyword: string, fields: BuilderField[]): string[] {
     // перенос строки, есть верхнеуровневый булев оператор, нет ВЫБОР/подзапроса (фаза 6.16).
     const isMultilineBool = !isMultilineCase && f.condition && f.ref.includes('\n') &&
       hasTopLevelBooleanOp(f.ref) &&
-      !/(?:^|[^\p{L}\p{N}_])(?:ВЫБОР|ВЫБРАТЬ)(?:[^\p{L}\p{N}_]|$)/u.test(f.ref) &&
+      !/(?:^|[^\p{L}\p{N}_&])(?:ВЫБОР|ВЫБРАТЬ)(?:[^\p{L}\p{N}_]|$)/u.test(f.ref) &&
       // Группа `НЕ(…)` несёт лишний +1 (НЕ — отдельный уровень), который reindentLeafBool
       // НЕ учитывает; такие условия не реиндентируем (оставляем геометрию как есть).
-      !/(?:^|[^\p{L}\p{N}_])НЕ\s*\(/u.test(f.ref);
+      !/(?:^|[^\p{L}\p{N}_&])НЕ\s*\(/u.test(f.ref);
     const ref = isMultilineCase
       ? reindentLeafCase(normalizeLeafCase(f.ref), 2)
       : isMultilineBool
@@ -1930,6 +1942,15 @@ function indentStringLiteralNewlines(text: string, tabs: number): string {
  * только нормализацию регистра/пробелов листа.
  */
 export function formatSelectExpression(expression: string): string {
+  // `ПУСТАЯТАБЛИЦА.(Код, Наименование)` → канон конструктора 1С (live, RP14): каждый
+  // элемент — пустое значение + ` КАК Имя`, элементы через `, `
+  // (`ПУСТАЯТАБЛИЦА.( КАК Код,  КАК Наименование)`); пустой список конструктор
+  // дополняет колонкой `Поле1`.
+  const emptyTableColumns = parseEmptyTableColumns(expression);
+  if (emptyTableColumns !== undefined) {
+    const columns = emptyTableColumns.length > 0 ? emptyTableColumns : ['Поле1'];
+    return `ПУСТАЯТАБЛИЦА.(${columns.map(c => ` КАК ${c}`).join(', ')})`;
+  }
   // Поле выборки-членство `Поле В (ВЫБРАТЬ … ИЗ …)`, набранное ИНЛАЙН (подзапрос на
   // одной строке): конструктор 1С РАЗВОРАЧИВАЕТ его — `Поле В` на строке поля, `(ВЫБРАТЬ`
   // на отступе 2, тело глубже, а часть `КАК Алиас` (её добавляет вызывающий) приклеивается
@@ -1941,7 +1962,7 @@ export function formatSelectExpression(expression: string): string {
   if (
     !needsFormatting(expression) &&
     !selectColumnNeedsBoolWrap(expression) &&
-    /(?:^|[^\p{L}\p{N}_])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/iu.test(expression.trim())
+    /(?:^|[^\p{L}\p{N}_&])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/iu.test(expression.trim())
   ) {
     const reflowed = inlineSelectMembershipReflow(expression.trim());
     if (reflowed) return appendIsNotNullTrailingSpace(reflowed.join('\n'));
@@ -2088,7 +2109,9 @@ function renderOrder(order: Order | undefined, model: QueryModel, includeAuto = 
         // Квалифицированная ссылка на метаданные: KEEP лишь для иерарх./`…Ссылка`.
         (metadataTable && (ownerTable!.hierarchical || lastSeg === 'Ссылка'));
       const hierSuffix = f.hierarchy && hierKeep ? ' ИЕРАРХИЯ' : '';
-      const suffix = (f.direction === 'desc' ? ' УБЫВ' : '') + hierSuffix;
+      // Платформенный порядок модификаторов: `ИЕРАРХИЯ` перед направлением
+      // (`ИЕРАРХИЯ УБЫВ`; `УБЫВ ИЕРАРХИЯ` — синтаксическая ошибка 1С, RP08).
+      const suffix = hierSuffix + (f.direction === 'desc' ? ' УБЫВ' : '');
       const comma = i < order.fields.length - 1 ? ',' : '';
       lines.push(`\t${ref}${suffix}${comma}`);
     });
@@ -2177,7 +2200,7 @@ export function renderTotals(totals: Totals | undefined, model: QueryModel): str
     // склейке). Иначе continuation-строки сохраняют исходный (пробельный) отступ
     // разработчика. Гейт узкий: многострочное выражение, содержащее слово ВЫБОР.
     if (f.expression.includes('\n') &&
-        /(?:^|[^\p{L}\p{N}_])ВЫБОР(?:[^\p{L}\p{N}_]|$)/u.test(f.expression)) {
+        /(?:^|[^\p{L}\p{N}_&])ВЫБОР(?:[^\p{L}\p{N}_]|$)/u.test(f.expression)) {
       return reindentLeafCase(normalizeLeafCase(f.expression), 1).replace(/^\t+/u, '');
     }
     return normalizeLeafCase(f.expression);

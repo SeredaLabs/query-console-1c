@@ -2890,6 +2890,41 @@ export function stripRedundantLeafParens(raw: string): string {
   }
   if (stack.length) return raw;
 
+  // Булев приоритет (Stage 1B.3, live 1C): снимать пару можно, лишь если самый слабый
+  // верхнеуровневый булев оператор ВНУТРИ связывает не слабее, чем требует сосед
+  // СНАРУЖИ; иначе меняется смысл: `(A ИЛИ B) И C` ≠ `A ИЛИ B И C`, `НЕ (A И B)` ≠
+  // `НЕ A И B` (приоритет ИЛИ < И < НЕ < сравнение). Уровни: 1 ИЛИ, 2 И, 3 префиксный
+  // НЕ, 4 — булевых операторов нет. `И` диапазона `МЕЖДУ a И b` булевым не считается.
+  const innerBoolLevel = (from: number, to: number): number => {
+    let lvl = 4;
+    let d = 0;
+    let between = 0;
+    for (let k = from; k < to; k++) {
+      const c = sig[k];
+      if (c.type === 'punct' && c.value === '(') { d++; continue; }
+      if (c.type === 'punct' && c.value === ')') { d--; continue; }
+      if (d !== 0) continue;
+      if (isWord(c, 'МЕЖДУ')) between++;
+      else if (isAnd(c)) { if (between > 0) between--; else lvl = Math.min(lvl, 2); }
+      else if (isOr(c)) lvl = 1;
+      // Префиксный НЕ — в начале или после булева оператора (не `ЕСТЬ НЕ`/`НЕ В`).
+      else if (isNot(c) && (k === from || isAnd(sig[k - 1]) || isOr(sig[k - 1]) || isNot(sig[k - 1]))) lvl = Math.min(lvl, 3);
+    }
+    return lvl;
+  };
+  // Минимальный уровень содержимого, который допускает сосед пары: граница (начало/
+  // конец, скобка, запятая, КАК, КОГДА/ТОГДА/ИНАЧЕ) — любой; ИЛИ — любой (ассоциативен);
+  // И — не ниже И; префиксный НЕ — не ниже НЕ; сравнение/предикат — без булевых операторов.
+  const requiredLevel = (t: Token | undefined): number => {
+    if (!t) return 1;
+    if (isOr(t)) return 1;
+    if (isAnd(t)) return 2;
+    if (isNot(t)) return 3;
+    if (isCmpPunct(t) || isMembershipWord(t) ||
+        ((t.type === 'keyword' || t.type === 'ident') && ['ЕСТЬ', 'МЕЖДУ', 'ПОДОБНО', 'ССЫЛКА'].includes(t.value.toUpperCase()))) return 4;
+    return 1;
+  };
+
   // Множество индексов скобок к удалению.
   const drop = new Set<number>();
   for (let i = 0; i < sig.length; i++) {
@@ -2899,8 +2934,6 @@ export function stripRedundantLeafParens(raw: string): string {
     const close = match.get(i)!;
     const prev = i > 0 ? sig[i - 1] : undefined;
     const nx = close + 1 < sig.length ? sig[close + 1] : undefined;
-    // Уже помеченный к удалению сосед-скобка считается «прозрачным» (вложенная
-    // охватывающая пара): пропускаем — внешняя пара решит за обе.
     if (isCallOpenContext(prev)) continue;
     // Содержимое не пустое и без верхнеуровневой запятой.
     if (close === i + 1) continue;
@@ -2949,6 +2982,14 @@ export function stripRedundantLeafParens(raw: string): string {
       }
       if (innerBoolCmp) continue;
     }
+    // Булев приоритет против ЭФФЕКТИВНЫХ соседей: уже снятая охватывающая пара
+    // прозрачна (`((A ИЛИ B)) И C` — внутренняя пара видит `И`, а не свою скобку).
+    let el = i - 1;
+    while (el >= 0 && drop.has(el)) el--;
+    let er = close + 1;
+    while (er < sig.length && drop.has(er)) er++;
+    const innerLvl = innerBoolLevel(i + 1, close);
+    if (innerLvl < requiredLevel(el >= 0 ? sig[el] : undefined) || innerLvl < requiredLevel(sig[er])) continue;
     drop.add(i);
     drop.add(close);
   }
@@ -2964,7 +3005,11 @@ export function stripRedundantLeafParens(raw: string): string {
   positions.sort((a, b) => b - a);
   let out = raw;
   for (const p of positions) {
-    out = out.slice(0, p) + ' ' + out.slice(p + 1);
+    // Снятая скобка вплотную к соседней скобке того же направления (`НЕ((…))`,
+    // `((…))`) пробела не оставляет — иначе `НЕ((A ИЛИ B))` дал бы `НЕ (…)` вместо
+    // `НЕ(…)`, и второй проход менял бы текст (Stage 1B.3).
+    const glued = (raw[p] === '(' && raw[p + 1] === '(') || (raw[p] === ')' && raw[p - 1] === ')');
+    out = out.slice(0, p) + (glued ? '' : ' ') + out.slice(p + 1);
   }
   return out
     .replace(/\s{2,}/g, ' ')
@@ -3399,8 +3444,32 @@ class Parser {
     return false;
   }
 
+  /**
+   * Повторная обёртка `((X))`: скобка на `open` содержит ровно одну скобочную пару.
+   * Возвращает индекс внутренней `(` — о структуре такой группы решает её содержимое.
+   * Иначе `((A ИЛИ B))` уходит в лист, лист теряет все охватывающие скобки, и
+   * `((A ИЛИ B)) И C` / `НЕ ((A ИЛИ B)) И C` печатаются без группировки (Stage 1B.3).
+   */
+  private doubledParenInner(open: number): number | undefined {
+    const first = this.toks[open + 1];
+    if (!first || first.type !== 'punct' || first.value !== '(') return undefined;
+    let d = 0;
+    for (let k = open + 1; k < this.toks.length; k++) {
+      const t = this.toks[k];
+      if (t.type === 'eof') return undefined;
+      if (t.type === 'punct' && t.value === '(') d++;
+      else if (t.type === 'punct' && t.value === ')' && --d === 0) {
+        const after = this.toks[k + 1];
+        return after && after.type === 'punct' && after.value === ')' ? open + 1 : undefined;
+      }
+    }
+    return undefined;
+  }
+
   /** Содержит ли скобочная группа, открытая на индексе `open`, верхнеур. И/ИЛИ. */
   private parenHasTopBoolean(open: number): boolean {
+    const inner = this.doubledParenInner(open);
+    if (inner !== undefined) return this.parenHasTopBoolean(inner);
     let depth = 0;
     for (let k = open; k < this.toks.length; k++) {
       const t = this.toks[k];
@@ -3552,7 +3621,10 @@ class Parser {
       if (!this.atEof() && this.peek().type === 'punct' && this.peek().value === ')') {
         this.i++;
       }
-      return { kind: 'group', child: inner };
+      // `((X))` ≡ `(X)`: вложенную группу повторно не оборачиваем, чтобы проверки
+      // приоритета по `group.child.kind` (ИЛИ-группа как операнд И, `НЕ(…)`) видели
+      // реальный узел, а не `group` (Stage 1B.3).
+      return inner.kind === 'group' ? inner : { kind: 'group', child: inner };
     }
     return this.parseLeaf();
   }
@@ -3566,6 +3638,8 @@ class Parser {
    * дословно (фаза 6.16, корпус ЗастрахованныеЛицаСЭДО/ОтчётКомиссионера).
    */
   private parenIsStructuralGroup(open: number): boolean {
+    const inner = this.doubledParenInner(open);
+    if (inner !== undefined) return this.parenIsStructuralGroup(inner);
     let depth = 0;
     let hasStructural = false;
     for (let k = open; k < this.toks.length; k++) {

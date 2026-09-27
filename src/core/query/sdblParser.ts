@@ -844,7 +844,7 @@ function parseSingleQuery(
 
   let groupingFromClause: { multiple: boolean; groupFields: FieldRef[]; groupSets: FieldRef[][] } | undefined;
   if (cur.isKeyword('СГРУППИРОВАТЬ')) {
-    groupingFromClause = parseGroupBy(cur, aliasToId, resolveOwner);
+    groupingFromClause = parseGroupBy(cur, aliasToId, resolveOwner, tableFullNames);
   }
 
   // ИМЕЮЩИЕ — фильтр по агрегатам, сразу за СГРУППИРОВАТЬ ПО.
@@ -951,6 +951,7 @@ function parseSingleQuery(
     explicitAliases,
     fields: model.fields,
     resolveOwner,
+    tableFullNames,
   };
   if (ctxOut) ctxOut.ctx = ownSectionCtx;
   // Секции объединённого запроса резолвятся по контексту ПЕРВОГО участника.
@@ -2899,10 +2900,13 @@ function interpretCondition(
   // `ГДЕ Т.Предопределенный`): весь сегмент — чистый точечный путь без оператора,
   // голова не псевдоним источника. Квалифицируем как произвольное выражение
   // `<псевдоним>.<path>` (генератор рендерит произвольные условия дословно).
+  // Ведущий префикс полного имени источника (`Справочник.Валюты.ПометкаУдаления`)
+  // — ссылка НА таблицу: снимаем его, как в bareLhsRef, иначе двойная квалификация
+  // `Валюты.Справочник.Валюты.ПометкаУдаления` (live 1C RP01-RP03).
   if (soleSource) {
     const bare = tryBareField(tokens, aliasToId);
     if (bare) {
-      return { custom: true, expression: `${soleSource.alias}.${bare.path}` };
+      return { custom: true, expression: `${soleSource.alias}.${stripOwnerFullName(bare.path, soleSource.fullName)}` };
     }
     // Отрицание голого поля при единственном источнике (`ГДЕ НЕ ПометкаУдаления` →
     // `ГДЕ НЕ Т.ПометкаУдаления`): первый токен — `НЕ`, остаток — чистый точечный
@@ -2910,7 +2914,7 @@ function interpretCondition(
     if (tokens.length > 1 && isNotToken(tokens[0])) {
       const negBare = tryBareField(tokens.slice(1), aliasToId);
       if (negBare) {
-        return { custom: true, expression: `НЕ ${soleSource.alias}.${negBare.path}` };
+        return { custom: true, expression: `НЕ ${soleSource.alias}.${stripOwnerFullName(negBare.path, soleSource.fullName)}` };
       }
     }
   }
@@ -3550,21 +3554,22 @@ function stripOuterParens(text: string): string {
 function parseGroupBy(
   cur: Cursor,
   aliasToId: Map<string, string>,
-  resolveOwner: OwnerResolver
+  resolveOwner: OwnerResolver,
+  tableFullNames: Map<string, string>
 ): { multiple: boolean; groupFields: FieldRef[]; groupSets: FieldRef[][] } {
   cur.expectKeyword('СГРУППИРОВАТЬ');
   cur.expectKeyword('ПО');
 
   if (cur.matchKeyword('ГРУППИРУЮЩИМ')) {
     cur.expectKeyword('НАБОРАМ');
-    const groupSets = parseGroupingSets(cur, aliasToId, resolveOwner);
+    const groupSets = parseGroupingSets(cur, aliasToId, resolveOwner, tableFullNames);
     return { multiple: true, groupFields: [], groupSets };
   }
 
   // Одна группировка: список ссылок через запятую.
   const groupFields: FieldRef[] = [];
   for (;;) {
-    const ref = parseGroupFieldRef(cur, aliasToId, resolveOwner);
+    const ref = parseGroupFieldRef(cur, aliasToId, resolveOwner, tableFullNames);
     groupFields.push(ref);
     if (cur.matchPunct(',')) continue;
     break;
@@ -3576,7 +3581,8 @@ function parseGroupBy(
 function parseGroupingSets(
   cur: Cursor,
   aliasToId: Map<string, string>,
-  resolveOwner: OwnerResolver
+  resolveOwner: OwnerResolver,
+  tableFullNames: Map<string, string>
 ): FieldRef[][] {
   cur.expectPunct('(');
   const sets: FieldRef[][] = [];
@@ -3584,7 +3590,7 @@ function parseGroupingSets(
     cur.expectPunct('(');
     const set: FieldRef[] = [];
     for (;;) {
-      set.push(parseGroupFieldRef(cur, aliasToId, resolveOwner));
+      set.push(parseGroupFieldRef(cur, aliasToId, resolveOwner, tableFullNames));
       if (cur.matchPunct(',')) continue;
       break;
     }
@@ -3608,7 +3614,8 @@ function parseGroupingSets(
 function parseGroupFieldRef(
   cur: Cursor,
   aliasToId: Map<string, string>,
-  resolveOwner: OwnerResolver
+  resolveOwner: OwnerResolver,
+  tableFullNames: Map<string, string>
 ): FieldRef {
   const tokens: Token[] = [];
   let depth = 0;
@@ -3641,7 +3648,7 @@ function parseGroupFieldRef(
   const bare = tryBareField(tokens, aliasToId);
   if (bare) {
     const owner = resolveOwner(bare.head);
-    if (owner !== undefined) return { tableId: owner, path: bare.path };
+    if (owner !== undefined) return { tableId: owner, path: stripOwnerFullName(bare.path, tableFullNames.get(owner)) };
   }
   return { tableId: '', path: '', expression: sliceSource(cur.source, tokens) };
 }
@@ -3651,10 +3658,13 @@ function parseGroupFieldRef(
 /**
  * Модификаторы поля упорядочивания после самого поля: направление
  * (`УБЫВ` → desc; `ВОЗР` — явное возрастание, лексер выдаёт его как ident) и
- * `ИЕРАРХИЯ` (иерархический порядок). Порядок токенов: направление, затем
- * ИЕРАРХИЯ. Возвращает выбранное направление и флаг иерархии.
+ * `ИЕРАРХИЯ` (иерархический порядок). Порядок токенов как у платформы:
+ * `[ИЕРАРХИЯ] [ВОЗР|УБЫВ]` (live 1C 8.3, RP08: `ИЕРАРХИЯ УБЫВ` валиден,
+ * `УБЫВ ИЕРАРХИЯ` — синтаксическая ошибка, поэтому обратный порядок не
+ * принимается). Возвращает выбранное направление и флаг иерархии.
  */
 function parseOrderModifiers(cur: Cursor): { direction: SortDirection; hierarchy: boolean } {
+  const hierarchy = cur.matchKeyword('ИЕРАРХИЯ');
   let direction: SortDirection = 'asc';
   if (cur.matchKeyword('УБЫВ')) {
     direction = 'desc';
@@ -3665,7 +3675,6 @@ function parseOrderModifiers(cur: Cursor): { direction: SortDirection; hierarchy
       cur.next();
     }
   }
-  const hierarchy = cur.matchKeyword('ИЕРАРХИЯ');
   return { direction, hierarchy };
 }
 
@@ -3681,6 +3690,8 @@ interface SectionResolveContext {
   fields: SelectedField[];
   /** Резолвер владельца голого поля. */
   resolveOwner: OwnerResolver;
+  /** id таблицы → её полное имя: снятие префикса полного имени владельца из голого пути. */
+  tableFullNames: Map<string, string>;
 }
 
 /**
@@ -3695,6 +3706,11 @@ function sectionBareOwner(segs: string[], ctx: SectionResolveContext): string | 
   if (ctx.explicitAliases.has(headUp)) return undefined;
   if (segs.length === 1 && LITERAL_VALUES.has(headUp)) return undefined;
   return ctx.resolveOwner(segs[0]);
+}
+
+/** Путь голого поля относительно владельца: без ведущего `<полное имя владельца>.`. */
+function sectionOwnerPath(owner: string, segs: string[], ctx: SectionResolveContext): string {
+  return stripOwnerFullName(segs.join('.'), ctx.tableFullNames.get(owner));
 }
 
 /**
@@ -3875,7 +3891,7 @@ function parseOrder(cur: Cursor, ctx: SectionResolveContext): Order {
       } else if (bareOwner !== undefined) {
         // Голое имя, НЕ совпадающее с явным псевдонимом выборки: конструктор 1С
         // квалифицирует его таблицей-владельцем (фаза 6.15.4, MCP).
-        fields.push({ tableId: bareOwner, path: segs.join('.'), direction, qualified: true, ...hier });
+        fields.push({ tableId: bareOwner, path: sectionOwnerPath(bareOwner, segs, ctx), direction, qualified: true, ...hier });
       } else {
         // Голая ссылка — псевдоним выборки (или нерезолвимое имя): остаётся как есть.
         const aliasKey = segs.join('.');
@@ -4157,7 +4173,12 @@ function resolveTotalsFieldRef(segs: string[], ctx: SectionResolveContext): Fiel
   }
   const owner = sectionBareOwner(segs, ctx);
   if (owner !== undefined) {
-    return { tableId: owner, path: name, qualified: true };
+    const path = sectionOwnerPath(owner, segs, ctx);
+    // `<полное имя владельца>.Поле` — то же, что `<псевдоним>.Поле` (ветка выше):
+    // колонку выборки конструктор печатает её псевдонимом (live 1C: `ИТОГИ … ПО Валюта`).
+    const viaFullName = path !== name;
+    const isColumn = viaFullName && ctx.fields.some(f => !f.expression && f.tableId === owner && f.path === path);
+    return isColumn ? { tableId: owner, path } : { tableId: owner, path, qualified: true };
   }
   return { tableId: '', path: name };
 }
@@ -4315,7 +4336,7 @@ function resolveSectionFieldRef(segs: string[], ctx: SectionResolveContext): Fie
   }
   const owner = sectionBareOwner(segs, ctx);
   if (owner !== undefined) {
-    return { tableId: owner, path: segs.join('.'), qualified: true };
+    return { tableId: owner, path: sectionOwnerPath(owner, segs, ctx), qualified: true };
   }
   const aliasKey = segs.join('.');
   const ref = resolveSelectAlias(aliasKey, ctx.aliasMap);
