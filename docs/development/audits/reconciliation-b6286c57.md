@@ -74,6 +74,13 @@ rerun live; local parse/generate results cannot upgrade platform UNKNOWNs.
 Paths below are relative to the repository; tests listed here were executed as
 part of the unmodified full unit suite.
 
+All repaired findings live in the shared query core, which Classic and Canvas
+use alike: the same parser opens the query, the same `assembleBatch` +
+`generateBatch` path writes it, and both run `webview/applyGate.ts`
+(`findStaticApplyBlocker`, `decideApply`). The fixes therefore apply to both
+designers. The regressions call the core directly; no Canvas-specific editing
+action or browser flow was exercised, which remains [V4](../technical-debt.md).
+
 | Finding | Production implementation | Regression evidence / disposition |
 |---|---|---|
 | Full-name binding | `src/core/query/sdblParser.ts`: `stripOwnerFullName`, `interpretCondition`, section owner binding | [fullNameQualification](../../../test/unit/fullNameQualification.test.ts), 34 tests, both resolver modes, grouping/order/totals and subquery controls |

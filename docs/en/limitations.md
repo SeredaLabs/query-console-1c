@@ -1,5 +1,5 @@
 <!--
-source_version: 6
+source_version: 7
 translation_status: canonical
 -->
 
@@ -37,6 +37,12 @@ The Query Text parameter list and generated parameter boilerplate may include
 Parameter suggestions can also fail while the name after `&` is still empty.
 Apply validates supported structure and selected metadata semantics, but does
 not prove that the generated query means the same as the original.
+
+The New Builder (Canvas) is an experimental preview, available only when
+`queryConsole.enableNewBuilderPreview` is enabled. It reads, checks and writes
+queries through the same parser, generator and Apply checks as the Classic
+designer, so their fixes apply to both. Its own editing actions have not yet
+been verified end to end.
 
 ## ⛔ Round-trip exclusions
 
