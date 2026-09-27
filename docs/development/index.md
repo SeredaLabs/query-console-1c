@@ -18,6 +18,7 @@ This is the canonical developer documentation.
 - [Performance](performance.md)
 - [Corpus testing](corpus-testing.md)
 - [Known issues](known-issues.md)
+- [Technical debt — current authoritative ledger](technical-debt.md)
 - [Roadmap](roadmap.md)
 - [Architecture decisions](decisions/README.md)
 - [Stage 0 SDBL audit](audits/stage-0.md)

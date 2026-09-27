@@ -61,3 +61,29 @@ an unexplained regression.
 Some oracle workflows require a private 1C environment, XML export, or locally
 built parser artifact and therefore are not CI requirements. Keep proprietary
 queries out of the repository and reduce defects to safe fixtures.
+
+## Evidence boundaries at b6286c57
+
+Current verification debt is V1–V3 in the [ledger](technical-debt.md); historical
+measurements remain in [Stage 0](audits/stage-0.md). The committed suite was rerun:
+1976 positive golden entries match recorded `query_text`; this is an independent
+platform-recorded expected-output contract, not a fresh live-platform execution.
+All 1976 entries are `valid: true`, none starts with English SELECT, and 85 inputs
+contain `#`. The corpus's acceptance selection has positive-only bias. Invalid
+unit examples now cover modifier order and empty-table columns, but do not form
+an attested negative/English platform corpus. New regressions cover full-name
+qualification, keyword parameters and Boolean grouping outside golden.jsonl.
+
+Query `.sdbl` fixtures are described by their test as generator-produced canonical
+text; they test stability, not independent validity. Curated oracle/meta1c fixture
+provenance is incomplete. Golden records lack per-entry platform build, metadata
+fingerprint and template-substitution attestation. The historical 17933-query
+private run requires local/private prerequisites; it was not available or rerun
+for this reconciliation. Do not report it as a committed CI gate.
+
+The tree-sitter helper warns and returns when the grammar WASM is absent, so
+Vitest's passed count includes calls that performed no independent grammar check.
+CI does not build that artifact. Stage 0 recorded an ABI incompatibility with its
+pinned upstream grammar; it has not been fixed or rebuilt here. A future explicit
+gate needs compatible, reproducible provenance and an explicit unavailable policy.
+Tree-sitter acceptance is never proof of 1C validity or semantic equivalence.

@@ -1,5 +1,12 @@
 # Stage 0 — evidence-based SDBL differential audit
 
+> Historical audit baseline: `35c9c6aaae1fe28d107343fd53e9f862626b125b`.
+> Current correctness baseline: `b6286c57cfa64ff8cb9f937347c376d4b98d55c8`.
+> Several findings have since been resolved. The status and verdicts below
+> describe the historical audit, not the current backlog. See the
+> [current debt ledger](../technical-debt.md) and
+> [baseline reconciliation](reconciliation-b6286c57.md).
+
 Status: **Stage 0a approved. Stage 0b complete, awaiting approval. Stage 1
 not started.**
 

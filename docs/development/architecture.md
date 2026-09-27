@@ -95,3 +95,24 @@ instead; until then, preserve the stack discipline and its strict/tolerant
 boundary regression coverage.
 
 Related decisions: see [`decisions/`](decisions/README.md).
+
+## Current semantic and expression contracts
+
+The [technical-debt ledger](technical-debt.md) owns current status. In particular,
+A1 tracks duplicated lexical/expression knowledge, and A2 tracks temporary-table
+lifetime/producer facts. Reusing or extending the hand-written lexer with
+canonical tokens is compatible with ADR 0001/0004 if spelling, source positions,
+opaque preservation and the platform-canonical output contract remain intact.
+A runtime grammar engine or independent recovery grammar would require revisiting
+those ADRs. A full expression AST needs a separate scope decision; a formatter's
+internal Boolean/arithmetic tree is not a shared expression AST in QueryModel.
+
+`buildSemanticSnapshotFromText` materializes source-alias `symbolsById` for complete
+and recovered parses; `resolveAliasAt` consumes it. `scopesById` and
+`referencesBySymbolId` are empty placeholders with no production consumer.
+`partial` is declared but is not returned by that builder. `complete` means the
+parse did not throw, not that every source/scope was captured: condition-subquery
+aliases and open-parenthesis recovery have the S1/S2 gaps. Current source maps and
+on-demand scope traversal already serve consumers; do not populate unused maps
+without a demonstrated need. Some source comments still describe earlier phases
+(D1); the implementation and this contract take precedence.

@@ -1,6 +1,35 @@
 # Known issues
 
+Current product boundaries at `b6286c57`. Engineering status and evidence live
+in the [technical-debt ledger](technical-debt.md); historical verdicts remain in
+[Stage 0](audits/stage-0.md).
+
 ## Active product limitations
+
+- English SDBL is rejected even though the recorded live platform accepts it
+  and canonicalizes it to Russian. Editor query detection recognizes only
+  `ВЫБРАТЬ`/`УНИЧТОЖИТЬ` (ledger C2).
+- Completion inside valid condition subqueries does not resolve their inner
+  aliases (C21/S1). Unclosed SELECT parentheses can hide all sources;
+  malformed ORDER/GROUP sections can disable assistance for the whole package
+  (C06/C13/C18/C19, S2). Parameter suggestions after a bare `&` can fail
+  because their lexer scan rejects the unfinished name. Source-subquery and ordinary batch alias scoping already
+  use the position-aware resolver; the old flat resolver is tooling-only.
+- With an existing resolver that cannot describe an accounting register,
+  `09-rb-oboroty.sdbl` loses argument text and fails idempotence; an absent
+  resolver and a compatible synthetic resolver preserve it (C1). This is a
+  preservation risk; live validity of that fixture has not been established.
+- Without metadata, ORDER BY can drop `ИЕРАРХИЯ` from a string field (RP20/C3).
+- A temporary-table producer with a tabular-section projection/trailing fields
+  yields different column sets in star expansion, designer and semantic schema
+  (A2). The platform-correct schema for this shape still needs confirmation.
+- Apply checks supported syntax/structure, selected metadata semantics and
+  recorded unsafe markers; it does not establish semantic equivalence to the
+  source query (V3). Some platform-invalid inputs are silently normalized,
+  including extra turnover arguments and INDEX BY without INTO (C5).
+- The Query Text parameter list and result-processing boilerplate use a raw
+  regex and can include `&name` from a string/comment or duplicate case variants;
+  editor parameter hover/completion use lexer tokens instead (C7).
 
 - Cursor detection cannot evaluate dynamically composed BSL query strings.
 - Validation is intentionally incomplete for arbitrary custom expressions and
@@ -125,68 +154,6 @@ calc-register base-register parsing for an unrelated reason, revisit this
 boundary — but do not attempt a partial/best-guess implementation of
 either in the meantime.
 
-## Required technical debt: three temporary-table models
-
-Package temporary tables are modeled in three places. Unifying them is a
-**required** follow-up task, see
-[roadmap: required follow-up tasks](roadmap.md#required-follow-up-tasks).
-
-- **Parser registry** -- `registerTempTables` and `inferUndefinedTempTables`
-  in `sdblParser.ts` (inherited from the upstream fork). Statements are parsed
-  in order, and a later statement needs the columns of an earlier
-  `ПОМЕСТИТЬ` to expand `ВТ.*`, so the registry shapes the parsed model
-  itself. It is built incrementally during both parse passes, is not kept in
-  the returned `BatchDocument`, silently skips an unresolved `*`, gives
-  pure-literal columns a primitive type so `resolveBuilderStar` can drop a
-  `.*` suffix, and registers tables as `kind: 'Справочник'`. Temporary tables
-  the package never creates follow a separate, oracle-verified rule: columns
-  are collected across the whole package, and the table becomes visible after
-  its first reference in an earlier statement.
-- **Designer model** -- `deriveTempTableLifetimes` in
-  `src/webview/state/queryStore/snapshots.ts`. Used by Classic and Canvas for
-  the "Временные таблицы" group, the temp-table picker, and package
-  continuity.
-- **Semantic model** -- `src/core/query/tempTableSemantics.ts`, used by field
-  validation, hover, and completion. It is a near-copy of the designer model
-  (same lifetime rules and names) plus a `complete` flag, which negative
-  "field not found" diagnostics require.
-
-All three follow the same create/`ДОБАВИТЬ`/`УНИЧТОЖИТЬ` lifetime rules.
-**Their column sets are not identical:** the parser registry and the designer
-model read only the head `fields` of the producer, while the semantic model
-reads every select element in order (`orderedSelectElements`), including
-tabular-section projections and trailing fields. For
-`ВЫБРАТЬ Т.Ссылка, Т.Товары.(Номенклатура) ПОМЕСТИТЬ ВТ …; ВЫБРАТЬ В.* ИЗ ВТ КАК В`
-the parser expands the star to `Ссылка`, while the semantic schema is
-`Ссылка, Товары`. Which one matches the real 1C constructor has not been
-verified. The golden corpus does not settle it: across its 561 temporary-table
-producers, the head-fields and all-elements column sets are identical, and
-the semantic names match the columns printed by the real 1C constructor for
-all 560 complete schemas.
-
-Not everything here is duplication. Lifetime rules and producer columns are
-single platform facts and must get one owner. The parser's incremental
-registry mechanism, `inferUndefinedTempTables`, and literal typing are
-distinct concerns and stay in the parser; the roadmap task defines this
-boundary.
-
-Until the shared parts are unified, a change to temporary-table lifetime or
-producer-column inference must be made in all three places.
-
-## Resolved: hover/autocomplete alias scoping
-
-Hover (`describeChain`) and autocomplete (`resolveCompletionTarget`), both in
-`hoverFieldInfo.ts`, used to resolve a table alias across the whole query
-batch, first-match -- a repeated alias for a different source elsewhere in
-the same batch could show/suggest the wrong table. As of the semantic-core
-roadmap's Phase 3d/3e, both share
-`resolveHeadTable`, which uses only `resolveAliasAt`, a position-aware resolver
-that respects real JOIN-condition scoping and nearest-ancestor subquery
-correlation (live-verified against real 1C). The old flat `findAliasTable`
-lookup is no longer used in production: a broken SELECT list (a missing comma,
-an empty list) is repaired with a same-length placeholder, so its
-`'recovered'` snapshot keeps positions and goes through `resolveAliasAt` too.
-When nothing is resolvable (the query does not parse even after repair),
-hover/completion show nothing. A frozen copy of the flat lookup
-(`tooling/corpus-verify/legacyFindAliasTable.ts`) remains only as the
-shadow-mode corpus baseline (see [corpus testing](corpus-testing.md)).
+Internal task details formerly duplicated here are maintained only in the
+[ledger](technical-debt.md). Historical resolved alias-scoping work remains
+covered by the semantic resolver and shadow-baseline tests.

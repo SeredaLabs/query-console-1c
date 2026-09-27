@@ -1,5 +1,5 @@
 <!--
-source_version: 5
+source_version: 6
 translation_status: canonical
 -->
 
@@ -29,6 +29,15 @@ an unresolved `*`, conditions inside subqueries, and custom expressions are
 not checked. Editor diagnostics report syntax errors only; a missing field is
 reported by the designer, not underlined in the editor.
 
+English SDBL is currently unsupported. Completion cannot resolve inner aliases
+of condition subqueries. An unclosed SELECT parenthesis can hide sources, and
+an invalid ORDER/GROUP section can disable assistance for the whole package.
+The Query Text parameter list and generated parameter boilerplate may include
+`&name` from strings/comments; parameter hover/completion use lexer tokens.
+Parameter suggestions can also fail while the name after `&` is still empty.
+Apply validates supported structure and selected metadata semantics, but does
+not prove that the generated query means the same as the original.
+
 ## ⛔ Round-trip exclusions
 
 > Do not apply designer changes to `Последовательность.*.Границы` when it
@@ -46,6 +55,15 @@ queries never produce) is blocked.
 
 Accounting-register `Субконто(...)` parameters are supported and regression
 tested; older documentation that marked them unsafe is obsolete.
+
+When a metadata resolver is present but lacks an accounting register, positional
+arguments can be lost during round-trip (`09-rb-oboroty`); its live-platform
+validity is still unverified. Without metadata, ORDER BY may drop `ИЕРАРХИЯ`.
+Temporary-table producers containing tabular-section projections can expose
+different column sets in star expansion and semantic assistance. A bare field
+in a subquery condition may bind to the inner source even when it belongs to an
+outer source. See [known issues](../development/known-issues.md) for the verified
+boundaries and evidence still needed.
 
 ## 🗂️ Metadata boundaries
 

@@ -1,6 +1,8 @@
 # Roadmap
 
-This page records direction, not committed release scope.
+This page records direction and ordering, not committed release scope or current
+status. The [technical-debt ledger](technical-debt.md) is authoritative for status.
+Do not infer pending work from historical Stage 0 priorities.
 
 ## Current priorities
 
@@ -33,66 +35,38 @@ and insertion back into the source document.
 
 ## Required follow-up tasks
 
-These are mandatory: they close known correctness debt and must not be
-dropped or silently deferred as optional cleanup.
+Current tasks and evidence are tracked once in the [ledger](technical-debt.md).
 
-### Unify the temporary-table models
+### Recommended engineering sequence
 
-Package temporary tables are modeled three times (parser registry, designer
-model, semantic model); see
-[known issues](known-issues.md#required-technical-debt-three-temporary-table-models).
+1. **Preservation evidence and narrow hardening (C1, C3, C4, C5).** Establish
+   missing-metadata accounting behavior, ORDER hierarchy and correlated-condition
+   canonicals; define invalid-input handling separately from valid grammar gaps.
+2. **CanonicalToken / ExpressionTokens spike (A1).** Inventory existing lexer
+   tokens, contextual words, formatter trees and raw scanners; define one lexical
+   identity/precedence boundary with source spelling/ranges preserved. Propose
+   introduce → validate → switch migration slices. No runtime parser replacement.
+3. **Verification foundation (V1–V3).** Record negative/English platform evidence,
+   metadata modes and bounded semantic-preservation checks; make the optional
+   grammar oracle reproducible with an explicit CI policy before relying on it.
+4. **English implementation (C2).** Follow the spike's contract across parser,
+   contextual words, expressions, metadata aliases/attributes, IDE detection,
+   qualification, formatting and Apply. No scattered keyword-regex patches.
+5. **Temporary-table fact unification (A2).** First verify tabular projections
+   and trailing columns on the platform; then share lifetime/producer-column
+   facts. Retain parser incremental registry, undefined-table inference and
+   internal literal typing. Migrate designer and parser consumers separately.
+6. **Semantic assistance (S1–S3).** Condition-subquery scope coverage, then
+   recovery with trustworthy positions; decide which snapshot fields have real
+   consumers. Do not build a scope/reference index just to populate empty maps.
+7. **Expression consumers (A3, C6, C7).** Display-only inference over the shared
+   representation, cosmetic JOIN stability and parameter-consumer consistency.
+8. **Preview release and documentation (V4, D1).** Canvas parity/browser gate and
+   source-comment corrections; preserve the preview flag until its own gate passes.
 
-**Scope: two shared facts, not one merged model.** Unify only what the
-platform defines once:
-
-- **Lifetime rules** -- a table is visible after its `ПОМЕСТИТЬ`, through
-  `ДОБАВИТЬ`, until `УНИЧТОЖИТЬ`; a later `ПОМЕСТИТЬ` starts a new schema. The
-  designer model and the semantic model implement this twice with
-  near-identical code; one module must own it for both.
-- **Producer columns** -- which output columns a `ПОМЕСТИТЬ` statement
-  creates. One function must serve all three call sites, so their column sets
-  can no longer diverge.
-
-**Keep separate on purpose** -- these are different concerns, not
-duplication, and must not be folded into the shared module:
-
-- The parser's incremental registry mechanism. The parser needs columns
-  mid-parse, statement by statement, and a map updated on create/drop is the
-  correct single-pass form of the same rules. Only its column source should
-  change to the shared producer-columns function; do not replace the map with
-  the lifetime-index structure.
-- `inferUndefinedTempTables`. It guesses the columns of a table the package
-  never creates from later references, under its own oracle-verified
-  visibility rule. That is a different fact from a `ПОМЕСТИТЬ` schema, and
-  the semantic model deliberately leaves such tables fail-open.
-- The parser's primitive typing of pure-literal columns. It is a
-  parser-internal device so `resolveBuilderStar` can drop a `.*` suffix (it
-  types numeric literals as `Строка` too), not a truthful column type for the
-  shared schema.
-
-Steps, each its own reviewable task:
-
-1. **Oracle check.** Record how the real 1C constructor expands `*` over a
-   temporary table whose producer contains a tabular-section projection
-   (`Т.Товары.(…)`) and trailing fields. This decides the correct producer
-   columns; do not pick one by preference.
-2. **Designer model onto the core module.** Make
-   `src/webview/state/queryStore/snapshots.ts` use the lifetime rules and
-   producer columns from `src/core/query/tempTableSemantics.ts` instead of its
-   own `deriveTempTableLifetimes` copy. Classic and Canvas temp-table groups,
-   the picker, and continuity must keep their current behavior apart from the
-   column set decided in step 1.
-3. **Parser column source.** Make `registerTempTables` take producer columns
-   from the shared function, keeping its own map, its literal typing, and
-   `inferUndefinedTempTables`. First verify whether the registry's
-   `kind: 'Справочник'` affects parsing before changing it; leave it if
-   changing it has no benefit.
-
-Done when lifetime rules have one owner used by the designer and semantic
-models, producer columns have one owner used by all three call sites, the
-separate concerns above are still separate, and the corpus,
-validator-corpus, and oracle checks pass. Any change in golden output must be
-explained case by case.
+This is one recommended sequence, not authorization to implement these stages.
+Resolve U1–U3 when the relevant stage needs their platform evidence. Existing
+accepted import coupling is a constraint, not an invitation to general cleanup.
 
 ## Planned, deferred
 
@@ -100,6 +74,9 @@ Agreed direction, not started. Pick up as separate tasks; do not fold into
 unrelated work.
 
 ### Expression type inference
+
+Status: **PARTIAL** (A3). The previous independent-walker implementation plan is
+**STALE**, absorbed into A1. The product goal and display-only boundary remain.
 
 **Why.** The Classic "Custom expression" dialog shows a result type only when
 the whole expression is a single resolved field; anything else is "unknown".
@@ -160,11 +137,11 @@ qualifiers until step 1 confirms it):
    `{ unionOfArgs: [0, 1] }` for `ЕСТЬNULL`, `'unknown'`) — extend the single
    source of truth, no parallel table. A test requires an explicit descriptor
    on every function leaf.
-3. **Core module.** A separate token walker following the same grammar as
-   `expressionSyntaxCheck`; do **not** modify the structural check that gates
-   Apply. Tests: rule table; a corpus differential test (the walker accepts
-   exactly what `isStructurallyValidExpression` accepts and never throws);
-   golden values only for oracle-verified expressions.
+3. **Core module, after A1.** Consume the shared token/expression contract
+   selected by the spike. Do not add another independent grammar walker or
+   infer semantic grouping from the syntax acceptor (it ignores precedence).
+   Preserve Apply behavior; test the type rules, unknown propagation and
+   oracle-verified values against that shared representation.
 4. **Dialog status.** Replace the single-field rule in `analyzeExpression`
    (`src/webview/expressionEditor/expressionContext.ts`) with
    `inferExpressionType`; render via `describeOne`, unions as `Число | NULL`,
@@ -174,16 +151,17 @@ qualifiers until step 1 confirms it):
    `Булево`; a type column for expression fields in the Canvas Fields grid.
 
 **Out of scope.** Temporary-table schemas, `inferUndefinedTempTables` and the
-parser's literal typing (see "Unify the temporary-table models" above); any
+parser's literal typing (see A2 in the ledger); any
 effect on SDBL generation, Apply or validation — types are display-only first,
 with no blocking checks built on them; a new expression AST or a parser
 rewrite.
 
 **Risks.** 1C precision and coercion rules (hence oracle first; contested
 cases stay unknown or unqualified). Composite types and NULL (the result type
-is a union from the start). Grammar duplication between the structural check
-and the walker, contained by the corpus differential test; merging them into
-one walker is a later task (introduce → validate → switch → remove old).
+is a union from the start). A second expression grammar would
+repeat the RP13/grouping failure pattern, so the shared representation is a
+prerequisite, not a later cleanup. An expression AST is an explicit future
+decision only if tokens cannot serve concrete consumers.
 
 ## Explicitly considered and not planned
 

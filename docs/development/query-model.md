@@ -45,9 +45,12 @@ change here with both parse and round-trip tests (`test/unit/comment*.test.ts`).
 
 ## Safety markers
 
-Virtual-table parsing records `unsafeExtraArgs` where positional arguments cannot
-be represented losslessly. The UI blocks apply for marked models. Preserve the
-marker through transformations and tests.
+Virtual-table parsing records `unsafeExtraArgs` in the generic fallback and
+modeled calculation-register overflow paths; Apply blocks marked models.
+Coverage is not universal: extra `Обороты`/`ОстаткиИОбороты` arguments can be
+lost without a marker (platform-invalid RP04/RP05). Missing accounting metadata
+also has a preservation gap (C1). See the [debt ledger](technical-debt.md).
+Preserve existing markers through transformations and tests.
 
 A structurally malformed custom/raw expression (unbalanced parens, a dangling
 operator, an unclosed `ВЫБОР…КОНЕЦ`, and similar) is a separate, narrower check
@@ -56,3 +59,19 @@ Apply; see [known issues](known-issues.md) for its exact scope and deliberate
 non-goals.
 
 Current user-facing boundaries are in the [limitations guide](../en/limitations.md).
+
+## Apply and expression boundaries
+
+Classic and Canvas share `findStaticApplyBlocker`/`decideApply` in
+`src/webview/applyGate.ts`: original model unsafe/malformed checks, then generated
+text parsed and checked for selected table/field, alias and UNION constraints.
+`validateBatchText` and `tryOpenBatch` reuse `tryParseBatch` and semantic validation.
+This certifies acceptance by the supported local checks, not full platform syntax
+or input/output semantic equivalence. No original-query comparison is performed.
+The structural expression acceptor deliberately ignores operator precedence and
+leaves template markers unjudgeable; boolean preservation is currently verified
+by targeted regression truth tables and recorded canonical examples.
+
+Opaque text is intentional, but repeatedly reinterpreting its lexical structure
+is architecture debt (A1). CanonicalToken/ExpressionTokens is a proposed shared
+boundary, not implemented, and does not require replacing the runtime parser.
