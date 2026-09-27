@@ -3,6 +3,20 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## 0.1.90 - 2026-09-27
+
+### Documentation
+
+- Updated the English, Ukrainian and Russian demos to show the current Classic
+  constructor, including the custom expression editor's templates, completion,
+  inline help and diagnostics.
+- Demos now use the enhanced Query Text v2 editor and show query structure,
+  formatting, validation, parameters and unsaved-change protection. The README
+  and designer guides explain how to enable the experimental editor.
+- Added a reproducible recording workflow with assertions against the real
+  WebView UI. Localized GIFs are included in the extension package; full-length
+  WebM videos are available from the documentation.
+
 ## 0.1.89 - 2026-09-26
 
 ### Changed
