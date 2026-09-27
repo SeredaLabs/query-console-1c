@@ -1,5 +1,5 @@
 <!--
-source_version: 5
+source_version: 6
 translation_status: canonical
 -->
 
@@ -29,8 +29,10 @@ connecting to a 1C database or executing the query.
 [Watch the video (WebM)](docs/videos/query-constructor-demo.en.webm) ·
 [Demo walkthrough](docs/en/query-designer.md#-demo-walkthrough)
 
-Recorded from the stable Classic WebView with demo metadata. The UI and captions
-are localized; SDBL keywords and metadata names stay unchanged. No query is executed.
+Recorded from the Classic WebView with demo metadata and the enhanced **Query text
+v2** editor. Enable the experimental `queryConsole.queryTextEditorV2` setting to
+use the text editor shown here. The UI and captions are localized; SDBL keywords
+and metadata names stay unchanged. No query is executed.
 
 ## ✨ What it does
 

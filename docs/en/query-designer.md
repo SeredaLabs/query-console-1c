@@ -1,5 +1,5 @@
 <!--
-source_version: 4
+source_version: 5
 translation_status: canonical
 -->
 
@@ -21,9 +21,9 @@ expressions from fields, operators, functions, and parameters.
 ## 🔍 Review generated text
 
 Open **Query text** to inspect generated SDBL. The default editor provides syntax
-highlighting and formatting. When `queryConsole.queryTextEditorV2` is enabled,
-the experimental editor also provides search, validation markers, query
-structure, and parameter panels.
+highlighting. Enable `queryConsole.queryTextEditorV2` for the enhanced experimental
+editor shown in the demo: formatting, search, validation markers, query structure,
+and parameter panels.
 
 Applying a manual text edit parses it back into the visual `QueryModel`. If the
 text is outside the supported grammar, the designer reports an error and keeps
@@ -41,7 +41,8 @@ metadata but does not edit the current BSL file.
 
 [Watch the video (WebM)](../videos/query-constructor-demo.en.webm).
 The recording uses the current Classic WebView and the small E2E metadata fixture,
-with the default text editor. It does not require a private configuration.
+with **Query text v2** enabled (`queryConsole.queryTextEditorV2: true`). It does not
+require a private configuration.
 
 1. Search for `Валюты Наим`: words can match both a table and its field.
 2. Drag `Наименование` into **Fields**. Its source table is added automatically.
@@ -54,14 +55,19 @@ with the default text editor. It does not require a private configuration.
    argument. An unfinished expression shows a syntax error and disables formatting;
    diagnostics do not disable **OK** in this dialog. Correct the expression to
    `ЕСТЬNULL(Валюты.Наименование, "-")` and save it as an output field.
-5. Open **Query**, add `ГДЕ Валюты.Код = &Код` and descending order, then **Apply**.
+5. Open **Query** in the enhanced text editor. **Structure** shows output fields
+   and sources next to the SDBL. Add `ГДЕ Валюты.Код = &Код` and descending order,
+   then use **Format** and **Validate** on the toolbar.
+6. Open **Parameters** to see `&Код` and its use count. Click the parameter to
+   navigate to its line, then **Apply** the text changes.
    Inspect **Conditions** and **Order** to see the text changes in the visual model.
-6. Try an unknown source table. Applying reports an error. Close the dialog and
-   reopen **Query**: the previous valid model is preserved.
-7. **OK** sends SDBL to the extension host for insertion into BSL; it does not run
+7. Try an unknown source table. Validation shows a diagnostic and an error marker;
+   applying the edit keeps the previous model. Close the dialog, confirm **Close
+   without saving**, and reopen **Query**: the previous valid model is preserved.
+8. **OK** sends SDBL to the extension host for insertion into BSL; it does not run
    a database query. The browser recording does not show VS Code editor insertion.
 
 The interface and captions follow the documentation language. Metadata identifiers
-and SDBL keywords remain unchanged. Experimental Canvas and Query text v2 are not
-enabled in this recording. The custom expression editor is available in the
-stable designer without either experimental setting.
+and SDBL keywords remain unchanged. Experimental Canvas is not enabled in this
+recording. Query text v2 is explicitly enabled for every text-editing scene; the
+custom expression editor is available without that setting.

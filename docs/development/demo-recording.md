@@ -2,7 +2,7 @@
 
 The README animations and videos show the built Classic WebView, not a recreated
 UI. The current recordings were made for **0.1.89**. They use the public metadata
-fixture in `test/e2e/harness/index.html`, the default text editor, and the actual
+fixture in `test/e2e/harness/index.html`, the enhanced Query text v2 editor, and the actual
 `en`, `uk`, and `ru` dictionaries. No database, private metadata, or VS Code window
 is used. The script checks the final `insertText` message; it does not record the
 Extension Host inserting a BSL string.
@@ -30,6 +30,10 @@ The server binds to a random loopback port and closes when the command finishes.
 The recorder reuses the E2E fixture. Its optional `?locale=` selects the initial
 UI language; without it, existing tests retain Russian. The surrounding title
 strip is for explanatory captions and is not part of the extension UI.
+The recorder then sends the host `init` message with `queryTextEditorV2: true`,
+equivalent to enabling `queryConsole.queryTextEditorV2` in VS Code. This is required
+for every recording: assertions on the v2 status bar and panels fail if the simple
+dialog is shown. The shared E2E harness and extension defaults stay unchanged.
 
 ## Outputs and review
 
@@ -48,12 +52,14 @@ committing: titles must fit, text and icons must be readable, and the error scen
 must be followed by the preserved valid query. GIF frames use full replacement,
 without fades that blend text from different screens.
 
-The 16 scenes verify multi-word search, adding a source by dragging a field,
+The 18 scenes verify multi-word search, adding a source by dragging a field,
 adding all fields with duplicate aliases, the new custom expression editor
 (field search and type, function snippets and inline help, completion, Tab between
 arguments, syntax diagnostics, formatting availability, and saving an expression
-into the generated SDBL), generated SDBL, applying text edits,
-condition/order synchronization, rejection of an unknown table, preservation of
+into the generated SDBL), Query text v2 structure, formatting and validation,
+parameters and navigation to uses, applying text edits, condition/order
+synchronization, rejection of an unknown table, confirmation before discarding
+unsaved edits, preservation of
 the previous model, and the outgoing insertion text. Captions live in
 `tooling/docs-demo/captions.json`; the scenario and assertions live in
 `tooling/docs-demo/record.mjs`. The GIF encoder uses actual screenshot checkpoints.
@@ -64,8 +70,9 @@ The scenario corrects the expression before saving and verifies it in the query.
 Update all three captions and the [English walkthrough](../en/query-designer.md)
 with its Ukrainian and Russian translations when changing the scenario. Keep
 metadata identifiers and SDBL keywords intact. Re-record after relevant UI changes
-and update the version above. Do not present Canvas or Query text v2 as default
-behavior; demonstrations of those features need an explicit experimental label.
+and update the version above. Query text v2 must remain enabled in this demo and
+explicitly labeled as experimental, with its setting documented in each language.
+Canvas remains disabled.
 
 The three GIFs are packaged for localized README previews. WebM files stay in the
 repository and are excluded from VSIX; Marketplace video links resolve to GitHub.

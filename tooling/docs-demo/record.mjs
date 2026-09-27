@@ -84,11 +84,19 @@ try {
     const app = page.frameLocator('iframe');
     const ui = JSON.parse(await readFile(path.join(root, `src/webview/i18n/${locale}.json`), 'utf8'));
     const button = key => app.getByRole('button', { name: ui[key], exact: true });
+    const toolbar = key => app.getByTitle(ui[key], { exact: true });
     const tab = key => app.getByRole('tab', { name: ui[key], exact: true });
     const editor = app.getByTestId('query-text-editor').locator('.cm-content');
     const queryText = async () => (await editor.locator('.cm-line').allTextContents()).join('\n');
     await expect(app.getByText(ui['tree.catalogs'], { exact: true })).toBeVisible();
     await expect(app.getByTestId('loading-overlay')).toBeHidden();
+    // Match the host message when queryConsole.queryTextEditorV2 is enabled.
+    // Keep the shared E2E fixture's default unchanged for legacy-editor tests.
+    await app.locator('body').evaluate((_, locale) => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true, locale },
+      }));
+    }, locale);
     await app.locator('body').evaluate(body => {
       // VS Code normally supplies the font. Keep the standalone fixture readable.
       body.style.fontFamily = 'Arial, sans-serif';
@@ -197,6 +205,10 @@ try {
     await caption(9);
     await button('common.query').click();
     await expect(editor).toContainText('Справочник.Валюты');
+    // Fail recording if it ever falls back to the simple query-text dialog.
+    await expect(app.getByTestId('query-text-status')).toContainText(ui['status.valid']);
+    await toolbar('dialog.queryText.structure').click();
+    await expect(app.getByTestId('query-text-structure-panel')).toContainText(customExpression);
     const generated = await queryText();
     assert(generated.includes('ВЫБРАТЬ'));
     assert(generated.includes('Наименование КАК Наименование1'));
@@ -204,38 +216,62 @@ try {
     await hold();
 
     await caption(10);
-    const edited = `${generated}\nГДЕ\n\tВалюты.Код = &Код\nУПОРЯДОЧИТЬ ПО\n\tВалюты.Наименование УБЫВ`;
+    await toolbar('dialog.queryText.structure').click();
+    const edited = `${generated}\nГДЕ Валюты.Код = &Код УПОРЯДОЧИТЬ ПО Валюты.Наименование УБЫВ`;
     await editor.fill(edited);
+    await toolbar('actions.format').click();
+    await toolbar('dialog.queryText.validateNow').click();
     await expect(editor).toContainText('&Код');
+    await expect.poll(queryText).toMatch(/УПОРЯДОЧИТЬ ПО\n/);
+    await expect(app.getByTestId('query-text-status')).toContainText(ui['status.valid']);
+    await hold(4000);
+
+    await caption(11);
+    await toolbar('dialog.queryText.parameters').click();
+    const parameters = app.getByTestId('query-text-parameters-panel');
+    await expect(parameters).toContainText('&Код');
+    await expect(parameters).toContainText(ui['parameters.uses'].replace('{count}', '1'));
+    await parameters.getByText('&Код', { exact: true }).click();
+    await expect(editor).toBeFocused();
+    await expect(app.locator('.cm-activeLine')).toContainText('&Код');
     await hold(4000);
     await button('actions.apply').click();
     await expect(editor).toBeHidden();
 
-    await caption(11);
+    await caption(12);
     await tab('tabs.conditions').click();
     await expect(app.locator('input[type="text"]')).toHaveValue('&Код');
     await hold();
-    await caption(12);
+    await caption(13);
     await tab('tabs.order').click();
     await expect(app.locator('select')).toHaveValue('desc');
     await hold();
 
-    await caption(13);
+    await caption(14);
     await button('common.query').click();
     const valid = await queryText();
     await editor.fill('ВЫБРАТЬ\n\tОшибка.Код\nИЗ\n\tСправочник.НесуществующаяТаблица КАК Ошибка');
-    await button('actions.apply').click();
+    await toolbar('dialog.queryText.validateNow').click();
     const errorText = ui['diagnostic.tableNotFound'].replace('{table}', 'Справочник.НесуществующаяТаблица');
-    await expect(app.getByText(errorText, { exact: false })).toBeVisible();
+    await expect(app.getByTestId('query-text-status')).toContainText(errorText);
+    await expect(app.locator('.cm-lintRange-error')).toBeVisible();
+    await button('actions.apply').click();
     await expect(editor).toBeVisible();
     await hold(4000);
 
-    await caption(14);
-    await app.getByRole('button', { name: ui['actions.close'], exact: true }).click();
+    await caption(15);
+    await button('actions.close').click();
+    await expect(app.getByTestId('query-text-close-confirm')).toContainText(ui['dialog.queryText.unsavedTitle']);
+    await hold(4000);
+    await button('actions.closeWithoutSaving').click();
+    await expect(editor).toBeHidden();
+
+    await caption(16);
     await button('common.query').click();
     await expect.poll(queryText).toBe(valid);
+    await expect(app.getByTestId('query-text-status')).toContainText(ui['status.valid']);
     await hold();
-    await caption(15);
+    await caption(17);
     await hold(4000);
     await button('actions.close').click();
     await button('actions.ok').click();
