@@ -31,8 +31,10 @@ case counts and representative transitions. Never update them blindly.
 
 `npm run package` runs the prepublish build and creates `query-console-1c.vsix`.
 Inspect the archive to confirm JavaScript bundles, localization bundles, manifest
-translations, icon, license, localized README files, the project banner, and the
-animated demo are included.
+translations, icon, license, localized README files, the project banner, and all
+three localized GIF demos are included. WebM videos are linked from GitHub and
+excluded from the VSIX. See [Recording localized demos](demo-recording.md) to
+regenerate and verify the media after relevant UI changes.
 
 ## Release workflow
 

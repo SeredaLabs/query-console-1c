@@ -11,6 +11,10 @@
 <body>
   <div id="root" style="height:100vh;"></div>
   <script>
+    // The documentation recorder uses the same fixture and production bundle.
+    const requestedLocale = new URLSearchParams(location.search).get('locale');
+    const locale = ['en', 'uk', 'ru'].includes(requestedLocale) ? requestedLocale : 'ru';
+    document.documentElement.lang = locale;
     // Capture all outgoing messages from the webview
     window.__webviewMessages = [];
 
@@ -23,7 +27,7 @@
           if (msg.type === 'ready') {
             setTimeout(function() {
               window.dispatchEvent(new MessageEvent('message', {
-                data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: false, locale: 'ru' }
+                data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: false, locale: locale }
               }));
               window.dispatchEvent(new MessageEvent('message', {
                 data: {

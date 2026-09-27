@@ -11,6 +11,7 @@ This is the canonical developer documentation.
 - [Query model and SDBL](query-model.md)
 - [Localization](localization.md)
 - [Testing and release](testing-and-release.md)
+- [Recording localized demos](demo-recording.md)
 
 ## Reference
 

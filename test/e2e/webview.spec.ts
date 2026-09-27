@@ -93,6 +93,16 @@ async function enableQueryTextV2(page: Page): Promise<void> {
 }
 
 test.describe('Query Constructor Webview', () => {
+  for (const [locale, catalogs] of [['en', 'Catalogs'], ['uk', 'Довідники'], ['ru', 'Справочники']]) {
+    test(`documentation harness starts in ${locale} without translating metadata`, async ({ page }) => {
+      await page.goto(`${BASE}/?locale=${locale}`);
+      await expect(page.locator('html')).toHaveAttribute('lang', locale);
+      await expect(page.getByTestId('loading-overlay')).toBeHidden();
+      await page.getByText(catalogs, { exact: true }).click();
+      await expect(page.locator('[data-table-fullname="Справочник.Валюты"]')).toContainText('Валюты');
+    });
+  }
+
   test('switches UI locale while preserving metadata names', async ({ page }) => {
     await page.goto(BASE);
     await expect(page.locator('[data-testid="loading-overlay"]')).toBeHidden();

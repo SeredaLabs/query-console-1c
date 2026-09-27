@@ -1,5 +1,5 @@
 <!--
-source_version: 3
+source_version: 5
 translation_status: canonical
 -->
 
@@ -24,7 +24,13 @@ translation_status: canonical
 metadata-aware 1C SDBL queries and inserting them as static BSL strings—without
 connecting to a 1C database or executing the query.
 
-![Animated demo: searching SFK metadata, selecting fields, adding a condition and ordering, then validating the generated SDBL query](docs/images/query-constructor-demo.gif)
+![English demo: metadata search, the new custom expression editor with function templates and completion, editing SDBL, and recovery after an invalid edit](docs/images/query-constructor-demo.gif)
+
+[Watch the video (WebM)](docs/videos/query-constructor-demo.en.webm) ·
+[Demo walkthrough](docs/en/query-designer.md#-demo-walkthrough)
+
+Recorded from the stable Classic WebView with demo metadata. The UI and captions
+are localized; SDBL keywords and metadata names stay unchanged. No query is executed.
 
 ## ✨ What it does
 
