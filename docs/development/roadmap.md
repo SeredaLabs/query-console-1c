@@ -41,8 +41,7 @@ Current tasks and evidence are tracked once in the [ledger](technical-debt.md).
 
 1. **Preservation evidence and narrow hardening.** Closed: C1, C3 (live
    hierarchy probe), C4 (metadata-proven correlated condition binding) and C5
-   (reject on open or block Apply). Optional follow-up: record the
-   constructor's canonical text for a correlated condition on 1C.
+   (reject on open or block Apply); C4 wizard text checked live.
 2. **CanonicalToken / ExpressionTokens spike (A1).** Inventory existing lexer
    tokens, contextual words, formatter trees and raw scanners; define one lexical
    identity/precedence boundary with source spelling/ranges preserved. Propose

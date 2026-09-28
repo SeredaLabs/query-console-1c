@@ -128,4 +128,31 @@ describe('C4: correlated bare fields in subquery conditions', () => {
     expect(decideApply(output.text, output.error, findStaticApplyBlocker(state), undefined)).toEqual({ ok: true });
     expect(flat(output.text!)).toContain('ГДЕ А.Цена > 0)');
   });
+
+  // Query-wizard text observed live on 2026-09-28 (docs/development/audits/c4-correlated-2026-09-28.md).
+  describe('matches the live 1C query wizard', () => {
+    const live = buildResolverFromTables([
+      { kind: 'Справочник', name: 'Пользователи', fullName: 'Справочник.Пользователи',
+        fields: ['Ссылка', 'Недействителен', 'Служебный'].map(f => ({ name: f, kind: 'standard' as const, types: [{ primitive: 'Булево' as const }] })) },
+      { kind: 'Справочник', name: 'ИдентификаторыОбъектовМетаданных', fullName: 'Справочник.ИдентификаторыОбъектовМетаданных',
+        fields: ['Ссылка', 'Наименование'].map(f => ({ name: f, kind: 'standard' as const, types: [{ primitive: 'Строка' as const }] })) },
+    ]);
+    const input = (where: string) =>
+      'ВЫБРАТЬ П.Ссылка КАК Ссылка ИЗ Справочник.Пользователи КАК П ГДЕ П.Ссылка В ' +
+      `(ВЫБРАТЬ Ид.Ссылка ИЗ Справочник.ИдентификаторыОбъектовМетаданных КАК Ид ГДЕ ${where})`;
+    const wizard = (where: string) =>
+      'ВЫБРАТЬ\n\tП.Ссылка КАК Ссылка\nИЗ\n\tСправочник.Пользователи КАК П\nГДЕ\n\tП.Ссылка В\n' +
+      '\t\t\t(ВЫБРАТЬ\n\t\t\t\tИд.Ссылка\n\t\t\tИЗ\n\t\t\t\tСправочник.ИдентификаторыОбъектовМетаданных КАК Ид\n' +
+      `\t\t\tГДЕ\n${where})`;
+    for (const [where, printed] of [
+      ['Недействителен = ЛОЖЬ', '\t\t\t\tП.Недействителен = ЛОЖЬ'],
+      ['НЕ Недействителен И Служебный = &Служебный', '\t\t\t\tНЕ П.Недействителен\n\t\t\t\tИ П.Служебный = &Служебный'],
+      ['П.Недействителен = ЛОЖЬ', '\t\t\t\tП.Недействителен = ЛОЖЬ'],
+    ]) {
+      it(where, () => {
+        expect(generateBatch(parseBatch(input(where), live))).toBe(wizard(printed));
+        expect(generateBatch(parseBatch(wizard(printed), live))).toBe(wizard(printed));
+      });
+    }
+  });
 });

@@ -83,8 +83,7 @@ in the [technical-debt ledger](technical-debt.md); historical verdicts remain in
   sole-source subquery is still bound to that source even when it belongs to an
   enclosing query: `ГДЕ Цена > 0` inside `(ВЫБРАТЬ … ИЗ Справочник.В КАК В)` is
   generated as `В.Цена`. With metadata it is rebound to the single nearest
-  enclosing owner (C4), matching the select list; the constructor's exact
-  canonical text for this case is not live-verified. The validator still skips
+  enclosing owner (C4), matching the query wizard's text observed live. The validator still skips
   conditions inside subqueries instead of reporting a false "field not found".
 
 These are documented user boundaries, not permission to weaken tests. Add a
