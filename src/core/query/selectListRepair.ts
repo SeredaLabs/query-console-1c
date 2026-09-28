@@ -97,55 +97,74 @@ function blankSelectList(segment: string): string {
   return blank[0] + '1' + ' ' + blank.slice(3);
 }
 
-/** Top-level sections after the sources that recovery may drop (S2, C18/C19). */
+/** Sections after the sources that recovery may drop (S2, C18/C19). */
 const TRAILING_SECTIONS = new Set(['СГРУППИРОВАТЬ', 'ИМЕЮЩИЕ', 'УПОРЯДОЧИТЬ', 'ИТОГИ', 'ИНДЕКСИРОВАТЬ']);
-/** Keywords that end such a section at statement level. */
-const SECTION_BOUNDARIES = new Set(['ОБЪЕДИНИТЬ', 'ВЫБРАТЬ', 'УНИЧТОЖИТЬ', 'ДЛЯ']);
+/** Keywords that end such a section and start a new union member or statement. */
+const MEMBER_BOUNDARIES = new Set(['ОБЪЕДИНИТЬ', 'ВЫБРАТЬ', 'УНИЧТОЖИТЬ']);
+
+/** One query level: the statement, a parenthesized (sub)query or a `{…}` block. */
+interface SectionFrame {
+  /** Start of the section being blanked at this level. */
+  open?: number;
+  /** The current union member at this level already has `ГДЕ` (before `open`). */
+  hasWhere: boolean;
+}
 
 /**
- * S2: for consumers that only need sources and aliases, blanks every top-level
+ * S2: for consumers that only need sources and aliases, blanks every
  * ГРУППИРОВКА/ИМЕЮЩИЕ/ПОРЯДОК/ИТОГИ/ИНДЕКС section (keyword included) with spaces
- * of the same length, up to the next section boundary (`;`, ОБЪЕДИНИТЬ, the next
- * statement, ДЛЯ ИЗМЕНЕНИЯ, the end). A half-typed `УПОРЯДОЧИТЬ ПО Т. ,` then no
- * longer makes the whole package unavailable. Called only after a normal parse
- * failed; offsets are preserved, so the recovered snapshot keeps positions.
- * The blank ends with a `ДЛЯ ИЗМЕНЕНИЯ` placeholder (valid at the end of any
- * member) when it fits: a union member's range ends at its last token, so without
- * it a cursor inside the blanked section would fall outside every query.
- * Sections inside subqueries are not touched. `undefined` if there is no such
- * section.
+ * of the same length, up to the end of its level (`;`, ОБЪЕДИНИТЬ, the next
+ * statement, ДЛЯ ИЗМЕНЕНИЯ, the closing `)` of a subquery, the end). A half-typed
+ * `УПОРЯДОЧИТЬ ПО Т. ,` then no longer makes the whole package unavailable.
+ * `nested: false` touches only statement-level sections; `nested: true` also those
+ * inside subqueries. Called only after a normal parse failed; offsets are
+ * preserved, so the recovered snapshot keeps positions.
+ *
+ * A union member's range ends at its last token, so the blank ends with a
+ * placeholder, otherwise a cursor inside the blanked section would fall outside
+ * every query: `ДЛЯ ИЗМЕНЕНИЯ` when it fits, else `И 1` (the member already has
+ * `ГДЕ`) or `ГДЕ 1`. Before an existing `ДЛЯ ИЗМЕНЕНИЯ` no placeholder is needed.
+ * `undefined` if there is no such section.
  */
-export function repairTrailingSectionsForRecovery(text: string): string | undefined {
+export function repairTrailingSectionsForRecovery(text: string, nested = false): string | undefined {
   const tokens = tokenize(text);
-  const ranges: Array<{ start: number; end: number; placeholder: boolean }> = [];
-  let depth = 0;
-  let open: number | undefined;
-  const close = (end: number, placeholder = true): void => {
-    if (open !== undefined) ranges.push({ start: open, end, placeholder });
-    open = undefined;
+  const ranges: Array<{ start: number; end: number; placeholder?: string }> = [];
+  const frames: SectionFrame[] = [{ hasWhere: false }];
+  const close = (frame: SectionFrame, end: number, withPlaceholder = true): void => {
+    if (frame.open === undefined) return;
+    const length = end - frame.open;
+    const short = frame.hasWhere ? 'И 1' : 'ГДЕ 1';
+    const placeholder = !withPlaceholder ? undefined
+      : length > FOR_UPDATE.length ? FOR_UPDATE
+      : length > short.length ? short
+      : undefined;
+    ranges.push({ start: frame.open, end, placeholder });
+    frame.open = undefined;
   };
   for (const t of tokens) {
-    if (t.type === 'eof') { close(t.pos); break; }
+    const frame = frames[frames.length - 1];
+    if (t.type === 'eof') { frames.forEach(f => close(f, t.pos)); break; }
     if (t.type === 'punct') {
-      if (t.value === '(' || t.value === '{') depth++;
-      else if (t.value === ')' || t.value === '}') depth--;
-      else if (t.value === ';' && depth === 0) close(t.pos);
+      if (t.value === '(' || t.value === '{') frames.push({ hasWhere: false });
+      else if ((t.value === ')' || t.value === '}') && frames.length > 1) { close(frame, t.pos); frames.pop(); }
+      else if (t.value === ';') { frames.forEach(f => close(f, t.pos)); frames.length = 1; frames[0].hasWhere = false; }
       continue;
     }
-    if (depth !== 0 || t.type !== 'keyword') continue;
-    if (SECTION_BOUNDARIES.has(t.value)) close(t.pos, t.value !== 'ДЛЯ');
-    else if (TRAILING_SECTIONS.has(t.value) && open === undefined) open = t.pos;
+    if (t.type !== 'keyword') continue;
+    const tracked = nested || frames.length === 1;
+    if (MEMBER_BOUNDARIES.has(t.value)) { if (tracked) close(frame, t.pos); frame.hasWhere = false; }
+    else if (t.value === 'ДЛЯ') { if (tracked) close(frame, t.pos, false); }
+    else if (t.value === 'ГДЕ' && frame.open === undefined) frame.hasWhere = true;
+    else if (tracked && TRAILING_SECTIONS.has(t.value) && frame.open === undefined) frame.open = t.pos;
   }
   if (ranges.length === 0) return undefined;
+  ranges.sort((a, b) => a.start - b.start);
   let result = text;
   for (let k = ranges.length - 1; k >= 0; k--) {
     const { start, end, placeholder } = ranges[k];
     // Line breaks are blanked too: only offsets matter, and the placeholder must
     // end exactly where the section did.
-    let blank = ' '.repeat(end - start);
-    if (placeholder && blank.length > FOR_UPDATE.length) {
-      blank = blank.slice(FOR_UPDATE.length) + FOR_UPDATE;
-    }
+    const blank = placeholder ? ' '.repeat(end - start - placeholder.length) + placeholder : ' '.repeat(end - start);
     result = result.slice(0, start) + blank + result.slice(end);
   }
   return result;
@@ -154,29 +173,58 @@ export function repairTrailingSectionsForRecovery(text: string): string | undefi
 const FOR_UPDATE = 'ДЛЯ ИЗМЕНЕНИЯ';
 
 /**
- * S2 (C06/C13/C11): an unclosed `(` makes the parser swallow the rest of the
+ * S2 (C06/C13/C11): an unclosed `(` makes the parser swallow the rest of its
  * statement (`ПОДСТРОКА(Т.` hides `ИЗ`), yet the parse may still succeed with no
- * sources. For recovery only: an unclosed subquery `(ВЫБРАТЬ …` is closed by `)`
- * appended at the very end of the text; any other unclosed `(` is replaced by a
- * space. Every original offset is unchanged (in-place blanking, appended tail).
- * `undefined` when every `(` is closed.
+ * sources. For recovery only, per batch statement (the batch splits at every
+ * `;`, parentheses notwithstanding):
+ * - any unclosed `(` not opening a subquery is replaced by a space;
+ * - unclosed subqueries `(ВЫБРАТЬ …` get their `)` at the statement end: after
+ *   the text for the last statement; otherwise over the whitespace just before
+ *   its `;`, or over the whitespace just after it (the `;` then moves right).
+ * Every original offset is unchanged (in-place edits, appended tail). A
+ * statement whose closers do not fit keeps its unclosed subquery. `undefined`
+ * when every `(` is closed.
  */
 export function repairUnbalancedParensForRecovery(text: string): string | undefined {
   const tokens = tokenize(text);
-  const open: number[] = [];
+  // Token offsets are UTF-16 units, so edit a UTF-16 unit array.
+  const units = text.split('');
+  let changed = false;
+  let tail = '';
+  let open: number[] = [];
+  const finish = (semicolonPos: number | undefined): void => {
+    let closers = 0;
+    for (const i of open) {
+      const next = tokens[i + 1];
+      if (next?.type === 'keyword' && next.value === 'ВЫБРАТЬ') closers++;
+      else { units[tokens[i].pos] = ' '; changed = true; }
+    }
+    open = [];
+    if (closers === 0) return;
+    if (semicolonPos === undefined) { tail += ')'.repeat(closers); changed = true; return; }
+    const isSpace = (at: number): boolean => at >= 0 && at < units.length && /\s/.test(units[at]);
+    let before = 0;
+    while (before < closers && isSpace(semicolonPos - 1 - before)) before++;
+    if (before === closers) {
+      for (let k = 1; k <= closers; k++) units[semicolonPos - k] = ')';
+      changed = true;
+      return;
+    }
+    let after = 0;
+    while (after < closers && isSpace(semicolonPos + 1 + after)) after++;
+    if (after === closers) {
+      for (let k = 0; k < closers; k++) units[semicolonPos + k] = ')';
+      units[semicolonPos + closers] = ';';
+      changed = true;
+    }
+  };
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
+    if (t.type === 'eof') { finish(undefined); break; }
     if (t.type !== 'punct') continue;
     if (t.value === '(') open.push(i);
     else if (t.value === ')') open.pop();
+    else if (t.value === ';') finish(t.pos);
   }
-  if (open.length === 0) return undefined;
-  let result = text;
-  let closers = '';
-  for (const i of open) {
-    const next = tokens[i + 1];
-    if (next?.type === 'keyword' && next.value === 'ВЫБРАТЬ') closers += ')';
-    else result = result.slice(0, tokens[i].pos) + ' ' + result.slice(tokens[i].pos + 1);
-  }
-  return result + closers;
+  return changed ? units.join('') + tail : undefined;
 }

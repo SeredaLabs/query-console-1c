@@ -45,6 +45,38 @@ describe('S2: recovery while typing', () => {
     });
   }
 
+  for (const [id, marked, alias, table] of [
+    ['section inside a source subquery', `ВЫБРАТЬ П.Ссылка ИЗ (ВЫБРАТЬ Т.Ссылка КАК Ссылка ${FROM} УПОРЯДОЧИТЬ ПО Т.¦ ,) КАК П`, 'Т', 'Справочник.Товары'],
+    ['section inside a condition subquery', `ВЫБРАТЬ Т.Ссылка ${FROM} ГДЕ Т.Контрагент В (ВЫБРАТЬ К.Ссылка ИЗ Справочник.Контрагенты КАК К СГРУППИРОВАТЬ ПО К.¦ ,)`, 'К', 'Справочник.Контрагенты'],
+    ['short section, member without ГДЕ', `ВЫБРАТЬ Т.Ссылка ${FROM} ИТОГИ ПО Т.¦`, 'Т', 'Справочник.Товары'],
+    ['short section after ГДЕ', `ВЫБРАТЬ Т.Ссылка ${FROM} ГДЕ Т.Ссылка = &С ИТОГИ ПО Т.¦`, 'Т', 'Справочник.Товары'],
+    ['unclosed subquery in a non-last statement (space before ;)', `ВЫБРАТЬ Т.Ссылка ${FROM} ГДЕ Т.Контрагент В (ВЫБРАТЬ К.¦ ИЗ Справочник.Контрагенты КАК К\n;\nВЫБРАТЬ 1`, 'К', 'Справочник.Контрагенты'],
+    ['unclosed subquery in a non-last statement (space after ;)', `ВЫБРАТЬ Т.Ссылка ${FROM} ГДЕ Т.Контрагент В (ВЫБРАТЬ К.¦ ИЗ Справочник.Контрагенты КАК К;\nВЫБРАТЬ 1`, 'К', 'Справочник.Контрагенты'],
+  ]) {
+    it(`${id}: completion after \`${alias}.\``, () => {
+      expect(completionAt(marked, alias)).toBe(table);
+      expect(buildSemanticSnapshotFromText(1, marked.replace('¦', ''), resolver).completeness).toBe('recovered');
+    });
+  }
+
+  it('the statement after a repaired unclosed subquery keeps its own positions', () => {
+    const text = `ВЫБРАТЬ Т.Ссылка ${FROM} ГДЕ Т.Контрагент В (ВЫБРАТЬ К. ИЗ Справочник.Контрагенты КАК К;\nВЫБРАТЬ К.Ссылка ИЗ Справочник.Контрагенты КАК К`;
+    expect(completionAt(text.replace(/К\.Ссылка ИЗ/, 'К.¦Ссылка ИЗ'), 'К')).toBe('Справочник.Контрагенты');
+    const fixed = repairUnbalancedParensForRecovery(text)!;
+    expect(fixed).toHaveLength(text.length);
+    expect(fixed).toBe(text.replace('КАК К;\n', 'КАК К);'));
+  });
+
+  it('an unclosed ( in one statement does not pair with a ) of the next one', () => {
+    const text = 'ВЫБРАТЬ ПОДСТРОКА(Т.Код ИЗ Справочник.Товары КАК Т;\nВЫБРАТЬ (1) КАК А';
+    expect(repairUnbalancedParensForRecovery(text)).toBe(text.replace('ПОДСТРОКА(', 'ПОДСТРОКА '));
+  });
+
+  it('a valid query with sections inside subqueries stays complete', () => {
+    const text = `ВЫБРАТЬ Т.Ссылка ${FROM} ГДЕ Т.Контрагент В (ВЫБРАТЬ К.Ссылка ИЗ Справочник.Контрагенты КАК К СГРУППИРОВАТЬ ПО К.Ссылка)`;
+    expect(buildSemanticSnapshotFromText(1, text, resolver).completeness).toBe('complete');
+  });
+
   it('a broken ORDER BY in one statement keeps the other statements', () => {
     const text = `ВЫБРАТЬ Т.Ссылка ${FROM};\nВЫБРАТЬ К.Ссылка ИЗ Справочник.Контрагенты КАК К УПОРЯДОЧИТЬ ПО К. ,`;
     const snapshot = buildSemanticSnapshotFromText(1, text, resolver);

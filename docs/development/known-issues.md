@@ -12,9 +12,8 @@ in the [technical-debt ledger](technical-debt.md); historical verdicts remain in
 - Aliases inside a condition subquery kept as custom text (inside an `ИЛИ`
   chain, `НЕ ИСТИНА В (…)`) are not resolved; structured `ГДЕ`/`ИМЕЮЩИЕ … В
   (ВЫБРАТЬ …)` subqueries are (S1). Typing recovery (S2) keeps assistance for an
-  unclosed `(` and for broken top-level ORDER/GROUP/TOTALS/INDEX sections, but not
-  for a broken section inside a subquery or an unclosed subquery in a non-last
-  batch statement. Source-subquery and ordinary batch alias scoping already
+  unclosed `(` and for broken ORDER/GROUP/TOTALS/INDEX sections, including inside
+  subqueries. Source-subquery and ordinary batch alias scoping already
   use the position-aware resolver; the old flat resolver is tooling-only.
 - A temporary-table producer with a tabular-section projection/trailing fields
   yields different column sets in star expansion, designer and semantic schema

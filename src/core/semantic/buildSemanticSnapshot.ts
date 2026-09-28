@@ -61,7 +61,8 @@ function withSymbolIndex(snapshot: SemanticSnapshot): SemanticSnapshot {
  *     the unclosed-parenthesis repair (when needed), then on top of it
  *     `repairSelectListsForRecovery` (placeholder SELECT lists, keeping
  *     `ИЗ`/aliases/joins), `repairTrailingSectionsForRecovery` (blanked
- *     ORDER/GROUP/TOTALS/INDEX sections) and both together. Every repair keeps
+ *     ORDER/GROUP/TOTALS/INDEX sections, statement level, then also inside
+ *     subqueries) and both together. Every repair keeps
  *     original offsets, so `sourceMapEvents` are kept. A recovered model's own
  *     SELECT-list fields may be placeholders, not the user's real fields —
  *     consumers that need real field data (not just source/alias visibility)
@@ -91,7 +92,7 @@ export function buildSemanticSnapshotFromText(
     const sink = new RecordingBatchSourceMapSink();
     const model = parseBatch(sourceText, resolver, { batchSourceMap: sink });
     plain = withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, model, 'complete', sink.events));
-    if (parens === undefined) return plain;
+    if (parens === undefined) return preferNestedRecovery(plain, documentVersion, sourceText, resolver);
   } catch {
     // falls through to the recovery attempts below
   }
@@ -100,11 +101,15 @@ export function buildSemanticSnapshotFromText(
   // when only a trailing section is broken (C18/C19).
   const base = parens ?? sourceText;
   const selects = safeRepair(() => repairSelectListsForRecovery(base));
+  const sections = (text: string | undefined, nested: boolean): string | undefined =>
+    text === undefined ? undefined : safeRepair(() => repairTrailingSectionsForRecovery(text, nested));
   const candidates = [
     parens,
     selects,
-    safeRepair(() => repairTrailingSectionsForRecovery(base)),
-    selects === undefined ? undefined : safeRepair(() => repairTrailingSectionsForRecovery(selects)),
+    sections(base, false),
+    sections(selects, false),
+    sections(base, true),
+    sections(selects, true),
   ];
   for (const repairedText of candidates) {
     if (repairedText === undefined) continue;
@@ -140,4 +145,29 @@ function safeRepair(repair: () => string | undefined): string | undefined {
 /** Same length, or only `)` appended after the original end. */
 function keepsOffsets(source: string, repaired: string): boolean {
   return repaired.length >= source.length && /^\)*$/.test(repaired.slice(source.length));
+}
+
+/**
+ * S2: a broken section inside a condition subquery (`В (ВЫБРАТЬ … СГРУППИРОВАТЬ
+ * ПО К. ,)`) does not fail the parse: the whole subquery silently stays custom
+ * text, so its aliases are lost. When the text has sections inside subqueries,
+ * the nested section repair is tried too and kept only if it yields MORE source
+ * aliases; otherwise the complete snapshot is returned unchanged.
+ */
+function preferNestedRecovery(
+  plain: SemanticSnapshot,
+  documentVersion: number,
+  sourceText: string,
+  resolver: MetadataResolver | undefined,
+): SemanticSnapshot {
+  const nested = safeRepair(() => repairTrailingSectionsForRecovery(sourceText, true));
+  if (nested === undefined || nested === safeRepair(() => repairTrailingSectionsForRecovery(sourceText, false))) return plain;
+  try {
+    const sink = new RecordingBatchSourceMapSink();
+    const model = parseBatch(nested, resolver, { batchSourceMap: sink });
+    const recovered = withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, model, 'recovered', sink.events));
+    return recovered.index.symbolsById.size > plain.index.symbolsById.size ? recovered : plain;
+  } catch {
+    return plain;
+  }
 }

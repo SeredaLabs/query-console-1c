@@ -30,8 +30,7 @@ not checked. Editor diagnostics report syntax errors only; a missing field is
 reported by the designer, not underlined in the editor.
 
 English SDBL is currently unsupported. Completion does not resolve aliases of a
-condition subquery written inside a custom expression (for example an `ИЛИ` chain). A broken
-section or an unclosed parenthesis inside a subquery can still hide its sources.
+condition subquery written inside a custom expression (for example an `ИЛИ` chain).
 The Query Text parameter list and generated parameter boilerplate may include
 `&name` from strings/comments; parameter hover/completion use lexer tokens.
 Parameter suggestions can also fail while the name after `&` is still empty.
