@@ -68,12 +68,13 @@ describe('buildSemanticSnapshotFromText', () => {
     expect(snapshot.sourceMapEvents).toEqual([]);
   });
 
-  it("a query with an unterminated string literal (common mid-edit state) yields completeness 'unavailable' instead of throwing, since the lexer itself fails during repair", () => {
+  it("a query with an unterminated string literal (common mid-edit state) is recovered, not thrown or unavailable (S2)", () => {
     const midEdit = 'ВЫБРАТЬ Т.Поле ИЗ Справочник.Валюты КАК Т ГДЕ Т.Поле = "abc';
     expect(() => buildSemanticSnapshotFromText(1, midEdit)).not.toThrow();
     const snapshot = buildSemanticSnapshotFromText(1, midEdit);
-    expect(snapshot.completeness).toBe('unavailable');
-    expect(snapshot.model.members).toEqual([]);
+    expect(snapshot.completeness).toBe('recovered');
+    expect(snapshot.model.members[0].members[0].model.tables.map(t => t.alias)).toEqual(['Т']);
+    expect(hasTrustworthyPositions(snapshot)).toBe(true);
   });
 
   it('sourceHash reflects the ORIGINAL text passed in, not any internally-repaired variant', () => {

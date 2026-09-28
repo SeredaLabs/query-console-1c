@@ -7,7 +7,8 @@
  * unchanged from the original, except that the placeholder now preserves the
  * replaced segment's length (see `blankSelectList`).
  */
-import { tokenize } from './sdblLexer';
+import { tokenize, SdblLexError } from './sdblLexer';
+import type { Token } from './sdblLexer';
 
 /**
  * Best-effort відновлення для консьюмерів, яким потрібен лише блок `ИЗ` (звідки
@@ -250,4 +251,38 @@ export function repairUnbalancedParensForRecovery(text: string): ParenRepair | u
     from = at;
   }
   return { text: result + units.slice(from).join(''), inserted };
+}
+
+/**
+ * S2: text being typed can fail to lex (bare `&`/`#`, unclosed string or date
+ * literal). Each lexical failure is blanked with spaces of the same length and
+ * the text re-lexed, so every offset stays exact and everything already typed
+ * keeps its tokens. The lexer decides what failed and how far (`SdblLexError`):
+ * a bare `&`/`#` or unexpected character blanks one character; an unclosed
+ * literal blanks the rest of the text (its content is inside the literal). Each
+ * retry must blank at least one character that was not already a space or line
+ * break; when it cannot, the original error is rethrown, so the loop always ends.
+ *
+ * Shared by the parameter scan (`queryParameters.ts`, uses `tokens`) and semantic
+ * recovery (`buildSemanticSnapshot.ts`, uses `text` as the base for the other
+ * repairs). `text === input` when the input lexes as is.
+ */
+export function repairLexicalErrorsForRecovery(input: string): { text: string; tokens: Token[] } {
+  let text = input;
+  for (;;) {
+    try {
+      return { text, tokens: tokenize(text) };
+    } catch (e) {
+      if (!(e instanceof SdblLexError)) throw e;
+      // `slice` with a negative or NaN offset would rebuild a different (even
+      // longer) text, so an offset outside the text is passed on as is too.
+      if (!(e.pos >= 0 && e.pos < text.length)) throw e;
+      const end = e.extent === 'unclosedLiteral' ? text.length : e.pos + 1;
+      const next = text.slice(0, e.pos) + text.slice(e.pos, end).replace(/[^\n]/g, ' ') + text.slice(end);
+      // Progress is the termination invariant: an error the blanking cannot remove
+      // (at a space or line break) is passed on unchanged.
+      if (next === text) throw e;
+      text = next;
+    }
+  }
 }

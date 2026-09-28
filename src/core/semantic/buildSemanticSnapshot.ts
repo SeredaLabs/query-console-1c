@@ -35,7 +35,12 @@
  */
 import { parseBatch } from '../query/sdblParser';
 import type { MetadataResolver } from '../query/metadataResolver';
-import { repairSelectListsForRecovery, repairTrailingSectionsForRecovery, repairUnbalancedParensForRecovery } from '../query/selectListRepair';
+import {
+  repairLexicalErrorsForRecovery,
+  repairSelectListsForRecovery,
+  repairTrailingSectionsForRecovery,
+  repairUnbalancedParensForRecovery,
+} from '../query/selectListRepair';
 import type { BatchDocument } from '../query/batchModel';
 import { RecordingBatchSourceMapSink } from '../query/sourceMap';
 import { createSemanticSnapshot, type SemanticSnapshot } from './semanticSnapshot';
@@ -58,7 +63,8 @@ function withSymbolIndex(snapshot: SemanticSnapshot): SemanticSnapshot {
  *  1. a plain `parseBatch` — `completeness: 'complete'`, unless the text has an
  *     unclosed `(` (it can swallow ИЗ while still parsing; S2).
  *  2. recovery repairs, least destructive first — `completeness: 'recovered'`:
- *     the unclosed-parenthesis repair (when needed), then on top of it
+ *     lexical errors blanked (`repairLexicalErrorsForRecovery`, when needed) and
+ *     the unclosed-parenthesis repair (when needed), then on top of them
  *     `repairSelectListsForRecovery` (placeholder SELECT lists, keeping
  *     `ИЗ`/aliases/joins), `repairTrailingSectionsForRecovery` (blanked
  *     ORDER/GROUP/TOTALS/INDEX sections, statement level, then also inside
@@ -81,10 +87,14 @@ export function buildSemanticSnapshotFromText(
   sourceText: string,
   resolver?: MetadataResolver,
 ): SemanticSnapshot {
+  // S2: every repair below tokenizes, so a lexical error while typing (bare `&`,
+  // unclosed string) is blanked first; otherwise no repair could run at all.
+  // Identical to `sourceText` when the text lexes.
+  const lexical = safeRepair(() => repairLexicalErrorsForRecovery(sourceText).text) ?? sourceText;
   // S2: with an unclosed `(` a parse can succeed and still be unusable (the
   // parenthesis swallows ИЗ: no sources). Such text is recovered first; the
   // plain parse is kept only when no repair parses.
-  const parens = safeRepair(() => repairUnbalancedParensForRecovery(sourceText));
+  const parens = safeRepair(() => repairUnbalancedParensForRecovery(lexical));
   let plain: SemanticSnapshot | undefined;
   try {
     const sink = new RecordingBatchSourceMapSink();
@@ -97,13 +107,13 @@ export function buildSemanticSnapshotFromText(
 
   // Recovery candidates, least destructive first: real SELECT lists are kept
   // when only a trailing section is broken (C18/C19).
-  const base = parens?.text ?? sourceText;
+  const base = parens?.text ?? lexical;
   const inserted = parens?.inserted ?? [];
   const selects = safeRepair(() => repairSelectListsForRecovery(base));
   const sections = (text: string | undefined, nested: boolean): string | undefined =>
     text === undefined ? undefined : safeRepair(() => repairTrailingSectionsForRecovery(text, nested));
   const candidates = [
-    parens?.text,
+    base === sourceText ? undefined : base,
     selects,
     sections(base, false),
     sections(selects, false),
