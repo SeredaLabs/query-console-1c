@@ -65,7 +65,8 @@ import { expandTabSectionFields } from './expandTabSectionFields';
 import { wrapTabSectionAggregates } from './wrapTabSectionAggregates';
 import { dropUserIBConditions } from './dropUserIBConditions';
 import { dropUnlimitedStringConditions } from './dropUnlimitedStringConditions';
-import { qualifyBareFields, qualifyBareSectionFields, setSubqueryParser } from './qualifyBareFields';
+import { qualifyBareFields, qualifyBareSectionFields, setSubqueryParser, sourceInfosOf, correlatedOuterAlias, isCorrelatedAliasHead } from './qualifyBareFields';
+import type { SourceInfo } from './qualifyBareFields';
 import { resolveBuilderStar } from './resolveBuilderStar';
 import { dropRedundantGroupDerefs, moveLeadingMovementCaseToEnd, moveBeforePrefixGroupDerefToEnd, substituteGroupFieldWithSelectExpr, dropFunctionallyDeterminedMovementCase, relocateKeptMovementCase } from './dropRedundantGroupDerefs';
 import { canonicalizeFieldCasing } from './canonicalizeFieldCasing';
@@ -97,6 +98,14 @@ let subquerySourceDepth = 0;
  * остаток текста. Максимум по золотому корпусу — 3; лимит взят с 10-кратным запасом.
  */
 let subqueryRecursionDepth = 0;
+
+/**
+ * C4: source levels of the enclosing queries, nearest first, visible to a
+ * subquery parsed inside a condition (ГДЕ/ИМЕЮЩИЕ/ПО). `undefined` everywhere
+ * else (top level, select list, FROM), so correlated rebinding never skips the
+ * level that actually encloses the subquery.
+ */
+let conditionOuterLevels: SourceInfo[][] | undefined;
 const MAX_SUBQUERY_RECURSION_DEPTH = 32;
 class SubqueryRecursionLimitError extends Error {}
 function withSubqueryRecursionGuard<T>(fn: () => T): T {
@@ -634,6 +643,21 @@ function parseSingleQuery(
   inheritedSectionCtx?: SectionResolveContext,
   ctxOut?: { ctx?: SectionResolveContext; cur?: Cursor }
 ): QueryModel {
+  const outerLevels = conditionOuterLevels;
+  conditionOuterLevels = undefined;
+  try {
+    return parseSingleQueryBody(cur, outerLevels, inheritedSectionCtx, ctxOut);
+  } finally {
+    conditionOuterLevels = outerLevels;
+  }
+}
+
+function parseSingleQueryBody(
+  cur: Cursor,
+  outerLevels: SourceInfo[][] | undefined,
+  inheritedSectionCtx?: SectionResolveContext,
+  ctxOut?: { ctx?: SectionResolveContext; cur?: Cursor }
+): QueryModel {
   // Синтез источника `ИЗ` из полных путей полей `Тип.Объект.поле` при отсутствии
   // секции `ИЗ` (фаза 6.16.17): возвращает переписанный курсор либо исходный.
   cur = synthesizeImplicitFrom(cur);
@@ -716,6 +740,19 @@ function parseSingleQuery(
   const trailingFields: SelectedField[] = [];
   // Единственный источник → можно квалифицировать голые поля без метаинформации.
   const soleSource = soleSourceOf(tables, joins);
+  if (soleSource && outerLevels && sourceResolver) {
+    const [sole] = sourceInfosOf(tables, sourceResolver);
+    soleSource.outerOwner = name => correlatedOuterAlias(sole, name, outerLevels);
+    soleSource.outerAliasHead = head => isCorrelatedAliasHead(sole, head, outerLevels);
+  }
+  // Levels passed to subqueries inside this query's conditions.
+  let ownLevels: SourceInfo[][] | undefined;
+  const inConditions = <T>(parse: () => T): T => {
+    ownLevels ??= [sourceInfosOf(tables, sourceResolver), ...(outerLevels ?? [])];
+    const prev = conditionOuterLevels;
+    conditionOuterLevels = ownLevels;
+    try { return parse(); } finally { conditionOuterLevels = prev; }
+  };
   // Резолвер владельца голого поля (фаза 6.15.4, MCP): при единственном источнике —
   // он; при нескольких — таблица, у которой это поле встречается в запросе
   // квалифицированным (`<псевдоним>.<поле>`) РОВНО у одного псевдонима. Конструктор
@@ -814,7 +851,7 @@ function parseSingleQuery(
         range: { start: first.pos, end: last.pos + last.text.length },
       });
     }
-    return resolveJoin(j, aliasToId, cur.source);
+    return inConditions(() => resolveJoin(j, aliasToId, cur.source));
   });
 
   // Секции после ИЗ — в каноническом порядке генератора:
@@ -822,7 +859,7 @@ function parseSingleQuery(
   //   → УПОРЯДОЧИТЬ ПО → ИТОГИ → ИНДЕКСИРОВАТЬ ПО → ДЛЯ ИЗМЕНЕНИЯ.
   let conditions: Condition[] | undefined;
   if (cur.isKeyword('ГДЕ')) {
-    conditions = parseWhere(cur, aliasToId, soleSource, aliasSpelling);
+    conditions = inConditions(() => parseWhere(cur, aliasToId, soleSource, aliasSpelling));
   }
 
   // Чтение блока построителя `{ГДЕ …}` с синтезом автопсевдонимов условий-выражений.
@@ -863,7 +900,7 @@ function parseSingleQuery(
   // ИМЕЮЩИЕ — фильтр по агрегатам, сразу за СГРУППИРОВАТЬ ПО.
   let having: Condition[] | undefined;
   if (cur.isKeyword('ИМЕЮЩИЕ')) {
-    having = parseHaving(cur, aliasToId);
+    having = inConditions(() => parseHaving(cur, aliasToId));
   }
 
   // `{ГДЕ …}` может стоять и ПОСЛЕ СГРУППИРОВАТЬ ПО/ИМЕЮЩИЕ (разработчик дописал
@@ -2486,6 +2523,10 @@ interface SoleSource {
   /** Полное имя источника-таблицы (`Документ.ДокументЭДОБЗК`) — для снятия его
    * ведущего префикса из голого пути поля (`Документ.ДокументЭДОБЗК.Поле` → `Поле`). */
   fullName?: string;
+  /** C4: outer alias owning a bare condition field this source lacks (see `correlatedOuterAlias`). */
+  outerOwner?: (name: string) => string | undefined;
+  /** C4: the head of a dotted bare path is an enclosing query's alias (`isCorrelatedAliasHead`). */
+  outerAliasHead?: (head: string) => boolean;
 }
 
 /**
@@ -2672,7 +2713,8 @@ function qualifyBareFieldsInExpression(
   tokens: Token[],
   source: string,
   aliasSpelling: Map<string, string>,
-  soleAlias: string | undefined
+  soleAlias: string | undefined,
+  outerOwner?: (name: string) => string | undefined
 ): string {
   const edits: { pos: number; len: number; text: string }[] = [];
   let depth = 0;
@@ -2733,7 +2775,7 @@ function qualifyBareFieldsInExpression(
         // (`Код` → `Алиас.Код`). Многосегментная цепочка с НЕобъявленной головой
         // (`Регионы.КодСубъектаРФ`) — коррелированная ссылка на внешнюю таблицу:
         // оставляем как есть, иначе сломали бы коррелированный подзапрос (фаза 6.15.27).
-        edits.push({ pos: t.pos, len: 0, text: `${soleAlias}.` });
+        edits.push({ pos: t.pos, len: 0, text: `${outerOwner?.(t.text) ?? soleAlias}.` });
       }
     }
     i = j;
@@ -2927,6 +2969,9 @@ function interpretCondition(
   if (soleSource) {
     const bare = tryBareField(tokens, aliasToId);
     if (bare) {
+      if (bare.path.includes('.') && soleSource.outerAliasHead?.(bare.head)) return { custom: true, expression: bare.path };
+      const outer = soleSource.outerOwner?.(bare.head);
+      if (outer) return { custom: true, expression: `${outer}.${bare.path}` };
       return { custom: true, expression: `${soleSource.alias}.${stripOwnerFullName(bare.path, soleSource.fullName)}` };
     }
     // Отрицание голого поля при единственном источнике (`ГДЕ НЕ ПометкаУдаления` →
@@ -2935,6 +2980,9 @@ function interpretCondition(
     if (tokens.length > 1 && isNotToken(tokens[0])) {
       const negBare = tryBareField(tokens.slice(1), aliasToId);
       if (negBare) {
+        if (negBare.path.includes('.') && soleSource.outerAliasHead?.(negBare.head)) return { custom: true, expression: `НЕ ${negBare.path}` };
+        const outer = soleSource.outerOwner?.(negBare.head);
+        if (outer) return { custom: true, expression: `НЕ ${outer}.${negBare.path}` };
         return { custom: true, expression: `НЕ ${soleSource.alias}.${stripOwnerFullName(negBare.path, soleSource.fullName)}` };
       }
     }
@@ -2945,7 +2993,7 @@ function interpretCondition(
   // к объявленному. Без единственного источника — дословный срез, как раньше.
   const customText = (): string =>
     soleSource && aliasSpelling
-      ? qualifyBareFieldsInExpression(tokens, source, aliasSpelling, soleSource.alias)
+      ? qualifyBareFieldsInExpression(tokens, source, aliasSpelling, soleSource.alias, soleSource.outerOwner)
       : sliceSource(source, tokens);
   // Скобки вокруг условия-параметра целиком (`И (&ТекстУсловия)` → `И &ТекстУсловия`):
   // конструктор 1С снимает скобки, когда всё условие ГДЕ — единственный голый
@@ -3013,6 +3061,13 @@ function trySimpleCondition(
   // Голое поле слева (`Код = &Код` при единственном источнике) → квалифицируем
   // псевдонимом источника, как сделал бы конструктор 1С.
   const direct = parseFieldRef(lhs, aliasToId);
+  // A correlated bare LHS belongs to an outer source, which cannot be a tableId of
+  // this model: keep the segment as custom text qualified with that outer alias.
+  if (!direct && soleSource?.outerOwner) {
+    const bare = tryBareField(lhs, aliasToId);
+    if (bare && (soleSource.outerOwner(bare.head) ||
+      (bare.path.includes('.') && soleSource.outerAliasHead?.(bare.head)))) return undefined;
+  }
   const ref = direct
     ?? (soleSource
       ? bareLhsRef(lhs, aliasToId, soleSource)
@@ -3109,7 +3164,7 @@ function trySimpleCondition(
     ? (aliasSpelling?.get(lhs[0].text.toUpperCase()) ?? lhs[0].text)
     : soleSource!.alias;
   const rhsText = aliasSpelling
-    ? qualifyBareFieldsInExpression(paramTokens, source, aliasSpelling, soleSource?.alias)
+    ? qualifyBareFieldsInExpression(paramTokens, source, aliasSpelling, soleSource?.alias, soleSource?.outerOwner)
     : param;
   const expr = `${lhsAlias}.${ref.path} ${renderOperatorRhs(op, normalizeLeafCase(rhsText))}`;
   // Консервативный гейт: выражение, заводящее форматер (ВЫБОР/ИЛИ/НЕ-группа),

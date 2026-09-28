@@ -65,9 +65,9 @@ Accounting-register `Субконто(...)` parameters are supported and regress
 tested; older documentation that marked them unsafe is obsolete.
 
 Temporary-table producers containing tabular-section projections can expose
-different column sets in star expansion and semantic assistance. A bare field
-in a subquery condition may bind to the inner source even when it belongs to an
-outer source. See [known issues](../development/known-issues.md) for the verified
+different column sets in star expansion and semantic assistance. Without
+metadata for the inner source, a bare field in a subquery condition may bind to
+the inner source even when it belongs to an outer source. See [known issues](../development/known-issues.md) for the verified
 boundaries and evidence still needed.
 
 ## 🗂️ Metadata boundaries

@@ -79,15 +79,13 @@ in the [technical-debt ledger](technical-debt.md); historical verdicts remain in
   remains fail-open. Editor diagnostics run the parser plus the structural
   expression check that gates Apply (`findMalformedCustomExpressions`); they
   do not check metadata (unknown fields or tables).
-- A bare field in a standard condition of a sole-source subquery is bound by
-  the parser to that source even when the source lacks the field and the
-  field really belongs to an enclosing query (a valid correlated reference):
-  `ГДЕ Цена > 0` inside `(ВЫБРАТЬ … ИЗ Справочник.В КАК В)` is generated as
-  `В.Цена`. The select-list counterpart is rebound to the outer owner
-  (`qualifyBareFields`, oracle-verified); for conditions the real
-  constructor's output has not been verified, so the binding is left as is and
-  the validator skips conditions inside subqueries instead of reporting a
-  false "field not found".
+- Without metadata for the inner source, a bare field in a condition of a
+  sole-source subquery is still bound to that source even when it belongs to an
+  enclosing query: `ГДЕ Цена > 0` inside `(ВЫБРАТЬ … ИЗ Справочник.В КАК В)` is
+  generated as `В.Цена`. With metadata it is rebound to the single nearest
+  enclosing owner (C4), matching the select list; the constructor's exact
+  canonical text for this case is not live-verified. The validator still skips
+  conditions inside subqueries instead of reporting a false "field not found".
 
 These are documented user boundaries, not permission to weaken tests. Add a
 regression test when fixing one and update all three limitations pages.

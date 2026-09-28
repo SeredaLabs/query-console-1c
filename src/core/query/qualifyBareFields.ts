@@ -25,7 +25,7 @@
  * псевдонимы после `КАК`.
  */
 import { tokenize, type Token } from './sdblLexer';
-import type { QueryModel, SelectedField, Condition, FieldRef } from './queryModel';
+import type { QueryModel, SelectedField, SelectedTable, Condition, FieldRef } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import type { QueryDocument } from './unionModel';
 import { resolveAliases } from './queryModelUtils';
@@ -66,7 +66,7 @@ const TYPE_PREFIXES = new Set([
   'ОПРЕДЕЛЯЕМЫЙТИП', 'ХРАНИЛИЩЕНАСТРОЕК', 'ВНЕШНИЙИСТОЧНИКДАННЫХ', 'ТАБЛИЦА',
 ]);
 
-interface SourceInfo {
+export interface SourceInfo {
   /** `SelectedTable.id` — нужен, щоб звужувати `sources` до видимих у конкретному
    * JOIN за `computeJoinVisibility` (не для зовнішніх/`outerLevels`: там своя
    * модель — рівні від найближчого, id не потрібен). */
@@ -132,21 +132,18 @@ function subqueryColumns(doc: QueryDocument): Set<string> {
   return cols;
 }
 
-function buildContext(
-  model: QueryModel,
-  resolver: MetadataResolver | undefined,
-  outerAliases: Set<string> = new Set(),
-  outerLevels: SourceInfo[][] = []
-): OwnerContext {
+/**
+ * Известный состав колонок каждого источника (по метаданным / выходу подзапроса).
+ * Общий для пост-пасса и для парсера, который при разборе условий передаёт эти
+ * уровни вложенным подзапросам (C4, `correlatedOuterAlias`).
+ */
+export function sourceInfosOf(tables: readonly SelectedTable[], resolver: MetadataResolver | undefined): SourceInfo[] {
   const sources: SourceInfo[] = [];
-  const aliases = new Set<string>();
-  const aliasSpelling = new Map<string, string>();
   // Те же псевдонимы, что печатает генератор (синтез по `defaultTableAlias` с
   // дедупликацией) — иначе квалификация навесит неверный префикс.
-  const aliasMap = resolveAliases(model.tables);
-  for (const t of model.tables) {
+  const aliasMap = resolveAliases([...tables]);
+  for (const t of tables) {
     const alias = aliasMap.get(t.id) ?? t.alias ?? t.fullName;
-    if (alias) { aliases.add(up(alias)); aliasSpelling.set(up(alias), alias); }
     if (t.subquery) {
       const cols = subqueryColumns(t.subquery);
       sources.push({ id: t.id, alias, fields: cols.size > 0 ? cols : undefined, wildcard: cols.size === 0 });
@@ -177,6 +174,48 @@ function buildContext(
       sources.push({ id: t.id, alias, wildcard: true });
     }
   }
+  return sources;
+}
+
+/**
+ * C4: псевдоним ВНЕШНЕГО источника для голого поля условия коррелированного
+ * подзапроса с единственным источником `sole`. Только когда по метаданным у `sole`
+ * поля точно нет, а на ближайшем объемлющем уровне, где оно есть, владелец ровно
+ * один (то же live-проверенное правило, что и для списка выборки). Иначе undefined —
+ * вызывающий оставляет прежнюю привязку к единственному источнику.
+ */
+export function correlatedOuterAlias(sole: SourceInfo, name: string, outerLevels: readonly SourceInfo[][]): string | undefined {
+  const N = up(name);
+  if (outerLevels.length === 0 || !sole.fields || sole.fields.has(N)) return undefined;
+  const owners = matchesAtNearestLevel(os => os.fields?.has(N) ?? false, outerLevels);
+  return owners.length === 1 ? owners[0].alias : undefined;
+}
+
+/**
+ * C4: голова `X` пути `X.Поле` в условии такого же подзапроса — псевдоним
+ * объемлющего источника (явная коррелированная ссылка), а не поле единственного
+ * источника: по метаданным у `sole` поля `X` нет. Без метаданных не решаем.
+ */
+export function isCorrelatedAliasHead(sole: SourceInfo, head: string, outerLevels: readonly SourceInfo[][]): boolean {
+  const N = up(head);
+  if (!sole.fields || sole.fields.has(N)) return false;
+  return outerLevels.some(level => level.some(src => up(src.alias) === N));
+}
+
+function buildContext(
+  model: QueryModel,
+  resolver: MetadataResolver | undefined,
+  outerAliases: Set<string> = new Set(),
+  outerLevels: SourceInfo[][] = []
+): OwnerContext {
+  const aliases = new Set<string>();
+  const aliasSpelling = new Map<string, string>();
+  const aliasMap = resolveAliases(model.tables);
+  for (const t of model.tables) {
+    const alias = aliasMap.get(t.id) ?? t.alias ?? t.fullName;
+    if (alias) { aliases.add(up(alias)); aliasSpelling.set(up(alias), alias); }
+  }
+  const sources = sourceInfosOf(model.tables, resolver);
   return { aliases, aliasSpelling, outerAliases, outerLevels, sources, resolver, parseDoc: activeParseDoc };
 }
 
