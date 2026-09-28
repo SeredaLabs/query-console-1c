@@ -71,7 +71,7 @@ They are decomposition constraints for A1, not extra urgent refactor tickets.
 
 | ID / status / severity | Area, evidence and impact | Dependency → next action |
 |---|---|---|
-| D1 · CLOSED · P3 | Corrected source comments for symbol wiring, recovered source maps, semantic Apply checks, shipped parameter support, unsafe-marker coverage, malformed-expression traversal and lexer failures (D03–D09 in the reconciliation). | Comment-only changes; C7/S1/S2/S3 limitations remain open. |
+| D1 · CLOSED · P3 | Corrected source comments for symbol wiring, recovered source maps, semantic Apply checks, shipped parameter support, unsafe-marker coverage, malformed-expression traversal and lexer failures (D03–D09 in the reconciliation). | Comment-only maintenance; current C7/S1/S2/S3 contracts are reflected in source comments. |
 
 ## Unknown / awaiting evidence
 
