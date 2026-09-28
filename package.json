@@ -151,7 +151,7 @@
     "watch:extension": "tsc -p tsconfig.json --watch",
     "watch:webview": "npm run build:webview -- --watch",
     "test:unit": "vitest run",
-    "pretest:e2e": "npm run build:webview && node scripts/copy-files.mjs test/e2e/harness/main.js out/webview/main.js",
+    "pretest:e2e": "npm run build:webview && npm run build:canvas && node scripts/copy-files.mjs test/e2e/harness/ out/webview/main.js out/webview/canvasApp.js out/webview/codicon.css out/webview/codicon.ttf",
     "test:e2e": "playwright test",
     "pretest:integration": "npm run build && tsc -p tsconfig.test-integration.json",
     "test:integration": "vscode-test",

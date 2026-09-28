@@ -9,13 +9,11 @@
  * needs no new segment kind: it's simply a `table` segment followed by another
  * `union`/`table` chain for what's inside it.
  *
- * Deliberately NOT wired into `SemanticIndex`/`createSemanticSnapshot` yet —
- * that wiring, plus building an actual `Scope` tree (mirroring `computeJoinVisibility`'s
- * join tree and the correlation ancestor chain), is Phase 3b's job, once
- * `resolveAliasAt(position)` exists to actually consume them. This phase only
- * proves symbols can be collected correctly; a bare per-snapshot counter is
- * enough for that (matches Refinement 3: identity only needs to be stable
- * WITHIN one snapshot, never across reparses).
+ * `buildSemanticSnapshotFromText` installs these symbols in `SemanticIndex`;
+ * `resolveAliasAt` consumes them. Scope/reference maps remain empty. The walk
+ * covers source subqueries, not condition subqueries (technical debt S1).
+ * Identity only needs to be stable WITHIN one snapshot, never across reparses,
+ * so a per-snapshot counter is sufficient.
  */
 import type { BatchDocument } from '../query/batchModel';
 import type { QueryDocument } from '../query/unionModel';

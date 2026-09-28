@@ -16,10 +16,10 @@
  * restriction the way table aliases have.
  *
  * Deliberately works from raw text, not a `SemanticSnapshot` — the lexer
- * never throws on structurally broken SDBL the way `parseBatch` can, so this
- * stays available even for a `'recovered'`/`'unavailable'` snapshot (the
- * exact v0.1.33 regression class other hover features had to special-case
- * around). No source-map recording needed either: unlike `virtualTableArg`
+ * does not require a structurally complete query, so this can remain available
+ * for a `'recovered'`/`'unavailable'` snapshot. Lexical errors (bare `&`, unclosed
+ * string) still throw and propagate to the caller (recovery debt S2).
+ * No source-map recording needed: unlike `virtualTableArg`
  * (which needs to know WHICH table/argument slot it's in), a parameter
  * occurrence carries no structural context to preserve — a direct lexer scan
  * over the caller's already-translated query text (the same coordinate

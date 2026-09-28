@@ -13,6 +13,10 @@ import { parseBatch } from '../../src/core/query/sdblParser';
 import { generateBatch } from '../../src/core/query/sdblGenerator';
 import { findUnsafeVirtualTables } from '../../src/core/query/semanticValidator';
 import type { BatchDocument } from '../../src/core/query/batchModel';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { buildYamlResolver } from '../../src/core/metadata/buildYamlResolver';
+import type { MetadataResolver } from '../../src/core/query/metadataResolver';
 
 /** Первая (единственная в фикстурах этого файла) виртуальная таблица разобранного пакета. */
 function firstTable(doc: BatchDocument) {
@@ -38,6 +42,56 @@ function withUnrelatedFieldAdded(doc: BatchDocument): BatchDocument {
 function roundTripWithUnrelatedEdit(text: string): string {
   return generateBatch(withUnrelatedFieldAdded(parseBatch(text)));
 }
+
+describe('accounting VT preservation with unavailable metadata (C1)', () => {
+  const input = readFileSync(resolve(__dirname, '../fixtures/queries/09-rb-oboroty.sdbl'), 'utf8');
+  const corpusResolver = buildYamlResolver(resolve(__dirname, '../fixtures/corpus/metadata/cf'))!;
+  const compatibleResolver: MetadataResolver = {
+    tableByFullName: fullName => fullName === 'РегистрБухгалтерии.Хозрасчетный' ? {
+      kind: 'РегистрБухгалтерии', name: 'Хозрасчетный', fullName, fields: [],
+      subcontoCount: 3, correspondence: true,
+    } : undefined,
+  };
+
+  for (const [name, resolver] of [
+    ['no resolver', undefined],
+    ['empty resolver', { tableByFullName: () => undefined }],
+    ['corpus missing this register', corpusResolver],
+    ['compatible register metadata', compatibleResolver],
+  ] as const) {
+    it(`${name}: retains argument positions after an unrelated edit and reopening`, () => {
+      const doc = parseBatch(input, resolver);
+      const params = firstTable(doc).virtual!;
+      expect(params.condition).toBe('Организация = &Орг');
+      expect(params.corrAccountCondition).toBe('СубконтоДт1 = &Суб');
+      expect(params.accountingArgs).toBeUndefined();
+      const edited = generateBatch(withUnrelatedFieldAdded(doc));
+      // The no-resolver fallback is the preservation control, not a platform-validity oracle.
+      expect(edited).toBe(roundTripWithUnrelatedEdit(input));
+      expect(generateBatch(parseBatch(edited, resolver))).toBe(edited);
+    });
+  }
+
+  it('the corpus control really has metadata but lacks this register', () => {
+    expect(corpusResolver).toBeDefined();
+    expect(corpusResolver.tableByFullName('РегистрБухгалтерии.Хозрасчетный')).toBeUndefined();
+  });
+
+  it('known metadata without subconto still controls the shorter layout', () => {
+    const resolver: MetadataResolver = {
+      tableByFullName: fullName => ({
+        kind: 'РегистрБухгалтерии', name: 'Тест', fullName, fields: [],
+        subcontoCount: 0, correspondence: false,
+      }),
+    };
+    const text = 'ВЫБРАТЬ Т.Счет ИЗ РегистрБухгалтерии.Тест.Остатки(&Дата, &Счет, Организация = &Орг) КАК Т';
+    const doc = parseBatch(text, resolver);
+    expect(firstTable(doc).virtual).toMatchObject({ subconto: false, condition: 'Организация = &Орг' });
+    const output = generateBatch(doc);
+    expect(output).toContain('Остатки(&Дата, &Счет, Организация = &Орг)');
+    expect(generateBatch(parseBatch(output, resolver))).toBe(output);
+  });
+});
 
 describe('VT round-trip — LOSSLESS (несвязанная правка не трогает параметры ВТ)', () => {
   const cases: Array<[string, string]> = [

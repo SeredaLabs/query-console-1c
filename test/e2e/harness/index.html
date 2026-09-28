@@ -77,6 +77,11 @@
       };
     };
   </script>
-  <script src="./main.js"></script>
+  <script>
+    const bundle = document.createElement('script');
+    bundle.src = new URLSearchParams(location.search).get('surface') === 'canvas'
+      ? './canvasApp.js' : './main.js';
+    document.body.appendChild(bundle);
+  </script>
 </body>
 </html>

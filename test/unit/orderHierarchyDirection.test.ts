@@ -25,6 +25,35 @@ const gen = (text: string, r?: MetadataResolver): string => generateBatch(parseB
 const firstOrderField = (text: string, r?: MetadataResolver): OrderField =>
   parseBatch(text, r).members[0].members[0].model.order!.fields[0];
 
+describe('C3: hierarchy preservation when source metadata is unavailable', () => {
+  const known = (hierarchical?: boolean): MetadataResolver => ({
+    tableByFullName: fullName => ({
+      kind: 'Справочник', name: 'ИдентификаторыОбъектовМетаданных', fullName,
+      fields: [], ...(hierarchical === undefined ? {} : { hierarchical }),
+    }),
+  });
+  const modes: Array<[string, MetadataResolver | undefined, boolean]> = [
+    ['no resolver', undefined, true],
+    ['missing source metadata', { tableByFullName: () => undefined }, true],
+    ['corpus hierarchical source', resolver, true],
+    ['known hierarchical source', known(true), true],
+    ['known nonhierarchical source', known(false), false],
+    ['known source without hierarchy flag', known(), false],
+  ];
+  for (const [name, r, keep] of modes) {
+    it.each(['', ' ВОЗР', ' УБЫВ'])(`${name}, direction '%s': preserves the existing known-metadata rule and reopens stably`, direction => {
+      const input = HEAD + 'Г.Наименование ИЕРАРХИЯ' + direction;
+      const expected = CANONICAL_HEAD + 'Г.Наименование' + (keep ? ' ИЕРАРХИЯ' : '') + (direction === ' УБЫВ' ? direction : '');
+      const doc = parseBatch(input, r);
+      expect(generateBatch(doc)).toBe(expected);
+      expect(gen(expected, r)).toBe(expected);
+      // An unrelated field alias edit must not drop the ORDER modifier either.
+      doc.members[0].members[0].model.fields[0].alias = 'ДругоеИмя';
+      expect(generateBatch(doc)).toBe(expected.replace('КАК Наименование', 'КАК ДругоеИмя'));
+    });
+  }
+});
+
 describe.each(MODES)('ORDER BY hierarchy + direction (%s)', (_mode, r) => {
   // [modifiers as written, expected model, expected generated field line]
   const VALID: Array<[string, { direction: 'asc' | 'desc'; hierarchy: boolean }, string]> = [

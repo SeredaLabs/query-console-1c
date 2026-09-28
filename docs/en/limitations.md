@@ -1,5 +1,5 @@
 <!--
-source_version: 7
+source_version: 9
 translation_status: canonical
 -->
 
@@ -41,8 +41,10 @@ not prove that the generated query means the same as the original.
 The New Builder (Canvas) is an experimental preview, available only when
 `queryConsole.enableNewBuilderPreview` is enabled. It reads, checks and writes
 queries through the same parser, generator and Apply checks as the Classic
-designer, so their fixes apply to both. Its own editing actions have not yet
-been verified end to end.
+designer, so their fixes apply to both. Browser tests cover representative
+round-trips, field/condition/sort edits and Save guards; a real VS Code test
+covers load, alias edit, Save and source insertion. These checks are not
+exhaustive coverage of its editing actions.
 
 ## ⛔ Round-trip exclusions
 
@@ -62,9 +64,6 @@ queries never produce) is blocked.
 Accounting-register `Субконто(...)` parameters are supported and regression
 tested; older documentation that marked them unsafe is obsolete.
 
-When a metadata resolver is present but lacks an accounting register, positional
-arguments can be lost during round-trip (`09-rb-oboroty`); its live-platform
-validity is still unverified. Without metadata, ORDER BY may drop `ИЕРАРХИЯ`.
 Temporary-table producers containing tabular-section projections can expose
 different column sets in star expansion and semantic assistance. A bare field
 in a subquery condition may bind to the inner source even when it belongs to an

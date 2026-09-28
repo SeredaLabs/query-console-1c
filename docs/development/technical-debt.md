@@ -1,14 +1,17 @@
 # Technical debt
 
-Authoritative current engineering-debt ledger, reconciled on 2026-09-27 against
-`b6286c57cfa64ff8cb9f937347c376d4b98d55c8`. The checkout `23188a4` differs only in
-release metadata/changelog. Update status here; keep historical findings in
+Authoritative current engineering-debt ledger. Baseline reconciliation: 2026-09-27
+against `b6286c57cfa64ff8cb9f937347c376d4b98d55c8`; implementation follow-up: 2026-09-28. Update status here; keep historical findings in
 [audits](audits/stage-0.md), product boundaries in [known issues](known-issues.md),
 and execution sequencing in [roadmap](roadmap.md).
 
 Evidence and the complete RP01–RP25 disposition are in the
-[baseline reconciliation](audits/reconciliation-b6286c57.md). No new live-platform
-run was performed. Recorded platform verdicts and local reproduction are distinct.
+[baseline reconciliation](audits/reconciliation-b6286c57.md). That reconciliation used recorded platform verdicts and local reproduction.
+The subsequent [C3 live observation and fix](audits/c3-hierarchy-2026-09-28.md)
+records the supplied web-client probe and its evidence limits.
+The [2026-09-28 implementation report](audits/near-term-2026-09-28.md) records
+C1/D1/V4 closure and exact test commands; the linked C3 follow-up closes its
+initial evidence boundary.
 
 Statuses: **CLOSED** resolved/no remaining finding; **OPEN** confirmed outstanding;
 **PARTIAL** some capability exists, work remains; **UNKNOWN** evidence insufficient;
@@ -21,10 +24,10 @@ No current item is promoted to P0 solely because Stage 0 used that label.
 
 | ID / status / severity | Area, evidence and impact | Dependency → next action |
 |---|---|---|
-| C1 · OPEN · P1 | Accounting VT preservation: `09-rb-oboroty.sdbl` loses `Организация = &Орг` and `СубконтоДт1 = &Суб` with an empty/corpus resolver; `sdblParser.applyAccountingMeta` treats missing metadata as no subconto. No-resolver and compatible synthetic-resolver controls are stable. Input's live validity/result impact remains unverified. | Record metadata/layout provenance → focused preservation hardening, including unavailable metadata; do not refresh the fixture to hide loss. |
+| C1 · CLOSED · P1 | Missing-register metadata no longer triggers accounting argument remapping: `applyAccountingMeta` retains the existing no-metadata fallback. Six regressions cover absent/empty/corpus/compatible metadata, unrelated edits, reopening and the known no-subconto layout. `09-rb-oboroty.sdbl` is unchanged. | Local preservation loss fixed; live validity of the fixture remains unverified and is not claimed by these tests. |
 | C2 · OPEN · P1 | English SDBL, RP06/RP07: recorded platform-valid input is rejected at `SELECT`; Russian-only detection, contextual words and metadata names also block end-to-end support. | A1 spike → English acceptance/canonicalization stage with platform-recorded RU/EN pairs. |
 | C4 · OPEN · P1 | Correlated bare conditions: parser binds `Цена > 0` to the sole inner source even if only an outer source owns `Цена`. `checkFieldPaths` skips subquery conditions to avoid false errors. Select-list correlation is already tested/correct. | Confirm condition canonical text on 1C → targeted qualification correction; preserve current fail-open validation until ownership is reliable. |
-| C3 · OPEN · P2 | RP20: `sdblGenerator.renderOrder` drops `ИЕРАРХИЯ` from a string field without metadata; corpus resolver keeps it. Fixture 0078 protects the old no-resolver output, not the recorded live canonical. | Focused platform evidence, including metadata absent/nonhierarchical cases → conservative modifier-preservation task. |
+| C3 · CLOSED · P2 | Live query-wizard text confirms RP20: `Г.Наименование ИЕРАРХИЯ` survives for `ИдентификаторыОбъектовМетаданных`. Unknown metadata now preserves the entered modifier; known-metadata rules remain. Added 18 unit regressions and Classic/Canvas browser checks; corrected only curated fixture 0078. | [Evidence, compatibility and baseline impact](audits/c3-hierarchy-2026-09-28.md). No new universal nonhierarchical-source or platform-build claim. |
 | C7 · OPEN · P2 | Parameter listing: `extractQueryParamNames` scans strings/comments and deduplicates case-sensitively, unlike lexer-backed `queryParameters`. Both result boilerplate and Query Text analysis use it. A quoted `"&Ложный"` adds a false parameter. | A1 lexical contract → align existing consumers, preserving incomplete-text behavior; no BSL data-flow feature. |
 | C5 · OPEN · P3 | Invalid-input safety: RP04/05 truncate extra VT args without `unsafeExtraArgs`; RP17 drops INDEX BY; RP11/12/15/23 are over-accepted or normalized. These are platform-invalid, not missing valid grammar. | Explicit preservation/rejection contract → negative fixtures and narrow guards; retain template tolerance. |
 | C6 · OPEN · P3 | Cosmetic JOIN idempotence: `booleanGroupingSemantics.test.ts` explicitly exempts two shapes from text equality on pass two; both passes pass truth-table checks. | A1 → bounded canonical-layout task; no semantic-corruption claim. |
@@ -62,13 +65,13 @@ They are decomposition constraints for A1, not extra urgent refactor tickets.
 | V1 · PARTIAL · P2 | 1976 golden entries pass, all positive and none starting with English SELECT. Negative unit examples exist, but no platform-attested negative/English corpus. Golden provenance lacks per-entry platform build/metadata attestation; 85 inputs contain `#`. Query fixtures are generator-derived, hence not an independent oracle. | Preserve ADR 0004 canonical contract → attested negative/English/metadata-mode cases and explicit provenance; U1 remains unknown. |
 | V2 · OPEN · P2 | Tree-sitter oracle unavailable in ordinary checkout/CI. Helper warns then returns; Vitest counts tests as passed. Source/toolchain/artifact are unpinned; Stage 0 recorded ABI 15 vs runtime 13–14 incompatibility. | Reproducible compatible dev-only artifact + manifest/checksum → explicit CI missing-oracle policy. Never add a runtime dependency. |
 | V3 · PARTIAL · P2 | Apply has parser acceptance, selected semantic checks and static unsafe/malformed guards. It has no input/output semantic-equivalence check, and the expression acceptor deliberately ignores precedence. Boolean truth-table regressions cover a subset. | A1 → bounded transformation-preservation checks and reviewed canonical evidence; not a theorem prover or mandatory live query execution. |
-| V4 · OPEN · P2 | Canvas preview has unit/shared-gate coverage, but lacks the recorded Classic/Canvas semantic-parity gate and Canvas browser load/edit/save/insertion E2E identified in the roadmap. The 1A–1B.4 fixes are in the shared path Canvas also uses (`parseBatch`, `assembleBatch` + `generateBatch`, `webview/applyGate.ts`), so they cover Canvas for queries opened from text and written back; models produced by Canvas-specific editing actions are not covered by those regressions. | Separate preview-release verification stage; retain preview boundary. |
+| V4 · CLOSED · P2 | Recorded gate added: six Classic/Canvas browser round-trips, Canvas alias/condition/sort edits, duplicate-alias recovery, unsafe/malformed Save guards and load failure. A real VS Code webview test loads the production Canvas bundle, edits an alias, clicks Save and verifies only the captured BSL literal changes through the real bridge. | See [verification scope](testing-and-release.md#canvas-verification). This is a bounded regression gate, not exhaustive UI coverage or live-platform equivalence; Canvas stays opt-in preview. |
 
 ## Documentation
 
 | ID / status / severity | Area, evidence and impact | Dependency → next action |
 |---|---|---|
-| D1 · OPEN · P3 | Source comments still claim unwired symbols, future-only parameter semantics, syntax-only Apply, complete-only source maps and a narrower unsafe-marker/traversal scope. Exact stale claims are recorded in the reconciliation. | Comment-only maintenance task authorized separately: this reconciliation deliberately changes no `src/` or tests. Current Markdown boundaries are corrected. |
+| D1 · CLOSED · P3 | Corrected source comments for symbol wiring, recovered source maps, semantic Apply checks, shipped parameter support, unsafe-marker coverage, malformed-expression traversal and lexer failures (D03–D09 in the reconciliation). | Comment-only changes; C7/S1/S2/S3 limitations remain open. |
 
 ## Unknown / awaiting evidence
 

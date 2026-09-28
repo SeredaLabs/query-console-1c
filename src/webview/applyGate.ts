@@ -14,7 +14,7 @@ import { assembleBatch, type QueryState } from './state/queryStore';
  * A known capability/preservation boundary that makes the current model
  * unsafe to apply (ТЗ §27/28/54 P0.5), checked continuously so the apply
  * button can be disabled with a reason:
- *  - `unsafeVirtualTable`: a virtual table with uncovered positions 3+ (see
+ *  - `unsafeVirtualTable`: a VT marked with unsupported extra arguments (see
  *    `docs/development/known-issues.md`, `findUnsafeVirtualTables`) — applying
  *    would silently drop those arguments;
  *  - `malformedCustom`: a stored custom/raw expression fails the structural SDBL

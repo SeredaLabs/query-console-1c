@@ -28,10 +28,10 @@ replace the Classic Constructor.
 The current Canvas baseline covers roadmap Phases 0--12. UNION UX (Phase 14)
 and most of the read-only SDBL developer experience (Phase 15) were completed
 ahead of sequence. Phase 13 remains the next main implementation step:
-source-subquery drill-down and manual temporary-table editing. Before Canvas
-can leave preview, the project still requires a recorded Classic/Canvas
-semantic-parity gate and a real Canvas browser E2E covering load, edit, save,
-and insertion back into the source document.
+source-subquery drill-down and manual temporary-table editing. The [Canvas verification gate](testing-and-release.md#canvas-verification) now
+records representative Classic/Canvas parity, editing/Save guards and a real
+VS Code load → edit → Save → source insertion scenario. Canvas remains an
+opt-in preview; this gate does not complete Phase 13 or prove all editing paths.
 
 ## Required follow-up tasks
 
@@ -39,9 +39,9 @@ Current tasks and evidence are tracked once in the [ledger](technical-debt.md).
 
 ### Recommended engineering sequence
 
-1. **Preservation evidence and narrow hardening (C1, C3, C4, C5).** Establish
-   missing-metadata accounting behavior, ORDER hierarchy and correlated-condition
-   canonicals; define invalid-input handling separately from valid grammar gaps.
+1. **Preservation evidence and narrow hardening (C4, C5).** C1 and C3 are fixed
+   with missing-metadata preservation regressions; C3 also has a recorded live
+   hierarchy probe. Establish correlated-condition canonicals; define invalid-input handling separately from valid grammar gaps.
 2. **CanonicalToken / ExpressionTokens spike (A1).** Inventory existing lexer
    tokens, contextual words, formatter trees and raw scanners; define one lexical
    identity/precedence boundary with source spelling/ranges preserved. Propose
@@ -61,8 +61,9 @@ Current tasks and evidence are tracked once in the [ledger](technical-debt.md).
    consumers. Do not build a scope/reference index just to populate empty maps.
 7. **Expression consumers (A3, C6, C7).** Display-only inference over the shared
    representation, cosmetic JOIN stability and parameter-consumer consistency.
-8. **Preview release and documentation (V4, D1).** Canvas parity/browser gate and
-   source-comment corrections; preserve the preview flag until its own gate passes.
+8. **Preview release.** V4 now has a recorded regression gate and D1 source
+   comments are corrected. Keep Canvas opt-in while its feature roadmap and
+   broader release review remain unfinished.
 
 This is one recommended sequence, not authorization to implement these stages.
 Resolve U1–U3 when the relevant stage needs their platform evidence. Existing

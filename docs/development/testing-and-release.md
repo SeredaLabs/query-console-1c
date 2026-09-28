@@ -27,6 +27,37 @@ do not report the grammar oracle as executed unless the fixture was present.
 Snapshot, corpus, or generated-output changes require an explanation of affected
 case counts and representative transitions. Never update them blindly.
 
+## Canvas verification
+
+`npm run test:e2e` builds both production bundles and serves the same metadata
+harness: `/?surface=canvas` selects Canvas, otherwise Classic. The thirteen tests
+in `test/e2e/canvas.spec.ts` cover:
+
+- Identical Classic/Canvas saved text and stable Canvas reopening for fields /
+  WHERE / ORDER, grouping, source subqueries, condition subqueries, UNION and a
+  temporary-table package.
+- Preservation of an entered string-field ORDER hierarchy modifier in both UIs
+  through load/save/reopen (C3).
+- Canvas alias, custom-condition and sort-direction edits, semantic assertions
+  on the saved model, then reopening/saving that result through Classic.
+- Duplicate-alias rejection and recovery, unsafe VT and malformed-expression
+  Save blocking, and a failed load that emits cancel without replacement text.
+
+The browser harness captures `insertText`; it does not modify a VS Code document.
+`npm run test:integration` additionally runs `canvasSave.test.ts`: a real VS Code
+webview loads the production Canvas bundle, receives metadata/query through the
+host, changes a field alias through DOM controls and clicks Save. The actual
+`acquireVsCodeApi` bridge and `insertResult` replace only the captured BSL literal.
+A test-only script drives those controls under the panel's existing CSP nonce;
+it does not synthesize `insertText` or replace the production UI. Existing host
+tests also cover stale-document rejection.
+
+Verified locally on 2026-09-28. This is a representative regression gate, not
+exhaustive Canvas editing coverage or proof of live 1C semantic equivalence.
+Phase 13 features and the opt-in preview boundary remain unchanged. These tests
+run through the existing browser and Extension Host CI commands; no new runtime
+dependency or test hook is added to the extension.
+
 ## Packaging
 
 `npm run package` runs the prepublish build and creates `query-console-1c.vsix`.

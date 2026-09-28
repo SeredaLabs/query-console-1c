@@ -42,9 +42,11 @@ is still under development and does not replace the Classic Constructor.
 Current checkpoint: the baseline roadmap through Phase 12 is implemented,
 including real query load/save, all six workspaces, package/UNION navigation,
 and temporary-table continuity. Phase 13 (manual temporary-table editing and
-source-subquery drill-down) is the next main implementation phase. Formal
-Classic/Canvas parity validation and a Canvas-specific browser E2E are still
-pending, so the preview flag remains intentional.
+source-subquery drill-down) is the next main implementation phase.
+[Verification now covers](../../development/testing-and-release.md#canvas-verification)
+representative Classic/Canvas parity, Canvas edits/Save guards and real VS Code
+source insertion. Broader feature coverage remains incomplete; the preview flag
+remains intentional.
 
 For contributor debugging, `F5` or `npm run preview:canvas` starts an Extension
 Development Host and opens Canvas automatically.

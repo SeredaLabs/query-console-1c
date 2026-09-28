@@ -1,6 +1,6 @@
 # Known issues
 
-Current product boundaries at `b6286c57`. Engineering status and evidence live
+Current product boundaries, updated 2026-09-28. Engineering status and evidence live
 in the [technical-debt ledger](technical-debt.md); historical verdicts remain in
 [Stage 0](audits/stage-0.md).
 
@@ -15,11 +15,6 @@ in the [technical-debt ledger](technical-debt.md); historical verdicts remain in
   (C06/C13/C18/C19, S2). Parameter suggestions after a bare `&` can fail
   because their lexer scan rejects the unfinished name. Source-subquery and ordinary batch alias scoping already
   use the position-aware resolver; the old flat resolver is tooling-only.
-- With an existing resolver that cannot describe an accounting register,
-  `09-rb-oboroty.sdbl` loses argument text and fails idempotence; an absent
-  resolver and a compatible synthetic resolver preserve it (C1). This is a
-  preservation risk; live validity of that fixture has not been established.
-- Without metadata, ORDER BY can drop `ИЕРАРХИЯ` from a string field (RP20/C3).
 - A temporary-table producer with a tabular-section projection/trailing fields
   yields different column sets in star expansion, designer and semantic schema
   (A2). The platform-correct schema for this shape still needs confirmation.

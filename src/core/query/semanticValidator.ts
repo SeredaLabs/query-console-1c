@@ -457,8 +457,9 @@ export function validateBatchSemantics(
 
 /**
  * PR-05 (ТЗ §54 P0.5, §27/28: known-lossy/unknown preservation → BLOCK) —
- * виртуальные таблицы с непокрытыми позициями 3+ (`VirtualParams.unsafeExtraArgs`,
- * см. `parseVirtualParams` generic-fallback в sdblParser.ts и KNOWN_ISSUES.md).
+ * виртуальные таблицы с `VirtualParams.unsafeExtraArgs`: generic-fallback
+ * после позиции 2 и раскладки регистра расчета после позиции 1 либо 4.
+ * См. `parseVirtualParams`; это не универсальная проверка арности (debt C5).
  * Структурная проверка, резолвер не нужен. НАМЕРЕННО отдельна от
  * `validateBatchSemantics`: та используется и для ОТКРЫТИЯ текста в конструктор
  * (`tryOpenBatch`) — блокировать открытие/просмотр уже существующего запроса не
@@ -499,10 +500,10 @@ export interface MalformedCustomHit {
 
 /**
  * Находит custom/сырые узлы модели (условия, условия соединений, соединения,
- * поля выборки, группировочные поля итогов — тот же набор, что и
- * `findRawFallbackHits` в tooling/corpus-verify/classification.ts, но здесь как
- * runtime Apply-gate, а не только для отчёта классификации корпуса), чей
- * сохранённый текст структурно некорректен по правилам
+ * поля выборки и дополнительные слоты, перечисленные ниже), чей сохранённый
+ * текст структурно некорректен по правилам. Этот runtime Apply-gate имеет более
+ * широкий обход, чем `findRawFallbackHits` в tooling/corpus-verify/classification.ts.
+ * Проверка использует
  * `isStructurallyValidExpression` (PR-14 шаг 2: не просто баланс скобок, а
  * акцептор грамматики SDBL-выражений/условий — см. её файловый комментарий).
  * Обход — рекурсивно по вложенным подзапросам, тем же способом, что и

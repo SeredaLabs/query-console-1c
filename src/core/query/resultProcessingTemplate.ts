@@ -1,27 +1,14 @@
 const PARAM_RE = /&([A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*)/gu;
 
 /**
- * QUERY PARAMETER SEMANTICS BOUNDARY (fixed 2026-09-14, research-only session,
- * memory: project-semantic-core-roadmap — read that memory's own STATUS UPDATE
- * before touching anything about `&Параметр`). This function is a plain regex
- * scan (no source-map, no position tracking) used ONLY to generate
- * `УстановитьПараметр` boilerplate — it is the natural, ALREADY-EXISTING
- * starting point a future session would reach for when building real
- * query-local parameter semantics (hover/completion on `&Параметр`). Before
- * extending it (or building a real semantic-layer equivalent on top of the
- * lexer's existing `'param'` token + source-map, the way `virtualTableArg`
- * events already work), the following contract applies:
+ * QUERY PARAMETER SEMANTICS BOUNDARY.
+ * This regex helper supplies result-processing boilerplate and Query Text
+ * analysis (`queryAnalysisService`). It scans strings/comments too and deduplicates
+ * case-sensitively; alignment with lexer-backed `queryParameters.ts` is debt C7.
  *
- * Level 0 — Query-local parameter semantics. STATUS: allowed / current scope,
- * but NOT started — only begin this on a fresh, explicit request, never as an
- * assumed "next roadmap step". `&Дата`/`&Товар`/`&Склад` are query-local named
- * parameters, scoped to the WHOLE `BatchDocument` (not per-statement/union-
- * member — 1C's own `&Параметр` scoping is batch-wide; there is no JOIN/
- * subquery-style visibility restriction for parameters anywhere in this
- * codebase, unlike aliases). No new `Symbol` kind needed — a minimal
- * `findQueryParameterAt(snapshot, position)` / `collectQueryParameters(batch)`
- * pair, recording `'param'` token ranges via the same source-map mechanism
- * already used for `virtualTableArg`, is enough.
+ * Level 0 — query-local parameter hover/completion is shipped via
+ * `queryParameters.ts`. Names are batch-wide, with token ranges from the lexer;
+ * no new Symbol kind or BSL value analysis is involved.
  *
  * Level 0's OWN acceptance boundary — it must NOT attempt to answer:
  *   - where the value comes from;

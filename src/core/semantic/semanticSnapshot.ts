@@ -7,9 +7,9 @@
  * this directory must never be imported from there (enforced by
  * `test/unit/semanticArchitectureBoundary.test.ts`).
  *
- * No real analysis happens yet — scopes/symbols/references are populated starting
- * Phase 2a/3a. This phase only establishes the snapshot shape and its lifecycle
- * discipline: `model` and `index` are always built together from the same
+ * The text builder populates source-alias symbols; scope/reference maps remain
+ * empty. This module defines the snapshot shape and its lifecycle discipline:
+ * `model` and `index` are always built together from the same
  * `documentVersion`/source text and must be discarded together, never mixed across
  * versions (a hover computed from `model@42` + `index@41` is a worse bug than
  * `undefined` — it looks plausible but is wrong).
@@ -158,12 +158,13 @@ function hashSource(text: string): string {
  * `sourceText` — callers must discard the whole snapshot on the next edit rather
  * than reuse `index` against a newer `model` (see module doc).
  *
- * `index` is empty until later phases (2a/3a) start populating scopes/symbols.
+ * This factory creates an empty `index`; the text builder adds source-alias
+ * symbols through `withSymbolIndex`. Scope/reference maps remain empty.
  * `completeness` defaults to `'complete'` for callers that already know their
  * `model` came from a clean parse; `buildSemanticSnapshotFromText` (Phase 1c)
  * is the tolerant entry point that determines it for you when parsing might fail.
- * `sourceMapEvents` defaults to `[]`; only pass a non-empty array alongside
- * `completeness: 'complete'` (see `sourceMapEvents`'s own doc for why).
+ * `sourceMapEvents` defaults to `[]`; non-empty events are also valid for
+ * recovered text when the repair preserved offsets (see `hasTrustworthyPositions`).
  */
 export function createSemanticSnapshot(
   documentVersion: number,

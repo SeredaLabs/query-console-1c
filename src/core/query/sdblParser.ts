@@ -4844,11 +4844,17 @@ function parseDocumentInner(
     // `… КАК Имя`, ещё не присутствующим в группировке (фаза 6.19, ЗависшиеЗадачи).
     substituteGroupFieldWithSelectExpr(model, resolver, subquerySourceDepth > 0);
     // Пометка иерархических источников (для суффикса ИЕРАРХИЯ в УПОРЯДОЧИТЬ ПО,
-    // фаза 6.16.6). По метаданным; без резолвера флаг не ставится.
+    // фаза 6.16.6). undefined означает отсутствие метаданных, а не false.
     if (resolver) {
       for (const t of model.tables) {
         if (t.subquery || !t.fullName) continue;
-        if (resolver.tableByFullName(t.fullName)?.hierarchical) t.hierarchical = true;
+        const meta = resolver.tableByFullName(t.fullName);
+        if (meta?.hierarchical) t.hierarchical = true;
+        else if (meta && t.fullName.includes('.') && !t.fullName.startsWith('&')) {
+          // Only metadata sources need an explicit negative fact. Synthetic
+          // package/temp sources keep their existing model shape and rules.
+          t.hierarchical = false;
+        }
       }
       applyAccountingMeta(model, resolver);
     }
@@ -4961,6 +4967,9 @@ function applyAccountingMeta(model: QueryModel, resolver: MetadataResolver): voi
     if (parts[0] !== 'РегистрБухгалтерии') continue;
     const slice = parts[2];
     const base = resolver.tableByFullName(`${parts[0]}.${parts[1]}`);
+    // Unknown metadata is not evidence of a shorter layout: keep fillAccounting's
+    // no-metadata fallback, otherwise conditions in later positions are discarded.
+    if (!base) continue;
     const hasSubconto = (base?.subcontoCount ?? 0) > 0;
     const corr = base?.correspondence === true;
     const args = v.accountingArgs;
