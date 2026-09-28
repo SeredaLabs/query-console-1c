@@ -56,9 +56,9 @@ Current tasks and evidence are tracked once in the [ledger](technical-debt.md).
    and trailing columns on the platform; then share lifetime/producer-column
    facts. Retain parser incremental registry, undefined-table inference and
    internal literal typing. Migrate designer and parser consumers separately.
-6. **Semantic assistance (S3).** Condition-subquery scope (S1) and typing
-   recovery (S2) are closed; decide which snapshot fields have real
-   consumers. Do not build a scope/reference index just to populate empty maps.
+6. **Semantic assistance.** Closed: condition-subquery scope (S1), typing
+   recovery (S2) and the snapshot contract (S3). Add a scope/reference index
+   only together with its first consumer.
 7. **Expression consumers (A3, C6).** Display-only inference over the shared
    representation and cosmetic JOIN stability. Parameter-consumer consistency
    (C7) is closed.

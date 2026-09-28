@@ -108,14 +108,14 @@ those ADRs. A full expression AST needs a separate scope decision; a formatter's
 internal Boolean/arithmetic tree is not a shared expression AST in QueryModel.
 
 `buildSemanticSnapshotFromText` materializes source-alias `symbolsById` for complete
-and recovered parses; `resolveAliasAt` consumes it. `scopesById` and
-`referencesBySymbolId` are empty placeholders with no production consumer.
-`partial` is declared but is not returned by that builder. `complete` means the
+and recovered parses; `resolveAliasAt` consumes it. It is the only index: the
+unused scope/reference maps and the never-produced `partial` state were removed
+(S3). Completeness is `complete`, `recovered` or `unavailable`. `complete` means the
 parse did not throw, not that every source/scope was captured: condition
 subqueries kept as custom text are not covered. Text with an unclosed `(` is
 recovered first even when it parses, because the parenthesis can swallow ИЗ.
 Source-map events carry `depth`; scope descent matches nested levels by depth and
 the parent node's range. Current source maps and
-on-demand scope traversal already serve consumers; do not populate unused maps
-without a demonstrated need. Some source comments still describe earlier phases
+on-demand scope traversal already serve consumers; add a new index only together
+with its first consumer. Some source comments still describe earlier phases
 (D1); the implementation and this contract take precedence.

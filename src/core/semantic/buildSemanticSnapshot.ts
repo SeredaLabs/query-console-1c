@@ -28,10 +28,10 @@
  * itself stays a plain, symbol-free skeleton constructor (`semanticSnapshot.ts`
  * is Phase 1a's foundational module and has no reason to depend on Phase 3a's
  * `collectSymbols.ts`); this function is the one real production entry point
- * (see `resolveAliasAt.ts`/hover), so populating the index here is enough —
- * `scopesById`/`referencesBySymbolId` stay empty until an actual consumer
- * needs them materialized too (per this roadmap's own established discipline:
- * don't build structure ahead of a real, concrete need).
+ * (see `resolveAliasAt.ts`/hover), so populating the index here is enough.
+ * Scope and reference indexes are deliberately absent until a real consumer
+ * needs them (per this roadmap's own discipline: don't build structure ahead of
+ * a concrete need).
  */
 import { parseBatch } from '../query/sdblParser';
 import type { MetadataResolver } from '../query/metadataResolver';
@@ -71,12 +71,10 @@ function withSymbolIndex(snapshot: SemanticSnapshot): SemanticSnapshot {
  *  4. nothing works — `completeness: 'unavailable'`, an EMPTY model (no
  *     tables/fields at all), never a thrown exception.
  *
- * `'partial'` (also a valid `SemanticCompleteness` value) is NOT reachable by
- * this function today — this parser has no partial-tree recovery (a hard parse
- * failure loses ALL structure, not just the broken part). The value exists so
- * a future, more capable recovery strategy (real partial-tree parsing, listed
- * as later roadmap work) can report it without a breaking type change; treat
- * its absence here as an honest gap, not an oversight.
+ * There is no partial-tree state: this parser has no partial-tree recovery (a
+ * hard parse failure loses ALL structure, not just the broken part). A future
+ * strategy that can report one adds its own `SemanticCompleteness` value
+ * together with the consumers that handle it (S3).
  */
 export function buildSemanticSnapshotFromText(
   documentVersion: number,

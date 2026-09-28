@@ -18,9 +18,7 @@ describe('createSemanticSnapshot', () => {
 
   it('starts with an empty index (no analysis performed yet, by design)', () => {
     const snapshot = createSemanticSnapshot(1, 'ВЫБРАТЬ 1', emptyBatch);
-    expect(snapshot.index.scopesById.size).toBe(0);
     expect(snapshot.index.symbolsById.size).toBe(0);
-    expect(snapshot.index.referencesBySymbolId.size).toBe(0);
   });
 
   it('produces the same sourceHash for identical text and a different one for different text', () => {
@@ -54,7 +52,7 @@ describe('createEmptySemanticIndex', () => {
   it('returns independent, empty maps on each call', () => {
     const first = createEmptySemanticIndex();
     const second = createEmptySemanticIndex();
-    first.scopesById.set(1, { id: 1 });
-    expect(second.scopesById.size).toBe(0);
+    first.symbolsById.set(1, { id: 1, alias: 'Т', ref: { kind: 'table', id: 1, path: [] } });
+    expect(second.symbolsById.size).toBe(0);
   });
 });

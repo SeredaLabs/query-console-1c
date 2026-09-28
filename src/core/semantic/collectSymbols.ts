@@ -13,7 +13,7 @@
  * under a `whereSubquery`/`havingSubquery` segment (S1).
  *
  * `buildSemanticSnapshotFromText` installs these symbols in `SemanticIndex`;
- * `resolveAliasAt` consumes them. Scope/reference maps remain empty.
+ * `resolveAliasAt` consumes them.
  * Identity only needs to be stable WITHIN one snapshot, never across reparses,
  * so a per-snapshot counter is sufficient.
  */

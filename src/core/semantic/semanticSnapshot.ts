@@ -7,8 +7,7 @@
  * this directory must never be imported from there (enforced by
  * `test/unit/semanticArchitectureBoundary.test.ts`).
  *
- * The text builder populates source-alias symbols; scope/reference maps remain
- * empty. This module defines the snapshot shape and its lifecycle discipline:
+ * The text builder populates source-alias symbols (the only index). This module defines the snapshot shape and its lifecycle discipline:
  * `model` and `index` are always built together from the same
  * `documentVersion`/source text and must be discarded together, never mixed across
  * versions (a hover computed from `model@42` + `index@41` is a worse bug than
@@ -48,10 +47,6 @@ export interface ModelRef {
   path: ModelPath;
 }
 
-export interface Scope {
-  id: SemanticNodeId;
-}
-
 /**
  * Phase 3a: currently always a source/table alias (`SelectedTable.alias`) —
  * the only symbol kind this roadmap has needed so far. Kept as one concrete
@@ -65,27 +60,21 @@ export interface Symbol {
   ref: ModelRef;
 }
 
-export interface Reference {
-  symbolId: SemanticNodeId;
-  path: ModelPath;
-}
-
 /**
- * Holds ONLY scopes/symbols/references — never a parallel fields/tables/conditions
- * tree. A future `{ fields; tables; conditions; grouping }` shape here would be a
+ * Holds ONLY semantic indexes — never a parallel fields/tables/conditions tree.
+ * A future `{ fields; tables; conditions; grouping }` shape here would be a
  * second `QueryModel`, which is the one anti-pattern this design exists to avoid.
+ * Only indexes with a production consumer live here (S3): scopes are resolved on
+ * demand from source-map events (`resolveAliasAt`), and no consumer needs a
+ * reference index yet. Add one together with its first consumer.
  */
 export interface SemanticIndex {
-  scopesById: Map<SemanticNodeId, Scope>;
   symbolsById: Map<SemanticNodeId, Symbol>;
-  referencesBySymbolId: Map<SemanticNodeId, Reference[]>;
 }
 
 export function createEmptySemanticIndex(): SemanticIndex {
   return {
-    scopesById: new Map(),
     symbolsById: new Map(),
-    referencesBySymbolId: new Map(),
   };
 }
 
@@ -103,13 +92,10 @@ export function createEmptySemanticIndex(): SemanticIndex {
  *   the repair touched is a placeholder, not the user's real field. Positions
  *   (`sourceMapEvents`) are available when the repair preserved offsets — see
  *   `hasTrustworthyPositions`.
- * - `'partial'`: reserved for a future, more capable partial-tree recovery this
- *   parser doesn't have yet (today a hard parse failure loses ALL structure,
- *   not just the broken part) — see `buildSemanticSnapshotFromText`'s doc.
  * - `'unavailable'`: no strategy produced a usable parse; `model` is an empty,
  *   safe placeholder (`{ members: [] }`), never a thrown exception.
  */
-export type SemanticCompleteness = 'complete' | 'recovered' | 'partial' | 'unavailable';
+export type SemanticCompleteness = 'complete' | 'recovered' | 'unavailable';
 
 export interface SemanticSnapshot {
   documentVersion: number;
@@ -162,7 +148,7 @@ function hashSource(text: string): string {
  * than reuse `index` against a newer `model` (see module doc).
  *
  * This factory creates an empty `index`; the text builder adds source-alias
- * symbols through `withSymbolIndex`. Scope/reference maps remain empty.
+ * symbols through `withSymbolIndex`.
  * `completeness` defaults to `'complete'` for callers that already know their
  * `model` came from a clean parse; `buildSemanticSnapshotFromText` (Phase 1c)
  * is the tolerant entry point that determines it for you when parsing might fail.
