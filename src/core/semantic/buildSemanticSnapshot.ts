@@ -113,21 +113,7 @@ export function buildSemanticSnapshotFromText(
   for (const repairedText of candidates) {
     if (repairedText === undefined) continue;
     try {
-      // Repairs edit in place; only the parenthesis repair adds `)` characters,
-      // listed in `inserted`, so positions are mapped back to `sourceText`.
-      // Checked rather than assumed: if a future repair ever shifted offsets
-      // otherwise, the snapshot must lose its positions instead of reporting
-      // wrong ones.
-      if (repairedText.length === sourceText.length + inserted.length) {
-        const sink = new RecordingBatchSourceMapSink();
-        const model = parseBatch(repairedText, resolver, { batchSourceMap: sink });
-        const events = inserted.length === 0 ? sink.events : sink.events.map(e => ({
-          ...e,
-          range: { start: toSourceOffset(e.range.start, inserted), end: toSourceOffset(e.range.end, inserted) },
-        }));
-        return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, model, 'recovered', events));
-      }
-      return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, parseBatch(repairedText, resolver), 'recovered'));
+      return recoveredSnapshot(documentVersion, sourceText, repairedText, inserted, resolver);
     } catch {
       // this repair wasn't enough — try the next one
     }
@@ -135,6 +121,34 @@ export function buildSemanticSnapshotFromText(
   if (plain) return plain;
 
   return createSemanticSnapshot(documentVersion, sourceText, EMPTY_BATCH, 'unavailable');
+}
+
+/**
+ * The one way a repaired text becomes a `'recovered'` snapshot, for every recovery
+ * path. Throws when `repairedText` does not parse (callers try the next candidate).
+ *
+ * Repairs edit in place; only the parenthesis repair adds `)` characters, listed
+ * in `inserted` (source offsets), so positions are mapped back to `sourceText`.
+ * Checked rather than assumed: when the length does not match, the snapshot gets
+ * no source-map events (no trustworthy positions) instead of wrong ones.
+ */
+function recoveredSnapshot(
+  documentVersion: number,
+  sourceText: string,
+  repairedText: string,
+  inserted: readonly number[],
+  resolver: MetadataResolver | undefined,
+): SemanticSnapshot {
+  if (repairedText.length !== sourceText.length + inserted.length) {
+    return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, parseBatch(repairedText, resolver), 'recovered'));
+  }
+  const sink = new RecordingBatchSourceMapSink();
+  const model = parseBatch(repairedText, resolver, { batchSourceMap: sink });
+  const events = inserted.length === 0 ? sink.events : sink.events.map(e => ({
+    ...e,
+    range: { start: toSourceOffset(e.range.start, inserted), end: toSourceOffset(e.range.end, inserted) },
+  }));
+  return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, model, 'recovered', events));
 }
 
 /** A repair that itself throws (lexically invalid text) just yields no candidate. */
@@ -173,9 +187,7 @@ function preferNestedRecovery(
   const nested = safeRepair(() => repairTrailingSectionsForRecovery(sourceText, true));
   if (nested === undefined || nested === safeRepair(() => repairTrailingSectionsForRecovery(sourceText, false))) return plain;
   try {
-    const sink = new RecordingBatchSourceMapSink();
-    const model = parseBatch(nested, resolver, { batchSourceMap: sink });
-    const recovered = withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, model, 'recovered', sink.events));
+    const recovered = recoveredSnapshot(documentVersion, sourceText, nested, [], resolver);
     return recovered.index.symbolsById.size > plain.index.symbolsById.size ? recovered : plain;
   } catch {
     return plain;
