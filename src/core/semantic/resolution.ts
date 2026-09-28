@@ -2,8 +2,8 @@
  * Phase 2b of the semantic-core roadmap (memory: project-semantic-core-roadmap).
  *
  * Shared result shape for the whole semantic layer, planned since the design's
- * very first refinement round and now needed by real code (`computeJoinVisibility`,
- * `resolveCorrelatedField`) rather than anticipated speculatively.
+ * very first refinement round and now needed by real code (`resolveAliasAt`,
+ * `describeVirtualTableArgAt`) rather than anticipated speculatively.
  *
  * Formalizes this project's existing fail-open philosophy (already used ad hoc
  * via `targetUnresolved`/`fieldNotFound` in `hoverFieldInfo.ts`): `'unknown'` is

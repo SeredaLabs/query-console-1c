@@ -26,20 +26,15 @@
 import type { Resolution } from './resolution';
 import { matchesAtNearestLevel } from '../query/nearestAncestor';
 
-/** Anything with a known (possibly empty/unknown) set of field names it owns. */
-export interface FieldOwner {
-  readonly fields?: ReadonlySet<string>;
-}
-
 /**
  * Shared core: checks ONE ancestor level at a time, nearest first, and stops
  * at the FIRST level with ANY match (resolved if exactly one, ambiguous if
  * more than one AT THAT SAME LEVEL) — never pools two different levels'
  * candidates together. `ancestorLevels` must be ordered NEAREST-FIRST.
- * Shared by `resolveCorrelatedField` (Phase 2b, live-verified) and
- * `resolveAliasAt` (alias symbols) — same rule, different match predicate.
- * The level walk itself is `matchesAtNearestLevel` (`src/core/query`), which
- * the parse-time `qualifyBareFields` pass uses too.
+ * Used by `resolveAliasAt` (alias symbols). The level walk itself is
+ * `matchesAtNearestLevel` (`src/core/query`), which bare-field correlation uses
+ * directly (`qualifyBareFields`, `correlatedOuterAlias`) — same rule, different
+ * match predicate. The live experiment is pinned in `correlation.test.ts`.
  */
 export function resolveNearestAncestorMatch<T>(
   matches: (item: T) => boolean,
@@ -49,15 +44,4 @@ export function resolveNearestAncestorMatch<T>(
   if (found.length === 1) return { kind: 'resolved', value: found[0] };
   if (found.length > 1) return { kind: 'ambiguous', candidates: found };
   return { kind: 'unknown' };
-}
-
-/**
- * `ancestorLevels` must be ordered NEAREST-FIRST (immediate enclosing level's
- * sources first, its own enclosing level's next, and so on outward).
- */
-export function resolveCorrelatedField<T extends FieldOwner>(
-  fieldName: string,
-  ancestorLevels: readonly (readonly T[])[],
-): Resolution<T> {
-  return resolveNearestAncestorMatch((s) => s.fields?.has(fieldName) ?? false, ancestorLevels);
 }
