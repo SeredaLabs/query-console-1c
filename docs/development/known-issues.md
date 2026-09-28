@@ -9,8 +9,9 @@ in the [technical-debt ledger](technical-debt.md); historical verdicts remain in
 - English SDBL is rejected even though the recorded live platform accepts it
   and canonicalizes it to Russian. Editor query detection recognizes only
   `ВЫБРАТЬ`/`УНИЧТОЖИТЬ` (ledger C2).
-- Completion inside valid condition subqueries does not resolve their inner
-  aliases (C21/S1). Unclosed SELECT parentheses can hide all sources;
+- Aliases inside a condition subquery kept as custom text (inside an `ИЛИ`
+  chain, `НЕ ИСТИНА В (…)`) are not resolved; structured `ГДЕ`/`ИМЕЮЩИЕ … В
+  (ВЫБРАТЬ …)` subqueries are (S1). Unclosed SELECT parentheses can hide all sources;
   malformed ORDER/GROUP sections can disable assistance for the whole package
   (C06/C13/C18/C19, S2). Parameter suggestions after a bare `&` can fail
   because their lexer scan rejects the unfinished name. Source-subquery and ordinary batch alias scoping already

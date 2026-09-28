@@ -111,8 +111,10 @@ internal Boolean/arithmetic tree is not a shared expression AST in QueryModel.
 and recovered parses; `resolveAliasAt` consumes it. `scopesById` and
 `referencesBySymbolId` are empty placeholders with no production consumer.
 `partial` is declared but is not returned by that builder. `complete` means the
-parse did not throw, not that every source/scope was captured: condition-subquery
-aliases and open-parenthesis recovery have the S1/S2 gaps. Current source maps and
+parse did not throw, not that every source/scope was captured: condition
+subqueries kept as custom text and open-parenthesis recovery (S2) are not covered.
+Source-map events carry `depth`; scope descent matches nested levels by depth and
+the parent node's range. Current source maps and
 on-demand scope traversal already serve consumers; do not populate unused maps
 without a demonstrated need. Some source comments still describe earlier phases
 (D1); the implementation and this contract take precedence.

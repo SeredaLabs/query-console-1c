@@ -24,7 +24,9 @@ export interface TextRange {
   end: number;
 }
 
-export type SourceMapNodeKind = 'unionMember' | 'table' | 'joinCondition' | 'outputAliasSection' | 'virtualTableArg';
+export type SourceMapNodeKind =
+  | 'unionMember' | 'table' | 'joinCondition' | 'outputAliasSection' | 'virtualTableArg'
+  | 'whereSubquery' | 'havingSubquery';
 
 export interface SourceMapEvent {
   kind: SourceMapNodeKind;
@@ -38,6 +40,8 @@ export interface SourceMapEvent {
    * of each per query, so no list-position semantics needed there. For
    * `virtualTableArg`, this is the TABLE index (same numbering as `'table'`) —
    * see `argIndex` for the positional argument within that table's own call.
+   * `whereSubquery`/`havingSubquery`: index of the condition in `model.conditions`/
+   * `model.having` whose `subquery` spans `range` (the parentheses included).
    * NOT a cross-document/batch-wide identity; a consumer that needs that
    * assembles it from the `parseDocument` call this event came from.
    */
@@ -49,6 +53,13 @@ export interface SourceMapEvent {
    * Meaningless (absent) for every other kind.
    */
   argIndex?: number;
+  /**
+   * Nesting depth of the query that owns this node: absent (0) for the parsed
+   * document's own members, +1 for each enclosing subquery (source or condition).
+   * Kind + index repeat at every level, so consumers match nested levels by depth
+   * and by the parent node's range.
+   */
+  depth?: number;
   range: TextRange;
 }
 
@@ -93,6 +104,8 @@ export interface AbsoluteSourceMapEvent {
   index: number;
   /** See `SourceMapEvent.argIndex` — only meaningful for `kind: 'virtualTableArg'`. */
   argIndex?: number;
+  /** See `SourceMapEvent.depth`. */
+  depth?: number;
   range: TextRange;
 }
 

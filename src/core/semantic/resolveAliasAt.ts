@@ -31,7 +31,7 @@
 import type { BatchDocument } from '../query/batchModel';
 import type { QueryDocument } from '../query/unionModel';
 import type { QueryModel } from '../query/queryModel';
-import type { AbsoluteSourceMapEvent } from '../query/sourceMap';
+import type { AbsoluteSourceMapEvent, TextRange } from '../query/sourceMap';
 import { rangeContains } from '../query/sourceMap';
 import type { Symbol, ModelPath, SemanticSnapshot } from './semanticSnapshot';
 import { hasTrustworthyPositions } from './semanticSnapshot';
@@ -46,24 +46,39 @@ interface ScopeLevel {
   joinIndex?: number;
 }
 
+/**
+ * Events of one nesting level inside one parent node. Kind + index repeat at every
+ * level (and in sibling subqueries), so a level only sees events of its own
+ * `depth` that lie inside the range of the node it was entered through.
+ */
+interface EventScope {
+  depth: number;
+  bound?: TextRange;
+}
+
 function findEvent(
   events: readonly AbsoluteSourceMapEvent[],
+  scope: EventScope,
   kind: AbsoluteSourceMapEvent['kind'],
   index: number,
   position: number,
 ): AbsoluteSourceMapEvent | undefined {
-  return events.find((e) => e.kind === kind && e.index === index && rangeContains(e.range, position));
+  return events.find((e) =>
+    e.kind === kind && e.index === index && (e.depth ?? 0) === scope.depth &&
+    rangeContains(e.range, position) &&
+    (!scope.bound || (e.range.start >= scope.bound.start && e.range.end <= scope.bound.end)));
 }
 
 function makeLevel(
   model: QueryModel,
   path: ModelPath,
   events: readonly AbsoluteSourceMapEvent[],
+  scope: EventScope,
   position: number,
 ): ScopeLevel {
   const joins = model.joins ?? [];
   for (let j = 0; j < joins.length; j++) {
-    if (findEvent(events, 'joinCondition', j, position)) return { model, path, joinIndex: j };
+    if (findEvent(events, scope, 'joinCondition', j, position)) return { model, path, joinIndex: j };
   }
   return { model, path };
 }
@@ -73,25 +88,36 @@ function descend(
   doc: QueryDocument,
   path: ModelPath,
   events: readonly AbsoluteSourceMapEvent[],
+  scope: EventScope,
   position: number,
   chain: ScopeLevel[],
 ): boolean {
   for (let u = 0; u < doc.members.length; u++) {
-    if (!findEvent(events, 'unionMember', u, position)) continue;
+    if (!findEvent(events, scope, 'unionMember', u, position)) continue;
     const model = doc.members[u].model;
     const modelPath: ModelPath = [...path, { kind: 'union', index: u }];
 
-    for (let t = 0; t < model.tables.length; t++) {
-      const table = model.tables[t];
-      if (!table.subquery) continue;
-      if (!findEvent(events, 'table', t, position)) continue;
-      if (descend(table.subquery, [...modelPath, { kind: 'table', index: t }], events, position, chain)) {
-        chain.push(makeLevel(model, modelPath, events, position));
+    const children: { doc: QueryDocument; segment: ModelPath[number]; kind: AbsoluteSourceMapEvent['kind']; index: number }[] = [];
+    model.tables.forEach((table, index) => {
+      if (table.subquery) children.push({ doc: table.subquery, segment: { kind: 'table', index }, kind: 'table', index });
+    });
+    model.conditions?.forEach((c, index) => {
+      if (c.subquery) children.push({ doc: c.subquery, segment: { kind: 'whereSubquery', index }, kind: 'whereSubquery', index });
+    });
+    model.having?.forEach((c, index) => {
+      if (c.subquery) children.push({ doc: c.subquery, segment: { kind: 'havingSubquery', index }, kind: 'havingSubquery', index });
+    });
+    for (const child of children) {
+      const event = findEvent(events, scope, child.kind, child.index, position);
+      if (!event) continue;
+      const childScope: EventScope = { depth: scope.depth + 1, bound: event.range };
+      if (descend(child.doc, [...modelPath, child.segment], events, childScope, position, chain)) {
+        chain.push(makeLevel(model, modelPath, events, scope, position));
         return true;
       }
     }
 
-    chain.push(makeLevel(model, modelPath, events, position));
+    chain.push(makeLevel(model, modelPath, events, scope, position));
     return true;
   }
   return false;
@@ -103,7 +129,7 @@ function findScopeChain(batch: BatchDocument, events: readonly AbsoluteSourceMap
     const stmtEvents = events.filter((e) => e.statementIndex === stmtIndex);
     if (stmtEvents.length === 0) continue;
     const chain: ScopeLevel[] = [];
-    if (descend(batch.members[stmtIndex], [{ kind: 'batch', index: stmtIndex }], stmtEvents, position, chain)) {
+    if (descend(batch.members[stmtIndex], [{ kind: 'batch', index: stmtIndex }], stmtEvents, { depth: 0 }, position, chain)) {
       return chain;
     }
   }

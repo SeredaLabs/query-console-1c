@@ -58,7 +58,7 @@ import type { QueryDocument, UnionMember } from './unionModel';
 import type { BatchDocument } from './batchModel';
 import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable, MetaField } from '../metadata/types';
-import type { SourceMapSink, BatchSourceMapSink, AbsoluteSourceMapEvent, TextRange } from './sourceMap';
+import type { SourceMapSink, SourceMapEvent, BatchSourceMapSink, AbsoluteSourceMapEvent, TextRange } from './sourceMap';
 import { RecordingSourceMapSink } from './sourceMap';
 import { expandStarFields } from './expandStarFields';
 import { expandTabSectionFields } from './expandTabSectionFields';
@@ -106,6 +106,36 @@ let subqueryRecursionDepth = 0;
  * level that actually encloses the subquery.
  */
 let conditionOuterLevels: SourceInfo[][] | undefined;
+
+/**
+ * S1: true while parsing ГДЕ/ИМЕЮЩИЕ/ПО of a query whose cursor records source
+ * positions in the member text's coordinates. Condition subqueries parsed then
+ * keep their own events in `conditionSubqueryEvents`; `recordConditionSubqueryEvents`
+ * writes them once the member model is final, so indexes match `model.conditions`.
+ */
+let recordConditionSubqueries = false;
+const conditionSubqueryEvents = new WeakMap<QueryDocument, { range: TextRange; offset: number; events: SourceMapEvent[] }>();
+
+function recordConditionSubqueryEvents(model: QueryModel, sink: SourceMapSink): void {
+  const emit = (list: Condition[] | undefined, kind: 'whereSubquery' | 'havingSubquery'): void => {
+    list?.forEach((c, index) => {
+      const rec = c.subquery && conditionSubqueryEvents.get(c.subquery);
+      if (!rec) return;
+      sink.record({ kind, index, range: rec.range });
+      for (const e of rec.events) {
+        sink.record({
+          kind: e.kind,
+          index: e.index,
+          argIndex: e.argIndex,
+          depth: (e.depth ?? 0) + 1,
+          range: { start: e.range.start + rec.offset, end: e.range.end + rec.offset },
+        });
+      }
+    });
+  };
+  emit(model.conditions, 'whereSubquery');
+  emit(model.having, 'havingSubquery');
+}
 const MAX_SUBQUERY_RECURSION_DEPTH = 32;
 class SubqueryRecursionLimitError extends Error {}
 function withSubqueryRecursionGuard<T>(fn: () => T): T {
@@ -644,11 +674,14 @@ function parseSingleQuery(
   ctxOut?: { ctx?: SectionResolveContext; cur?: Cursor }
 ): QueryModel {
   const outerLevels = conditionOuterLevels;
+  const outerRecording = recordConditionSubqueries;
   conditionOuterLevels = undefined;
+  recordConditionSubqueries = false;
   try {
     return parseSingleQueryBody(cur, outerLevels, inheritedSectionCtx, ctxOut);
   } finally {
     conditionOuterLevels = outerLevels;
+    recordConditionSubqueries = outerRecording;
   }
 }
 
@@ -750,8 +783,14 @@ function parseSingleQueryBody(
   const inConditions = <T>(parse: () => T): T => {
     ownLevels ??= [sourceInfosOf(tables, sourceResolver), ...(outerLevels ?? [])];
     const prev = conditionOuterLevels;
+    const prevRecording = recordConditionSubqueries;
     conditionOuterLevels = ownLevels;
-    try { return parse(); } finally { conditionOuterLevels = prev; }
+    // A synthesized cursor has no sink: its text is not the member text.
+    recordConditionSubqueries = cur.sourceMap !== undefined;
+    try { return parse(); } finally {
+      conditionOuterLevels = prev;
+      recordConditionSubqueries = prevRecording;
+    }
   };
   // Резолвер владельца голого поля (фаза 6.15.4, MCP): при единственном источнике —
   // он; при нескольких — таблица, у которой это поле встречается в запросе
@@ -1995,6 +2034,7 @@ function parseTableSource(cur: Cursor, index: number): SelectedTable {
           kind: e.kind,
           index: e.index,
           argIndex: e.argIndex,
+          depth: (e.depth ?? 0) + 1,
           range: { start: e.range.start + offset, end: e.range.end + offset },
         });
       }
@@ -3329,7 +3369,13 @@ function trySubqueryParam(paramTokens: Token[], source: string): QueryDocument |
     // `synthesizeTempTableFrom` (не бачачи резолвера) не може синтезувати
     // `ИЗ <ВТ>` для скорочення `(ВЫБРАТЬ ВТ.Поле)` без явного `ИЗ` — поле
     // залишається сирим виразом з автопсевдонімом, джерело губиться (P0).
-    return withSubqueryRecursionGuard(() => parseDocument(innerText, sourceResolver));
+    if (!recordConditionSubqueries) {
+      return withSubqueryRecursionGuard(() => parseDocument(innerText, sourceResolver));
+    }
+    const sink = new RecordingSourceMapSink();
+    const doc = withSubqueryRecursionGuard(() => parseDocument(innerText, sourceResolver, { sourceMap: sink }));
+    conditionSubqueryEvents.set(doc, { range: { start: open.pos, end: close.pos + 1 }, offset: open.pos + 1, events: sink.events });
+    return doc;
   } catch (e) {
     if (e instanceof SubqueryRecursionLimitError) throw e;
     return undefined;
@@ -4942,6 +4988,7 @@ function parseDocumentInner(
     for (const t of model.tables) {
       if (t.virtual?.accountingArgs) delete t.virtual.accountingArgs;
     }
+    if (memberCur.sourceMap) recordConditionSubqueryEvents(model, memberCur.sourceMap);
     return model;
   });
 
@@ -5293,6 +5340,7 @@ export function parseBatch(
           kind: e.kind,
           index: e.index,
           argIndex: e.argIndex,
+          ...(e.depth ? { depth: e.depth } : {}),
           range: { start: e.range.start + offset, end: e.range.end + offset },
         });
       }
@@ -5342,6 +5390,7 @@ export function parseBatch(
           kind: e.kind,
           index: e.index,
           argIndex: e.argIndex,
+          ...(e.depth ? { depth: e.depth } : {}),
           range: { start: e.range.start + offset, end: e.range.end + offset },
         });
       }

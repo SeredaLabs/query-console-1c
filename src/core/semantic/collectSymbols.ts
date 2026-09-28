@@ -9,9 +9,11 @@
  * needs no new segment kind: it's simply a `table` segment followed by another
  * `union`/`table` chain for what's inside it.
  *
+ * Condition subqueries (`ГДЕ`/`ИМЕЮЩИЕ … В (ВЫБРАТЬ …)`) are walked the same way
+ * under a `whereSubquery`/`havingSubquery` segment (S1).
+ *
  * `buildSemanticSnapshotFromText` installs these symbols in `SemanticIndex`;
- * `resolveAliasAt` consumes them. Scope/reference maps remain empty. The walk
- * covers source subqueries, not condition subqueries (technical debt S1).
+ * `resolveAliasAt` consumes them. Scope/reference maps remain empty.
  * Identity only needs to be stable WITHIN one snapshot, never across reparses,
  * so a per-snapshot counter is sufficient.
  */
@@ -60,6 +62,12 @@ function collectFromModel(
       collectFromDocument(table.subquery, tablePath, out, allocateId);
     }
   });
+  model.conditions?.forEach((c, index) => {
+    if (c.subquery) collectFromDocument(c.subquery, [...path, { kind: 'whereSubquery', index }], out, allocateId);
+  });
+  model.having?.forEach((c, index) => {
+    if (c.subquery) collectFromDocument(c.subquery, [...path, { kind: 'havingSubquery', index }], out, allocateId);
+  });
 }
 
 /**
@@ -79,11 +87,15 @@ export function resolveSymbolTable(batch: BatchDocument, path: ModelPath): Selec
     const model: QueryModel | undefined = doc.members[unionSeg.index]?.model;
     if (!model) return undefined;
     i++;
-    const tableSeg = path[i];
-    if (tableSeg?.kind !== 'table') return undefined;
-    const table: SelectedTable | undefined = model.tables[tableSeg.index];
-    if (!table) return undefined;
+    const seg = path[i];
     i++;
+    if (seg?.kind === 'whereSubquery' || seg?.kind === 'havingSubquery') {
+      doc = (seg.kind === 'whereSubquery' ? model.conditions : model.having)?.[seg.index]?.subquery;
+      continue;
+    }
+    if (seg?.kind !== 'table') return undefined;
+    const table: SelectedTable | undefined = model.tables[seg.index];
+    if (!table) return undefined;
     if (i >= path.length) return table;
     doc = table.subquery;
   }

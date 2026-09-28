@@ -30,6 +30,9 @@ export type ModelPathSegment =
   | { kind: 'batch'; index: number }
   | { kind: 'union'; index: number }
   | { kind: 'table'; index: number }
+  /** A condition subquery: `model.conditions[index]` / `model.having[index]`, followed by its `union` chain. */
+  | { kind: 'whereSubquery'; index: number }
+  | { kind: 'havingSubquery'; index: number }
   | { kind: 'field'; index: number };
 
 /** A structural path into `BatchDocument`, meaningful only inside the snapshot it was produced from. */

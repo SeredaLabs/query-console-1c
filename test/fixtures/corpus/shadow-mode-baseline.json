@@ -4,13 +4,13 @@
   "validQueries": 1976,
   "candidatePositions": 22975,
   "summary": {
-    "sameResolved": 14565,
-    "differentResolved": 450,
+    "sameResolved": 14690,
+    "differentResolved": 521,
     "oldResolvedNewAmbiguous": 0,
-    "oldResolvedNewUnknown": 306,
-    "oldUnknownNewResolved": 2478,
+    "oldResolvedNewUnknown": 110,
+    "oldUnknownNewResolved": 2607,
     "oldUnknownNewAmbiguous": 0,
-    "bothUnknown": 5176
+    "bothUnknown": 5047
   },
   "disagreements": {
     "Catalogs-Валюты-Ext-ManagerModule.bsl_2.txt:211:Валюты": {
@@ -741,6 +741,14 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "&НовыеНаименованияПрофилей#НовыеНаименованияПрофилей"
     },
+    "Catalogs-ПрофилиГруппДоступа-Ext-ManagerModule.bsl_6.txt:268:РолиПрофилей": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ПрофилиГруппДоступа.Роли#РолиПрофилей"
+    },
+    "Catalogs-ПрофилиГруппДоступа-Ext-ManagerModule.bsl_6.txt:362:РолиПрофилей": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ПрофилиГруппДоступа.Роли#РолиПрофилей"
+    },
     "Catalogs-ПрофилиГруппДоступа-Ext-ObjectModule.bsl_3.txt:208:Данные": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#Данные"
@@ -748,14 +756,6 @@
     "Catalogs-ПрофилиГруппДоступа-Ext-ObjectModule.bsl_3.txt:260:СтарыеРолиПрофиля": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "СтарыеРолиПрофиля#СтарыеРолиПрофиля"
-    },
-    "Catalogs-ПрофилиГруппДоступа-Ext-ObjectModule.bsl_3.txt:408:НовыеРолиПрофиля": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ПрофилиГруппДоступа.Роли#НовыеРолиПрофиля"
-    },
-    "Catalogs-ПрофилиГруппДоступа-Ext-ObjectModule.bsl_3.txt:505:НовыеРолиПрофиля": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ПрофилиГруппДоступа.Роли#НовыеРолиПрофиля"
     },
     "Catalogs-ПрофилиГруппДоступа-Ext-ObjectModule.bsl_3.txt:571:Данные": {
       "classification": "oldUnknownNewResolved",
@@ -997,6 +997,14 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "&Вопросы#Вопросы"
     },
+    "Catalogs-ШаблоныАнкет-Forms-ФормаЭлемента-Ext-Form-Module.bsl_1.txt:131:НазначениеОпросов": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Документ.НазначениеОпросов#НазначениеОпросов"
+    },
+    "Catalogs-ШаблоныАнкет-Forms-ФормаЭлемента-Ext-Form-Module.bsl_1.txt:226:НазначениеОпросов": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Документ.НазначениеОпросов#НазначениеОпросов"
+    },
     "ChartsOfCharacteristicTypes-ДополнительныеРеквизитыИСведения-Ext-ManagerModule.bsl_11.txt:474:ДополнительныеРеквизитыИСведения": {
       "classification": "oldResolvedNewUnknown",
       "oldSignature": "ПланВидовХарактеристик.ДополнительныеРеквизитыИСведения#ДополнительныеРеквизитыИСведения"
@@ -1219,97 +1227,97 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "Профили#Профили"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3043:ТекущиеВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеВидыДоступа#ТекущиеВидыДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:2899:ВидыДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыДоступа#ВидыДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3101:ТекущиеВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеВидыДоступа#ТекущиеВидыДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3021:ВидыДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыДоступа#ВидыДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3164:ТекущиеВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеВидыДоступа#ТекущиеВидыДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3076:ВидыДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыДоступа#ВидыДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3203:ТекущиеВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеВидыДоступа#ТекущиеВидыДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3137:ВидыДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыДоступа#ВидыДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3275:ТекущиеВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеВидыДоступа#ТекущиеВидыДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3405:ВидыДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыДоступа#ВидыДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3427:ТекущиеВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеВидыДоступа#ТекущиеВидыДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3462:ВидыДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыДоступа#ВидыДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3487:ТекущиеВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеВидыДоступа#ТекущиеВидыДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3525:ВидыДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыДоступа#ВидыДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3552:ТекущиеВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеВидыДоступа#ТекущиеВидыДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3592:ВидыДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыДоступа#ВидыДоступа"
+    },
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3657:ЗначенияДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЗначенияДоступа#ЗначенияДоступа"
+    },
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3799:ЗначенияДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЗначенияДоступа#ЗначенияДоступа"
     },
     "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:38:Профили": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&Профили#Профили"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3825:ТекущиеЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеЗначенияДоступа#ТекущиеЗначенияДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3862:ЗначенияДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЗначенияДоступа#ЗначенияДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3891:ТекущиеЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеЗначенияДоступа#ТекущиеЗначенияДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3931:ЗначенияДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЗначенияДоступа#ЗначенияДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:3961:ТекущиеЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеЗначенияДоступа#ТекущиеЗначенияДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4002:ЗначенияДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЗначенияДоступа#ЗначенияДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4036:ТекущиеЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеЗначенияДоступа#ТекущиеЗначенияДоступа"
-    },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4118:ТекущиеЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеЗначенияДоступа#ТекущиеЗначенияДоступа"
-    },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4167:ТекущиеЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеЗначенияДоступа#ТекущиеЗначенияДоступа"
-    },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4243:ТекущиеЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеЗначенияДоступа#ТекущиеЗначенияДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4081:ЗначенияДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЗначенияДоступа#ЗначенияДоступа"
     },
     "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:428:ЗначенияДоступа": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ЗначенияДоступа#ЗначенияДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4419:ТекущиеЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеЗначенияДоступа#ТекущиеЗначенияДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4393:ЗначенияДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЗначенияДоступа#ЗначенияДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4487:ТекущиеЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеЗначенияДоступа#ТекущиеЗначенияДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4458:ЗначенияДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЗначенияДоступа#ЗначенияДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4559:ТекущиеЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеЗначенияДоступа#ТекущиеЗначенияДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4529:ЗначенияДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЗначенияДоступа#ЗначенияДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4636:ТекущиеЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеЗначенияДоступа#ТекущиеЗначенияДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4602:ЗначенияДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЗначенияДоступа#ЗначенияДоступа"
+    },
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4683:ЗначенияДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЗначенияДоступа#ЗначенияДоступа"
     },
     "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:472:ЗначенияДоступа": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ЗначенияДоступа#ЗначенияДоступа"
     },
-    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4720:ТекущиеЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущиеЗначенияДоступа#ТекущиеЗначенияДоступа"
+    "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4770:ЗначенияДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЗначенияДоступа#ЗначенияДоступа"
     },
     "CommonForms-ПраваДоступаУпрощенно-Ext-Form-Module.bsl_2.txt:4929:Профили": {
       "classification": "oldUnknownNewResolved",
@@ -1398,6 +1406,10 @@
     "CommonForms-УточнениеКонтактов-Ext-Form-Module.bsl_1.txt:31:Контакты": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&Контакты#Контакты"
+    },
+    "CommonForms-УточнениеКонтактов-Ext-Form-Module.bsl_1.txt:928:Контакты": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Контакты#Контакты"
     },
     "CommonForms-УточнениеКонтактов-Ext-Form-Module.bsl_2.txt:111:ТаблицаКонтактов": {
       "classification": "oldUnknownNewResolved",
@@ -2245,53 +2257,85 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "&Вопросы#Вопросы"
     },
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:1041:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
+    },
     "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:1125:ВопросыШаблонаАнкеты": {
       "classification": "oldResolvedNewUnknown",
       "oldSignature": "Справочник.ВопросыШаблонаАнкеты#ВопросыШаблонаАнкеты"
+    },
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:1229:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
+    },
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:1311:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
+    },
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:1420:ВопросыШаблонаАнкетыСоставКомплексногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставКомплексногоВопроса#ВопросыШаблонаАнкетыСоставКомплексногоВопроса"
     },
     "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:1506:ВопросыШаблонаАнкеты": {
       "classification": "oldResolvedNewUnknown",
       "oldSignature": "Справочник.ВопросыШаблонаАнкеты#ВопросыШаблонаАнкеты"
     },
-    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:5703:ВопросыШаблонаАнкеты": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты#ВопросыШаблонаАнкеты"
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:1614:ВопросыШаблонаАнкетыСоставКомплексногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставКомплексногоВопроса#ВопросыШаблонаАнкетыСоставКомплексногоВопроса"
     },
-    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:5821:ВопросыШаблонаАнкеты": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты#ВопросыШаблонаАнкеты"
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:1698:ВопросыШаблонаАнкетыСоставКомплексногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставКомплексногоВопроса#ВопросыШаблонаАнкетыСоставКомплексногоВопроса"
     },
-    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:5873:ВопросыШаблонаАнкеты": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты#ВопросыШаблонаАнкеты"
-    },
-    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:5922:ВопросыШаблонаАнкеты": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты#ВопросыШаблонаАнкеты"
-    },
-    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:5962:ВопросыШаблонаАнкеты": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты#ВопросыШаблонаАнкеты"
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:6038:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
     },
     "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:6122:ВопросыШаблонаАнкеты": {
       "classification": "oldResolvedNewUnknown",
       "oldSignature": "Справочник.ВопросыШаблонаАнкеты#ВопросыШаблонаАнкеты"
     },
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:6226:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
+    },
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:6308:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
+    },
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:6387:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
+    },
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:6457:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
+    },
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:6563:ВопросыШаблонаАнкетыСоставКомплексногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставКомплексногоВопроса#ВопросыШаблонаАнкетыСоставКомплексногоВопроса"
+    },
     "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:6649:ВопросыШаблонаАнкеты": {
       "classification": "oldResolvedNewUnknown",
       "oldSignature": "Справочник.ВопросыШаблонаАнкеты#ВопросыШаблонаАнкеты"
     },
-    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:792:ВопросыШаблонаАнкеты": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты#ВопросыШаблонаАнкеты"
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:6757:ВопросыШаблонаАнкетыСоставКомплексногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставКомплексногоВопроса#ВопросыШаблонаАнкетыСоставКомплексногоВопроса"
     },
-    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:910:ВопросыШаблонаАнкеты": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты#ВопросыШаблонаАнкеты"
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:6841:ВопросыШаблонаАнкетыСоставКомплексногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставКомплексногоВопроса#ВопросыШаблонаАнкетыСоставКомплексногоВопроса"
     },
-    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:962:ВопросыШаблонаАнкеты": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты#ВопросыШаблонаАнкеты"
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:6922:ВопросыШаблонаАнкетыСоставКомплексногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставКомплексногоВопроса#ВопросыШаблонаАнкетыСоставКомплексногоВопроса"
+    },
+    "CommonModules-Анкетирование-Ext-Module.bsl_4.txt:6994:ВопросыШаблонаАнкетыСоставКомплексногоВопроса": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ВопросыШаблонаАнкеты.СоставКомплексногоВопроса#ВопросыШаблонаАнкетыСоставКомплексногоВопроса"
     },
     "CommonModules-Анкетирование-Ext-Module.bsl_5.txt:10:ВнешнийИсточник": {
       "classification": "oldUnknownNewResolved",
@@ -2329,17 +2373,13 @@
       "classification": "oldResolvedNewUnknown",
       "oldSignature": "Справочник.ВопросыШаблонаАнкеты#ВопросыШаблонаАнкеты"
     },
-    "CommonModules-Анкетирование-Ext-Module.bsl_8.txt:1471:ДействующиеОпросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ДействующиеОпросы#ДействующиеОпросы"
+    "CommonModules-Анкетирование-Ext-Module.bsl_7.txt:552:ВопросыШаблона": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВопросыШаблона#ВопросыШаблона"
     },
-    "CommonModules-Анкетирование-Ext-Module.bsl_8.txt:1560:ДействующиеОпросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ДействующиеОпросы#ДействующиеОпросы"
-    },
-    "CommonModules-Анкетирование-Ext-Module.bsl_8.txt:1910:ДействующиеОпросыОтборПоРеспонденту": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ДействующиеОпросыОтборПоРеспонденту#ДействующиеОпросыОтборПоРеспонденту"
+    "CommonModules-Анкетирование-Ext-Module.bsl_7.txt:967:ЭлементарныеВопросы": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЭлементарныеВопросы#ЭлементарныеВопросы"
     },
     "CommonModules-БизнесПроцессыИЗадачиСервер-Ext-Module.bsl_25.txt:21:Таблица": {
       "classification": "oldUnknownNewResolved",
@@ -2780,33 +2820,25 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ИмяТаблицыСправочника#ПрисоединенныеФайлыПисьма"
     },
-    "CommonModules-Взаимодействия-Ext-Module.bsl_47.txt:1677:Взаимодействия": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ЖурналДокументов.Взаимодействия#Взаимодействия"
+    "CommonModules-Взаимодействия-Ext-Module.bsl_46.txt:529:Взаимодействия": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЖурналДокументов.Взаимодействия#Взаимодействия"
     },
-    "CommonModules-Взаимодействия-Ext-Module.bsl_47.txt:1778:Взаимодействия": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ЖурналДокументов.Взаимодействия#Взаимодействия"
-    },
-    "CommonModules-Взаимодействия-Ext-Module.bsl_48.txt:273:Взаимодействия": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ЖурналДокументов.Взаимодействия#Взаимодействия"
-    },
-    "CommonModules-Взаимодействия-Ext-Module.bsl_48.txt:374:Взаимодействия": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ЖурналДокументов.Взаимодействия#Взаимодействия"
+    "CommonModules-Взаимодействия-Ext-Module.bsl_46.txt:630:Взаимодействия": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЖурналДокументов.Взаимодействия#Взаимодействия"
     },
     "CommonModules-Взаимодействия-Ext-Module.bsl_5.txt:207:КонтактыВзаимодействия": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ИмяТаблицы#КонтактыВзаимодействия"
     },
-    "CommonModules-Взаимодействия-Ext-Module.bsl_51.txt:410:Взаимодействия": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ЖурналДокументов.Взаимодействия#Взаимодействия"
+    "CommonModules-Взаимодействия-Ext-Module.bsl_50.txt:528:Взаимодействия": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЖурналДокументов.Взаимодействия#Взаимодействия"
     },
-    "CommonModules-Взаимодействия-Ext-Module.bsl_51.txt:511:Взаимодействия": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ЖурналДокументов.Взаимодействия#Взаимодействия"
+    "CommonModules-Взаимодействия-Ext-Module.bsl_50.txt:629:Взаимодействия": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ЖурналДокументов.Взаимодействия#Взаимодействия"
     },
     "CommonModules-Взаимодействия-Ext-Module.bsl_52.txt:411:ПапкиЭлектронныхПисем": {
       "classification": "oldResolvedNewUnknown",
@@ -2817,6 +2849,10 @@
       "newSignature": "&ПапкиДляРасчета#ПапкиДляРасчета"
     },
     "CommonModules-Взаимодействия-Ext-Module.bsl_53.txt:1017:ПапкиДляРасчета": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ПапкиДляРасчета#ПапкиДляРасчета"
+    },
+    "CommonModules-Взаимодействия-Ext-Module.bsl_53.txt:583:ПапкиДляРасчета": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "ПапкиДляРасчета#ПапкиДляРасчета"
     },
@@ -2847,10 +2883,6 @@
     "CommonModules-Взаимодействия-Ext-Module.bsl_60.txt:10:ПредметыДляРасчета": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ПредметыДляРасчета#ПредметыДляРасчета"
-    },
-    "CommonModules-Взаимодействия-Ext-Module.bsl_62.txt:828:ПредметыДляРасчета": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПредметыДляРасчета#ПредметыДляРасчета"
     },
     "CommonModules-Взаимодействия-Ext-Module.bsl_66.txt:20:ТаблицаКонтактов": {
       "classification": "oldUnknownNewResolved",
@@ -3002,31 +3034,31 @@
     },
     "CommonModules-ГрафикиРаботы-Ext-Module.bsl_6.txt:3432:ДниВключенныеВГрафик": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "ВТДниВключенныеВГрафик#ДниВключенныеВГрафик"
+      "newSignature": "#ДниВключенныеВГрафик"
     },
     "CommonModules-ГрафикиРаботы-Ext-Module.bsl_6.txt:3486:ДниВключенныеВГрафик": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "ВТДниВключенныеВГрафик#ДниВключенныеВГрафик"
+      "newSignature": "#ДниВключенныеВГрафик"
     },
     "CommonModules-ГрафикиРаботы-Ext-Module.bsl_6.txt:3538:ДниВключенныеВГрафик": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "ВТДниВключенныеВГрафик#ДниВключенныеВГрафик"
+      "newSignature": "#ДниВключенныеВГрафик"
     },
     "CommonModules-ГрафикиРаботы-Ext-Module.bsl_6.txt:3606:ДниВключенныеВГрафик": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "ВТДниВключенныеВГрафик#ДниВключенныеВГрафик"
+      "newSignature": "#ДниВключенныеВГрафик"
     },
     "CommonModules-ГрафикиРаботы-Ext-Module.bsl_6.txt:3656:ДниВключенныеВГрафик": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "ВТДниВключенныеВГрафик#ДниВключенныеВГрафик"
+      "newSignature": "#ДниВключенныеВГрафик"
     },
     "CommonModules-ГрафикиРаботы-Ext-Module.bsl_6.txt:3697:ДниВключенныеВГрафик": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "ВТДниВключенныеВГрафик#ДниВключенныеВГрафик"
+      "newSignature": "#ДниВключенныеВГрафик"
     },
     "CommonModules-ГрафикиРаботы-Ext-Module.bsl_6.txt:3748:ДниВключенныеВГрафик": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "ВТДниВключенныеВГрафик#ДниВключенныеВГрафик"
+      "newSignature": "#ДниВключенныеВГрафик"
     },
     "CommonModules-ГрафикиРаботы-Ext-Module.bsl_6.txt:3827:ДниВключенныеВГрафик": {
       "classification": "oldUnknownNewResolved",
@@ -3199,6 +3231,14 @@
       "classification": "differentResolved",
       "oldSignature": "Справочник.ДополнительныеОтчетыИОбработки.Разделы#РазделыОтчетовИОбработок",
       "newSignature": "Справочник.ДополнительныеОтчетыИОбработки.Назначение#РазделыОтчетовИОбработок"
+    },
+    "CommonModules-ДополнительныеОтчетыИОбработкиВМоделиСервиса-Ext-Module.bsl_2.txt:263:ПоставляемыеДополнительныеОтчетыИОбработкиСовместимость": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ПоставляемыеДополнительныеОтчетыИОбработки.Совместимость#ПоставляемыеДополнительныеОтчетыИОбработкиСовместимость"
+    },
+    "CommonModules-ДополнительныеОтчетыИОбработкиВМоделиСервиса-Ext-Module.bsl_2.txt:479:ПоставляемыеДополнительныеОтчетыИОбработкиСовместимость": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ПоставляемыеДополнительныеОтчетыИОбработки.Совместимость#ПоставляемыеДополнительныеОтчетыИОбработкиСовместимость"
     },
     "CommonModules-ЗащитаПерсональныхДанных-Ext-Module.bsl_11.txt:1941:Согласия": {
       "classification": "differentResolved",
@@ -4183,10 +4223,6 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ТекущаяТаблица#ТекущаяТаблица"
     },
-    "CommonModules-ОбновлениеИнформационнойБазыСлужебный-Ext-Module.bsl_24.txt:202:ТекущаяТаблица2": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущаяТаблица2#ТекущаяТаблица2"
-    },
     "CommonModules-ОбновлениеИнформационнойБазыСлужебный-Ext-Module.bsl_24.txt:309:ТекущаяТаблица": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ТекущаяТаблица"
@@ -4349,17 +4385,29 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ИмяТаблицы#Таб"
     },
-    "CommonModules-Пользователи-Ext-Module.bsl_11.txt:440:ВнешниеПользователи": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВнешниеПользователи#ВнешниеПользователи"
+    "CommonModules-Пользователи-Ext-Module.bsl_10.txt:190:СправочникПользователи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.Пользователи#СправочникПользователи"
     },
-    "CommonModules-Пользователи-Ext-Module.bsl_11.txt:491:ВнешниеПользователи": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВнешниеПользователи#ВнешниеПользователи"
+    "CommonModules-Пользователи-Ext-Module.bsl_10.txt:313:СправочникПользователи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.Пользователи#СправочникПользователи"
     },
-    "CommonModules-Пользователи-Ext-Module.bsl_11.txt:586:ВнешниеПользователи": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВнешниеПользователи#ВнешниеПользователи"
+    "CommonModules-Пользователи-Ext-Module.bsl_10.txt:365:СправочникПользователи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.Пользователи#СправочникПользователи"
+    },
+    "CommonModules-Пользователи-Ext-Module.bsl_10.txt:655:СправочникПользователи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.Пользователи#СправочникПользователи"
+    },
+    "CommonModules-Пользователи-Ext-Module.bsl_10.txt:778:СправочникПользователи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.Пользователи#СправочникПользователи"
+    },
+    "CommonModules-Пользователи-Ext-Module.bsl_10.txt:830:СправочникПользователи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.Пользователи#СправочникПользователи"
     },
     "CommonModules-Пользователи-Ext-Module.bsl_11.txt:716:НеоднозначныеИдентификаторы": {
       "classification": "oldUnknownNewResolved",
@@ -4517,17 +4565,17 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "&СтарыеРолиВнешнихПользователей#СтарыеРолиВнешнихПользователей"
     },
-    "CommonModules-ПользователиСлужебный-Ext-Module.bsl_24.txt:547:ВнешниеПользователи": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВнешниеПользователи#ВнешниеПользователи"
-    },
-    "CommonModules-ПользователиСлужебный-Ext-Module.bsl_24.txt:648:ВнешниеПользователи": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВнешниеПользователи#ВнешниеПользователи"
+    "CommonModules-ПользователиСлужебный-Ext-Module.bsl_24.txt:389:ИзмененныеВнешниеПользователи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ИзмененныеВнешниеПользователи#ИзмененныеВнешниеПользователи"
     },
     "CommonModules-ПользователиСлужебный-Ext-Module.bsl_24.txt:66:ИзмененныеВнешниеПользователиИРоли": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ИзмененныеВнешниеПользователиИРоли"
+    },
+    "CommonModules-ПользователиСлужебный-Ext-Module.bsl_24.txt:695:ИзмененныеВнешниеПользователи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ИзмененныеВнешниеПользователи#ИзмененныеВнешниеПользователи"
     },
     "CommonModules-ПользователиСлужебный-Ext-Module.bsl_24.txt:879:ИзмененныеВнешниеПользователиИРоли": {
       "classification": "oldUnknownNewResolved",
@@ -4705,30 +4753,6 @@
     "CommonModules-РаботаСКурсамиВалютСлужебный-Ext-Module.bsl_4.txt:35:Сравнение": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#Сравнение"
-    },
-    "CommonModules-РаботаСКурсамиВалютСлужебный-Ext-Module.bsl_4.txt:411:КурсыВалют": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КурсыВалют#КурсыВалют"
-    },
-    "CommonModules-РаботаСКурсамиВалютСлужебный-Ext-Module.bsl_4.txt:432:КурсыВалют": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КурсыВалют#КурсыВалют"
-    },
-    "CommonModules-РаботаСКурсамиВалютСлужебный-Ext-Module.bsl_4.txt:456:КурсыВалют": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КурсыВалют#КурсыВалют"
-    },
-    "CommonModules-РаботаСКурсамиВалютСлужебный-Ext-Module.bsl_4.txt:537:КурсыВалют": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КурсыВалют#КурсыВалют"
-    },
-    "CommonModules-РаботаСКурсамиВалютСлужебный-Ext-Module.bsl_4.txt:569:КурсыВалют": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КурсыВалют#КурсыВалют"
-    },
-    "CommonModules-РаботаСКурсамиВалютСлужебный-Ext-Module.bsl_4.txt:660:КурсыВалют": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КурсыВалют#КурсыВалют"
     },
     "CommonModules-РаботаСКурсамиВалютСлужебный-Ext-Module.bsl_4.txt:71:Сравнение": {
       "classification": "oldUnknownNewResolved",
@@ -4970,6 +4994,10 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ИмяСправочника#Файлы"
     },
+    "CommonModules-РаботаСФайламиВТомахСлужебный-Ext-Module.bsl_10.txt:87:СуществующиеФайлы": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "СуществующиеФайлы#СуществующиеФайлы"
+    },
     "CommonModules-РаботаСФайламиВТомахСлужебный-Ext-Module.bsl_11.txt:18:Файлы": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&Файлы#Файлы"
@@ -4981,6 +5009,14 @@
     "CommonModules-РаботаСФайламиВТомахСлужебный-Ext-Module.bsl_11.txt:95:Файлы": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&Файлы#Файлы"
+    },
+    "CommonModules-РаботаСФайламиВТомахСлужебный-Ext-Module.bsl_14.txt:1243:УникальныеСвязи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "УникальныеСвязи#УникальныеСвязи"
+    },
+    "CommonModules-РаботаСФайламиВТомахСлужебный-Ext-Module.bsl_14.txt:1638:УникальныеСвязи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "УникальныеСвязи#УникальныеСвязи"
     },
     "CommonModules-РаботаСФайламиВТомахСлужебный-Ext-Module.bsl_15.txt:126:СправочникПрисоединенныеФайлы": {
       "classification": "oldUnknownNewResolved",
@@ -5391,6 +5427,14 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеКонфликты"
     },
+    "CommonModules-СтандартныеПодсистемыСервер-Ext-Module.bsl_10.txt:1407:Дубли": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "#Дубли"
+    },
+    "CommonModules-СтандартныеПодсистемыСервер-Ext-Module.bsl_10.txt:1473:Дубли": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "#Дубли"
+    },
     "CommonModules-СтандартныеПодсистемыСервер-Ext-Module.bsl_10.txt:1538:ВсеКонфликты": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеКонфликты"
@@ -5717,6 +5761,10 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ЗначенияБезГрупп"
     },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_1.txt:134:ЗначенияБезПустойСсылки": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "&ТаблицаЗначенийДоступа#ЗначенияБезПустойСсылки"
+    },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_1.txt:20:ЗначенияБезГрупп": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ЗначенияБезГрупп"
@@ -5791,18 +5839,6 @@
       "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#КлючиДоступаНаборов",
       "newSignature": "РегистрСведений.КлючиДоступаВнешнихПользователей#КлючиДоступаНаборов"
     },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_106.txt:1022:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_106.txt:1053:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_106.txt:1159:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаГруппДоступа#СтарыеДанные"
-    },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_106.txt:1265:ВсеСтроки": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСтроки"
@@ -5835,29 +5871,9 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСтроки"
     },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_106.txt:992:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаГруппДоступа#СтарыеДанные"
-    },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_122.txt:107:ВсеСтроки": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСтроки"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_122.txt:1418:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_122.txt:1452:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_122.txt:1483:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_122.txt:1596:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
     },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_122.txt:161:ВсеСтроки": {
       "classification": "oldUnknownNewResolved",
@@ -5886,26 +5902,6 @@
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_122.txt:9:ВсеСтроки": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСтроки"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_123.txt:1632:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаПользователей#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_123.txt:1661:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаПользователей#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_123.txt:1692:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаПользователей#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_123.txt:1799:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаПользователей#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_123.txt:1836:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаПользователей#СтарыеДанные"
     },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_123.txt:1910:ВсеСтроки": {
       "classification": "oldUnknownNewResolved",
@@ -5938,26 +5934,6 @@
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_123.txt:743:ВсеСтроки": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСтроки"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_124.txt:1737:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаВнешнихПользователей#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_124.txt:1773:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаВнешнихПользователей#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_124.txt:1804:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаВнешнихПользователей#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_124.txt:1918:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаВнешнихПользователей#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_124.txt:1955:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаВнешнихПользователей#СтарыеДанные"
     },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_124.txt:2029:ВсеСтроки": {
       "classification": "oldUnknownNewResolved",
@@ -5992,8 +5968,9 @@
       "newSignature": "#ВсеСтроки"
     },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_13.txt:1624:УчастникиГруппДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ГруппыДоступа.Пользователи#УчастникиГруппДоступа"
+      "classification": "differentResolved",
+      "oldSignature": "Справочник.ГруппыДоступа.Пользователи#УчастникиГруппДоступа",
+      "newSignature": "УчастникиГруппДоступа#УчастникиГруппДоступа"
     },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_13.txt:217:ГруппыДоступа": {
       "classification": "oldResolvedNewUnknown",
@@ -6310,6 +6287,10 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ВидВедущегоСписка#ТекущиеДанныеДляОтбора"
     },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_182.txt:353:СпискиВедущихКлючейДоступа": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.КлючиДоступа#СпискиВедущихКлючейДоступа"
+    },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_185.txt:307:ПраваНаКлючиДоступа": {
       "classification": "differentResolved",
       "oldSignature": "РегистрСведений.КлючиДоступаГруппДоступа#ПраваНаКлючиДоступа",
@@ -6460,12 +6441,12 @@
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_189.txt:7607:НастройкиПрав": {
       "classification": "differentResolved",
       "oldSignature": "РегистрСведений.НастройкиПравОбъектов#НастройкиПрав",
-      "newSignature": "НастройкиПравЧтения#НастройкиПрав"
+      "newSignature": "НастройкиПравИзменения#НастройкиПрав"
     },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_189.txt:7631:НастройкиПрав": {
       "classification": "differentResolved",
       "oldSignature": "РегистрСведений.НастройкиПравОбъектов#НастройкиПрав",
-      "newSignature": "НастройкиПравЧтения#НастройкиПрав"
+      "newSignature": "НастройкиПравИзменения#НастройкиПрав"
     },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_189.txt:7753:НастройкиПрав": {
       "classification": "differentResolved",
@@ -6517,6 +6498,10 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ЗначенияСГруппами"
     },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_2.txt:135:ЗначенияБезПустойСсылки": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "&ТаблицаЗначенийДоступа#ЗначенияБезПустойСсылки"
+    },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_2.txt:20:ЗначенияСГруппами": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ЗначенияСГруппами"
@@ -6537,10 +6522,6 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСпискиОбновления"
     },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_232.txt:480:ОбновлениеКлючейДоступаПользователей": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ОбновлениеКлючейДоступаПользователей#ОбновлениеКлючейДоступаПользователей"
-    },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_232.txt:58:ВсеСпискиОбновления": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСпискиОбновления"
@@ -6552,6 +6533,10 @@
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_232.txt:9:ВсеСпискиОбновления": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСпискиОбновления"
+    },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_3.txt:129:ЗначенияБезПустойСсылки": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "&ТаблицаЗначенийДоступа#ЗначенияБезПустойСсылки"
     },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_3.txt:20:ВсеЗначения": {
       "classification": "oldUnknownNewResolved",
@@ -6678,17 +6663,19 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеПользователиИзПрав"
     },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_55.txt:439:СписокПользователей": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.Пользователи#СписокПользователей"
-    },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_56.txt:19:ВсеПользователиИзПрав": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеПользователиИзПрав"
     },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_56.txt:439:ПроверяемыеПользователи": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПроверяемыеПользователи#ПроверяемыеПользователи"
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:1029:ТекущаяТаблица": {
+      "classification": "differentResolved",
+      "oldSignature": "ТекущаяТаблица#ТекущаяТаблица",
+      "newSignature": "ПользователиСПравамиНаЭлементыДанных#ТекущаяТаблица"
+    },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:1218:ТекущаяТаблица": {
+      "classification": "differentResolved",
+      "oldSignature": "ТекущаяТаблица#ТекущаяТаблица",
+      "newSignature": "ПользователиСПравамиНаЭлементыДанных#ТекущаяТаблица"
     },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:1335:ПраваПользователей": {
       "classification": "oldUnknownNewResolved",
@@ -6702,13 +6689,58 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ПраваПользователей"
     },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:524:ПраваНаТаблицу": {
+      "classification": "differentResolved",
+      "oldSignature": "ПользователиСПравамиБезОграниченияНаТаблицу#ПраваНаТаблицу",
+      "newSignature": "ПользователиСПравамиСОграничениемНаТаблицу#ПраваНаТаблицу"
+    },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:562:ПраваНаТаблицу": {
+      "classification": "differentResolved",
+      "oldSignature": "ПользователиСПравамиБезОграниченияНаТаблицу#ПраваНаТаблицу",
+      "newSignature": "ПользователиСПравамиСОграничениемНаТаблицу#ПраваНаТаблицу"
+    },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:597:ТекущаяТаблица": {
+      "classification": "differentResolved",
+      "oldSignature": "ТекущаяТаблица#ТекущаяТаблица",
+      "newSignature": "ПользователиСПравамиНаЭлементыДанных#ТекущаяТаблица"
+    },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:630:ТекущаяТаблица": {
+      "classification": "differentResolved",
+      "oldSignature": "ТекущаяТаблица#ТекущаяТаблица",
+      "newSignature": "ПользователиСПравамиНаЭлементыДанных#ТекущаяТаблица"
+    },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:819:ТекущаяТаблица": {
+      "classification": "differentResolved",
+      "oldSignature": "ТекущаяТаблица#ТекущаяТаблица",
+      "newSignature": "ПользователиСПравамиНаЭлементыДанных#ТекущаяТаблица"
+    },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:83:ПраваПользователей": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ПраваПользователей"
     },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:856:ПраваНаТаблицу": {
+      "classification": "differentResolved",
+      "oldSignature": "ПользователиСПравамиБезОграниченияНаТаблицу#ПраваНаТаблицу",
+      "newSignature": "ПользователиСПравамиСОграничениемНаТаблицу#ПраваНаТаблицу"
+    },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:9:ПраваПользователей": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ПраваПользователей"
+    },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:923:ПраваНаТаблицу": {
+      "classification": "differentResolved",
+      "oldSignature": "ПользователиСПравамиБезОграниченияНаТаблицу#ПраваНаТаблицу",
+      "newSignature": "ПользователиСПравамиСОграничениемНаТаблицу#ПраваНаТаблицу"
+    },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:961:ПраваНаТаблицу": {
+      "classification": "differentResolved",
+      "oldSignature": "ПользователиСПравамиБезОграниченияНаТаблицу#ПраваНаТаблицу",
+      "newSignature": "ПользователиСПравамиСОграничениемНаТаблицу#ПраваНаТаблицу"
+    },
+    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_57.txt:996:ТекущаяТаблица": {
+      "classification": "differentResolved",
+      "oldSignature": "ТекущаяТаблица#ТекущаяТаблица",
+      "newSignature": "ПользователиСПравамиНаЭлементыДанных#ТекущаяТаблица"
     },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_6.txt:242:КлючиДоступаКДанным": {
       "classification": "differentResolved",
@@ -6820,22 +6852,6 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСтроки"
     },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_89.txt:572:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_89.txt:600:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_89.txt:631:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_89.txt:772:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_89.txt:82:ВсеСтроки": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСтроки"
@@ -6855,10 +6871,6 @@
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_89.txt:951:ВсеСтроки": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСтроки"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_90.txt:1012:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
     },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_90.txt:106:ВсеСтроки": {
       "classification": "oldUnknownNewResolved",
@@ -6892,30 +6904,6 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСтроки"
     },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_90.txt:756:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_90.txt:784:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_90.txt:815:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_90.txt:956:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_91.txt:1016:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_91.txt:1157:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_91.txt:1243:ВсеСтроки": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСтроки"
@@ -6940,37 +6928,9 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСтроки"
     },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_91.txt:957:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_91.txt:985:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_92.txt:106:ВсеСтроки": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВсеСтроки"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_92.txt:1146:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_92.txt:1174:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_92.txt:1205:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_92.txt:1346:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
-    },
-    "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_92.txt:1402:СтарыеДанные": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.КлючиДоступаНаборовГруппДоступа#СтарыеДанные"
     },
     "CommonModules-УправлениеДоступомСлужебный-Ext-Module.bsl_92.txt:1478:ВсеСтроки": {
       "classification": "oldUnknownNewResolved",
@@ -7598,15 +7558,15 @@
     },
     "CommonModules-УправлениеЭлектроннойПочтой-Ext-Module.bsl_16.txt:244:Получатели": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "&ИмяТаблицыПолучателиПисьма#Получатели"
+      "newSignature": "&ИмяТаблицыПолучателиКопий#Получатели"
     },
     "CommonModules-УправлениеЭлектроннойПочтой-Ext-Module.bsl_16.txt:264:Получатели": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "&ИмяТаблицыПолучателиПисьма#Получатели"
+      "newSignature": "&ИмяТаблицыПолучателиКопий#Получатели"
     },
     "CommonModules-УправлениеЭлектроннойПочтой-Ext-Module.bsl_16.txt:339:Получатели": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "&ИмяТаблицыПолучателиПисьма#Получатели"
+      "newSignature": "&ИмяТаблицыПолучателиКопий#Получатели"
     },
     "CommonModules-УправлениеЭлектроннойПочтой-Ext-Module.bsl_16.txt:34:Адреса": {
       "classification": "oldUnknownNewResolved",
@@ -7614,15 +7574,15 @@
     },
     "CommonModules-УправлениеЭлектроннойПочтой-Ext-Module.bsl_16.txt:398:Получатели": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "&ИмяТаблицыПолучателиПисьма#Получатели"
+      "newSignature": "&ИмяТаблицыПолучателиОтвет#Получатели"
     },
     "CommonModules-УправлениеЭлектроннойПочтой-Ext-Module.bsl_16.txt:418:Получатели": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "&ИмяТаблицыПолучателиПисьма#Получатели"
+      "newSignature": "&ИмяТаблицыПолучателиОтвет#Получатели"
     },
     "CommonModules-УправлениеЭлектроннойПочтой-Ext-Module.bsl_16.txt:492:Получатели": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "&ИмяТаблицыПолучателиПисьма#Получатели"
+      "newSignature": "&ИмяТаблицыПолучателиОтвет#Получатели"
     },
     "CommonModules-УправлениеЭлектроннойПочтой-Ext-Module.bsl_16.txt:64:Получатели": {
       "classification": "oldUnknownNewResolved",
@@ -7728,6 +7688,14 @@
       "classification": "oldResolvedNewUnknown",
       "oldSignature": "Справочник.ШаблоныСообщений#ШаблоныСообщений"
     },
+    "CommonModules-ЭлектроннаяПодписьСлужебный-Ext-Module.bsl_10.txt:1003:СертификатыКлючейЭлектроннойПодписиИШифрованияПользователи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.СертификатыКлючейЭлектроннойПодписиИШифрования.Пользователи#СертификатыКлючейЭлектроннойПодписиИШифрованияПользователи"
+    },
+    "CommonModules-ЭлектроннаяПодписьСлужебный-Ext-Module.bsl_10.txt:1080:СертификатыКлючейЭлектроннойПодписиИШифрованияПользователи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.СертификатыКлючейЭлектроннойПодписиИШифрования.Пользователи#СертификатыКлючейЭлектроннойПодписиИШифрованияПользователи"
+    },
     "CommonModules-ЭлектроннаяПодписьСлужебный-Ext-Module.bsl_11.txt:398:СертификатыКлючейЭлектроннойПодписиИШифрования": {
       "classification": "oldResolvedNewUnknown",
       "oldSignature": "Справочник.СертификатыКлючейЭлектроннойПодписиИШифрования#СертификатыКлючейЭлектроннойПодписиИШифрования"
@@ -7749,6 +7717,30 @@
       "classification": "differentResolved",
       "oldSignature": "Справочник.СертификатыКлючейЭлектроннойПодписиИШифрования#Сертификаты",
       "newSignature": "ВсеСертификаты#Сертификаты"
+    },
+    "CommonModules-ЭлектроннаяПодписьСлужебныйВызовСервера-Ext-Module.bsl_1.txt:1160:ВсеСертификаты": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВсеСертификаты#ВсеСертификаты"
+    },
+    "CommonModules-ЭлектроннаяПодписьСлужебныйВызовСервера-Ext-Module.bsl_1.txt:1248:ВсеСертификаты": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВсеСертификаты#ВсеСертификаты"
+    },
+    "CommonModules-ЭлектроннаяПодписьСлужебныйВызовСервера-Ext-Module.bsl_1.txt:1331:ВсеСертификаты": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВсеСертификаты#ВсеСертификаты"
+    },
+    "CommonModules-ЭлектроннаяПодписьСлужебныйВызовСервера-Ext-Module.bsl_1.txt:1572:ВсеСертификаты": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВсеСертификаты#ВсеСертификаты"
+    },
+    "CommonModules-ЭлектроннаяПодписьСлужебныйВызовСервера-Ext-Module.bsl_1.txt:1596:СертификатыКлючейЭлектроннойПодписиИШифрованияПользователи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.СертификатыКлючейЭлектроннойПодписиИШифрования.Пользователи#СертификатыКлючейЭлектроннойПодписиИШифрованияПользователи"
+    },
+    "CommonModules-ЭлектроннаяПодписьСлужебныйВызовСервера-Ext-Module.bsl_1.txt:1673:СертификатыКлючейЭлектроннойПодписиИШифрованияПользователи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.СертификатыКлючейЭлектроннойПодписиИШифрования.Пользователи#СертификатыКлючейЭлектроннойПодписиИШифрованияПользователи"
     },
     "CommonModules-ЭлектроннаяПодписьСлужебныйВызовСервера-Ext-Module.bsl_1.txt:185:Отпечатки": {
       "classification": "oldUnknownNewResolved",
@@ -7824,6 +7816,14 @@
     "DataProcessors-ЗагрузкаДанныхИзФайла-Ext-ManagerModule.bsl_1.txt:8:ЗначенияДляСопоставления": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ЗначенияДляСопоставления#ЗначенияДляСопоставления"
+    },
+    "DataProcessors-ЗаявлениеНаВыпускНовогоКвалифицированногоСертификата-Ext-ManagerModule.bsl_3.txt:1057:СертификатыКлючейЭлектроннойПодписиИШифрованияПользователиПереопределяемый": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.СертификатыКлючейЭлектроннойПодписиИШифрования.Пользователи#СертификатыКлючейЭлектроннойПодписиИШифрованияПользователиПереопределяемый"
+    },
+    "DataProcessors-ЗаявлениеНаВыпускНовогоКвалифицированногоСертификата-Ext-ManagerModule.bsl_3.txt:1321:СертификатыКлючейЭлектроннойПодписиИШифрованияПользователиПереопределяемый": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.СертификатыКлючейЭлектроннойПодписиИШифрования.Пользователи#СертификатыКлючейЭлектроннойПодписиИШифрованияПользователиПереопределяемый"
     },
     "DataProcessors-ИнтерактивноеИзменениеВыгрузки-Ext-ObjectModule.bsl_1.txt:8:ИмяТаблицыМетаданных": {
       "classification": "oldUnknownNewResolved",
@@ -8182,24 +8182,29 @@
       "newSignature": "#Т"
     },
     "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_19.txt:2892:Приоритеты": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПриоритетыВыполнения#Приоритеты"
+      "classification": "differentResolved",
+      "oldSignature": "ПриоритетыВыполнения#Приоритеты",
+      "newSignature": "ПриоритетыОбработчиков#Приоритеты"
     },
     "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_19.txt:2933:Приоритеты": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПриоритетыВыполнения#Приоритеты"
+      "classification": "differentResolved",
+      "oldSignature": "ПриоритетыВыполнения#Приоритеты",
+      "newSignature": "ПриоритетыОбработчиков#Приоритеты"
     },
     "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_19.txt:2978:Приоритеты": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПриоритетыВыполнения#Приоритеты"
+      "classification": "differentResolved",
+      "oldSignature": "ПриоритетыВыполнения#Приоритеты",
+      "newSignature": "ПриоритетыОбработчиков#Приоритеты"
     },
     "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_19.txt:3063:Приоритеты": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПриоритетыВыполнения#Приоритеты"
+      "classification": "differentResolved",
+      "oldSignature": "ПриоритетыВыполнения#Приоритеты",
+      "newSignature": "ПриоритетыОбработчиков#Приоритеты"
     },
     "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_19.txt:3170:Приоритеты": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПриоритетыВыполнения#Приоритеты"
+      "classification": "differentResolved",
+      "oldSignature": "ПриоритетыВыполнения#Приоритеты",
+      "newSignature": "ПриоритетыОбработчиков#Приоритеты"
     },
     "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_19.txt:3328:Т": {
       "classification": "oldUnknownNewResolved",
@@ -8251,30 +8256,6 @@
     "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_2.txt:159:Т": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#Т"
-    },
-    "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_2.txt:1634:ИзменяемыеОбъектыДругимиОбработчиками": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ИзменяемыеОбъекты#ИзменяемыеОбъектыДругимиОбработчиками"
-    },
-    "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_2.txt:2054:ИзменяемыеОбъектыДругимиОбработчиками": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ИзменяемыеОбъекты#ИзменяемыеОбъектыДругимиОбработчиками"
-    },
-    "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_2.txt:2150:ИзменяемыеОбъектыДругимиОбработчиками": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ИзменяемыеОбъекты#ИзменяемыеОбъектыДругимиОбработчиками"
-    },
-    "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_2.txt:2237:ИзменяемыеОбъектыДругимиОбработчиками": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ИзменяемыеОбъекты#ИзменяемыеОбъектыДругимиОбработчиками"
-    },
-    "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_2.txt:2453:ИзменяемыеОбъектыДругимиОбработчиками": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ИзменяемыеОбъекты#ИзменяемыеОбъектыДругимиОбработчиками"
-    },
-    "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_2.txt:2548:ИзменяемыеОбъектыДругимиОбработчиками": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ИзменяемыеОбъекты#ИзменяемыеОбъектыДругимиОбработчиками"
     },
     "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_2.txt:2697:Т": {
       "classification": "oldUnknownNewResolved",
@@ -8391,10 +8372,6 @@
     "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_8.txt:55:Проблемы": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#Проблемы"
-    },
-    "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_8.txt:636:ЧтениеНизкогоПорядка": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "втВтЧтениеНизкогоПорядкаСФильтромПоПриоритету#ЧтениеНизкогоПорядка"
     },
     "DataProcessors-ОписаниеОбработчиковОбновления-Ext-ObjectModule.bsl_8.txt:9:Проблемы": {
       "classification": "oldUnknownNewResolved",
@@ -8856,17 +8833,167 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ИмяТаблицыМетаданных#ПсевдонимЗаданнойТаблицы"
     },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:1147:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.ЭлектронноеПисьмоВходящее#ДокументВзаимодействий"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:1189:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.ЭлектронноеПисьмоВходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:1515:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.ЭлектронноеПисьмоВходящее#ДокументВзаимодействий"
+    },
     "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:155:ВложенныйЗапрос": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВложенныйЗапрос"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:1726:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.ЭлектронноеПисьмоВходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:1781:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.ЭлектронноеПисьмоВходящее#ДокументВзаимодействий"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:1819:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.ЭлектронноеПисьмоВходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:1938:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.Встреча#ДокументВзаимодействий"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:1980:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.Встреча.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
     },
     "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:22:ВложенныйЗапрос": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВложенныйЗапрос"
     },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:2288:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.Встреча#ДокументВзаимодействий"
+    },
     "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:246:ВложенныйЗапрос": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВложенныйЗапрос"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:2481:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.Встреча.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:2536:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.Встреча#ДокументВзаимодействий"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:2574:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.Встреча.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:2693:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.ТелефонныйЗвонок#ДокументВзаимодействий"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:2735:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.ТелефонныйЗвонок.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:3052:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.ТелефонныйЗвонок#ДокументВзаимодействий"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:3254:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.ТелефонныйЗвонок.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:3309:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.ТелефонныйЗвонок#ДокументВзаимодействий"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:3347:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.ТелефонныйЗвонок.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:3466:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.СообщениеSMS#ДокументВзаимодействий"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:3508:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.СообщениеSMS.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:3821:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.СообщениеSMS#ДокументВзаимодействий"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:4019:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.СообщениеSMS.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:4074:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.СообщениеSMS#ДокументВзаимодействий"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:4112:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.СообщениеSMS.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:4231:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.ЗапланированноеВзаимодействие#ДокументВзаимодействий"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:4273:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.ЗапланированноеВзаимодействие.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:4603:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.ЗапланированноеВзаимодействие#ДокументВзаимодействий"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:4818:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.ЗапланированноеВзаимодействие.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:4873:ДокументВзаимодействий": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее#ДокументВзаимодействий",
+      "newSignature": "Документ.ЗапланированноеВзаимодействие#ДокументВзаимодействий"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:4911:ДокументВзаимодействийДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты",
+      "newSignature": "Документ.ЗапланированноеВзаимодействие.ДополнительныеРеквизиты#ДокументВзаимодействийДополнительныеРеквизиты"
     },
     "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_1.txt:5039:ВложенныйЗапрос": {
       "classification": "oldUnknownNewResolved",
@@ -8896,49 +9023,189 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВложенныйЗапрос"
     },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:1127:СвойстваТипаБулево": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "СвойстваТипаБулево#СвойстваТипаБулево"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:1222:СвойстваТипаБулево": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "СвойстваТипаБулево#СвойстваТипаБулево"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:1379:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ТелефонныйЗвонок.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:1700:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ТелефонныйЗвонок.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:1747:Взаимодействие": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча#Взаимодействие",
+      "newSignature": "Документ.ТелефонныйЗвонок#Взаимодействие"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:1871:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ТелефонныйЗвонок.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:1968:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ТелефонныйЗвонок.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:2035:СвойстваТипаБулево": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "СвойстваТипаБулево#СвойстваТипаБулево"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:2130:СвойстваТипаБулево": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "СвойстваТипаБулево#СвойстваТипаБулево"
+    },
     "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:22:СвойстваТипаБулево": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&СвойстваТипаБулево#СвойстваТипаБулево"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:2209:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ТелефонныйЗвонок.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:2287:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЗапланированноеВзаимодействие.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:2634:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЗапланированноеВзаимодействие.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:2681:Взаимодействие": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча#Взаимодействие",
+      "newSignature": "Документ.ЗапланированноеВзаимодействие#Взаимодействие"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:2805:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЗапланированноеВзаимодействие.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:2902:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЗапланированноеВзаимодействие.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:2969:СвойстваТипаБулево": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "СвойстваТипаБулево#СвойстваТипаБулево"
     },
     "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:302:ВложенныйЗапрос": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВложенныйЗапрос"
     },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:3064:СвойстваТипаБулево": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "СвойстваТипаБулево#СвойстваТипаБулево"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:3143:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЗапланированноеВзаимодействие.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:3221:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЭлектронноеПисьмоВходящее.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
     "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:348:ВложенныйЗапрос": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВложенныйЗапрос"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:3560:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЭлектронноеПисьмоВходящее.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:3607:Взаимодействие": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча#Взаимодействие",
+      "newSignature": "Документ.ЭлектронноеПисьмоВходящее#Взаимодействие"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:3731:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЭлектронноеПисьмоВходящее.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:3828:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЭлектронноеПисьмоВходящее.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:3895:СвойстваТипаБулево": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "СвойстваТипаБулево#СвойстваТипаБулево"
     },
     "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:394:ВложенныйЗапрос": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВложенныйЗапрос"
     },
-    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:5075:ДополнительныеСведения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДополнительныеСведения#ДополнительныеСведения"
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:3990:СвойстваТипаБулево": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "СвойстваТипаБулево#СвойстваТипаБулево"
     },
-    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:5361:ДополнительныеСведения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДополнительныеСведения#ДополнительныеСведения"
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:4069:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЭлектронноеПисьмоВходящее.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
     },
-    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:5393:Взаимодействия": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ЖурналДокументов.Взаимодействия#Взаимодействия"
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:4147:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
     },
-    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:5517:Взаимодействия": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ЖурналДокументов.Взаимодействия#Взаимодействия"
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:4488:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
     },
-    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:5591:ДополнительныеСведения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДополнительныеСведения#ДополнительныеСведения"
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:4535:Взаимодействие": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча#Взаимодействие",
+      "newSignature": "Документ.ЭлектронноеПисьмоИсходящее#Взаимодействие"
     },
-    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:5791:ДополнительныеСведения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДополнительныеСведения#ДополнительныеСведения"
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:4659:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
     },
-    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:6132:ДополнительныеСведения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДополнительныеСведения#ДополнительныеСведения"
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:4756:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:4823:СвойстваТипаБулево": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "СвойстваТипаБулево#СвойстваТипаБулево"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:4918:СвойстваТипаБулево": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "СвойстваТипаБулево#СвойстваТипаБулево"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:4997:ВзаимодействиеДополнительныеРеквизиты": {
+      "classification": "differentResolved",
+      "oldSignature": "Документ.Встреча.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты",
+      "newSignature": "Документ.ЭлектронноеПисьмоИсходящее.ДополнительныеРеквизиты#ВзаимодействиеДополнительныеРеквизиты"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:5643:СвойстваТипаБулево": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "СвойстваТипаБулево#СвойстваТипаБулево"
+    },
+    "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:5742:СвойстваТипаБулево": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "СвойстваТипаБулево#СвойстваТипаБулево"
     },
     "DocumentJournals-Взаимодействия-Forms-ФормаСписка-Ext-Form-Module.bsl_5.txt:6204:ВложенныйЗапрос": {
       "classification": "oldUnknownNewResolved",
@@ -9044,6 +9311,10 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "СоставОтветов#СоставОтветов"
     },
+    "Documents-Анкета-Forms-ФормаДокумента-Ext-Form-Module.bsl_2.txt:1775:ВложенныйЗапрос": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "#ВложенныйЗапрос"
+    },
     "Documents-Анкета-Forms-ФормаДокумента-Ext-Form-Module.bsl_2.txt:1880:СоставОтветов": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "СоставОтветов#СоставОтветов"
@@ -9059,6 +9330,10 @@
     "Documents-Анкета-Forms-ФормаДокумента-Ext-Form-Module.bsl_2.txt:2572:СоставОтветов": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "СоставОтветов#СоставОтветов"
+    },
+    "Documents-Анкета-Forms-ФормаДокумента-Ext-Form-Module.bsl_2.txt:2934:ОбязательныеВопросыБезОтветов": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ОбязательныеВопросыБезОтветов#ОбязательныеВопросыБезОтветов"
     },
     "Documents-Анкета-Forms-ФормаДокумента-Ext-Form-Module.bsl_2.txt:311:ВопросыБезОтветов": {
       "classification": "oldUnknownNewResolved",
@@ -9156,6 +9431,18 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ИмяТаблицыПолучателиКопий#ЭлектронноеПисьмоПолучателиКопий"
     },
+    "Documents-ЭлектронноеПисьмоИсходящее-Ext-ObjectModule.bsl_4.txt:1256:АдресТекущегоПолучателя": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "АдресТекущегоПолучателя#АдресТекущегоПолучателя"
+    },
+    "Documents-ЭлектронноеПисьмоИсходящее-Ext-ObjectModule.bsl_4.txt:246:ЭлектронноеПисьмо": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "&ИмяТаблицыДокумента#ЭлектронноеПисьмо"
+    },
+    "Documents-ЭлектронноеПисьмоИсходящее-Ext-ObjectModule.bsl_4.txt:342:ЭлектронноеПисьмо": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "&ИмяТаблицыДокумента#ЭлектронноеПисьмо"
+    },
     "Documents-ЭлектронноеПисьмоИсходящее-Ext-ObjectModule.bsl_4.txt:471:ЭлектронноеПисьмоПолучателиПисьма": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ИмяТаблицыПолучателиПисьма#ЭлектронноеПисьмоПолучателиПисьма"
@@ -9175,6 +9462,10 @@
     "Documents-ЭлектронноеПисьмоИсходящее-Ext-ObjectModule.bsl_4.txt:738:ЭлектронноеПисьмоПолучателиПисьма": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ИмяТаблицыПолучателиПисьма#ЭлектронноеПисьмоПолучателиПисьма"
+    },
+    "Documents-ЭлектронноеПисьмоИсходящее-Ext-ObjectModule.bsl_4.txt:798:АдресТекущегоПолучателя": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "АдресТекущегоПолучателя#АдресТекущегоПолучателя"
     },
     "Documents-ЭлектронноеПисьмоИсходящее-Ext-ObjectModule.bsl_4.txt:936:ЭлектронноеПисьмоПолучателиКопий": {
       "classification": "oldUnknownNewResolved",
@@ -9268,26 +9559,6 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ТаблицаРазделов#ТаблицаРазделов"
     },
-    "InformationRegisters-ДатыЗапретаИзменения-Forms-ДатыЗапретаИзменения-Ext-Form-Module.bsl_2.txt:1058:ДатыЗапретаИзменения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДатыЗапретаИзменения#ДатыЗапретаИзменения"
-    },
-    "InformationRegisters-ДатыЗапретаИзменения-Forms-ДатыЗапретаИзменения-Ext-Form-Module.bsl_2.txt:1146:ДатыЗапретаИзменения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДатыЗапретаИзменения#ДатыЗапретаИзменения"
-    },
-    "InformationRegisters-ДатыЗапретаИзменения-Forms-ДатыЗапретаИзменения-Ext-Form-Module.bsl_2.txt:1241:ДатыЗапретаИзменения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДатыЗапретаИзменения#ДатыЗапретаИзменения"
-    },
-    "InformationRegisters-ДатыЗапретаИзменения-Forms-ДатыЗапретаИзменения-Ext-Form-Module.bsl_2.txt:1336:ДатыЗапретаИзменения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДатыЗапретаИзменения#ДатыЗапретаИзменения"
-    },
-    "InformationRegisters-ДатыЗапретаИзменения-Forms-ДатыЗапретаИзменения-Ext-Form-Module.bsl_2.txt:1426:ДатыЗапретаИзменения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДатыЗапретаИзменения#ДатыЗапретаИзменения"
-    },
     "InformationRegisters-ДатыЗапретаИзменения-Forms-ДатыЗапретаИзменения-Ext-Form-Module.bsl_2.txt:1663:Разделы": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#Разделы"
@@ -9340,18 +9611,6 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "ТаблицаРазделов#ТаблицаРазделов"
     },
-    "InformationRegisters-ДатыЗапретаИзменения-Forms-ДатыЗапретаИзменения-Ext-Form-Module.bsl_2.txt:669:ДатыЗапретаИзменения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДатыЗапретаИзменения#ДатыЗапретаИзменения"
-    },
-    "InformationRegisters-ДатыЗапретаИзменения-Forms-ДатыЗапретаИзменения-Ext-Form-Module.bsl_2.txt:700:ДатыЗапретаИзменения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДатыЗапретаИзменения#ДатыЗапретаИзменения"
-    },
-    "InformationRegisters-ДатыЗапретаИзменения-Forms-ДатыЗапретаИзменения-Ext-Form-Module.bsl_2.txt:879:ДатыЗапретаИзменения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДатыЗапретаИзменения#ДатыЗапретаИзменения"
-    },
     "InformationRegisters-ДатыЗапретаИзменения-Forms-ДатыЗапретаИзменения-Ext-Form-Module.bsl_2.txt:909:ТаблицаРазделов": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "ТаблицаРазделов#ТаблицаРазделов"
@@ -9359,10 +9618,6 @@
     "InformationRegisters-ДатыЗапретаИзменения-Forms-ДатыЗапретаИзменения-Ext-Form-Module.bsl_2.txt:939:ТаблицаРазделов": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "ТаблицаРазделов#ТаблицаРазделов"
-    },
-    "InformationRegisters-ДатыЗапретаИзменения-Forms-ДатыЗапретаИзменения-Ext-Form-Module.bsl_2.txt:976:ДатыЗапретаИзменения": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.ДатыЗапретаИзменения#ДатыЗапретаИзменения"
     },
     "InformationRegisters-ДатыЗапретаИзменения-Forms-ДатыЗапретаИзменения-Ext-Form-Module.bsl_3.txt:296:ОбщаяДата": {
       "classification": "oldUnknownNewResolved",
@@ -9707,9 +9962,21 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "&Таблица#Таблица"
     },
+    "InformationRegisters-ИсполнителиЗадач-Ext-RecordSetModule.bsl_1.txt:1009:НовыеЗаписи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "НовыеЗаписи#НовыеЗаписи"
+    },
     "InformationRegisters-ИсполнителиЗадач-Ext-RecordSetModule.bsl_1.txt:103:НовыеЗаписи": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&НовыеЗаписи#НовыеЗаписи"
+    },
+    "InformationRegisters-ИсполнителиЗадач-Ext-RecordSetModule.bsl_1.txt:1049:НовыеЗаписи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "НовыеЗаписи#НовыеЗаписи"
+    },
+    "InformationRegisters-ИсполнителиЗадач-Ext-RecordSetModule.bsl_1.txt:1095:НовыеЗаписи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "НовыеЗаписи#НовыеЗаписи"
     },
     "InformationRegisters-ИсполнителиЗадач-Ext-RecordSetModule.bsl_1.txt:1209:Различия": {
       "classification": "oldUnknownNewResolved",
@@ -9762,6 +10029,14 @@
     "InformationRegisters-ИсполнителиЗадач-Ext-RecordSetModule.bsl_1.txt:9:НовыеЗаписи": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&НовыеЗаписи#НовыеЗаписи"
+    },
+    "InformationRegisters-ИсполнителиЗадач-Ext-RecordSetModule.bsl_1.txt:949:НовыеЗаписи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "НовыеЗаписи#НовыеЗаписи"
+    },
+    "InformationRegisters-ИсполнителиЗадач-Ext-RecordSetModule.bsl_1.txt:981:НовыеЗаписи": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "НовыеЗаписи#НовыеЗаписи"
     },
     "InformationRegisters-ИспользуемыеВидыДоступа-Ext-ManagerModule.bsl_1.txt:1032:ИспользуемыеВидыДоступа": {
       "classification": "oldUnknownNewResolved",
@@ -9959,6 +10234,10 @@
       "classification": "oldResolvedNewUnknown",
       "oldSignature": "Справочник.Календари#Календари"
     },
+    "InformationRegisters-КалендарныеГрафики-Ext-ManagerModule.bsl_3.txt:4385:ВТОбновляемыеГрафикиРаботы": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВТОбновляемыеГрафикиРаботы#ВТОбновляемыеГрафикиРаботы"
+    },
     "InformationRegisters-КалендарныеГрафики-Ext-ManagerModule.bsl_3.txt:59:УсловияОбновления": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&УсловияОбновления#УсловияОбновления"
@@ -10014,10 +10293,6 @@
     "InformationRegisters-НаследованиеНастроекПравОбъектов-Ext-ManagerModule.bsl_3.txt:9:ТаблицаСИерархией": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "&ТаблицаСИерархией#ТаблицаСИерархией"
-    },
-    "InformationRegisters-НаследованиеНастроекПравОбъектов-Ext-ManagerModule.bsl_4.txt:563:РодительСсылки": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РодительСсылки#РодительСсылки"
     },
     "InformationRegisters-НастройкиВариантовОтчетов-Ext-ManagerModule.bsl_2.txt:686:СоставыГруппПользователей": {
       "classification": "oldResolvedNewUnknown",
@@ -10323,17 +10598,9 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "#Таблица"
     },
-    "InformationRegisters-НеудаленныеОбъекты-Ext-RecordSetModule.bsl_1.txt:809:ТекущийНабор": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущийНабор#ТекущийНабор"
-    },
-    "InformationRegisters-НеудаленныеОбъекты-Ext-RecordSetModule.bsl_1.txt:832:ТекущийНабор": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущийНабор#ТекущийНабор"
-    },
-    "InformationRegisters-НеудаленныеОбъекты-Ext-RecordSetModule.bsl_1.txt:866:ТекущийНабор": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ТекущийНабор#ТекущийНабор"
+    "InformationRegisters-НеудаленныеОбъекты-Ext-RecordSetModule.bsl_1.txt:737:Таб": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ТекущийНабор#Таб"
     },
     "InformationRegisters-НеудаленныеОбъекты-Ext-RecordSetModule.bsl_1.txt:9:ТекущийНаборЗаписей": {
       "classification": "oldUnknownNewResolved",
@@ -10439,21 +10706,9 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "#Ссылки"
     },
-    "InformationRegisters-СведенияОПользователях-Ext-ManagerModule.bsl_1.txt:251:СведенияОПользователях": {
+    "InformationRegisters-СведенияОПользователях-Ext-ManagerModule.bsl_1.txt:538:Пользователи": {
       "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.СведенияОПользователях#СведенияОПользователях"
-    },
-    "InformationRegisters-СведенияОПользователях-Ext-ManagerModule.bsl_1.txt:407:СведенияОПользователях": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.СведенияОПользователях#СведенияОПользователях"
-    },
-    "InformationRegisters-СведенияОПользователях-Ext-ManagerModule.bsl_1.txt:479:СведенияОПользователях": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.СведенияОПользователях#СведенияОПользователях"
-    },
-    "InformationRegisters-СведенияОПользователях-Ext-ManagerModule.bsl_1.txt:569:СведенияОПользователях": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "РегистрСведений.СведенияОПользователях#СведенияОПользователях"
+      "oldSignature": "Справочник.Пользователи#Пользователи"
     },
     "InformationRegisters-СнимкиОтчетов-Ext-ManagerModule.bsl_1.txt:1009:СнимкиОтчетов": {
       "classification": "oldUnknownNewResolved",
@@ -10719,6 +10974,14 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "ПраваРолейРасширений#ПраваРолейРасширений"
     },
+    "Reports-АнализЖурналаРегистрации-Ext-ManagerModule.bsl_1.txt:220:ГруппыПользователей": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ГруппыПользователей#ГруппыПользователей"
+    },
+    "Reports-АнализЖурналаРегистрации-Ext-ManagerModule.bsl_1.txt:334:ГруппыПользователей": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "Справочник.ГруппыПользователей#ГруппыПользователей"
+    },
     "Reports-АнализЖурналаРегистрации-Ext-ManagerModule.bsl_4.txt:305:Пользователи": {
       "classification": "differentResolved",
       "oldSignature": "Справочник.Пользователи#Пользователи",
@@ -10733,90 +10996,6 @@
       "classification": "differentResolved",
       "oldSignature": "Справочник.Пользователи#Пользователи",
       "newSignature": "Справочник.ВнешниеПользователи#Пользователи"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:10027:ВопросыШаблонаАнкетыВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВопросыШаблонаАнкетыВопросы#ВопросыШаблонаАнкетыВопросы"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:10227:ВопросыШаблонаАнкетыВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВопросыШаблонаАнкетыВопросы#ВопросыШаблонаАнкетыВопросы"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:10264:ДанныеРегистраБулевоВариантыОтветов": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ДанныеРегистраБулевоВариантыОтветов#ДанныеРегистраБулевоВариантыОтветов"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:10313:ВопросыШаблонаАнкетыВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВопросыШаблонаАнкетыВопросы#ВопросыШаблонаАнкетыВопросы"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:10357:ДанныеРегистраБулевоВариантыОтветов": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ДанныеРегистраБулевоВариантыОтветов#ДанныеРегистраБулевоВариантыОтветов"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:10438:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:10526:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:10592:ОтветыНаТабличныеВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ОтветыНаТабличныеВопросы#ОтветыНаТабличныеВопросы"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:10661:ОтветыНаТабличныеВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ОтветыНаТабличныеВопросы#ОтветыНаТабличныеВопросы"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:10960:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:11025:ВопросыДляАнкетирования": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПланВидовХарактеристик.ВопросыДляАнкетирования#ВопросыДляАнкетирования"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:11136:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:11189:ОтветыНаТабличныеВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ОтветыНаТабличныеВопросы#ОтветыНаТабличныеВопросы"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:11227:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:11292:ОтветыНаТабличныеВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ОтветыНаТабличныеВопросы#ОтветыНаТабличныеВопросы"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:11419:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:11507:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:11950:ВопросыДляАнкетирования": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПланВидовХарактеристик.ВопросыДляАнкетирования#ВопросыДляАнкетирования"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:12183:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:12271:ВопросыШаблонаАнкетыСоставТабличногоВопроса": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ВопросыШаблонаАнкеты.СоставТабличногоВопроса#ВопросыШаблонаАнкетыСоставТабличногоВопроса"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:12337:ОтветыНаТабличныеВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ОтветыНаТабличныеВопросы#ОтветыНаТабличныеВопросы"
     },
     "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:12475:ОсновнойЗапрос": {
       "classification": "oldUnknownNewResolved",
@@ -10895,42 +11074,6 @@
     "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:8260:ОсновнойЗапрос": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ОсновнойЗапрос"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:9547:ВопросыШаблонаАнкетыВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВопросыШаблонаАнкетыВопросы#ВопросыШаблонаАнкетыВопросы"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:9585:ВопросыШаблонаАнкетыВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВопросыШаблонаАнкетыВопросы#ВопросыШаблонаАнкетыВопросы"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:9635:ДанныеРегистраБулевоВариантыОтветов": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ДанныеРегистраБулевоВариантыОтветов#ДанныеРегистраБулевоВариантыОтветов"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:9691:ВопросыШаблонаАнкетыВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВопросыШаблонаАнкетыВопросы#ВопросыШаблонаАнкетыВопросы"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:9742:ДанныеРегистраБулевоВариантыОтветов": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ДанныеРегистраБулевоВариантыОтветов#ДанныеРегистраБулевоВариантыОтветов"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:9793:ВопросыШаблонаАнкетыВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВопросыШаблонаАнкетыВопросы#ВопросыШаблонаАнкетыВопросы"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:9838:ДанныеРегистраБулевоВариантыОтветов": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ДанныеРегистраБулевоВариантыОтветов#ДанныеРегистраБулевоВариантыОтветов"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:9929:ВопросыШаблонаАнкетыВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВопросыШаблонаАнкетыВопросы#ВопросыШаблонаАнкетыВопросы"
-    },
-    "Reports-АнализОпроса-Ext-ObjectModule.bsl_1.txt:9970:ВопросыШаблонаАнкетыВопросы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВопросыШаблонаАнкетыВопросы#ВопросыШаблонаАнкетыВопросы"
     },
     "Reports-АнализОпроса-Ext-ObjectModule.bsl_3.txt:10:ТаблицаСправочника": {
       "classification": "oldUnknownNewResolved",
@@ -11442,23 +11585,19 @@
     },
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_13.txt:1437:ГруппыДоступа": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "Справочник.ГруппыДоступа#ГруппыДоступа"
+      "newSignature": "ГруппыДоступаВыбранногоЗначенияДоступа#ГруппыДоступа"
     },
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_13.txt:1462:ГруппыДоступа": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "Справочник.ГруппыДоступа#ГруппыДоступа"
+      "newSignature": "ГруппыДоступаВыбранногоЗначенияДоступа#ГруппыДоступа"
     },
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_13.txt:1628:ГруппыДоступа": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "Справочник.ГруппыДоступа#ГруппыДоступа"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_13.txt:1688:УчастникиГруппДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ГруппыДоступа.Пользователи#УчастникиГруппДоступа"
+      "newSignature": "ГруппыДоступаВыбранногоЗначенияДоступа#ГруппыДоступа"
     },
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_13.txt:1719:ГруппыДоступа": {
       "classification": "oldUnknownNewResolved",
-      "newSignature": "Справочник.ГруппыДоступа#ГруппыДоступа"
+      "newSignature": "ГруппыДоступаВыбранногоЗначенияДоступа#ГруппыДоступа"
     },
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_13.txt:289:ГруппыДоступа": {
       "classification": "oldUnknownNewResolved",
@@ -11824,25 +11963,13 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
     },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:1113:ПрофилиГруппДоступаВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ПрофилиГруппДоступа.ВидыДоступа#ПрофилиГруппДоступаВидыДоступа"
-    },
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:11334:ВидыИЗначенияДоступа": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
     },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:1158:ПрофилиГруппДоступаВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ПрофилиГруппДоступа.ВидыДоступа#ПрофилиГруппДоступаВидыДоступа"
-    },
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:11685:ВидыИЗначенияДоступа": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:1214:ПрофилиГруппДоступаЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ПрофилиГруппДоступа.ЗначенияДоступа#ПрофилиГруппДоступаЗначенияДоступа"
     },
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:123:ВидыИЗначенияДоступа": {
       "classification": "oldUnknownNewResolved",
@@ -11856,33 +11983,9 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
     },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:1454:ПрофилиГруппДоступаВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ПрофилиГруппДоступа.ВидыДоступа#ПрофилиГруппДоступаВидыДоступа"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:1643:ПрофилиГруппДоступаЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ПрофилиГруппДоступа.ЗначенияДоступа#ПрофилиГруппДоступаЗначенияДоступа"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:1687:ПрофилиГруппДоступаВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ПрофилиГруппДоступа.ВидыДоступа#ПрофилиГруппДоступаВидыДоступа"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:1733:ПрофилиГруппДоступаЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ПрофилиГруппДоступа.ЗначенияДоступа#ПрофилиГруппДоступаЗначенияДоступа"
-    },
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:176:ВидыИЗначенияДоступа": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "#ВидыИЗначенияДоступа"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:1781:ПрофилиГруппДоступаВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ПрофилиГруппДоступа.ВидыДоступа#ПрофилиГруппДоступаВидыДоступа"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:1831:ПрофилиГруппДоступаВидыДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "Справочник.ПрофилиГруппДоступа.ВидыДоступа#ПрофилиГруппДоступаВидыДоступа"
     },
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_7.txt:19:ВидыИЗначенияДоступа": {
       "classification": "oldUnknownNewResolved",
@@ -11988,53 +12091,9 @@
       "classification": "oldUnknownNewResolved",
       "newSignature": "ТаблицыОтчетов#ТаблицыОтчетов"
     },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:2757:ПраваПрофилейНаТаблицы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПраваПрофилейНаТаблицы#ПраваПрофилейНаТаблицы"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:2799:ПраваПрофилейНаТаблицы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПраваПрофилейНаТаблицы#ПраваПрофилейНаТаблицы"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:2837:ПраваПрофилейНаТаблицы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПраваПрофилейНаТаблицы#ПраваПрофилейНаТаблицы"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:2878:ПраваПрофилейНаТаблицы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПраваПрофилейНаТаблицы#ПраваПрофилейНаТаблицы"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:2920:ПраваПрофилейНаТаблицы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПраваПрофилейНаТаблицы#ПраваПрофилейНаТаблицы"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:2972:ПраваПрофилейНаТаблицы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПраваПрофилейНаТаблицы#ПраваПрофилейНаТаблицы"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:3027:ПраваПрофилейНаТаблицы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПраваПрофилейНаТаблицы#ПраваПрофилейНаТаблицы"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:3083:ПраваПрофилейНаТаблицы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПраваПрофилейНаТаблицы#ПраваПрофилейНаТаблицы"
-    },
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:309:ПраваРолейНаОтчеты": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "ПраваРолейНаОтчеты#ПраваРолейНаОтчеты"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:3123:ПраваПрофилейНаТаблицы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПраваПрофилейНаТаблицы#ПраваПрофилейНаТаблицы"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:3169:ПраваПрофилейНаТаблицы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПраваПрофилейНаТаблицы#ПраваПрофилейНаТаблицы"
-    },
-    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:3343:ПраваПрофилейНаТаблицы": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ПраваПрофилейНаТаблицы#ПраваПрофилейНаТаблицы"
     },
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:3376:ТаблицыОтчетов": {
       "classification": "oldUnknownNewResolved",
@@ -12047,6 +12106,10 @@
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:3461:ТаблицыОтчетов": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "ТаблицыОтчетов#ТаблицыОтчетов"
+    },
+    "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:3793:ПраваПрофилейНаОтчеты": {
+      "classification": "oldResolvedNewUnknown",
+      "oldSignature": "ПраваПрофилейНаОтчеты#ПраваПрофилейНаОтчеты"
     },
     "Reports-АнализПравДоступа-Ext-ObjectModule.bsl_8.txt:3829:ТаблицыОтчетов": {
       "classification": "oldUnknownNewResolved",
@@ -12828,17 +12891,13 @@
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:12569:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:12616:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:12727:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
-    },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:12764:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:12674:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:1299:ПраваРолейРасширений": {
       "classification": "oldUnknownNewResolved",
@@ -12849,27 +12908,35 @@
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:13188:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:13289:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:13319:ПраваРолей": {
       "classification": "differentResolved",
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:13433:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:13355:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
+    },
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:13400:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:13493:ПраваРолей": {
       "classification": "differentResolved",
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:13585:ГруппыДоступаПользователя": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ГруппыДоступаПользователя#ГруппыДоступаПользователя"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:13637:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
+    },
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:13695:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:1384:ПраваРолейРасширений": {
       "classification": "oldUnknownNewResolved",
@@ -12880,18 +12947,26 @@
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:14144:ГруппыДоступаПользователя": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ГруппыДоступаПользователя#ГруппыДоступаПользователя"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:14285:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:14315:ПраваРолей": {
       "classification": "differentResolved",
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:14363:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
+    },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:1439:ПраваРолейРасширений": {
       "classification": "oldUnknownNewResolved",
       "newSignature": "ПраваРолейРасширений#ПраваРолейРасширений"
+    },
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:14453:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:15018:ПраваРолейПрофилей": {
       "classification": "oldUnknownNewResolved",
@@ -13147,17 +13222,13 @@
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:18599:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:18646:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:18757:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
-    },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:18794:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:18704:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:19074:ПраваРолей": {
       "classification": "differentResolved",
@@ -13169,35 +13240,35 @@
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:19253:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:19354:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:19384:ПраваРолей": {
       "classification": "differentResolved",
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:19501:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:19420:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
+    },
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:19468:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:19561:ПраваРолей": {
       "classification": "differentResolved",
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:19685:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:19732:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:19843:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
-    },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:19880:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:19790:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:20160:ПраваРолей": {
       "classification": "differentResolved",
@@ -13209,27 +13280,35 @@
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:20338:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:20439:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:20469:ПраваРолей": {
       "classification": "differentResolved",
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:20586:ВидыИЗначенияДоступа": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ВидыИЗначенияДоступа#ВидыИЗначенияДоступа"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:20505:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
+    },
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:20553:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:20646:ПраваРолей": {
       "classification": "differentResolved",
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:20770:ГруппыДоступаПользователя": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ГруппыДоступаПользователя#ГруппыДоступаПользователя"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:20822:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
+    },
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:20880:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:21205:ПраваРолей": {
       "classification": "differentResolved",
@@ -13246,14 +13325,22 @@
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
     },
-    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:21399:ГруппыДоступаПользователя": {
-      "classification": "oldResolvedNewUnknown",
-      "oldSignature": "ГруппыДоступаПользователя#ГруппыДоступаПользователя"
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:21540:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:21570:ПраваРолей": {
       "classification": "differentResolved",
       "oldSignature": "РегистрСведений.ПраваРолей#ПраваРолей",
       "newSignature": "ПраваРолей#ПраваРолей"
+    },
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:21618:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
+    },
+    "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:21708:ВидыОграниченийПрав": {
+      "classification": "oldUnknownNewResolved",
+      "newSignature": "ВидыОграниченийПрав#ВидыОграниченийПрав"
     },
     "Reports-ПраваДоступа-Ext-ObjectModule.bsl_1.txt:2210:ПраваРолейРасширений": {
       "classification": "oldUnknownNewResolved",
