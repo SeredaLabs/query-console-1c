@@ -23,9 +23,6 @@ in the [technical-debt ledger](technical-debt.md); historical verdicts remain in
   source query (V3). Platform-invalid inputs are either rejected on open or
   open with Apply blocked (C5); some, such as source aliases `В`/`И`, still
   open and are shown in the designer.
-- The Query Text parameter list and result-processing boilerplate use a raw
-  regex and can include `&name` from a string/comment or duplicate case variants;
-  editor parameter hover/completion use lexer tokens instead (C7).
 
 - Cursor detection cannot evaluate dynamically composed BSL query strings.
 - Validation is intentionally incomplete for arbitrary custom expressions and

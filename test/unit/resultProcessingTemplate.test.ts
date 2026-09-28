@@ -71,3 +71,25 @@ describe('buildResultProcessingCode', () => {
     expect(code).toContain('\t\t\t"ВЫБРАТЬ');
   });
 });
+
+describe('C7: parameter names come from lexer tokens', () => {
+  it('ignores `&name` inside strings and comments', () => {
+    const text = 'ВЫБРАТЬ "&Ложный" КАК С, &Реальный КАК Р // &Комментарий\nИЗ Т КАК Т';
+    expect(extractQueryParamNames(text)).toEqual(['Реальный']);
+    expect(buildResultProcessingCode(text)).not.toContain('УстановитьПараметр("Ложный"');
+    expect(buildResultProcessingCode(text)).toContain('Запрос.УстановитьПараметр("Реальный", "");');
+    expect(buildResultProcessingCode(text)).not.toContain('УстановитьПараметр("Комментарий"');
+  });
+
+  it('merges case variants, keeping the first spelling', () => {
+    expect(extractQueryParamNames('ВЫБРАТЬ &Дата, &ДАТА, &дата, &Код')).toEqual(['Дата', 'Код']);
+  });
+
+  it('keeps names with letters outside the Russian alphabet whole', () => {
+    expect(extractQueryParamNames('ВЫБРАТЬ &Ціна, &Größe, &Дата2')).toEqual(['Ціна', 'Größe', 'Дата2']);
+  });
+
+  it('still lists parameters in text that is lexically incomplete', () => {
+    expect(extractQueryParamNames('ВЫБРАТЬ &А, & ГДЕ Х = "не закрыта &Б')).toEqual(['А']);
+  });
+});

@@ -3,14 +3,12 @@
  * project-semantic-core-roadmap — read that memory's own "Query parameter
  * semantics boundary" STATUS UPDATE before extending this; see also the
  * contract docstring above `extractQueryParamNames` in
- * `resultProcessingTemplate.ts`, the existing regex-based utility this is a
- * semantic-layer counterpart to, NOT a duplicate of).
+ * `resultProcessingTemplate.ts`, which now builds on this module, C7).
  *
  * Finds every `&Параметр` occurrence in a piece of SDBL text via the REAL
- * lexer (`tokenize`) — deliberately NOT a regex over raw text like
- * `extractQueryParamNames`, so an `&` that happens to appear inside a string
- * literal is correctly never mistaken for a parameter (the lexer already
- * consumes the whole string token first). Scope is the WHOLE text passed in
+ * lexer (`tokenize`) — deliberately NOT a regex over raw text, so an `&` that
+ * happens to appear inside a string literal or comment is never mistaken for a
+ * parameter (the lexer already consumes the whole string token first). Scope is the WHOLE text passed in
  * — matches 1C's own `&Параметр` semantics: one value, shared across every
  * statement of the same `Запрос.Текст`, no per-statement/union-member
  * restriction the way table aliases have.

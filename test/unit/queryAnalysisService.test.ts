@@ -82,6 +82,13 @@ describe('analyze: разбор полей/источников/соединен
     );
     expect(r.parameters).toEqual([{ name: 'Код', usageCount: 2 }]);
   });
+
+  it('C7: strings/comments are not parameters; case variants are one parameter', () => {
+    const r = analyze(
+      'ВЫБРАТЬ "&Ложный" КАК Поле\nИЗ Справочник.Валюты КАК Валюты\nГДЕ Валюты.Код = &Код И Валюты.Наименование <> &КОД // &Комментарий'
+    );
+    expect(r.parameters).toEqual([{ name: 'Код', usageCount: 2 }]);
+  });
 });
 
 describe('analyze: structured diagnostic plumbing (structured → string → regex устранён)', () => {

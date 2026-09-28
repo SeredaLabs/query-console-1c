@@ -1,10 +1,10 @@
-const PARAM_RE = /&([A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*)/gu;
+import { collectQueryParameters } from './queryParameters';
 
 /**
  * QUERY PARAMETER SEMANTICS BOUNDARY.
- * This regex helper supplies result-processing boilerplate and Query Text
- * analysis (`queryAnalysisService`). It scans strings/comments too and deduplicates
- * case-sensitively; alignment with lexer-backed `queryParameters.ts` is debt C7.
+ * This helper supplies result-processing boilerplate and Query Text analysis
+ * (`queryAnalysisService`). Names come from the lexer-backed, typing-tolerant
+ * `queryParameters.ts` (C7): not from strings/comments, case variants merged.
  *
  * Level 0 — query-local parameter hover/completion is shipped via
  * `queryParameters.ts`. Names are batch-wide, with token ranges from the lexer;
@@ -47,18 +47,13 @@ const PARAM_RE = /&([A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*)/gu;
  * detail.
  */
 
-/** Уникальные имена параметров (`&Имя`) в тексте запроса, в порядке первого появления. */
+/**
+ * Уникальные имена параметров (`&Имя`) в тексте запроса, в порядке первого
+ * появления. Имена параметров 1С регистронезависимы: варианты регистра — один
+ * параметр с написанием первого вхождения.
+ */
 export function extractQueryParamNames(queryText: string): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const m of queryText.matchAll(PARAM_RE)) {
-    const name = m[1];
-    if (!seen.has(name)) {
-      seen.add(name);
-      out.push(name);
-    }
-  }
-  return out;
+  return [...collectQueryParameters(queryText).values()].map(occurrences => occurrences[0].name);
 }
 
 /**

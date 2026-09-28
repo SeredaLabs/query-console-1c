@@ -2,7 +2,7 @@ import type { MetadataResolver } from './metadataResolver';
 import { tryOpenBatch } from './validateBatch';
 import { fieldExpr } from './sdblGenerator';
 import { resolveAliases, synthesizedFieldAlias, joinKeyword } from './queryModelUtils';
-import { extractQueryParamNames } from './resultProcessingTemplate';
+import { collectQueryParameters } from './queryParameters';
 import { getBatchStatementSpans } from './sdblParser';
 import type { QueryModel, Condition } from './queryModel';
 import { lintBatch, type LintWarning } from './queryLinter';
@@ -171,10 +171,11 @@ function analyzeModel(model: QueryModel): Omit<QueryAnalysisQuery, 'name'> {
  * а не только по текущей — иначе вторая и следующие ветви объединения теряли бы
  * привязку к своей временной таблице в отображаемом имени.
  *
- * Параметры извлекаются регэкспом по СЫРОМУ тексту ЦЕЛИКОМ (`extractQueryParamNames`,
- * уже применяется в resultProcessingTemplate.ts), а не из моделей — так учитываются
- * параметры из ЛЮБОГО `;`-блока и в произвольных выражениях/условиях связи/
- * виртуальных таблицах, а не только простые условия ГДЕ первого блока.
+ * Параметры берутся из токенов лексера по тексту ЦЕЛИКОМ (`collectQueryParameters`,
+ * тот же источник, что у resultProcessingTemplate.ts), а не из моделей — так
+ * учитываются параметры из ЛЮБОГО `;`-блока и в произвольных выражениях/условиях
+ * связи/виртуальных таблицах. Строки и комментарии не учитываются; варианты
+ * регистра — один параметр (C7).
  */
 export function analyze(text: string, resolver?: MetadataResolver): QueryAnalysisResult {
   const r = tryOpenBatch(text, resolver);
@@ -209,9 +210,9 @@ export function analyze(text: string, resolver?: MetadataResolver): QueryAnalysi
     }
   });
 
-  const parameters: QueryAnalysisParameter[] = extractQueryParamNames(text).map(name => ({
-    name,
-    usageCount: (text.match(new RegExp(`&${name}(?![\\p{L}\\p{N}_])`, 'gu')) ?? []).length,
+  const parameters: QueryAnalysisParameter[] = [...collectQueryParameters(text).values()].map(occurrences => ({
+    name: occurrences[0].name,
+    usageCount: occurrences.length,
   }));
 
   return {

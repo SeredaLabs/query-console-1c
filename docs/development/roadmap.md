@@ -59,8 +59,9 @@ Current tasks and evidence are tracked once in the [ledger](technical-debt.md).
 6. **Semantic assistance (S3).** Condition-subquery scope (S1) and typing
    recovery (S2) are closed; decide which snapshot fields have real
    consumers. Do not build a scope/reference index just to populate empty maps.
-7. **Expression consumers (A3, C6, C7).** Display-only inference over the shared
-   representation, cosmetic JOIN stability and parameter-consumer consistency.
+7. **Expression consumers (A3, C6).** Display-only inference over the shared
+   representation and cosmetic JOIN stability. Parameter-consumer consistency
+   (C7) is closed.
 8. **Preview release.** V4 now has a recorded regression gate and D1 source
    comments are corrected. Keep Canvas opt-in while its feature roadmap and
    broader release review remain unfinished.
