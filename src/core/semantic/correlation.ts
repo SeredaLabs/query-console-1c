@@ -37,7 +37,7 @@ export interface FieldOwner {
  * more than one AT THAT SAME LEVEL) — never pools two different levels'
  * candidates together. `ancestorLevels` must be ordered NEAREST-FIRST.
  * Shared by `resolveCorrelatedField` (Phase 2b, live-verified) and
- * `resolveAliasCorrelated` (Phase 3b) — same rule, different match predicate.
+ * `resolveAliasAt` (alias symbols) — same rule, different match predicate.
  * The level walk itself is `matchesAtNearestLevel` (`src/core/query`), which
  * the parse-time `qualifyBareFields` pass uses too.
  */

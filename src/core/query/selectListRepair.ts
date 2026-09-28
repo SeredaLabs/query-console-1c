@@ -29,8 +29,7 @@ import { tokenize } from './sdblLexer';
  * рівні не знайдено (нічого відновлювати).
  *
  * ВІДОМЕ СПРОЩЕННЯ: незавершене поле ВСЕРЕДИНІ вкладеного підзапиту (глибше рівня
- * 0) цим не покривається — той самий "лише верхній рівень" компроміс, що й у
- * alias-scope (див. docs/development/known-issues.md).
+ * 0) цим не покривається: список полів вкладеного підзапиту не підміняється.
  */
 export function repairSelectListsForRecovery(text: string): string | undefined {
   const tokens = tokenize(text);

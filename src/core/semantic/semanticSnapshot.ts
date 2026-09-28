@@ -31,8 +31,7 @@ export type ModelPathSegment =
   | { kind: 'table'; index: number }
   /** A condition subquery: `model.conditions[index]` / `model.having[index]`, followed by its `union` chain. */
   | { kind: 'whereSubquery'; index: number }
-  | { kind: 'havingSubquery'; index: number }
-  | { kind: 'field'; index: number };
+  | { kind: 'havingSubquery'; index: number };
 
 /** A structural path into `BatchDocument`, meaningful only inside the snapshot it was produced from. */
 export type ModelPath = readonly ModelPathSegment[];
@@ -42,7 +41,8 @@ export type ModelPath = readonly ModelPathSegment[];
  * doesn't hard-couple to `SelectedField`/`SelectedTable`'s exact shape.
  */
 export interface ModelRef {
-  kind: 'table' | 'field' | 'query' | 'unionMember';
+  /** Only source tables are referenced today (source-alias symbols). */
+  kind: 'table';
   id: SemanticNodeId;
   path: ModelPath;
 }
