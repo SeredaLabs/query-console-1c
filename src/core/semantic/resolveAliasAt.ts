@@ -1,32 +1,22 @@
 /**
- * Phase 3b of the semantic-core roadmap (memory: project-semantic-core-roadmap).
+ * `resolveAliasAt(snapshot, position, alias)`: position-aware source-alias
+ * resolution, the only alias resolver hover/completion use. It combines:
+ *  - `snapshot.sourceMapEvents`, to find which statement, union member and
+ *    subquery (source or condition subquery), and which JOIN's own `ПО`
+ *    condition (`joinCondition` events), the position falls inside. Kind and
+ *    index repeat at every level, so nested levels are matched by event
+ *    `depth` and the parent node's range;
+ *  - `computeJoinVisibility` (live-verified against real 1C), to narrow the
+ *    visible tables inside a join condition;
+ *  - `resolveNearestAncestorMatch` (live-verified), for correlated outer-alias
+ *    access from inside a subquery: the nearest enclosing level wins, farther
+ *    levels only when nearer ones have no match;
+ *  - `snapshot.index.symbolsById`, materialized once per snapshot.
  *
- * `resolveAliasAt(snapshot, position, alias)`: the first genuinely
- * position-aware alias resolver in this roadmap, wiring together everything
- * built in Phases 1b-3a:
- *  - `snapshot.sourceMapEvents` (Phase 1b/1b.2) to find which statement/union
- *    member/subquery — and, critically, which specific JOIN's own `ПО`
- *    condition (Phase 3b's own `joinCondition` source-map events) — the
- *    cursor position falls inside.
- *  - `computeJoinVisibility` (Phase 2b, live-verified against real 1C) to
- *    narrow the visible table set when position is inside a join condition
- *    specifically, rather than treating the whole query's tables as flatly
- *    visible everywhere.
- *  - `resolveNearestAncestorMatch` (Phase 2b, live-verified) for correlated
- *    outer-alias access from inside a subquery — nearest enclosing level
- *    wins, with fallback to farther levels only when nearer ones have no
- *    match at all.
- *  - `snapshot.index.symbolsById` (Phase 3a's symbol table, materialized
- *    once in `buildSemanticSnapshotFromText` as of Phase 3d — no longer
- *    re-collected on every call here).
- *
- * Shadow-mode comparison against the old flat `findAliasTable` lookup
- * (Refinement 4/5's explicit gate) shipped and ran clean over the full golden
- * corpus before this resolver was wired into hover (Phase 3d,
- * `queryHoverProvider.ts`/`hoverFieldInfo.ts`). It is now the ONLY alias
- * resolver hover/completion use; the flat lookup survives only as a frozen
- * reference for the corpus regression sweep
- * (`tooling/corpus-verify/shadowMode.ts`, `legacyFindAliasTable.ts`).
+ * The former flat, position-blind lookup survives only as a frozen reference
+ * for the corpus shadow-mode sweep (`tooling/corpus-verify/shadowMode.ts`,
+ * `legacyFindAliasTable.ts`); reviewed disagreements are kept in
+ * `test/fixtures/corpus/shadow-mode-baseline.json`.
  */
 import type { BatchDocument } from '../query/batchModel';
 import type { QueryDocument } from '../query/unionModel';
@@ -158,7 +148,7 @@ function localSymbolsFor(allSymbols: readonly Symbol[], scopePath: ModelPath): S
  * The `QueryModel` whose own text directly contains `position` (the innermost
  * scope level, same lookup `resolveAliasAt` itself does) — exported for other
  * position-aware checks that need "which model is this" without the rest of
- * alias-resolution (Phase 2x-1: `resolveOutputAliasReference.ts` uses this to
+ * alias-resolution (`resolveOutputAliasReference.ts` uses this to
  * find the right model's `selectOutputAliases`). `undefined` for a snapshot
  * without trustworthy positions (`hasTrustworthyPositions`) or a position
  * outside any recorded scope, same as `resolveAliasAt`'s own fail-open cases.
@@ -185,7 +175,7 @@ export function resolveAliasAt(snapshot: SemanticSnapshot, position: number, ali
   const chain = findScopeChain(snapshot.model, snapshot.sourceMapEvents, position);
   if (chain.length === 0) return { kind: 'unknown' };
 
-  // Materialized once in `buildSemanticSnapshotFromText` (Phase 3d) instead of
+  // Materialized once in `buildSemanticSnapshotFromText` instead of
   // re-walking the whole `BatchDocument` on every call.
   const allSymbols = Array.from(snapshot.index.symbolsById.values());
   const upperAlias = alias.toUpperCase();

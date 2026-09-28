@@ -1,37 +1,21 @@
 /**
- * Phase 1c of the semantic-core roadmap (memory: project-semantic-core-roadmap).
+ * Tolerant construction of a `SemanticSnapshot` from raw query text: the one
+ * production entry point behind hover/completion (`resolveAliasAt`,
+ * `hoverFieldInfo.ts`). Assistance is requested while a query is half-typed,
+ * so a snapshot must be buildable even when the text does not parse; see
+ * `buildSemanticSnapshotFromText` for the strategy and its guarantees.
  *
- * Tolerant snapshot construction: a `SemanticSnapshot` should be buildable EVEN
- * when the raw text doesn't fully parse — this project's own hover/completion
- * already regressed once in production (v0.1.33) on an everyday malformed-query
- * case (a missing comma), which is exactly why the tolerant/recovered distinction
- * matters here too: a new semantic layer that only works on fully-parseable
- * queries would be a REGRESSION relative to already-shipped behavior, not an
- * improvement.
+ * Text repairs live in `../query/selectListRepair` (shared with the parameter
+ * scan); this module only orders them, picks the result and builds the
+ * snapshot. Source-map events come from `parseBatch`'s `batchSourceMap`
+ * option, so positions are batch-wide and absolute.
  *
- * Reuses the SAME recovery heuristic hover/completion already rely on
- * (`repairSelectListsForRecovery`, moved to `../query/selectListRepair` in this
- * phase precisely so it isn't duplicated) rather than inventing a parallel one.
- *
- * A `'complete'` snapshot also collects `sourceMapEvents` (batch-wide, absolute
- * table/union-member ranges) via `parseBatch`'s `batchSourceMap` option —
- * closing a gap an external review of Phase 1a-1c correctly flagged: proving
- * the position mapping at the single-`parseDocument` level (the original
- * Phase 1b oracle suite) doesn't help THIS function's actual entry point,
- * `parseBatch`, which parses a whole (potentially multi-statement) batch.
- *
- * Phase 3d (hover migration): this is also where `index.symbolsById` gets
- * materialized — `collectSourceAliasSymbols` runs ONCE here (for `'complete'`
- * and `'recovered'` models; source/alias structure is trustworthy in both,
- * see the `'recovered'` case above) instead of every `resolveAliasAt` call
- * re-walking the whole `BatchDocument` from scratch. `createSemanticSnapshot`
- * itself stays a plain, symbol-free skeleton constructor (`semanticSnapshot.ts`
- * is Phase 1a's foundational module and has no reason to depend on Phase 3a's
- * `collectSymbols.ts`); this function is the one real production entry point
- * (see `resolveAliasAt.ts`/hover), so populating the index here is enough.
- * Scope and reference indexes are deliberately absent until a real consumer
- * needs them (per this roadmap's own discipline: don't build structure ahead of
- * a concrete need).
+ * `index.symbolsById` is materialized here, once per snapshot
+ * (`collectSourceAliasSymbols`), for `'complete'` and `'recovered'` models:
+ * source/alias structure is trustworthy in both. `createSemanticSnapshot` stays
+ * a symbol-free constructor (`semanticSnapshot.ts` does not depend on
+ * `collectSymbols.ts`). A new index is added only together with its first
+ * consumer.
  */
 import { parseBatch } from '../query/sdblParser';
 import type { MetadataResolver } from '../query/metadataResolver';

@@ -15,7 +15,7 @@ import { OPEN_FROM_RANGE_COMMAND } from './openFromRangeCommand';
  * развитие поверх того же `resolveFieldPath`-ядра, что уже используют
  * `checkFieldPaths` (semanticValidator.ts) и три мигрированных прохода парсера.
  *
- * Phase 3d (semantic-core roadmap): псевдонім голови ланцюжка резолвиться
+ * Псевдонім голови ланцюжка резолвиться
  * позиційно-усвідомленим `resolveAliasAt` (реальна видимість JOIN/підзапиту,
  * live-verified проти справжнього 1С) — див. doc-коментар `hoverFieldInfo.ts`.
  *
@@ -56,7 +56,7 @@ export class QueryHoverProvider implements vscode.HoverProvider {
         const headPosition = rawOffsetToQueryTextOffset(source, hit, chain.segments[0].start);
         const segmentTexts = chain.segments.map((s) => s.text);
 
-        // Phase 2x-2, increment 2: a bare identifier inside a virtual-table
+        // A bare identifier inside a virtual-table
         // `Условие`/`УсловиеСчета`/etc. argument names a field of the
         // REGISTER ITSELF, not a source alias — try this FIRST, since
         // `describeChain`'s alias-based resolution would just fail (chain[0]
@@ -83,8 +83,7 @@ export class QueryHoverProvider implements vscode.HoverProvider {
       }
     }
 
-    // Phase 2x-2 (semantic-core roadmap, memory: project-semantic-core-roadmap):
-    // virtual-table positional-argument hover — a SEPARATE check from the
+    // Virtual-table positional-argument hover — a SEPARATE check from the
     // chain-based one above, since an argument can be `&Параметр` (lexed as a
     // distinct token type, never an identifier chain `findChainAt` would find)
     // or a whole condition expression, not just a bare alias/field reference.
@@ -104,8 +103,7 @@ export class QueryHoverProvider implements vscode.HoverProvider {
       this.channel.appendLine(vscode.l10n.t('[1C Query] Hover: metadata unavailable: {error}', { error: String(e) }));
     }
 
-    // Level 0 query parameter semantics (semantic-core roadmap, memory:
-    // project-semantic-core-roadmap — "Query parameter semantics boundary").
+    // Level 0 query parameter semantics (boundary: `resultProcessingTemplate.ts`).
     // Any OTHER `&Параметр` occurrence (not a virtual-table argument, handled
     // more specifically above) is still a query-local named parameter, scoped
     // to the whole batch. No resolver needed. The scan tolerates text that is
@@ -163,7 +161,7 @@ function buildHoverMessage(
 }
 
 /**
- * Phase 2x-2, increment 2: a virtual-table `Условие`/etc. argument has NO
+ * A virtual-table `Условие`/etc. argument has NO
  * alias segment at all — the whole chain (including index 0) names fields of
  * the register directly, so unlike `buildHoverMessage` there is no special
  * "index 0 is the source" case; every index maps straight into

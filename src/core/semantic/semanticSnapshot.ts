@@ -1,13 +1,11 @@
 /**
- * Phase 1a of the semantic-core roadmap (see memory: project-semantic-core-roadmap).
- *
- * This module is the skeleton of a NEW, parallel analysis layer: read-only consumer
- * of `BatchDocument`/raw text, never a dependency of `parseBatch`/`generateBatch`.
- * `src/core/query` stays exactly what it is today (corpus-proven round-trip engine);
- * this directory must never be imported from there (enforced by
+ * Shape and lifecycle of the semantic analysis layer: a read-only consumer of
+ * `BatchDocument`/raw text for editor assistance, never a dependency of
+ * `parseBatch`/`generateBatch`. `src/core/query` (the round-trip engine) must
+ * never import this directory (enforced by
  * `test/unit/semanticArchitectureBoundary.test.ts`).
  *
- * The text builder populates source-alias symbols (the only index). This module defines the snapshot shape and its lifecycle discipline:
+ * The text builder populates source-alias symbols (the only index). Lifecycle:
  * `model` and `index` are always built together from the same
  * `documentVersion`/source text and must be discarded together, never mixed across
  * versions (a hover computed from `model@42` + `index@41` is a worse bug than
@@ -48,7 +46,7 @@ export interface ModelRef {
 }
 
 /**
- * Phase 3a: currently always a source/table alias (`SelectedTable.alias`) —
+ * Currently always a source/table alias (`SelectedTable.alias`) —
  * the only symbol kind this roadmap has needed so far. Kept as one concrete
  * shape rather than a discriminated union until a second kind (e.g. an
  * output-column symbol) is actually needed; see `collectSourceAliasSymbols`.
@@ -79,7 +77,7 @@ export function createEmptySemanticIndex(): SemanticIndex {
 }
 
 /**
- * Phase 1c: how much of `model` is trustworthy. Formalizes this project's
+ * How much of `model` is trustworthy. Formalizes this project's
  * existing fail-open philosophy (already used ad hoc via
  * `targetUnresolved`/`fieldNotFound` in `hoverFieldInfo.ts`) so different
  * consumers can apply different trust thresholds to the same snapshot — e.g.
@@ -150,7 +148,7 @@ function hashSource(text: string): string {
  * This factory creates an empty `index`; the text builder adds source-alias
  * symbols through `withSymbolIndex`.
  * `completeness` defaults to `'complete'` for callers that already know their
- * `model` came from a clean parse; `buildSemanticSnapshotFromText` (Phase 1c)
+ * `model` came from a clean parse; `buildSemanticSnapshotFromText`
  * is the tolerant entry point that determines it for you when parsing might fail.
  * `sourceMapEvents` defaults to `[]`; non-empty events are also valid for
  * recovered text when the repair preserved offsets (see `hasTrustworthyPositions`).

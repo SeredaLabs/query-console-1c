@@ -207,9 +207,8 @@ export function findQueryAt(source: string, offset: number): QueryHit | null {
 /**
  * Переводить сирий символьний офсет документа (у межах тіла `hit`, тобто
  * `[hit.start, hit.end)`) у офсет ВЖЕ ВІДНОВЛЕНОГО `hit.text` — координатну
- * систему, в якій працюють `SemanticSnapshot.sourceMapEvents`/`resolveAliasAt`
- * (Phase 3d: hover-міграція семантичного ядра, memory:
- * project-semantic-core-roadmap). Потрібно, бо `hit.text` — це НЕ підрядок
+ * систему, в якій працюють `SemanticSnapshot.sourceMapEvents`/`resolveAliasAt`.
+ * Потрібно, бо `hit.text` — це НЕ підрядок
  * `source`: `""` згорнуто в один символ, а на рядках-продовженнях відкинуто
  * префікс `[ \t]*\|` (див. `unpipe`) — обидві трансформації зсувають індекси.
  *

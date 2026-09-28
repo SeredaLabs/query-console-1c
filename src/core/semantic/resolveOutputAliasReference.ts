@@ -1,6 +1,4 @@
 /**
- * Phase 2x-1 of the semantic-core roadmap (memory: project-semantic-core-roadmap).
- *
  * A bare identifier inside `УПОРЯДОЧИТЬ`/`ИТОГИ` can name a SELECT-list OUTPUT
  * column alias instead of a source-table alias/field — a genuinely different
  * resolution domain, not covered by `resolveAliasAt` (which only ever
@@ -21,9 +19,8 @@
  *
  * This module only ANSWERS "is this a reference to an output column, not a
  * table alias" — callers (`hoverFieldInfo.ts`'s `resolveHeadTable`) decide
- * what to do with that (currently: show nothing, rather than inventing an
- * "output column" hover/completion result this roadmap has no design for
- * yet).
+ * what to do with that (currently: show nothing; there is no output-column
+ * hover/completion result).
  */
 import { rangeContains } from '../query/sourceMap';
 import { selectOutputAliases } from '../query/qualifyBareFields';

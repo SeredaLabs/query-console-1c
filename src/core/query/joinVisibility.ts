@@ -1,23 +1,16 @@
 /**
- * Phase 2b of the semantic-core roadmap (memory: project-semantic-core-roadmap).
- *
  * Computes, for each JOIN in a single `QueryModel`'s `ИЗ` clause, which table
  * ids are valid bare-field-ownership candidates for THAT join's own `ПО`
  * condition — i.e. the real lexical-scope visibility rules for JOIN chains.
  *
- * Lives in `src/core/query` (not `src/core/semantic`, despite being built as
- * part of the semantic-core roadmap) because it has zero dependency on
- * anything semantic-layer-specific — only `QueryModel`/`Join`/`SelectedTable`
- * — and BOTH `src/core/semantic/resolveAliasAt.ts` (Phase 3b) AND
- * `qualifyBareFields.ts` (the actual bare-field-qualification PASS this was
- * originally written to eventually replace/narrow, see below) need it.
- * `src/core/semantic` may depend on `src/core/query`, never the reverse — so
- * this had to live down here, moved from its original location the same way
- * `selectListRepair.ts` was in an earlier phase.
+ * Lives in `src/core/query` (not `src/core/semantic`) because it depends only
+ * on `QueryModel`/`Join`/`SelectedTable`, and BOTH
+ * `src/core/semantic/resolveAliasAt.ts` AND `qualifyBareFields.ts` (the
+ * parse-time bare-field qualification pass) need it; `src/core/semantic` may
+ * depend on `src/core/query`, never the reverse.
  *
  * The rules below are NOT derived from reading the grammar or guessing — they
- * were live-verified against a real 1C instance (Phase 2a of this roadmap,
- * 2026-09-10) by feeding deliberately-crafted raw SDBL text through the real
+ * were live-verified against a real 1C instance (2026-09-10) by feeding deliberately-crafted raw SDBL text through the real
  * query compiler's "Проверка" (compile-check) and reading its actual
  * "Ambiguous field"/"Field not found" errors:
  *

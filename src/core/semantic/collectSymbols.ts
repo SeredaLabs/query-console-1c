@@ -1,6 +1,4 @@
 /**
- * Phase 3a of the semantic-core roadmap (memory: project-semantic-core-roadmap).
- *
  * Collects one `Symbol` per declared source alias (`SelectedTable.alias`) in a
  * `BatchDocument`, recursing into every subquery source so nested aliases get
  * their own symbols too. Each symbol's `path` locates it structurally (batch

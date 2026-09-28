@@ -1,9 +1,8 @@
 /**
- * Level 0 query parameter semantics (semantic-core roadmap, memory:
- * project-semantic-core-roadmap — read that memory's own "Query parameter
- * semantics boundary" STATUS UPDATE before extending this; see also the
- * contract docstring above `extractQueryParamNames` in
- * `resultProcessingTemplate.ts`, which now builds on this module, C7).
+ * Level 0 query parameter semantics. Read the "Query parameter semantics
+ * boundary" docstring above `extractQueryParamNames` in
+ * `resultProcessingTemplate.ts` (which builds on this module) before extending
+ * this.
  *
  * Finds every `&Параметр` occurrence in a piece of SDBL text via the REAL
  * lexer (`tokenize`) — deliberately NOT a regex over raw text, so an `&` that

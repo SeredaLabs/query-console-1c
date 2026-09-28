@@ -1,8 +1,7 @@
 /**
  * Nearest-ancestor-wins lookup for correlated references from inside a
- * subquery, live-verified against real 1C (semantic-core roadmap Phase 2a,
- * 2026-09-10; see `src/core/semantic/correlation.ts` for the verification
- * details): enclosing levels are checked ONE AT A TIME, nearest first, and the
+ * subquery, live-verified against real 1C (2026-09-10; see
+ * `src/core/semantic/correlation.ts` for the verification details): enclosing levels are checked ONE AT A TIME, nearest first, and the
  * first level with ANY match decides — its candidates are never pooled with a
  * farther level's.
  *

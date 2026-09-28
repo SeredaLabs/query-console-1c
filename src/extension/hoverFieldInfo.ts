@@ -10,8 +10,7 @@
  * связка с `vscode.HoverProvider`/`vscode.CompletionItemProvider` — отдельные
  * файлы (`queryHoverProvider.ts`, `queryCompletionProvider.ts`).
  *
- * Phase 3d/3e (semantic-core roadmap, memory: project-semantic-core-roadmap):
- * both `describeChain` (hover) and `resolveCompletionTarget` (autocomplete)
+ * Both `describeChain` (hover) and `resolveCompletionTarget` (autocomplete)
  * resolve the chain's HEAD alias via `resolveHeadTable`, which uses ONLY
  * `resolveAliasAt` (position-aware — respects real JOIN-condition scoping and
  * nearest-ancestor subquery correlation, live-verified against real 1C). A
@@ -19,10 +18,9 @@
  * that alias — an explicit product decision: a flat, whole-batch,
  * first-match guess risked confidently-WRONG answers in exactly the cases
  * (e.g. a right-nested JOIN's own inner condition, an alias reused across
- * UNION branches) this resolver exists to fix. The old flat lookup is no
- * longer used in production; a frozen copy lives in
- * `tooling/corpus-verify/legacyFindAliasTable.ts` solely as the corpus
- * shadow-mode baseline.
+ * UNION branches) this resolver exists to fix. A frozen copy of the former
+ * flat lookup lives only in `tooling/corpus-verify/legacyFindAliasTable.ts`,
+ * as the corpus shadow-mode baseline.
  */
 import type { MetadataResolver } from '../core/query/metadataResolver';
 import type { MetaTable } from '../core/metadata/types';
@@ -67,7 +65,7 @@ export interface ChainDescription {
 
 /**
  * Резолвить ГОЛОВУ ланцюжка (`alias`) до її таблиці — спільне ядро для
- * `describeChain` і `resolveCompletionTarget` (Phase 3d/3e).
+ * `describeChain` і `resolveCompletionTarget`.
  *
  * Коли снепшот має надійні позиції (`hasTrustworthyPositions`: повністю
  * розбираний запит, АБО `'recovered'` зі зламаним SELECT-списком, чий ремонт
@@ -98,7 +96,7 @@ function resolveHeadTable(
   const snapshot = buildSemanticSnapshotFromText(1, queryText, resolver);
   if (!hasTrustworthyPositions(snapshot) || headPosition === undefined) return undefined;
 
-  // Phase 2x-1: a bare identifier inside УПОРЯДОЧИТЬ/ИТОГИ can name a
+  // A bare identifier inside УПОРЯДОЧИТЬ/ИТОГИ can name a
   // SELECT-output column, not a source alias at all — resolving it as one
   // would risk a confident, WRONG answer if the name happens to collide
   // with a real table alias elsewhere in the query.
@@ -179,7 +177,7 @@ export function describeChain(
 }
 
 /**
- * Phase 2x-2: describes the virtual-table positional argument at `position`
+ * Describes the virtual-table positional argument at `position`
  * (in `queryText` coordinates — same as `describeChain`'s `headPosition`),
  * e.g. "this is the `Период` parameter of `РегистрНакопления.Продажи.Остатки`".
  *
@@ -202,7 +200,7 @@ export function describeVirtualTableArg(
 }
 
 /**
- * Phase 2x-2, increment 3: the fixed keyword values for a virtual-table
+ * The fixed keyword values for a virtual-table
  * argument at `position`, when (and only when) that argument's role is
  * `Периодичность`/`МетодДополнения` (`keywordValuesForRole` — the only two
  * roles backed by a closed enum, not a field/value/condition expression).
@@ -221,7 +219,7 @@ export function virtualTableArgKeywordValues(
 }
 
 /**
- * Phase 2x-2, increment 2: roles whose argument text is an SDBL condition
+ * Roles whose argument text is an SDBL condition
  * expression evaluated against the REGISTER'S OWN fields (dimensions/
  * resources/attributes, unqualified — no alias prefix, confirmed against
  * Хрусталёва's book for every catalogued form) rather than a value list,
@@ -253,7 +251,7 @@ export interface VirtualTableConditionFieldChain {
 }
 
 /**
- * Phase 2x-2, increment 2: resolves `chain` (a bare identifier, or a chain
+ * Resolves `chain` (a bare identifier, or a chain
  * through a reference field — e.g. `Контрагент.ИНН`) found at `headPosition`
  * INSIDE a virtual-table `Условие`/`УсловиеСчета`/etc. argument, against the
  * underlying register's own metadata — NOT an alias lookup (there is no alias
@@ -297,7 +295,7 @@ export interface CompletionTarget {
  * ланцюжка не вдалося пройти) — пропонувати ВГАДАНІ варіанти тут гірше, ніж не
  * запропонувати нічого.
  *
- * `headPosition` — те саме, що й у `describeChain` (Phase 3e): офсет голови
+ * `headPosition` — те саме, що й у `describeChain`: офсет голови
  * `prefixChain[0]` У КООРДИНАТАХ `queryText`, для позиційно-усвідомленого
  * `resolveAliasAt` через спільний `resolveHeadTable`.
  */

@@ -1,12 +1,10 @@
 /**
- * Phase 2b of the semantic-core roadmap (memory: project-semantic-core-roadmap).
- *
  * Correlated-subquery field resolution: when a bare field inside a subquery
  * doesn't belong to any of the subquery's own local sources, real 1C searches
  * ENCLOSING levels — but as NEAREST-ANCESTOR-WINS lexical scoping, not a
  * flattened "all ancestors at once" set.
  *
- * Live-verified against a real 1C instance (Phase 2a, 2026-09-10) with a
+ * Live-verified against a real 1C instance (2026-09-10) with a
  * 3-level-deep correlated subquery and a field name shared by the grandparent
  * and parent levels (absent from the innermost level):
  * - The immediate parent having a match resolves cleanly to it, with NO

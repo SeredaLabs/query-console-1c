@@ -11,8 +11,8 @@ import { buildFieldCard, renderFieldCardMarkdown } from '../core/metadata/fieldC
  * запиту `.bsl` — той самий `resolveFieldPath`-фундамент, що вже використовують
  * hover (`queryHoverProvider.ts`) і `checkFieldPaths` (semanticValidator.ts).
  *
- * Phase 3e (semantic-core roadmap): голова ланцюжка резолвиться позиційно-
- * усвідомленим `resolveAliasAt` (той самий шлях, що й hover з Phase 3d) —
+ * Голова ланцюжка резолвиться позиційно-
+ * усвідомленим `resolveAliasAt` (той самий шлях, що й hover) —
  * `rawOffsetToQueryTextOffset` перекладає офсет курсора з сирого документа в
  * координати `hit.text`, спільні з `resolveHeadTable` (`hoverFieldInfo.ts`).
  *
@@ -49,7 +49,7 @@ export class QueryCompletionProvider implements vscode.CompletionItemProvider {
       return undefined;
     }
 
-    // Phase 2x-2, increment 3: keyword-value completion for a virtual-table
+    // Keyword-value completion for a virtual-table
     // argument whose role is Периодичность/МетодДополнения — a fixed,
     // closed enum, unrelated to `findChainForCompletion`'s dot-triggered
     // field completion below (there is no leading `.` here at all).
@@ -61,8 +61,7 @@ export class QueryCompletionProvider implements vscode.CompletionItemProvider {
       }
     }
 
-    // Level 0 query parameter semantics (semantic-core roadmap, memory:
-    // project-semantic-core-roadmap — "Query parameter semantics boundary"):
+    // Level 0 query parameter semantics (boundary: `resultProcessingTemplate.ts`):
     // right after `&`, suggest names already used elsewhere in the SAME
     // query (batch-wide, per Level 0's scope) — no resolver needed, purely
     // off the lexer's `'param'` tokens, unrelated to the dot-triggered field

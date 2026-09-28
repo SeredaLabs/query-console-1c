@@ -1,6 +1,5 @@
 /**
- * Phase 2x-2 (semantic-core roadmap, memory: project-semantic-core-roadmap):
- * static catalog of virtual-table positional-argument signatures, verified
+ * Static catalog of virtual-table positional-argument signatures, verified
  * against Хрусталёва, «Язык запросов "1С:Предприятия 8"», 2-е изд. (page
  * cited per register kind below). Consumed by the hover feature to describe
  * "this is the `<role>` parameter of `<Table>.<Slice>`" for a cursor sitting
@@ -120,7 +119,7 @@ export function lookupVirtualTableSignature(
 }
 
 /**
- * Phase 2x-2, increment 3: `Периодичность`/`МетодДополнения` are the only two
+ * `Периодичность`/`МетодДополнения` are the only two
  * roles whose value is a fixed keyword from a closed set (verified against
  * the book, §1.2) — everywhere the catalog above uses these roles (both
  * РегистрНакопления and РегистрБухгалтерии's `Обороты`/`ОстаткиИОбороты`),

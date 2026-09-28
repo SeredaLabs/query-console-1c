@@ -85,8 +85,8 @@ export function findChainAt(text: string, offset: number): { segments: FieldChai
   // confidently resolve a PARAMETER reference to an unrelated real alias or
   // field that happens to share its name — exactly the "confidently wrong"
   // class of bug this whole roadmap exists to avoid. No chain here at all is
-  // the correct fail-open answer (Phase 2x-3, not started, is where a real
-  // parameter-aware resolution would eventually live).
+  // the correct fail-open answer; parameter-aware resolution would be a
+  // separate feature.
   if (segments[0].start > 0 && text[segments[0].start - 1] === '&') return null;
 
   return { segments, hoveredIndex };
@@ -98,7 +98,7 @@ export function findChainAt(text: string, offset: number): { segments: FieldChai
  * набраний сегмент НЕ входить у результат — VS Code сам фільтрує запропоновані
  * варіанти за тим, що вже введено, як для будь-якого звичайного автодоповнення).
  *
- * Несе ті самі `[start, end)` офсети, що й `findChainAt` (Phase 3e: перший
+ * Несе ті самі `[start, end)` офсети, що й `findChainAt` (перший
  * сегмент — голова-псевдонім — потрібен `rawOffsetToQueryTextOffset`, щоб
  * передати позицію в `resolveCompletionTarget`).
  *

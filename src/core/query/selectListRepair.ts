@@ -1,11 +1,11 @@
 /**
- * Moved from `src/extension/hoverFieldInfo.ts` (v0.1.33) into `src/core/query` so
- * it can be shared by the semantic-core roadmap's tolerant snapshot (Phase 1c,
- * memory: project-semantic-core-roadmap) without duplicating the repair
- * heuristic — `src/core/semantic` may depend on `src/core/query`, but not on
- * `src/extension` (core must not depend on the extension layer). Behavior
- * unchanged from the original, except that the placeholder now preserves the
- * replaced segment's length (see `blankSelectList`).
+ * Recovery-only text repairs for the tolerant semantic snapshot
+ * (`src/core/semantic/buildSemanticSnapshot.ts`) and the parameter scan
+ * (`queryParameters.ts`). Every repair keeps original offsets (in-place
+ * blanking and placeholders; only the parenthesis repair adds `)` and reports
+ * where), so recovered positions stay trustworthy. Never used for Apply or
+ * generation. Lives in `src/core/query` because `src/core/semantic` may depend
+ * on it, but not on `src/extension`.
  */
 import { tokenize, SdblLexError } from './sdblLexer';
 import type { Token } from './sdblLexer';

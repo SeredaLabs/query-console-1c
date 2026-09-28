@@ -468,8 +468,7 @@ function qualifyExpression(raw: string, ctx: OwnerContext): string {
  * УПОРЯДОЧИТЬ/ИТОГИ, чьё имя совпадает с псевдонимом колонки, адресуется ПО
  * псевдониму (печатается голым) — конструктор 1С его НЕ квалифицирует.
  *
- * Exported (semantic-core roadmap Phase 2x-1, memory:
- * project-semantic-core-roadmap): `resolveOutputAliasReference.ts` reuses this
+ * Exported: `resolveOutputAliasReference.ts` reuses this
  * SAME corpus-proven set to stop hover/completion from misreading a bare
  * УПОРЯДОЧИТЬ/ИТОГИ reference to an output column as a table-alias lookup —
  * without this, a collision between an output alias and a real table alias
@@ -614,7 +613,7 @@ function processModel(
   // самого `ПО` идемпотентно пропускаются (голова — псевдоним источника).
   //
   // Видимість джерел для КОЖНОГО `ПО` звужена до `computeJoinVisibility` (live-
-  // verified проти реального 1С, Phase 2a семантичного roadmap) — право-вкладене
+  // verified проти реального 1С) — право-вкладене
   // `ПО` НЕ бачить затравку зовнішнього ланцюга, флет-ланцюг не бачить наперед.
   // Звужується лише `ctx.sources` (кандидати-власники голого поля) — `ctx.aliases`
   // лишається повним, щоб уже написаний `Псевдонім.Поле` розпізнавався як

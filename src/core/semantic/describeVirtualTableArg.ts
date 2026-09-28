@@ -1,8 +1,7 @@
 /**
- * Phase 2x-2 of the semantic-core roadmap (memory: project-semantic-core-roadmap),
- * increment 1 (hover-only, see `.claude/scratch_phase2x2_virtual_table_design.md`
- * §2.3 — bare-field resolution inside `Условие`/etc. is a later, separate
- * increment, NOT done here).
+ * Describes the virtual-table positional argument at a position (hover). Bare
+ * fields inside `Условие`-like arguments are resolved separately
+ * (`describeVirtualTableConditionFieldChain` in `hoverFieldInfo.ts`).
  *
  * Combines three things, none of which know about each other:
  *  - the `'virtualTableArg'` source-map events (`sourceMap.ts`) recorded by
@@ -12,7 +11,7 @@
  *  - the static catalog (`virtualTableSignatures.ts`) that maps
  *    (register kind, slice, positional slot) to a human-meaningful role.
  *
- * Reuses `findModelAt` (Phase 3d/3b) for the same position-aware "which query
+ * Reuses `findModelAt` for the same position-aware "which query
  * level is this" scoping `resolveAliasAt`/`isOutputAliasReference` already
  * rely on, so a `virtualTableArg` event inside a subquery source resolves
  * against ITS OWN model's `tables` array (per-model 0-based numbering,

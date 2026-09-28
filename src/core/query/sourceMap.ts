@@ -1,6 +1,4 @@
 /**
- * Phase 1b of the semantic-core roadmap (memory: project-semantic-core-roadmap).
- *
  * Source-location side-channel for the parser: an optional, write-only sink that
  * `sdblParser.ts` reports completed node→range mappings into. No sink supplied ⇒
  * byte-identical parser behavior — this is a pure side observation, never
@@ -8,12 +6,12 @@
  * `test/unit/semanticArchitectureBoundary.test.ts` and proven against the whole
  * golden corpus by `test/unit/sourceMapZeroImpact.test.ts`).
  *
- * Lives in `src/core/query` (not `src/core/semantic`) even though it exists FOR
- * the future semantic layer: the parser (`Cursor`, `parseTableSource`, …) needs
+ * Lives in `src/core/query` (not `src/core/semantic`) even though the semantic
+ * layer consumes it: the parser (`Cursor`, `parseTableSource`, …) needs
  * to reference this type directly to call `sourceMap?.record(...)`, and
  * `src/core/query` must never import from `src/core/semantic` (one-way
  * dependency, the opposite direction is fine and expected — the semantic layer
- * will import THIS file to consume the recorded events). Deliberately
+ * imports this file to consume the recorded events). Deliberately
  * self-contained (no `BatchDocument`/`QueryModel` types) so it can sit at the
  * boundary between both layers without pulling either one in.
  */

@@ -1,6 +1,5 @@
 /**
- * Phase 2x-2 follow-up (semantic-core roadmap, memory: project-semantic-core-roadmap):
- * hover enrichment for a virtual-table OUTPUT field (e.g. `Остатки.КоличествоОстаток`
+ * Hover enrichment for a virtual-table OUTPUT field (e.g. `Остатки.КоличествоОстаток`
  * in the SELECT list/WHERE/etc. — NOT a positional argument, see
  * `describeVirtualTableArg.ts` for that separate concern).
  *

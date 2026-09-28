@@ -179,8 +179,7 @@ class Cursor {
     private readonly tokens: Token[],
     readonly source: string,
     /**
-     * Phase 1b (semantic-core roadmap, memory: project-semantic-core-roadmap):
-     * optional write-only source-location sink. `undefined` in every existing
+     * Optional write-only source-location sink. `undefined` in every existing
      * call site except `parseDocumentInner`'s main cursor, so parser behavior
      * is unchanged unless a caller opts in via `ParseOptions.sourceMap`.
      * Deliberately NOT threaded into the two `synthesizeImplicitFrom`/
@@ -874,7 +873,7 @@ function parseSingleQueryBody(
   }
 
   // Соединения: достроить ссылки на таблицы по псевдонимам.
-  // Phase 3b (semantic-core roadmap): записываем диапазон условия ПО каждого
+  // Записываем диапазон условия ПО каждого
   // соединения (без самого "ПО") — index соответствует позиции в итоговом
   // model.joins (resolvedJoins ниже становится им один в один, без фильтрации
   // и без переупорядочивания), что resolveAliasAt использует, чтобы понять,
@@ -1969,7 +1968,7 @@ function parseFrom(cur: Cursor): FromResult {
 
 /** Один источник таблицы: `<fullName> [(<params>)] КАК <alias>`. */
 function parseTableSource(cur: Cursor, index: number): SelectedTable {
-  // Phase 1b (semantic-core roadmap): исходная позиция источника — для записи
+  // Исходная позиция источника — для записи
   // диапазона в sourceMap (write-only, см. ./sourceMap.ts). startTok берётся ДО
   // разбора; recordTableRange вызывается ПОСЛЕ того, как источник уже построен,
   // используя последний поглощённый токен (cur.peek(-1)) как конец диапазона.
@@ -2004,18 +2003,13 @@ function parseTableSource(cur: Cursor, index: number): SelectedTable {
     // условие могло потеряться/сместиться (фаза 6.16.70).
     subquerySourceDepth++;
     let subquery: QueryDocument;
-    // Phase 1b (semantic-core roadmap): пробрасываем sourceMap и в подзапрос —
-    // ранее эта рекурсия НЕ передавала его вовсе, так что unionMember/table
-    // внутри подзапроса-источника не записывались вообще (закрытая по запросу
-    // пользователя дыра, ранее задокументированная и протестированная как
-    // известное ограничение в sourceMapOracle.test.ts). Промежуточный sink
+    // sourceMap пробрасывается и в подзапрос. Промежуточный sink
     // собирает диапазоны ОТНОСИТЕЛЬНО `innerText`; каждый транслируется в
     // координаты `cur.source` сдвигом на `open.pos + 1` (начало среза) перед
     // записью в ВНЕШНИЙ sink — та же техника смещения offset'ов, что и
-    // batch-level stitching в `parseBatch`. Форма события (`SourceMapEvent`,
-    // плоские `kind`/`index`) не меняется: вложенность восстанавливается через
-    // containment диапазонов (`findContaining`/`findNearest` уже сортируют
-    // "изнутри наружу"), не через явный parent-указатель.
+    // batch-level stitching в `parseBatch`. Каждое внутреннее событие получает
+    // `depth + 1`: kind/index повторяются на каждом уровне, поэтому потребители
+    // (`resolveAliasAt`) сопоставляют уровни по глубине и диапазону родителя.
     const innerSink = cur.sourceMap ? new RecordingSourceMapSink() : undefined;
     try {
       subquery = withSubqueryRecursionGuard(() =>
@@ -2220,8 +2214,7 @@ function arg(args: string[], n: number): string {
 
 function parseVirtualParams(cur: Cursor, fullName: string, tableIndex: number): VirtualParams {
   const rawArgs = parsePositionalArgs(cur);
-  // Phase 2x-2 (semantic-core roadmap, memory: project-semantic-core-roadmap):
-  // one 'virtualTableArg' event per non-empty positional argument — purely
+  // One 'virtualTableArg' event per non-empty positional argument — purely
   // positional (which table, which slot), no semantic role baked in here. A
   // consumer (hover) combines this with the static catalog in
   // `virtualTableSignatures.ts` (keyed by the table's real MetaTable.kind +
@@ -4755,14 +4748,14 @@ function splitUnionMembers(tokens: Token[]): RawUnionMember[] {
 export interface ParseOptions {
   preserveComments?: boolean;
   /**
-   * Phase 1b (semantic-core roadmap) — optional write-only source-location sink
+   * Optional write-only source-location sink
    * (see `./sourceMap.ts`). `undefined` by default → zero behavior change; every
    * recorded range is relative to THIS call's own `text`, not any enclosing
    * batch (see `SourceMapEvent`'s doc).
    */
   sourceMap?: SourceMapSink;
   /**
-   * Phase 1b (semantic-core roadmap) — `parseBatch`-only counterpart of
+   * `parseBatch`-only counterpart of
    * `sourceMap`: a write-only sink for BATCH-wide, absolute-offset ranges
    * (`AbsoluteSourceMapEvent`, tagged with `statementIndex`). `parseBatch`
    * builds one per-chunk `sourceMap` internally, translates its chunk-relative
@@ -4770,9 +4763,9 @@ export interface ParseOptions {
    * index, and forwards them here — a separate field from `sourceMap` because
    * the two carry different event shapes (chunk-relative vs. batch-absolute)
    * and `parseDocument` itself has no use for `statementIndex`. `undefined` by
-   * default → zero behavior change. Only populated for statements produced by
-   * a `'complete'` parse; see `AbsoluteSourceMapEvent`'s doc for why a
-   * repaired/recovered parse can't safely produce these.
+   * default → zero behavior change. The semantic snapshot also passes it when
+   * parsing a repaired text; whether those positions are trustworthy is decided
+   * there (`recoveredSnapshot`), not here.
    */
   batchSourceMap?: BatchSourceMapSink;
 }
@@ -4902,7 +4895,7 @@ function parseDocumentInner(
     if (finalCur.peek().type !== 'eof') {
       throw finalCur.error('после конца запроса остались нераспознанные данные', finalCur.peek());
     }
-    // Phase 1b (semantic-core roadmap): диапазон участника ОБЪЕДИНЕНИЯ целиком —
+    // Диапазон участника ОБЪЕДИНЕНИЯ целиком —
     // записывается через memberCur (ДО любой внутренней пересборки Cursor'а внутри
     // parseSingleQuery, см. Cursor.sourceMap doc) по границам исходного среза `r`.
     const eofTok = r.tokens[r.tokens.length - 1];
@@ -5293,7 +5286,7 @@ export function parseBatch(
   // следующего запроса) конструктор отбрасывает — канон заканчивается последним
   // запросом без хвостового разделителя.
   const chunks = splitBatchText(normalized).filter((c) => c.trim() !== '');
-  // Phase 1b (semantic-core roadmap): absolute `[start, end)` span of each chunk
+  // Absolute `[start, end)` span of each chunk
   // within `text` — `getBatchStatementSpans` uses the exact same splitting logic
   // (same regex, same string-literal-range guard) and already filters empty
   // fragments identically, so `spans[i]` corresponds to `chunks[i]` 1:1 (proven
