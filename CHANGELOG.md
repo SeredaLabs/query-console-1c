@@ -3,6 +3,36 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## 0.1.92 - 2026-09-28
+
+### Fixed
+
+- A field of an enclosing query used without an alias in a subquery condition
+  is now written with the enclosing source's alias, when metadata shows that
+  the subquery's single source lacks the field. Previously `ГДЕ Цена > 0` inside
+  `(ВЫБРАТЬ … ИЗ Справочник.В КАК В)` became `В.Цена` and changed the query.
+  The output matches the 1C query wizard. An explicit outer reference such as
+  `А.Флаг` in that position is no longer written as `В.А.Флаг`.
+- Accounting register virtual tables keep their arguments when the register's
+  metadata is missing, and `ИЕРАРХИЯ` in `УПОРЯДОЧИТЬ ПО` is kept for sources
+  without metadata.
+- Invalid input is no longer silently changed on Apply. Extra arguments of
+  `Обороты`/`ОстаткиИОбороты` block Apply. `ИНДЕКСИРОВАТЬ ПО` without
+  `ПОМЕСТИТЬ` and `'…'` date literals are reported as errors (use
+  `ДАТАВРЕМЯ(…)`).
+- Hover and completion now work inside `ГДЕ`/`ИМЕЮЩИЕ … В (ВЫБРАТЬ …)`
+  subqueries, and inside `ОБЪЕДИНИТЬ` members of a subquery in `ИЗ`, where
+  they could show the first member's table.
+- Hover and completion keep working while a query is being typed. This covers
+  an unclosed parenthesis or subquery, a half-typed `УПОРЯДОЧИТЬ ПО`/
+  `СГРУППИРОВАТЬ ПО`/`ИТОГИ` (including inside subqueries), and a bare `&`.
+  Previously such text could disable assistance for the whole query package.
+- The Query Text parameter list and the generated `УстановитьПараметр` calls
+  no longer include `&name` from strings or comments, treat `&Дата` and `&ДАТА`
+  as one parameter, and keep names with non-Russian letters whole (`&Ціна`).
+- The New Builder (Canvas) Save is covered by automated browser and VS Code
+  checks.
+
 ## 0.1.91 - 2026-09-27
 
 ### Fixed
