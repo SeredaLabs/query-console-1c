@@ -20,8 +20,9 @@ in the [technical-debt ledger](technical-debt.md); historical verdicts remain in
   (A2). The platform-correct schema for this shape still needs confirmation.
 - Apply checks supported syntax/structure, selected metadata semantics and
   recorded unsafe markers; it does not establish semantic equivalence to the
-  source query (V3). Some platform-invalid inputs are silently normalized,
-  including extra turnover arguments and INDEX BY without INTO (C5).
+  source query (V3). Platform-invalid inputs are either rejected on open or
+  open with Apply blocked (C5); some, such as source aliases `В`/`И`, still
+  open and are shown in the designer.
 - The Query Text parameter list and result-processing boilerplate use a raw
   regex and can include `&name` from a string/comment or duplicate case variants;
   editor parameter hover/completion use lexer tokens instead (C7).

@@ -47,9 +47,8 @@ change here with both parse and round-trip tests (`test/unit/comment*.test.ts`).
 
 Virtual-table parsing records `unsafeExtraArgs` in the generic fallback and
 modeled calculation-register overflow paths; Apply blocks marked models.
-Coverage is not universal: extra `Обороты`/`ОстаткиИОбороты` arguments can be
-lost without a marker (platform-invalid RP04/RP05). Missing accounting metadata
-also has a preservation gap (C1). See the [debt ledger](technical-debt.md).
+Nonempty extra `Обороты`/`ОстаткиИОбороты` arguments (platform-invalid RP04/RP05)
+are marked too; trailing empty slots are accepted. See the [debt ledger](technical-debt.md).
 Preserve existing markers through transformations and tests.
 
 A structurally malformed custom/raw expression (unbalanced parens, a dangling

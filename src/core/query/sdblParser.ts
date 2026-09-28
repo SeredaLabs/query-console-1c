@@ -307,8 +307,21 @@ const AUTO_ALIAS = /^Поле\d+$/;
 /** Голый параметр выборки `&Имя` (захватывает имя без `&`). */
 const BARE_PARAM_ALIAS = /^&([A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*)$/u;
 
+/**
+ * The lexer keeps `'…'` as a `date` token for highlighting/formatting, but the
+ * platform rejects it in query text (RP23); accepting it would let Apply write
+ * a query 1C cannot run. Date constants are written as ДАТАВРЕМЯ(…).
+ */
+function rejectQuotedDateLiterals(tokens: Token[], text: string): void {
+  const date = tokens.find(t => t.type === 'date');
+  if (date) {
+    throw new Cursor(tokens, text).error('литерал в одинарных кавычках недопустим в языке запросов, используйте ДАТАВРЕМЯ(…)', date);
+  }
+}
+
 export function parseQuery(text: string): QueryModel {
   const tokens = tokenize(text);
+  rejectQuotedDateLiterals(tokens, text);
   const cur = new Cursor(tokens, text);
   const model = parseSingleQuery(cur);
   // accountingArgs — транзиентное поле пост-разбора (parseDocument); прямой parseQuery
@@ -952,6 +965,7 @@ function parseSingleQuery(
     fields: model.fields,
     resolveOwner,
     tableFullNames,
+    createsTempTable: model.queryType === 'createTemp',
   };
   if (ctxOut) ctxOut.ctx = ownSectionCtx;
   // Секции объединённого запроса резолвятся по контексту ПЕРВОГО участника.
@@ -977,6 +991,11 @@ function parseSingleQuery(
   }
   if (cur.isKeyword('ИНДЕКСИРОВАТЬ')) {
     model.indexing = parseIndex(cur, sectionCtx);
+    // UNION tail sections belong to the first member, which owns ПОМЕСТИТЬ.
+    // Without that destination the generator would silently omit the index.
+    if (!sectionCtx.createsTempTable) {
+      throw cur.error('ИНДЕКСИРОВАТЬ ПО требует ПОМЕСТИТЬ');
+    }
   }
 
   // Блок характеристик СКД `{ХАРАКТЕРИСТИКИ … }` в конце запроса. Конструктор
@@ -2163,6 +2182,7 @@ function parseVirtualParams(cur: Cursor, fullName: string, tableIndex: number): 
     set('endPeriod', arg(args, 1));
     set('periodicity', arg(args, 2));
     set('condition', arg(args, 3));
+    if (args.slice(4).some(a => a !== '')) v.unsafeExtraArgs = true;
     return v;
   }
   if (slice === 'ОстаткиИОбороты') {
@@ -2172,6 +2192,7 @@ function parseVirtualParams(cur: Cursor, fullName: string, tableIndex: number): 
     set('periodicity', arg(args, 2));
     set('fillMethod', arg(args, 3));
     set('condition', arg(args, 4));
+    if (args.slice(5).some(a => a !== '')) v.unsafeExtraArgs = true;
     return v;
   }
 
@@ -3680,6 +3701,8 @@ function parseOrderModifiers(cur: Cursor): { direction: SortDirection; hierarchy
 
 /** Контекст резолвинга полей секций УПОРЯДОЧИТЬ/ИТОГИ/ИНДЕКСИРОВАТЬ (фаза 6.15.4). */
 interface SectionResolveContext {
+  /** The first UNION member owns the destination for a trailing index clause. */
+  createsTempTable: boolean;
   /** Карта псевдоним выборки → (tableId, path). */
   aliasMap: Map<string, FieldRef>;
   /** Псевдоним таблицы (ВЕРХНИЙ регистр) → tableId. */
@@ -4750,6 +4773,7 @@ function parseDocumentInner(
   sourceMap?: SourceMapSink,
 ): QueryDocument {
   const tokens = tokenize(text);
+  rejectQuotedDateLiterals(tokens, text);
   const raw = splitUnionMembers(tokens);
 
   // Контекст секций (УПОРЯДОЧИТЬ/ИТОГИ/ИНДЕКС) первого участника: секции стоят
