@@ -9,6 +9,7 @@ import { buildSemanticSnapshotFromText } from '../../src/core/semantic/buildSema
 import { resolveCompletionTarget } from '../../src/extension/hoverFieldInfo';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
 import {
+  repairSelectListsForRecovery,
   repairTrailingSectionsForRecovery,
   repairUnbalancedParensForRecovery,
 } from '../../src/core/query/selectListRepair';
@@ -93,6 +94,19 @@ describe('S2: recovery while typing', () => {
   it('a valid query with sections inside subqueries stays complete', () => {
     const text = `ВЫБРАТЬ Т.Ссылка ${FROM} ГДЕ Т.Контрагент В (ВЫБРАТЬ К.Ссылка ИЗ Справочник.Контрагенты КАК К СГРУППИРОВАТЬ ПО К.Ссылка)`;
     expect(buildSemanticSnapshotFromText(1, text, resolver).completeness).toBe('complete');
+  });
+
+  it('an unclosed ( in one statement does not break select-list recovery of the next one', () => {
+    // Statement 2 needs the select-list repair (missing comma). That repair does not
+    // reset paren depth at `;`, so on its own it skips statement 2; the pipeline
+    // relies on the parenthesis repair running first.
+    const text = 'ВЫБРАТЬ ПОДСТРОКА(Т.Код ИЗ Справочник.Товары КАК Т;\nВЫБРАТЬ К.Ссылка К.ИНН ИЗ Справочник.Контрагенты КАК К';
+    expect(repairSelectListsForRecovery(text)).toBeUndefined();
+    const snapshot = buildSemanticSnapshotFromText(1, text, resolver);
+    expect(snapshot.completeness).toBe('recovered');
+    expect(snapshot.model.members).toHaveLength(2);
+    expect(completionAt(text.replace('К.Ссылка', 'К.¦Ссылка'), 'К')).toBe('Справочник.Контрагенты');
+    expect(completionAt(text.replace('ПОДСТРОКА(Т.Код', 'ПОДСТРОКА(Т.¦Код'), 'Т')).toBe('Справочник.Товары');
   });
 
   it('a broken ORDER BY in one statement keeps the other statements', () => {
