@@ -35,7 +35,7 @@
  */
 import { parseBatch } from '../query/sdblParser';
 import type { MetadataResolver } from '../query/metadataResolver';
-import { repairSelectListsForRecovery } from '../query/selectListRepair';
+import { repairSelectListsForRecovery, repairTrailingSectionsForRecovery, repairUnbalancedParensForRecovery } from '../query/selectListRepair';
 import type { BatchDocument } from '../query/batchModel';
 import { RecordingBatchSourceMapSink } from '../query/sourceMap';
 import { createSemanticSnapshot, type SemanticSnapshot } from './semanticSnapshot';
@@ -55,15 +55,19 @@ function withSymbolIndex(snapshot: SemanticSnapshot): SemanticSnapshot {
 /**
  * Builds a `SemanticSnapshot` from raw source text, trying increasingly lossy
  * strategies until one succeeds:
- *  1. a plain `parseBatch` — `completeness: 'complete'`.
- *  2. `repairSelectListsForRecovery` (blanks out broken top-level SELECT lists,
- *     keeping `ИЗ`/aliases/joins intact) then `parseBatch` again —
- *     `completeness: 'recovered'`, with `sourceMapEvents` when the repair kept
- *     offsets in place (length-preserving placeholder). The recovered model's own SELECT-list fields
- *     are placeholders, not the user's real fields — consumers that need real
- *     field data (not just source/alias visibility) must treat a `'recovered'`
- *     snapshot's fields as unreliable.
- *  3. neither works — `completeness: 'unavailable'`, an EMPTY model (no
+ *  1. a plain `parseBatch` — `completeness: 'complete'`, unless the text has an
+ *     unclosed `(` (it can swallow ИЗ while still parsing; S2).
+ *  2. recovery repairs, least destructive first — `completeness: 'recovered'`:
+ *     the unclosed-parenthesis repair (when needed), then on top of it
+ *     `repairSelectListsForRecovery` (placeholder SELECT lists, keeping
+ *     `ИЗ`/aliases/joins), `repairTrailingSectionsForRecovery` (blanked
+ *     ORDER/GROUP/TOTALS/INDEX sections) and both together. Every repair keeps
+ *     original offsets, so `sourceMapEvents` are kept. A recovered model's own
+ *     SELECT-list fields may be placeholders, not the user's real fields —
+ *     consumers that need real field data (not just source/alias visibility)
+ *     must treat a `'recovered'` snapshot's fields as unreliable.
+ *  3. the plain parse from step 1 when it succeeded but no repair parsed.
+ *  4. nothing works — `completeness: 'unavailable'`, an EMPTY model (no
  *     tables/fields at all), never a thrown exception.
  *
  * `'partial'` (also a valid `SemanticCompleteness` value) is NOT reachable by
@@ -78,31 +82,62 @@ export function buildSemanticSnapshotFromText(
   sourceText: string,
   resolver?: MetadataResolver,
 ): SemanticSnapshot {
+  // S2: with an unclosed `(` a parse can succeed and still be unusable (the
+  // parenthesis swallows ИЗ: no sources). Such text is recovered first; the
+  // plain parse is kept only when no repair parses.
+  const parens = safeRepair(() => repairUnbalancedParensForRecovery(sourceText));
+  let plain: SemanticSnapshot | undefined;
   try {
     const sink = new RecordingBatchSourceMapSink();
     const model = parseBatch(sourceText, resolver, { batchSourceMap: sink });
-    return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, model, 'complete', sink.events));
+    plain = withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, model, 'complete', sink.events));
+    if (parens === undefined) return plain;
   } catch {
-    // falls through to the recovery attempt below
+    // falls through to the recovery attempts below
   }
 
-  try {
-    const repairedText = repairSelectListsForRecovery(sourceText);
-    if (repairedText !== undefined) {
-      // The repair placeholder is length-preserving, so each offset in
-      // `repairedText` is the same offset in `sourceText`. Checked rather than
-      // assumed: if a future repair ever shifted offsets, the snapshot must
-      // lose its positions instead of reporting wrong ones.
-      if (repairedText.length === sourceText.length) {
+  // Recovery candidates, least destructive first: real SELECT lists are kept
+  // when only a trailing section is broken (C18/C19).
+  const base = parens ?? sourceText;
+  const selects = safeRepair(() => repairSelectListsForRecovery(base));
+  const candidates = [
+    parens,
+    selects,
+    safeRepair(() => repairTrailingSectionsForRecovery(base)),
+    selects === undefined ? undefined : safeRepair(() => repairTrailingSectionsForRecovery(selects)),
+  ];
+  for (const repairedText of candidates) {
+    if (repairedText === undefined) continue;
+    try {
+      // Every repair keeps each original offset (in-place blanking, or `)`
+      // appended after the end). Checked rather than assumed: if a future
+      // repair ever shifted offsets, the snapshot must lose its positions
+      // instead of reporting wrong ones.
+      if (keepsOffsets(sourceText, repairedText)) {
         const sink = new RecordingBatchSourceMapSink();
         const model = parseBatch(repairedText, resolver, { batchSourceMap: sink });
         return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, model, 'recovered', sink.events));
       }
       return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, parseBatch(repairedText, resolver), 'recovered'));
+    } catch {
+      // this repair wasn't enough — try the next one
     }
-  } catch {
-    // repair itself wasn't enough — fall through to 'unavailable'
   }
+  if (plain) return plain;
 
   return createSemanticSnapshot(documentVersion, sourceText, EMPTY_BATCH, 'unavailable');
+}
+
+/** A repair that itself throws (lexically invalid text) just yields no candidate. */
+function safeRepair(repair: () => string | undefined): string | undefined {
+  try {
+    return repair();
+  } catch {
+    return undefined;
+  }
+}
+
+/** Same length, or only `)` appended after the original end. */
+function keepsOffsets(source: string, repaired: string): boolean {
+  return repaired.length >= source.length && /^\)*$/.test(repaired.slice(source.length));
 }

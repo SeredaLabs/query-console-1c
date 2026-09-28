@@ -96,3 +96,87 @@ function blankSelectList(segment: string): string {
   if (segment.length < 3) return '*' + blank.slice(1);
   return blank[0] + '1' + ' ' + blank.slice(3);
 }
+
+/** Top-level sections after the sources that recovery may drop (S2, C18/C19). */
+const TRAILING_SECTIONS = new Set(['СГРУППИРОВАТЬ', 'ИМЕЮЩИЕ', 'УПОРЯДОЧИТЬ', 'ИТОГИ', 'ИНДЕКСИРОВАТЬ']);
+/** Keywords that end such a section at statement level. */
+const SECTION_BOUNDARIES = new Set(['ОБЪЕДИНИТЬ', 'ВЫБРАТЬ', 'УНИЧТОЖИТЬ', 'ДЛЯ']);
+
+/**
+ * S2: for consumers that only need sources and aliases, blanks every top-level
+ * ГРУППИРОВКА/ИМЕЮЩИЕ/ПОРЯДОК/ИТОГИ/ИНДЕКС section (keyword included) with spaces
+ * of the same length, up to the next section boundary (`;`, ОБЪЕДИНИТЬ, the next
+ * statement, ДЛЯ ИЗМЕНЕНИЯ, the end). A half-typed `УПОРЯДОЧИТЬ ПО Т. ,` then no
+ * longer makes the whole package unavailable. Called only after a normal parse
+ * failed; offsets are preserved, so the recovered snapshot keeps positions.
+ * The blank ends with a `ДЛЯ ИЗМЕНЕНИЯ` placeholder (valid at the end of any
+ * member) when it fits: a union member's range ends at its last token, so without
+ * it a cursor inside the blanked section would fall outside every query.
+ * Sections inside subqueries are not touched. `undefined` if there is no such
+ * section.
+ */
+export function repairTrailingSectionsForRecovery(text: string): string | undefined {
+  const tokens = tokenize(text);
+  const ranges: Array<{ start: number; end: number; placeholder: boolean }> = [];
+  let depth = 0;
+  let open: number | undefined;
+  const close = (end: number, placeholder = true): void => {
+    if (open !== undefined) ranges.push({ start: open, end, placeholder });
+    open = undefined;
+  };
+  for (const t of tokens) {
+    if (t.type === 'eof') { close(t.pos); break; }
+    if (t.type === 'punct') {
+      if (t.value === '(' || t.value === '{') depth++;
+      else if (t.value === ')' || t.value === '}') depth--;
+      else if (t.value === ';' && depth === 0) close(t.pos);
+      continue;
+    }
+    if (depth !== 0 || t.type !== 'keyword') continue;
+    if (SECTION_BOUNDARIES.has(t.value)) close(t.pos, t.value !== 'ДЛЯ');
+    else if (TRAILING_SECTIONS.has(t.value) && open === undefined) open = t.pos;
+  }
+  if (ranges.length === 0) return undefined;
+  let result = text;
+  for (let k = ranges.length - 1; k >= 0; k--) {
+    const { start, end, placeholder } = ranges[k];
+    // Line breaks are blanked too: only offsets matter, and the placeholder must
+    // end exactly where the section did.
+    let blank = ' '.repeat(end - start);
+    if (placeholder && blank.length > FOR_UPDATE.length) {
+      blank = blank.slice(FOR_UPDATE.length) + FOR_UPDATE;
+    }
+    result = result.slice(0, start) + blank + result.slice(end);
+  }
+  return result;
+}
+
+const FOR_UPDATE = 'ДЛЯ ИЗМЕНЕНИЯ';
+
+/**
+ * S2 (C06/C13/C11): an unclosed `(` makes the parser swallow the rest of the
+ * statement (`ПОДСТРОКА(Т.` hides `ИЗ`), yet the parse may still succeed with no
+ * sources. For recovery only: an unclosed subquery `(ВЫБРАТЬ …` is closed by `)`
+ * appended at the very end of the text; any other unclosed `(` is replaced by a
+ * space. Every original offset is unchanged (in-place blanking, appended tail).
+ * `undefined` when every `(` is closed.
+ */
+export function repairUnbalancedParensForRecovery(text: string): string | undefined {
+  const tokens = tokenize(text);
+  const open: number[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t.type !== 'punct') continue;
+    if (t.value === '(') open.push(i);
+    else if (t.value === ')') open.pop();
+  }
+  if (open.length === 0) return undefined;
+  let result = text;
+  let closers = '';
+  for (const i of open) {
+    const next = tokens[i + 1];
+    if (next?.type === 'keyword' && next.value === 'ВЫБРАТЬ') closers += ')';
+    else result = result.slice(0, tokens[i].pos) + ' ' + result.slice(tokens[i].pos + 1);
+  }
+  return result + closers;
+}

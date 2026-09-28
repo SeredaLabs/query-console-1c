@@ -108,8 +108,8 @@ export class QueryHoverProvider implements vscode.HoverProvider {
     // project-semantic-core-roadmap — "Query parameter semantics boundary").
     // Any OTHER `&Параметр` occurrence (not a virtual-table argument, handled
     // more specifically above) is still a query-local named parameter, scoped
-    // to the whole batch. No resolver needed. The strict lexer can throw on
-    // incomplete tokens (bare `&`, unclosed string); recovery is tracked in S2.
+    // to the whole batch. No resolver needed. The scan tolerates text that is
+    // lexically incomplete while typing (bare `&`, unclosed string).
     // The result deliberately names ONLY that this is a parameter,
     // never where its value comes from (see this feature's own acceptance
     // boundary in `queryParameters.ts`/`resultProcessingTemplate.ts`).

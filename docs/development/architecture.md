@@ -112,7 +112,8 @@ and recovered parses; `resolveAliasAt` consumes it. `scopesById` and
 `referencesBySymbolId` are empty placeholders with no production consumer.
 `partial` is declared but is not returned by that builder. `complete` means the
 parse did not throw, not that every source/scope was captured: condition
-subqueries kept as custom text and open-parenthesis recovery (S2) are not covered.
+subqueries kept as custom text are not covered. Text with an unclosed `(` is
+recovered first even when it parses, because the parenthesis can swallow ИЗ.
 Source-map events carry `depth`; scope descent matches nested levels by depth and
 the parent node's range. Current source maps and
 on-demand scope traversal already serve consumers; do not populate unused maps

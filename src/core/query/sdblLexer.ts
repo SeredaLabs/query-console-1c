@@ -183,7 +183,7 @@ export function tokenize(text: string, opts?: { comments?: boolean }): Token[] {
       const nameStart = i;
       while (i < text.length && isIdentPart(text[i])) advance();
       if (i === nameStart) {
-        throw lexError('ожидалось имя после "#"', startLine, startCol);
+        throw lexError('ожидалось имя после "#"', startLine, startCol, startPos, 'token');
       }
       let name = '#' + text.slice(nameStart, i);
       if (text[i] === '#') { advance(); name += '#'; }
@@ -197,7 +197,7 @@ export function tokenize(text: string, opts?: { comments?: boolean }): Token[] {
       const nameStart = i;
       while (i < text.length && isIdentPart(text[i])) advance();
       if (i === nameStart) {
-        throw lexError('ожидалось имя параметра после "&"', startLine, startCol);
+        throw lexError('ожидалось имя параметра после "&"', startLine, startCol, startPos, 'token');
       }
       push('param', '&' + text.slice(nameStart, i), startPos, startLine, startCol);
       continue;
@@ -224,7 +224,7 @@ export function tokenize(text: string, opts?: { comments?: boolean }): Token[] {
         advance();
       }
       if (!closed) {
-        throw lexError('незакрытый строковый литерал', startLine, startCol);
+        throw lexError('незакрытый строковый литерал', startLine, startCol, startPos, 'unclosedLiteral');
       }
       push('string', value, startPos, startLine, startCol);
       continue;
@@ -239,7 +239,7 @@ export function tokenize(text: string, opts?: { comments?: boolean }): Token[] {
         advance();
       }
       if (text[i] !== "'") {
-        throw lexError('незакрытый литерал даты', startLine, startCol);
+        throw lexError('незакрытый литерал даты', startLine, startCol, startPos, 'unclosedLiteral');
       }
       value += "'";
       advance();
@@ -299,13 +299,25 @@ export function tokenize(text: string, opts?: { comments?: boolean }): Token[] {
       continue;
     }
 
-    throw lexError(`неожиданный символ ${JSON.stringify(ch)}`, startLine, startCol);
+    throw lexError(`неожиданный символ ${JSON.stringify(ch)}`, startLine, startCol, startPos, 'token');
   }
 
   push('eof', '', i, line, col);
   return tokens;
 }
 
-function lexError(message: string, line: number, col: number): Error {
-  return new Error(`Лексическая ошибка ${line}:${col} — ${message}`);
+/**
+ * Lexical failure with its offset. The message format is parsed by the webview
+ * i18n layer and must stay unchanged. `unclosedLiteral`: the rest of the text
+ * from `pos` belongs to the unfinished literal; `token`: only the character at
+ * `pos` (a bare `&`/`#` or an unexpected character) is invalid.
+ */
+export class SdblLexError extends Error {
+  constructor(message: string, readonly pos: number, readonly extent: 'token' | 'unclosedLiteral') {
+    super(message);
+  }
+}
+
+function lexError(message: string, line: number, col: number, pos: number, extent: SdblLexError['extent']): Error {
+  return new SdblLexError(`Лексическая ошибка ${line}:${col} — ${message}`, pos, extent);
 }
