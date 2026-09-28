@@ -63,13 +63,31 @@ describe('S2: recovery while typing', () => {
     const text = `ВЫБРАТЬ Т.Ссылка ${FROM} ГДЕ Т.Контрагент В (ВЫБРАТЬ К. ИЗ Справочник.Контрагенты КАК К;\nВЫБРАТЬ К.Ссылка ИЗ Справочник.Контрагенты КАК К`;
     expect(completionAt(text.replace(/К\.Ссылка ИЗ/, 'К.¦Ссылка ИЗ'), 'К')).toBe('Справочник.Контрагенты');
     const fixed = repairUnbalancedParensForRecovery(text)!;
-    expect(fixed).toHaveLength(text.length);
-    expect(fixed).toBe(text.replace('КАК К;\n', 'КАК К);'));
+    expect(fixed).toEqual({ text: text.replace('КАК К;\n', 'КАК К);'), inserted: [] });
+  });
+
+  it('unclosed subquery with no whitespace around ;: `)` is inserted and positions map back', () => {
+    const text = `ВЫБРАТЬ Т.Ссылка ${FROM} ГДЕ Т.Контрагент В (ВЫБРАТЬ К.Ссылка ИЗ Справочник.Контрагенты КАК К;ВЫБРАТЬ К.Ссылка ИЗ Справочник.Товары КАК К`;
+    const semi = text.indexOf(';');
+    expect(repairUnbalancedParensForRecovery(text)).toEqual({ text: text.slice(0, semi) + ')' + text.slice(semi), inserted: [semi] });
+    // Inside the repaired subquery and in the next statement (after the insertion).
+    expect(completionAt(text.replace('К.Ссылка ИЗ Справочник.Контрагенты', 'К.¦Ссылка ИЗ Справочник.Контрагенты'), 'К')).toBe('Справочник.Контрагенты');
+    expect(completionAt(text.replace('К.Ссылка ИЗ Справочник.Товары', 'К.¦Ссылка ИЗ Справочник.Товары'), 'К')).toBe('Справочник.Товары');
+    const snapshot = buildSemanticSnapshotFromText(1, text, resolver);
+    expect(snapshot.completeness).toBe('recovered');
+    const second = snapshot.sourceMapEvents.find(e => e.statementIndex === 1 && e.kind === 'table')!;
+    expect(text.slice(second.range.start, second.range.end)).toBe('Справочник.Товары КАК К');
+  });
+
+  it('the shortest section keyword still gets a placeholder', () => {
+    const text = 'ВЫБРАТЬ Т.Ссылка ИЗ Справочник.Товары КАК Т ИТОГИ';
+    const fixed = repairTrailingSectionsForRecovery(text)!;
+    expect(fixed).toBe(text.replace('ИТОГИ', 'ГДЕ 1'));
   });
 
   it('an unclosed ( in one statement does not pair with a ) of the next one', () => {
     const text = 'ВЫБРАТЬ ПОДСТРОКА(Т.Код ИЗ Справочник.Товары КАК Т;\nВЫБРАТЬ (1) КАК А';
-    expect(repairUnbalancedParensForRecovery(text)).toBe(text.replace('ПОДСТРОКА(', 'ПОДСТРОКА '));
+    expect(repairUnbalancedParensForRecovery(text)).toEqual({ text: text.replace('ПОДСТРОКА(', 'ПОДСТРОКА '), inserted: [] });
   });
 
   it('a valid query with sections inside subqueries stays complete', () => {
@@ -103,7 +121,7 @@ describe('S2: recovery while typing', () => {
 
     const parens = `ВЫБРАТЬ ПОДСТРОКА(Т.\n${FROM} ГДЕ Т.К В (ВЫБРАТЬ К.К ИЗ Справочник.К КАК К`;
     const closed = repairUnbalancedParensForRecovery(parens)!;
-    expect(closed).toBe(parens.replace('ПОДСТРОКА(', 'ПОДСТРОКА ') + ')');
+    expect(closed).toEqual({ text: parens.replace('ПОДСТРОКА(', 'ПОДСТРОКА ') + ')', inserted: [parens.length] });
   });
 
   it('sections inside a subquery are not blanked', () => {

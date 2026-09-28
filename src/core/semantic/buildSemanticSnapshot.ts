@@ -99,12 +99,13 @@ export function buildSemanticSnapshotFromText(
 
   // Recovery candidates, least destructive first: real SELECT lists are kept
   // when only a trailing section is broken (C18/C19).
-  const base = parens ?? sourceText;
+  const base = parens?.text ?? sourceText;
+  const inserted = parens?.inserted ?? [];
   const selects = safeRepair(() => repairSelectListsForRecovery(base));
   const sections = (text: string | undefined, nested: boolean): string | undefined =>
     text === undefined ? undefined : safeRepair(() => repairTrailingSectionsForRecovery(text, nested));
   const candidates = [
-    parens,
+    parens?.text,
     selects,
     sections(base, false),
     sections(selects, false),
@@ -114,14 +115,19 @@ export function buildSemanticSnapshotFromText(
   for (const repairedText of candidates) {
     if (repairedText === undefined) continue;
     try {
-      // Every repair keeps each original offset (in-place blanking, or `)`
-      // appended after the end). Checked rather than assumed: if a future
-      // repair ever shifted offsets, the snapshot must lose its positions
-      // instead of reporting wrong ones.
-      if (keepsOffsets(sourceText, repairedText)) {
+      // Repairs edit in place; only the parenthesis repair adds `)` characters,
+      // listed in `inserted`, so positions are mapped back to `sourceText`.
+      // Checked rather than assumed: if a future repair ever shifted offsets
+      // otherwise, the snapshot must lose its positions instead of reporting
+      // wrong ones.
+      if (repairedText.length === sourceText.length + inserted.length) {
         const sink = new RecordingBatchSourceMapSink();
         const model = parseBatch(repairedText, resolver, { batchSourceMap: sink });
-        return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, model, 'recovered', sink.events));
+        const events = inserted.length === 0 ? sink.events : sink.events.map(e => ({
+          ...e,
+          range: { start: toSourceOffset(e.range.start, inserted), end: toSourceOffset(e.range.end, inserted) },
+        }));
+        return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, model, 'recovered', events));
       }
       return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, parseBatch(repairedText, resolver), 'recovered'));
     } catch {
@@ -134,7 +140,7 @@ export function buildSemanticSnapshotFromText(
 }
 
 /** A repair that itself throws (lexically invalid text) just yields no candidate. */
-function safeRepair(repair: () => string | undefined): string | undefined {
+function safeRepair<T>(repair: () => T | undefined): T | undefined {
   try {
     return repair();
   } catch {
@@ -142,9 +148,15 @@ function safeRepair(repair: () => string | undefined): string | undefined {
   }
 }
 
-/** Same length, or only `)` appended after the original end. */
-function keepsOffsets(source: string, repaired: string): boolean {
-  return repaired.length >= source.length && /^\)*$/.test(repaired.slice(source.length));
+/**
+ * Repaired-text offset → source offset, given the sorted source offsets before
+ * which one character each was inserted (the i-th inserted character sits at
+ * repaired offset `inserted[i] + i`).
+ */
+function toSourceOffset(repaired: number, inserted: readonly number[]): number {
+  let before = 0;
+  while (before < inserted.length && inserted[before] + before < repaired) before++;
+  return repaired - before;
 }
 
 /**

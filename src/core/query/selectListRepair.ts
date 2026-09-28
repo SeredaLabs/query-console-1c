@@ -123,7 +123,7 @@ interface SectionFrame {
  * A union member's range ends at its last token, so the blank ends with a
  * placeholder, otherwise a cursor inside the blanked section would fall outside
  * every query: `ДЛЯ ИЗМЕНЕНИЯ` when it fits, else `И 1` (the member already has
- * `ГДЕ`) or `ГДЕ 1`. Before an existing `ДЛЯ ИЗМЕНЕНИЯ` no placeholder is needed.
+ * `ГДЕ`) or `ГДЕ 1` (always fits: the shortest section keyword, ИТОГИ, is as long). Before an existing `ДЛЯ ИЗМЕНЕНИЯ` no placeholder is needed.
  * `undefined` if there is no such section.
  */
 export function repairTrailingSectionsForRecovery(text: string, nested = false): string | undefined {
@@ -134,9 +134,11 @@ export function repairTrailingSectionsForRecovery(text: string, nested = false):
     if (frame.open === undefined) return;
     const length = end - frame.open;
     const short = frame.hasWhere ? 'И 1' : 'ГДЕ 1';
+    // A section keyword starts a token, so the character before it cannot glue
+    // to the placeholder; every section keyword is at least as long as `ГДЕ 1`.
     const placeholder = !withPlaceholder ? undefined
       : length > FOR_UPDATE.length ? FOR_UPDATE
-      : length > short.length ? short
+      : length >= short.length ? short
       : undefined;
     ranges.push({ start: frame.open, end, placeholder });
     frame.open = undefined;
@@ -180,17 +182,25 @@ const FOR_UPDATE = 'ДЛЯ ИЗМЕНЕНИЯ';
  * - any unclosed `(` not opening a subquery is replaced by a space;
  * - unclosed subqueries `(ВЫБРАТЬ …` get their `)` at the statement end: after
  *   the text for the last statement; otherwise over the whitespace just before
- *   its `;`, or over the whitespace just after it (the `;` then moves right).
- * Every original offset is unchanged (in-place edits, appended tail). A
- * statement whose closers do not fit keeps its unclosed subquery. `undefined`
- * when every `(` is closed.
+ *   its `;`, or over the whitespace just after it (the `;` then moves right),
+ *   or, with no whitespace there (`КАК К;ВЫБРАТЬ`), inserted before the `;`.
+ * In-place edits keep every offset. Each `)` added to the text (appended or
+ * inserted) is listed in `inserted` by the SOURCE offset it precedes, so callers
+ * can map positions back (`text.length` for the appended tail). `undefined` when
+ * every `(` is closed.
  */
-export function repairUnbalancedParensForRecovery(text: string): string | undefined {
+export interface ParenRepair {
+  text: string;
+  /** Sorted source offsets; one added `)` precedes the source character at each. */
+  inserted: number[];
+}
+
+export function repairUnbalancedParensForRecovery(text: string): ParenRepair | undefined {
   const tokens = tokenize(text);
   // Token offsets are UTF-16 units, so edit a UTF-16 unit array.
   const units = text.split('');
   let changed = false;
-  let tail = '';
+  const inserted: number[] = [];
   let open: number[] = [];
   const finish = (semicolonPos: number | undefined): void => {
     let closers = 0;
@@ -201,7 +211,11 @@ export function repairUnbalancedParensForRecovery(text: string): string | undefi
     }
     open = [];
     if (closers === 0) return;
-    if (semicolonPos === undefined) { tail += ')'.repeat(closers); changed = true; return; }
+    if (semicolonPos === undefined) {
+      for (let k = 0; k < closers; k++) inserted.push(text.length);
+      changed = true;
+      return;
+    }
     const isSpace = (at: number): boolean => at >= 0 && at < units.length && /\s/.test(units[at]);
     let before = 0;
     while (before < closers && isSpace(semicolonPos - 1 - before)) before++;
@@ -216,7 +230,10 @@ export function repairUnbalancedParensForRecovery(text: string): string | undefi
       for (let k = 0; k < closers; k++) units[semicolonPos + k] = ')';
       units[semicolonPos + closers] = ';';
       changed = true;
+      return;
     }
+    for (let k = 0; k < closers; k++) inserted.push(semicolonPos);
+    changed = true;
   };
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
@@ -226,5 +243,12 @@ export function repairUnbalancedParensForRecovery(text: string): string | undefi
     else if (t.value === ')') open.pop();
     else if (t.value === ';') finish(t.pos);
   }
-  return changed ? units.join('') + tail : undefined;
+  if (!changed) return undefined;
+  let result = '';
+  let from = 0;
+  for (const at of inserted) {
+    result += units.slice(from, at).join('') + ')';
+    from = at;
+  }
+  return { text: result + units.slice(from).join(''), inserted };
 }
