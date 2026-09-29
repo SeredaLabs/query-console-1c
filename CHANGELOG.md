@@ -3,6 +3,17 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## 0.1.94 - 2026-09-29
+
+### Fixed
+
+- An unclosed parenthesis in GROUP BY, ORDER BY function calls or comparisons,
+  and INDEX BY now produces a positioned parse error instead of looping until
+  memory exhaustion. This also prevents query diagnostics from crashing the
+  extension host while these expressions are being typed.
+- An unclosed `{ХАРАКТЕРИСТИКИ …}` block is rejected on open instead of being
+  silently discarded when saving. Closed blocks retain their original contents.
+
 ## 0.1.93 - 2026-09-29
 
 ### Fixed
