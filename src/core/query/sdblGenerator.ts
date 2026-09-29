@@ -1251,10 +1251,51 @@ function renderJoinConjuncts(conditions: NonNullable<Join['conditions']>, aliase
 }
 
 /**
- * Делит выражение на конъюнкты по ВЕРХНЕУРОВНЕВОМУ `И` (вне скобок и строк); `И`
- * диапазона `МЕЖДУ a И b` не считается. Возвращает массив подвыражений (trim).
+ * Делит выражение на конъюнкты по ВЕРХНЕУРОВНЕВОМУ `И` (вне скобок); `И`
+ * диапазона `МЕЖДУ a И b` не считается. Возвращает массив подвыражений (trim),
+ * вырезанных из исходного текста по позициям токенов.
+ *
+ * Лексические факты (строки, даты, комментарии, параметры `&И`, имена `#И`,
+ * границы слов, регистр) берутся из токенов лексера (A1); синтаксическое правило
+ * `МЕЖДУ … И` остаётся здесь. Экспортирована для тестов.
  */
-function splitTopLevelAnd(expr: string): string[] {
+export function splitTopLevelAnd(expr: string): string[] {
+  let tokens;
+  try {
+    tokens = tokenize(expr);
+  } catch {
+    // Лексически незавершённое выражение (ручной ввод): прежний посимвольный
+    // разбор, чтобы не появилось новых исключений и форматирование не менялось.
+    return splitTopLevelAndRaw(expr);
+  }
+  const parts: string[] = [];
+  let depth = 0;
+  let betweenPending = 0;
+  let start = 0;
+  for (const t of tokens) {
+    if (t.type === 'punct') {
+      if (t.value === '(') depth++;
+      else if (t.value === ')') depth--;
+      continue;
+    }
+    if (depth !== 0 || (t.type !== 'ident' && t.type !== 'keyword')) continue;
+    const word = t.value.toUpperCase();
+    if (word === 'МЕЖДУ') betweenPending++;
+    else if (word === 'И') {
+      if (betweenPending > 0) { betweenPending--; continue; }
+      parts.push(expr.slice(start, t.pos).trim());
+      start = t.pos + t.text.length;
+    }
+  }
+  parts.push(expr.slice(start).trim());
+  return parts;
+}
+
+/**
+ * Прежний посимвольный вариант `splitTopLevelAnd` — только для выражений,
+ * которые лексер не принимает. Не использовать для других целей.
+ */
+function splitTopLevelAndRaw(expr: string): string[] {
   const n = expr.length;
   const isWordChar = (c: string | undefined): boolean => c !== undefined && /[\p{L}\p{N}_]/u.test(c);
   const parts: string[] = [];
