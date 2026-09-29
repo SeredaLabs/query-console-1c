@@ -3736,6 +3736,10 @@ function parseGroupFieldRef(
   let depth = 0;
   for (;;) {
     const t = cur.peek();
+    if (t.type === 'eof') {
+      if (depth !== 0) throw cur.error('ожидался символ «)»', t);
+      break;
+    }
     if (depth === 0) {
       // Стоп на секционных ключевых словах (ДЛЯ ИЗМЕНЕНИЯ / порядок / итоги /
       // индекс) и на запятой/конце — границах элемента группировки. Исключение:
@@ -3743,7 +3747,6 @@ function parseGroupFieldRef(
       // регистронезависим) — за ним `.`, значит это ссылка, а не секция (фаза 6.16).
       if (t.type === 'keyword' && isSectionKeyword(t.value) && !cur.isPunct('.', 1)) break;
       if (t.type === 'punct' && (t.value === ',' || t.value === ';' || t.value === '{' || t.value === '}')) break;
-      if (t.type === 'eof') break;
     }
     if (t.type === 'punct' && t.value === '(') depth++;
     else if (t.type === 'punct' && t.value === ')') {
@@ -3909,11 +3912,14 @@ function parseOrder(cur: Cursor, ctx: SectionResolveContext): Order {
         let depth = 0;
         for (;;) {
           const t = cur.peek();
+          if (t.type === 'eof') {
+            if (depth !== 0) throw cur.error('ожидался символ «)»', t);
+            break;
+          }
           if (depth === 0) {
             if (t.type === 'keyword' && (isSectionKeyword(t.value) || t.value === 'УБЫВ' || t.value === 'ВОЗР' || t.value === 'ИЕРАРХИЯ')) break;
             if (t.type === 'ident' && (t.text.toUpperCase() === 'ВОЗР')) break;
             if (t.type === 'punct' && (t.value === ',' || t.value === ';' || t.value === '{' || t.value === '}')) break;
-            if (t.type === 'eof') break;
           }
           if (t.type === 'punct' && t.value === '(') depth++;
           else if (t.type === 'punct' && t.value === ')') {
@@ -3950,11 +3956,14 @@ function parseOrder(cur: Cursor, ctx: SectionResolveContext): Order {
         let depth = 0;
         for (;;) {
           const t = cur.peek();
+          if (t.type === 'eof') {
+            if (depth !== 0) throw cur.error('ожидался символ «)»', t);
+            break;
+          }
           if (depth === 0) {
             if (t.type === 'keyword' && (isSectionKeyword(t.value) || t.value === 'УБЫВ' || t.value === 'ИЕРАРХИЯ')) break;
             if ((t.type === 'ident' || t.type === 'keyword') && t.value.toUpperCase() === 'ВОЗР') break;
             if (t.type === 'punct' && (t.value === ',' || t.value === ';' || t.value === '{' || t.value === '}')) break;
-            if (t.type === 'eof') break;
           }
           if (t.type === 'punct' && t.value === '(') depth++;
           else if (t.type === 'punct' && t.value === ')') { if (depth > 0) depth--; }
@@ -4488,10 +4497,13 @@ function parseIndexField(cur: Cursor, ctx: SectionResolveContext): FieldRef {
     let depth = 0;
     for (;;) {
       const tk = cur.peek();
+      if (tk.type === 'eof') {
+        if (depth !== 0) throw cur.error('ожидался символ «)»', tk);
+        break;
+      }
       if (depth === 0) {
         if (tk.type === 'keyword' && isSectionKeyword(tk.value)) break;
         if (tk.type === 'punct' && (tk.value === ',' || tk.value === ';' || tk.value === '{' || tk.value === '}')) break;
-        if (tk.type === 'eof') break;
       }
       if (tk.type === 'punct' && tk.value === '(') depth++;
       else if (tk.type === 'punct' && tk.value === ')') {

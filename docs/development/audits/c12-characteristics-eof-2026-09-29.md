@@ -1,5 +1,7 @@
 # C12 — reject unterminated characteristics, 2026-09-29
 
+Follow-up: C13–C15 were subsequently closed as P0 in the [EOF loop fix](c13-c15-raw-expression-eof-2026-09-29.md). The findings below describe the C12 baseline.
+
 Baseline: `9843b3b` / `v0.1.93`. This is the explicitly authorized parser exception
 following the [C11 audit stop](c11-slot-audit-2026-09-29.md). C11 implementation
 remains outside this task.
