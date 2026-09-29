@@ -33,6 +33,35 @@ function hasCodeBeforeOnLine(toks: Token[], line: number, pos: number): boolean 
   );
 }
 
+/**
+ * C16: indices of comments inside the argument list of a virtual-table or
+ * selection-criterion call (a dotted name directly followed by `(`) or of
+ * `ПЕРИОДАМИ(…)`. With `preserveComments` the parser keeps them in those raw
+ * argument slices, so relocating them to `afterFrom` would duplicate them.
+ */
+function commentsInKeptArgs(toks: Token[]): Set<number> {
+  const inside = new Set<number>();
+  const stack: boolean[] = [];
+  let code: Token[] = [];
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i];
+    if (t.type === 'comment') {
+      if (stack.includes(true)) inside.add(i);
+      continue;
+    }
+    if (t.type === 'punct' && t.value === '(') {
+      const [a, b] = [code[code.length - 1], code[code.length - 2]];
+      const call = a?.type === 'ident' && (b?.type === 'punct' && b.value === '.' || a.value.toUpperCase() === 'ПЕРИОДАМИ');
+      stack.push(!!call);
+    } else if (t.type === 'punct' && t.value === ')') {
+      stack.pop();
+    }
+    code.push(t);
+    if (code.length > 2) code = code.slice(-2);
+  }
+  return inside;
+}
+
 export function extractComments(memberText: string, model: QueryModel): void {
   try {
     const toks = tokenize(memberText, { comments: true });
@@ -153,6 +182,7 @@ export function extractComments(memberText: string, model: QueryModel): void {
     // --- 4. Классификация и привязка комментариев --------------------------
     const beforeSelect: string[] = [];
     const afterFrom: string[] = [];
+    const inKeptArgs = commentsInKeptArgs(toks);
 
     for (let ci = 0; ci < toks.length; ci++) {
       const c = toks[ci];
@@ -192,7 +222,7 @@ export function extractComments(memberText: string, model: QueryModel): void {
 
       // (4) afterFrom — после ИЗ, отдельной строкой.
       if (fromIdx >= 0 && ci > fromIdx) {
-        if (!hasCodeBeforeOnLine(toks, c.line, c.pos)) afterFrom.push(text);
+        if (!hasCodeBeforeOnLine(toks, c.line, c.pos) && !inKeptArgs.has(ci)) afterFrom.push(text);
         continue;
       }
 

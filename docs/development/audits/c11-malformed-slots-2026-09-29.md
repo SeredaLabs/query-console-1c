@@ -1,7 +1,8 @@
 # C11 — malformed expression slots, 2026-09-29
 
-Baseline: `c07e9a9` / `v0.1.94` plus the C11 resumed audit. C16 remains **OPEN**;
-this change does not fix `sliceSource` comment loss.
+Baseline: `c07e9a9` / `v0.1.94` plus the C11 resumed audit. C16 was **OPEN**
+here; it is closed for VT/`ПЕРИОДАМИ` arguments in [C16](c16-raw-slice-comments-2026-09-30.md);
+the other raw slices are C17.
 
 ## Change
 

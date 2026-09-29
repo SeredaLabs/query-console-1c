@@ -50,7 +50,8 @@ import type {
 
 import { defaultTableAlias, accountingPositionKeys } from './queryModel';
 import { renderOperatorRhs, needsFormatting, isRootNotGroup, normalizeLeafCase } from './exprFormatter';
-import { tokenize } from './sdblLexer';
+import { tokenize, tryTokenize } from './sdblLexer';
+import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
 import { fieldAlias } from './unionModel';
 import { extractComments } from './commentBinder';
@@ -83,6 +84,14 @@ setSubqueryParser((text, r) => parseDocument(text, r));
  * Сохраняется/восстанавливается стеково на время `parseDocument` (фаза 6.16.70).
  */
 let sourceResolver: MetadataResolver | undefined;
+/**
+ * C16: while true (parse with `preserveComments`), the virtual-table argument and
+ * `ПЕРИОДАМИ(…)` readers keep user `//` comments. Every other raw slice still
+ * strips them: those renderers are not comment-safe (a kept comment could
+ * swallow a generated `И`; C17). Saved/restored like `sourceResolver`; nested
+ * parses without an explicit `preserveComments` inherit it.
+ */
+let keepArgComments = false;
 // Глубина вложенности подзапроса-источника `ИЗ (ВЫБРАТЬ …)`. >0 при разборе тела
 // такого подзапроса — конструктор 1С реконструирует его СГРУППИРОВАТЬ ПО из схемы
 // (подстановка листа выражением, фаза 6.19), тогда как ВЕРХНЕУРОВНЕВУЮ группировку
@@ -1771,6 +1780,55 @@ function sliceSource(source: string, bodyTokens: Token[]): string {
   return stripLineComments(source.slice(first.pos, end));
 }
 
+/**
+ * C16: argument texts of a VT / `ПЕРИОДАМИ` call that keep user `//` comments
+ * (`args[i]` = code tokens of argument i, empty for an omitted one; `open` = end
+ * of `(`, `close` = pos of `)`). Comments are assigned to arguments with code so
+ * that reopening generated text is stable: on the line of an argument's code or
+ * of the comma right after it → that argument's trailing comment; on their own
+ * line → leading comments of the next argument with code, or own-line trailing
+ * comments of the last one before `)`. Comments inside an argument's code stay in
+ * its raw text; omitted arguments stay `''`. `undefined` when the call has no
+ * comment, no argument with code, or cannot be lexed: callers keep the former
+ * slicing (comments stripped).
+ */
+function argTextsKeepingComments(source: string, args: Token[][], open: number, close: number): string[] | undefined {
+  const inCall = tryTokenize(source.slice(open, close), { comments: true });
+  const coded = args.map((_, i) => i).filter(i => args[i].length > 0);
+  if (!inCall?.some(t => t.type === 'comment') || coded.length === 0) return undefined;
+  const start = (i: number): number => args[i][0].pos;
+  const end = (i: number): number => args[i][args[i].length - 1].pos + args[i][args[i].length - 1].text.length;
+  const leading: string[][] = args.map(() => []);
+  const same: Array<string | undefined> = args.map(() => undefined);
+  const own: string[][] = args.map(() => []);
+  const gap = (from: number, to: number): Token[] =>
+    (tryTokenize(source.slice(from, to), { comments: true }) ?? [])
+      .filter(t => t.type !== 'eof')
+      .map(t => ({ ...t, pos: from + t.pos }));
+  const sameLine = (from: number, to: number): boolean => !source.slice(from, to).includes('\n');
+  for (const c of gap(open, start(coded[0]))) if (c.type === 'comment') leading[coded[0]].push(c.text);
+  coded.forEach((k, j) => {
+    const next = coded[j + 1];
+    const from = end(k);
+    const toks = gap(from, next === undefined ? close : start(next));
+    const comma = toks.find(t => t.type === 'punct' && t.value === ',');
+    for (const c of toks) {
+      if (c.type !== 'comment') continue;
+      const onCodeLine = sameLine(from, c.pos);
+      const onCommaLine = comma !== undefined && c.pos > comma.pos && sameLine(comma.pos, c.pos);
+      if (same[k] === undefined && (onCodeLine || onCommaLine)) same[k] = c.text;
+      else if (next === undefined) own[k].push(c.text);
+      else leading[next].push(c.text);
+    }
+  });
+  return args.map((a, i) => a.length === 0 ? '' :
+    leading[i].map(c => `${c}\n`).join('') +
+    source.slice(start(i), end(i)) +
+    (same[i] !== undefined ? ` ${same[i]}` : '') +
+    own[i].map(c => `\n${c}`).join(''),
+  );
+}
+
 /** Псевдоним соединения до резолвинга (хранит псевдонимы вместо tableId). */
 interface RawJoin {
   kind: 'ВНУТРЕННЕЕ' | 'ЛЕВОЕ' | 'ПРАВОЕ' | 'ПОЛНОЕ';
@@ -2328,7 +2386,9 @@ function fillAccounting(
  */
 function parsePositionalArgs(cur: Cursor): Array<{ text: string; range: TextRange }> {
   cur.expectPunct('(');
+  const openEnd = cur.peek(-1).pos + 1;
   const args: Array<{ text: string; range: TextRange }> = [];
+  const groups: Token[][] = [];
   let curTokens: Token[] = [];
   let argStart = cur.peek().pos;
   let depth = 0;
@@ -2340,12 +2400,15 @@ function parsePositionalArgs(cur: Cursor): Array<{ text: string; range: TextRang
       text: curTokens.length > 0 ? sliceSource(cur.source, curTokens) : '',
       range: { start: argStart, end },
     });
+    groups.push(curTokens);
     curTokens = [];
   };
+  let closePos = argStart;
   for (;;) {
     const t = cur.peek();
     if (t.type === 'eof') throw cur.error('незакрытая скобка параметров', t);
     if (depth === 0 && t.type === 'punct' && t.value === ')') {
+      closePos = t.pos;
       cur.next();
       break;
     }
@@ -2360,6 +2423,8 @@ function parsePositionalArgs(cur: Cursor): Array<{ text: string; range: TextRang
     curTokens.push(cur.next());
   }
   flush();
+  const kept = keepArgComments ? argTextsKeepingComments(cur.source, groups, openEnd, closePos) : undefined;
+  if (kept) kept.forEach((text, i) => { args[i].text = text; });
   return args;
 }
 
@@ -4322,16 +4387,20 @@ function matchPeriodBy(cur: Cursor): string | undefined {
   if (!cur.isPunct('(', 1)) return undefined;
   cur.next(); // ПЕРИОДАМИ
   cur.expectPunct('(');
+  const openEnd = cur.peek(-1).pos + 1;
   const args: string[] = [];
+  const groups: Token[][] = [];
   let curArg: Token[] = [];
   let depth = 0;
+  let closePos = openEnd;
   for (;;) {
     const t = cur.peek();
     if (t.type === 'eof') throw cur.error('ожидался символ «)» в ПЕРИОДАМИ(…)', t);
-    if (depth === 0 && t.type === 'punct' && t.value === ')') { cur.next(); break; }
+    if (depth === 0 && t.type === 'punct' && t.value === ')') { closePos = t.pos; cur.next(); break; }
     if (depth === 0 && t.type === 'punct' && t.value === ',') {
       cur.next();
       args.push(sliceSource(cur.source, curArg));
+      groups.push(curArg);
       curArg = [];
       continue;
     }
@@ -4339,10 +4408,30 @@ function matchPeriodBy(cur: Cursor): string | undefined {
     else if (t.type === 'punct' && t.value === ')') depth--;
     curArg.push(cur.next());
   }
-  if (curArg.length) args.push(sliceSource(cur.source, curArg));
+  if (curArg.length) { args.push(sliceSource(cur.source, curArg)); groups.push(curArg); }
+  const kept = keepArgComments ? argTextsKeepingComments(cur.source, groups, openEnd, closePos) : undefined;
+  if (kept) return periodByKeepingComments(kept);
   // Первый аргумент — период (ГОД/КВАРТАЛ/МЕСЯЦ/…): нормализуем в верхний регистр.
   if (args.length) args[0] = args[0].toUpperCase();
   return `ПЕРИОДАМИ(${args.join(', ')})`;
+}
+
+/**
+ * C16: `ПЕРИОДАМИ(…)` text with kept comments. The comma goes before an
+ * argument's trailing comment and every comment ends its line, so none swallows
+ * a separator or `)`. The unit's code is upper-cased; comment text is not.
+ */
+function periodByKeepingComments(args: string[]): string {
+  let out = 'ПЕРИОДАМИ(';
+  args.forEach((a, i) => {
+    const last = i === args.length - 1;
+    const parts = splitArgComments(a);
+    const code = i === 0 ? (parts?.code ?? a).toUpperCase() : parts?.code ?? a;
+    const tail = parts ? (parts.same !== undefined ? ` ${parts.same}` : '') + parts.own.map(c => `\n${c}`).join('') : '';
+    out += (parts?.leading.map(c => `${c}\n`).join('') ?? '') + code + (last ? '' : ',') + tail +
+      (tail ? '\n' : last ? '' : ' ') + (last ? ')' : '');
+  });
+  return out;
 }
 
 /** Одно группировочное поле итогов: `<поле>[ ИЕРАРХИЯ| ТОЛЬКО ИЕРАРХИЯ][ КАК <alias>]`. */
@@ -4859,7 +4948,9 @@ export function parseDocument(
   opts?: ParseOptions,
 ): QueryDocument {
   const prevSourceResolver = sourceResolver;
+  const prevKeepArgComments = keepArgComments;
   sourceResolver = resolver;
+  if (opts?.preserveComments !== undefined) keepArgComments = opts.preserveComments;
   try {
     const doc = parseDocumentInner(text, resolver, opts?.sourceMap);
     // 8.1: связывание комментариев для одиночного запроса И для ОБЪЕДИНЕНИЯ
@@ -4870,6 +4961,7 @@ export function parseDocument(
     return doc;
   } finally {
     sourceResolver = prevSourceResolver;
+    keepArgComments = prevKeepArgComments;
   }
 }
 
@@ -5289,6 +5381,21 @@ export function parseBatch(
   text: string,
   resolver?: MetadataResolver,
   opts?: ParseOptions,
+): BatchDocument {
+  // C16: statement parses below inherit the flag (they pass only `sourceMap`).
+  const prevKeepArgComments = keepArgComments;
+  keepArgComments = !!opts?.preserveComments;
+  try {
+    return parseBatchInner(text, resolver, opts);
+  } finally {
+    keepArgComments = prevKeepArgComments;
+  }
+}
+
+function parseBatchInner(
+  text: string,
+  resolver: MetadataResolver | undefined,
+  opts: ParseOptions | undefined,
 ): BatchDocument {
   // Хвостовой разделитель пакета `;` (с возможными пробелами/переводами строк)
   // конструктор отбрасывает: `;` — концерн МЕЖДУ операторами, после последнего

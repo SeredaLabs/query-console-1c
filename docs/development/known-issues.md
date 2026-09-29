@@ -45,7 +45,11 @@ in the [technical-debt ledger](technical-debt.md); historical verdicts remain in
   virtual-table period/condition/account-condition arguments, `ПЕРИОДАМИ`
   date operands, tabular-section `castPrefix`, and non-custom comparison
   operands; DCS `{…}` aliases, VT order/limit/lists, BETWEEN right-hand sides
-  and the characteristics section are excluded (ledger C11/C16).
+  and the characteristics section are excluded (ledger C11).
+- User `//` comments are kept on open/Apply only in virtual-table, accounting and
+  selection-criterion arguments and in `ПЕРИОДАМИ(…)` (C16). Comments inside
+  ГДЕ, ИМЕЮЩИЕ, JOIN ПО, field expressions, СГРУППИРОВАТЬ ПО and ИТОГИ are still
+  dropped when the query is opened, so Apply writes it without them (C17).
 - `Последовательность.*.Границы` still falls back to a generic, unverified
   `[period, condition]` layout -- a third positional argument cannot be
   losslessly reconstructed; marked models are blocked from apply.

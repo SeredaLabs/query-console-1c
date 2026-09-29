@@ -6,6 +6,7 @@ import type { BatchDocument } from './batchModel';
 import { parseDocument } from './sdblParser';
 import { resolveAliases, isTabularSectionSource, qualifiedAutoAlias, synthesizedFieldAlias, joinKeyword } from './queryModelUtils';
 import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpression, formatJoinConjunct, normalizeLeafCase, stripNegatedFieldParens, stripNotFieldParens, stripRedundantLeafParens, appendIsNotNullTrailingSpace, renderOperatorRhs, flattenMultilineLeaf, reindentLeafSubquery, reindentLeafCase, reindentLeafBool, wrapBareCastOperand, reprintLeafArithmetic, canonicalizeComparisonOperands, setInlineSubqueryReflow, tightenLeafInOperator } from './exprFormatter';
+import { splitArgComments } from './argComments';
 import { tokenize, tryTokenize } from './sdblLexer';
 import { parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { BARE_PARAM, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
@@ -149,15 +150,30 @@ function closeAfterLastLine(text: string, pad: string): string {
 }
 
 /**
- * Surrounding call layout for lexically invalid positional arguments: each
- * argument keeps the slot indent on its own line; `closeAfterLastLine` places
- * `)` on the next line when the whole prefix is lexically invalid, so a
- * trailing `//` cannot swallow it. No in-expression rewriting.
+ * Surrounding call layout for lexically invalid positional arguments, or ones
+ * carrying a user `//` comment (C16): each argument keeps the slot indent on its
+ * own line; `closeAfterLastLine` places `)` on the next line when the whole
+ * prefix is lexically invalid or ends in a comment, so a trailing `//` cannot
+ * swallow it. An argument's comments go on their own lines around its code and
+ * its comma goes before its trailing comment (`splitArgComments`). No
+ * in-expression rewriting.
  */
 function emitRawCall(fullName: string, positions: string[], bodyTabs: number): string {
   const pad = '\t'.repeat(bodyTabs + 2);
   const close = '\t'.repeat(bodyTabs);
-  return closeAfterLastLine(`${fullName}(\n${positions.map(p => pad + p).join(',\n')}`, close);
+  const lines: string[] = [];
+  positions.forEach((p, i) => {
+    const comma = i < positions.length - 1 ? ',' : '';
+    const parts = splitArgComments(p);
+    if (!parts) {
+      lines.push(pad + p + comma);
+      return;
+    }
+    for (const c of parts.leading) lines.push(pad + c);
+    lines.push(pad + parts.code + comma + (parts.same !== undefined ? ` ${parts.same}` : ''));
+    for (const c of parts.own) lines.push(pad + c);
+  });
+  return closeAfterLastLine(`${fullName}(\n${lines.join('\n')}`, close);
 }
 
 function renderSource(t: SelectedTable, bodyTabs = 1): string {
@@ -184,6 +200,7 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
   if (kind === 'КритерийОтбора') {
     if ((v.period ?? '') === '' && !v.hadParens) return t.fullName;
     if (v.period && !tryTokenize(v.period)) return emitRawCall(t.fullName, [v.period], bodyTabs);
+    if (v.period && hasLineComment(v.period)) return emitRawCall(t.fullName, [v.period], bodyTabs);
     return `${t.fullName}(${v.period ? normalizeLeafCase(v.period) : ''})`;
   }
 
@@ -193,6 +210,7 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
     let positions = accountingPositions(slice, v);
     if (!positions.some(p => p !== '') && !v.hadParens) return t.fullName;
     if (positions.some(p => !tryTokenize(p))) return emitRawCall(t.fullName, positions, bodyTabs);
+    if (positions.some(p => hasLineComment(p))) return emitRawCall(t.fullName, positions, bodyTabs);
     // Автопсевдоним `Поле<2k>` для выражений в DCS-скобках `{(…)}` (как в renderVirtualParams).
     const dcsStateAcc = { k: 0 };
     positions = positions.map(p => (p ? aliasDcsBraceExprs(wrapDcsBraceParam(p), dcsStateAcc) : p));
@@ -346,6 +364,9 @@ function mergeDcsBraces(text: string): string {
 function renderVirtualParams(fullName: string, positions: string[], condition: string, bodyTabs: number): string {
   // An unknown lexical structure must not authorize DCS/Boolean rewrites.
   if (!tryTokenize(condition) || positions.some(p => !tryTokenize(p))) {
+    return emitRawCall(fullName, positions, bodyTabs);
+  }
+  if (hasLineComment(condition) || positions.some(p => hasLineComment(p))) {
     return emitRawCall(fullName, positions, bodyTabs);
   }
   // Регистровая нормализация параметров виртуальной таблицы (период, условие):

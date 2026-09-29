@@ -18,7 +18,7 @@ Statuses: **CLOSED** resolved/no remaining finding; **OPEN** confirmed outstandi
 **STALE** superseded claim/plan; **DUPLICATE** tracked elsewhere; **ABSORBED** included
 in a named broader task. P1 = meaningful capability loss or preservation risk;
 P2 = bounded behavior/verification gap; P3 = hardening, cosmetic, or maintenance.
-No current item is promoted to P0 solely because Stage 0 used that label.
+P0 = the extension host can crash or hang during ordinary editing (C13–C15); no item is P0 solely because Stage 0 used that label.
 
 ## Correctness
 
@@ -26,69 +26,21 @@ No current item is promoted to P0 solely because Stage 0 used that label.
 |---|---|---|
 | C1 · CLOSED · P1 | Missing-register metadata no longer triggers accounting argument remapping: `applyAccountingMeta` retains the existing no-metadata fallback. Six regressions cover absent/empty/corpus/compatible metadata, unrelated edits, reopening and the known no-subconto layout. `09-rb-oboroty.sdbl` is unchanged. | Local preservation loss fixed; live validity of the fixture remains unverified and is not claimed by these tests. |
 | C2 · OPEN · P1 | English SDBL, RP06/RP07: recorded platform-valid input is rejected at `SELECT`; Russian-only detection, contextual words and metadata names also block end-to-end support. | A1 spike → English acceptance/canonicalization stage with platform-recorded RU/EN pairs. |
-| C4 · CLOSED · P1 | With metadata, a bare condition field of a sole-source subquery in ГДЕ/ИМЕЮЩИЕ/ПО binds to the enclosing owner when the inner source lacks it and the nearest enclosing level has exactly one owner — the live-verified nearest-ancestor rule already used for the select list. Explicit `Внешний.Поле` paths there are no longer double-qualified (`В.А.Флаг`). No metadata, unknown inner schema or same-level ambiguity keep the previous binding. 24 regressions in `correlatedConditions.test.ts`; golden output unchanged in both modes (1976/1976). | [Live wizard check](audits/c4-correlated-2026-09-28.md): three condition shapes are byte-identical to the 1C query wizard with metadata. Without metadata the old binding remains (documented limitation). `checkFieldPaths` still skips subquery conditions (fail-open kept). |
 | C3 · CLOSED · P2 | Live query-wizard text confirms RP20: `Г.Наименование ИЕРАРХИЯ` survives for `ИдентификаторыОбъектовМетаданных`. Unknown metadata now preserves the entered modifier; known-metadata rules remain. Added 18 unit regressions and Classic/Canvas browser checks; corrected only curated fixture 0078. | [Evidence, compatibility and baseline impact](audits/c3-hierarchy-2026-09-28.md). No new universal nonhierarchical-source or platform-build claim. |
-| C7 · CLOSED · P2 | Result-processing boilerplate (`extractQueryParamNames`) and Query Text analysis now take parameters from the lexer-backed, typing-tolerant `collectQueryParameters`. Nothing from strings or comments; case variants are one parameter with the first spelling; names with non-Russian letters stay whole (the old regex cut `&Ціна` to `&Ц`); `usageCount` counts tokens. 5 regressions in `resultProcessingTemplate.test.ts`/`queryAnalysisService.test.ts`. | No BSL data-flow feature (the Level 0 boundary in `resultProcessingTemplate.ts` is unchanged). |
+| C4 · CLOSED · P1 | With metadata, a bare condition field of a sole-source subquery in ГДЕ/ИМЕЮЩИЕ/ПО binds to the enclosing owner when the inner source lacks it and the nearest enclosing level has exactly one owner — the live-verified nearest-ancestor rule already used for the select list. Explicit `Внешний.Поле` paths there are no longer double-qualified (`В.А.Флаг`). No metadata, unknown inner schema or same-level ambiguity keep the previous binding. 24 regressions in `correlatedConditions.test.ts`; golden output unchanged in both modes (1976/1976). | [Live wizard check](audits/c4-correlated-2026-09-28.md): three condition shapes are byte-identical to the 1C query wizard with metadata. Without metadata the old binding remains (documented limitation). `checkFieldPaths` still skips subquery conditions (fail-open kept). |
 | C5 · CLOSED · P3 | Contract for platform-invalid input: reject on open, or open but block Apply; never write text with lost or altered content. RP04/05: nonempty extra `Обороты`/`ОстаткиИОбороты` args now set `unsafeExtraArgs` (Apply blocked; trailing empty slots still accepted). RP17: INDEX BY without the first member's ПОМЕСТИТЬ is rejected on open. RP23: `'…'` literals are rejected on open (lexer still tokenizes them). RP11/12 (malformed blocker) and RP15 (final reparse fails) already refused Apply; now locked by regressions. All in `invalidInputPreservation.test.ts`. | RP11/12/15 still open successfully: rejecting В/И aliases on open would contradict many existing tests/fixtures using `КАК В`, so it is not done here. |
 | C6 · OPEN · P3 | Cosmetic JOIN idempotence: `booleanGroupingSemantics.test.ts` explicitly exempts two shapes from text equality on pass two; both passes pass truth-table checks. | A1 → bounded canonical-layout task; no semantic-corruption claim. |
+| C7 · CLOSED · P2 | Result-processing boilerplate (`extractQueryParamNames`) and Query Text analysis now take parameters from the lexer-backed, typing-tolerant `collectQueryParameters`. Nothing from strings or comments; case variants are one parameter with the first spelling; names with non-Russian letters stay whole (the old regex cut `&Ціна` to `&Ц`); `usageCount` counts tokens. 5 regressions in `resultProcessingTemplate.test.ts`/`queryAnalysisService.test.ts`. | No BSL data-flow feature (the Level 0 boundary in `resultProcessingTemplate.ts` is unchanged). |
 | C8 · CLOSED · P1 | Apply safety: static malformed-expression checks covered the input model, but generated output could reparse successfully while swallowing later sections into an unbalanced opaque expression; Apply now applies the same malformed-expression guard to reparsed generated output (`decideApply`, shared by Classic and Canvas). Known trigger: a manually entered JOIN conjunct ending in a `//` comment, whose wrapper `)` lands inside the comment. Regressions in `applyGeneratedOutput.test.ts`; corpus probe 0 new blockers (1976 × with/without resolver). | No valid-but-semantically-different output was reproduced during the audit; that is not proven impossible. Broader structural equivalence stays V3. The comment rendering that triggers it is a separate issue. |
-
-Additional correctness finding **C9 · CLOSED · P1**: the flat webview store now
-preserves `QueryModel.having` through conversion, snapshots and restore. Optional
-state fields retain compatibility with older snapshots. Ten unit regressions and
-Classic/Canvas edit/save/reopen checks cover preservation and malformed-HAVING
-Apply refusal. The store corpus sweep restores HAVING in 33/1976 queries in each
-metadata mode, with no unexplained differences or golden updates.
-See [scope and verification](audits/c9-having-2026-09-29.md).
-
-Additional correctness finding **C10 · CLOSED · P1**: the flat store preserves
-`QueryModel.trailingFields` and `QueryModel.characteristics` through conversion,
-snapshots and restore. Both fields remain optional for older snapshots. The
-permanent store/core corpus gate now passes all 1976 queries in both metadata
-modes without expected failures; 13 outputs without metadata and 18 with metadata
-regain their trailing fields. Core output and golden data are unchanged.
-Seventeen unit regressions and four Classic/Canvas browser regressions cover the
-fix, including synthetic characteristics preservation (absent from the corpus).
-See [step 1 evidence](audits/store-parity-2026-09-29.md) and
-[C10 fix and verification](audits/c10-preserved-sections-2026-09-29.md).
-
-Additional correctness findings from the [C11 slot audit](audits/c11-slot-audit-2026-09-29.md):
-
-- **C11 · CLOSED · P1**: `findMalformedCustomExpressions` now walks virtual-table
-  *expression* slots (`period`/`condition`/account conditions), `periodBy` date
-  operands, tabular-section `castPrefix`, and non-custom comparison operands.
-  `Код = = &Код` in a VT condition and `&А = = 1` in `ПЕРИОДАМИ` set
-  `malformedCustom` (Apply disabled) with and without metadata. DCS `{…}` /
-  `КАК Отбор`, VT order/limit/lists/periodicity/fill method, BETWEEN RHS and
-  characteristics stay excluded. [Fix, exclusions and verification](audits/c11-malformed-slots-2026-09-29.md).
-  Comment loss via `sliceSource` remains **C16**, not this change.
-- **C12 · CLOSED · P1**: the characteristics reader now rejects EOF before the
-  matching outer `}` with the existing localized expected-symbol error. Closed
-  raw blocks remain unchanged. Seventeen unit cases and four Classic/Canvas
-  cases cover rejection before LOAD_BATCH/Apply, nested braces, metadata modes,
-  localization and IDE failure handling. [Fix and audit](audits/c12-characteristics-eof-2026-09-29.md);
-  [implementation commit, located by its unique subject](https://github.com/SeredaLabs/query-console-1c/commits/main/?query=fix%28parser%29%3A%20reject%20unterminated%20characteristics%20blocks%20%28C12%29).
-- **C13 · CLOSED · P0**: `parseGroupFieldRef` now checks EOF at every depth,
-  rejecting unclosed parentheses with the existing positioned parser error.
-- **C14 · CLOSED · P0**: both function-call and comparison-operand loops in
-  `parseOrder` now terminate at EOF and reject unclosed parentheses.
-- **C15 · CLOSED · P0**: `parseIndexField` now terminates at EOF and rejects
-  unclosed function parentheses. Balanced expressions retain existing behavior.
-
-C13–C15 were promoted to P0 because editing a query invokes this parser through
-IDE diagnostics and could exhaust the extension-host heap. Twenty isolated
-regressions cover all four readers and their IDE consumers. The pre-edit loop
-audit found no additional EOF loop of this class. See [fix, audit and verification](audits/c13-c15-raw-expression-eof-2026-09-29.md).
-
-- **C16 · OPEN · P1**: comments inside raw slices disappear before the static
-  gate even with `preserveComments: true`; Apply returns `ok: true` in both
-  metadata modes. `sliceSource` ends at the last expression token and drops
-  line comments. Confirmed slots (minimal input):
-  - VT condition: `СрезПоследних(, ИСТИНА // C16-marker)`;
-  - `periodBy`: `ПЕРИОДАМИ(Месяц, 1 // C16-marker, 2)`.
-  This is series step 8, not a validator gap. A C11-style check cannot recover
-  text already absent from the model. [Reproductions](audits/c11-resumed-audit-2026-09-29.md);
-  C11 implementation did not change these readers.
+| C9 · CLOSED · P1 | The flat webview store now preserves `QueryModel.having` through conversion, snapshots and restore; optional state fields keep older snapshots compatible. Ten unit regressions and Classic/Canvas edit/save/reopen checks cover preservation and malformed-HAVING Apply refusal. The store corpus sweep restores HAVING in 33/1976 queries in each metadata mode, with no unexplained differences or golden updates. | [Scope and verification](audits/c9-having-2026-09-29.md). |
+| C10 · CLOSED · P1 | The flat store preserves `QueryModel.trailingFields` and `QueryModel.characteristics` through conversion, snapshots and restore (optional fields, older snapshots compatible). The permanent store/core corpus gate passes all 1976 queries in both metadata modes without expected failures; 13 outputs without metadata and 18 with metadata regain their trailing fields. Core output and golden data unchanged. Seventeen unit and four Classic/Canvas browser regressions, including synthetic characteristics preservation (absent from the corpus). | [Step 1 evidence](audits/store-parity-2026-09-29.md); [fix and verification](audits/c10-preserved-sections-2026-09-29.md). |
+| C11 · CLOSED · P1 | `findMalformedCustomExpressions` now walks virtual-table *expression* slots (`period`/`condition`/account conditions), `periodBy` date operands, tabular-section `castPrefix` and non-custom comparison operands. `Код = = &Код` in a VT condition and `&А = = 1` in `ПЕРИОДАМИ` set `malformedCustom` (Apply disabled) with and without metadata. A `{` inside a string literal is not a DCS argument. | DCS `{…}` / `КАК Отбор`, VT order/limit/lists/periodicity/fill method, BETWEEN RHS and characteristics stay excluded. [Slot audit](audits/c11-slot-audit-2026-09-29.md); [fix, exclusions and verification](audits/c11-malformed-slots-2026-09-29.md). |
+| C12 · CLOSED · P1 | An unterminated `{ХАРАКТЕРИСТИКИ …` block was accepted on open but sliced to an empty string, so Apply wrote the query without it. The reader now rejects EOF before the matching outer `}` with the existing localized expected-symbol error; closed raw blocks are unchanged. Seventeen unit and four Classic/Canvas cases cover rejection before LOAD_BATCH/Apply, nested braces, metadata modes, localization and IDE failure handling. | [Fix and audit](audits/c12-characteristics-eof-2026-09-29.md). |
+| C13 · CLOSED · P0 | `parseGroupFieldRef` checked EOF only at depth zero: an unclosed call in СГРУППИРОВАТЬ ПО looped until the extension-host heap was exhausted (IDE diagnostics parse while typing). It now rejects EOF at every depth with the positioned parser error. | P0 because ordinary typing could crash the extension host. [Fix, audit and verification for C13–C15](audits/c13-c15-raw-expression-eof-2026-09-29.md); the loop audit found no other EOF loop of this class. |
+| C14 · CLOSED · P0 | Same EOF loop in both the function-call and the comparison-operand readers of `parseOrder` (УПОРЯДОЧИТЬ ПО); both now terminate at EOF and reject unclosed parentheses. | See C13. |
+| C15 · CLOSED · P0 | Same EOF loop in the function reader of `parseIndexField` (ИНДЕКСИРОВАТЬ ПО); it now terminates and rejects unclosed parentheses. Balanced expressions keep existing behavior. Twenty isolated regressions cover all four readers and their IDE consumers. | See C13. |
+| C16 · CLOSED · P1 | With `preserveComments` (the production open path) user `//` comments in virtual-table, accounting-register and selection-criterion arguments and in `ПЕРИОДАМИ(…)` survive open → store → preview → Apply exactly once. Comments are assigned deterministically: on the argument's line or its comma's line → trailing; on their own line → leading of the next argument (trailing of the last one before `)`); the comma is written before a trailing comment, so a comment never swallows `,` or `)`, and reopening is stable. `commentBinder` no longer also relocates such comments after ИЗ. Other raw slices are unchanged (C17). Calls without comments, and parsing without `preserveComments`, are byte-identical; corpus 1976 × both metadata modes × with/without `preserveComments` unchanged. | Continuation lines after an inner comment keep their source indentation (verbatim rule). A call whose arguments are all omitted keeps no comment. [Fix and evidence](audits/c16-raw-slice-comments-2026-09-30.md); `rawSliceComments.c16.test.ts`. |
+| C17 · OPEN · P1 | Other raw slices still drop user `//` comments on open even with `preserveComments`: ГДЕ, ИМЕЮЩИЕ, JOIN ПО (top level and in subqueries), field expressions, СГРУППИРОВАТЬ ПО, ИТОГИ. Apply then writes the query without them. Keeping them naively is unsafe: the Boolean/expression renderers are not comment-safe (a kept `// c` in ИМЕЮЩИЕ swallowed the generated `И`, blocking a valid Apply). The known-loss cells are pinned in `rawSliceComments.c16.test.ts`. | Step 8: either comment-aware expression rendering (A1 risk) or an Apply confirmation when input comments would be dropped; decide from the measured matrix. |
 
 ## Architecture
 
