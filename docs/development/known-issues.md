@@ -41,7 +41,11 @@ in the [technical-debt ledger](technical-debt.md); historical verdicts remain in
   configurations before shipping -- zero false positives on complete queries;
   the only hits on real code were already-incomplete fragments from runtime
   string concatenation (not something the constructor itself ever produces,
-  since it always edits one complete query string).
+  since it always edits one complete query string). C11 additionally walks
+  virtual-table period/condition/account-condition arguments, `ПЕРИОДАМИ`
+  date operands, tabular-section `castPrefix`, and non-custom comparison
+  operands; DCS `{…}` aliases, VT order/limit/lists, BETWEEN right-hand sides
+  and the characteristics section are excluded (ledger C11/C16).
 - `Последовательность.*.Границы` still falls back to a generic, unverified
   `[period, condition]` layout -- a third positional argument cannot be
   losslessly reconstructed; marked models are blocked from apply.

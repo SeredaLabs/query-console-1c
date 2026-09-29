@@ -30,7 +30,7 @@ case counts and representative transitions. Never update them blindly.
 ## Canvas verification
 
 `npm run test:e2e` builds both production bundles and serves the same metadata
-harness: `/?surface=canvas` selects Canvas, otherwise Classic. The thirteen tests
+harness: `/?surface=canvas` selects Canvas, otherwise Classic. Tests
 in `test/e2e/canvas.spec.ts` cover:
 
 - Identical Classic/Canvas saved text and stable Canvas reopening for fields /
@@ -41,7 +41,8 @@ in `test/e2e/canvas.spec.ts` cover:
 - Canvas alias, custom-condition and sort-direction edits, semantic assertions
   on the saved model, then reopening/saving that result through Classic.
 - Duplicate-alias rejection and recovery, unsafe VT and malformed-expression
-  Save blocking, and a failed load that emits cancel without replacement text.
+  Save blocking, C11 VT/`ПЕРИОДАМИ` Apply refusal with an explanation on both
+  surfaces, and a failed load that emits cancel without replacement text.
 
 The browser harness captures `insertText`; it does not modify a VS Code document.
 `npm run test:integration` additionally runs `canvasSave.test.ts`: a real VS Code

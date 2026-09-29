@@ -54,10 +54,14 @@ See [step 1 evidence](audits/store-parity-2026-09-29.md) and
 
 Additional correctness findings from the [C11 slot audit](audits/c11-slot-audit-2026-09-29.md):
 
-- **C11 · OPEN · P1**: static malformed-expression traversal omits virtual-table
-  arguments. `Код = = &Код` in a VT condition reaches Apply with `ok: true`.
-  Other opaque-slot gaps and specialized argument syntax are inventoried in the audit;
-  do not apply the ordinary expression grammar blindly to DCS sections.
+- **C11 · CLOSED · P1**: `findMalformedCustomExpressions` now walks virtual-table
+  *expression* slots (`period`/`condition`/account conditions), `periodBy` date
+  operands, tabular-section `castPrefix`, and non-custom comparison operands.
+  `Код = = &Код` in a VT condition and `&А = = 1` in `ПЕРИОДАМИ` set
+  `malformedCustom` (Apply disabled) with and without metadata. DCS `{…}` /
+  `КАК Отбор`, VT order/limit/lists/periodicity/fill method, BETWEEN RHS and
+  characteristics stay excluded. [Fix, exclusions and verification](audits/c11-malformed-slots-2026-09-29.md).
+  Comment loss via `sliceSource` remains **C16**, not this change.
 - **C12 · CLOSED · P1**: the characteristics reader now rejects EOF before the
   matching outer `}` with the existing localized expected-symbol error. Closed
   raw blocks remain unchanged. Seventeen unit cases and four Classic/Canvas
@@ -75,6 +79,16 @@ C13–C15 were promoted to P0 because editing a query invokes this parser throug
 IDE diagnostics and could exhaust the extension-host heap. Twenty isolated
 regressions cover all four readers and their IDE consumers. The pre-edit loop
 audit found no additional EOF loop of this class. See [fix, audit and verification](audits/c13-c15-raw-expression-eof-2026-09-29.md).
+
+- **C16 · OPEN · P1**: comments inside raw slices disappear before the static
+  gate even with `preserveComments: true`; Apply returns `ok: true` in both
+  metadata modes. `sliceSource` ends at the last expression token and drops
+  line comments. Confirmed slots (minimal input):
+  - VT condition: `СрезПоследних(, ИСТИНА // C16-marker)`;
+  - `periodBy`: `ПЕРИОДАМИ(Месяц, 1 // C16-marker, 2)`.
+  This is series step 8, not a validator gap. A C11-style check cannot recover
+  text already absent from the model. [Reproductions](audits/c11-resumed-audit-2026-09-29.md);
+  C11 implementation did not change these readers.
 
 ## Architecture
 

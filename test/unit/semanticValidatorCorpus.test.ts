@@ -264,4 +264,23 @@ describe('findMalformedCustomExpressions: нове покриття обходу
       .join('\n');
     expect(falsePositives, `Хибних спрацювань: ${falsePositives.length}\n${preview}`).toEqual([]);
   });
+
+  it('жоден реальний запит не дає нових блокувань обходу C11 в обох режимах метаданих', () => {
+    const resolver = buildYamlResolver(path.join(CORPUS_DIR, 'metadata', 'cf'));
+    const falsePositives: Array<{ file: string; mode: string; hits: unknown[] }> = [];
+    for (const withMeta of [false, true]) {
+      for (const g of golden) {
+        if (!g.valid) continue;
+        let doc;
+        try {
+          doc = parseBatch(g.input, withMeta ? resolver : undefined);
+        } catch {
+          continue;
+        }
+        const hits = findMalformedCustomExpressions(doc);
+        if (hits.length > 0) falsePositives.push({ file: g.file, mode: withMeta ? 'meta' : 'none', hits });
+      }
+    }
+    expect(falsePositives, JSON.stringify(falsePositives.slice(0, 10))).toEqual([]);
+  });
 });

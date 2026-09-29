@@ -26,7 +26,7 @@
 import type { BatchDocument } from './batchModel';
 import type { QueryDocument } from './unionModel';
 import { orderedSelectElements } from './unionModel';
-import type { QueryModel, SelectedTable, Condition } from './queryModel';
+import type { QueryModel, SelectedTable, Condition, VirtualParams } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import { tokenize } from './sdblLexer';
 import type { Token } from './sdblLexer';
@@ -494,7 +494,8 @@ export interface MalformedCustomHit {
     // Architecture audit P1 №3 (2026-09-22) — раньше НЕ обходились вовсе:
     | 'trailingField' | 'groupField' | 'totalField' | 'orderField' | 'indexField' | 'tabSectionExpr'
     // Review follow-up (2026-09-22) — Построитель отчётов (model.builder):
-    | 'builderCondition';
+    | 'builderCondition'
+    | 'virtualTableArg' | 'periodBy' | 'castPrefix';
   text: string;
 }
 
@@ -521,6 +522,11 @@ export interface MalformedCustomHit {
  *
  * Review follow-up (2026-09-22): `model.builder` (Построитель отчётов —
  * `{ВЫБРАТЬ}`/`{ГДЕ}`/`{УПОРЯДОЧИТЬ ПО}`/`{ИТОГИ}`) теперь тоже проверяется.
+ * C11 additionally walks virtual-table *expression* arguments, `periodBy`
+ * date operands, tabular-section `castPrefix`, and non-custom condition
+ * operands that are themselves expression positions. Specialized VT syntax
+ * (DCS `{…}` / `КАК` aliases, order/limit, dimension lists, periodicity,
+ * fill method, characteristics) is excluded — see the C11 audit table.
  * `parseBuilderCondition` (sdblParser.ts) собирает элемент-УСЛОВИЕ блока
  * `{ГДЕ}` (`BuilderField.condition === true`) тем же способом, что и обычные
  * `custom`-условия — токены до `,`/`}`/`КАК`, без проверки собственной
@@ -532,6 +538,72 @@ export interface MalformedCustomHit {
  * тому, как голые/`custom`-размеченные условия различаются в `walkConditions`
  * ниже).
  */
+const VT_EXPRESSION_KEYS: (keyof VirtualParams)[] = [
+  'period', 'startPeriod', 'endPeriod',
+  'condition', 'accountCondition', 'corrAccountCondition',
+  'accountDtCondition', 'accountKtCondition',
+];
+
+function isWordToken(t: Token | undefined, word: string): boolean {
+  return !!t && (t.type === 'ident' || t.type === 'keyword') && t.value.toUpperCase() === word;
+}
+
+/** DCS `{…}` / `… КАК Отбор` are not ordinary expressions (C11 compatibility). */
+function isOrdinaryExpressionSlot(text: string): boolean {
+  let tokens: Token[];
+  try {
+    tokens = tokenize(text).filter(t => t.type !== 'eof' && t.type !== 'comment');
+  } catch {
+    return true;
+  }
+  if (tokens.some(t => t.type === 'punct' && t.value === '{')) return false;
+  let depth = 0;
+  for (const t of tokens) {
+    if (t.type === 'punct' && (t.value === '(' || t.value === '{')) depth++;
+    else if (t.type === 'punct' && (t.value === ')' || t.value === '}')) depth--;
+    else if (depth === 0 && isWordToken(t, 'КАК')) return false;
+  }
+  return true;
+}
+
+/** Date/start/end operands of `ПЕРИОДАМИ(unit, start, end)`; the unit is a keyword. */
+function periodByDateExpressions(periodBy: string): string[] {
+  const trimmed = periodBy.trim();
+  let tokens: Token[];
+  try {
+    tokens = tokenize(trimmed).filter(t => t.type !== 'eof');
+  } catch {
+    return [trimmed];
+  }
+  if (!isWordToken(tokens[0], 'ПЕРИОДАМИ') || tokens[1]?.value !== '(' || tokens[tokens.length - 1]?.value !== ')') {
+    return [trimmed];
+  }
+  const inner = tokens.slice(2, -1);
+  const args: string[] = [];
+  let start = 0;
+  let depth = 0;
+  const flush = (end: number): void => {
+    const slice = inner.slice(start, end).filter(t => t.type !== 'comment');
+    if (slice.length === 0) {
+      args.push('');
+      return;
+    }
+    const last = slice[slice.length - 1];
+    args.push(trimmed.slice(slice[0].pos, last.pos + last.text.length));
+  };
+  for (let i = 0; i < inner.length; i++) {
+    const t = inner[i];
+    if (t.type === 'punct' && (t.value === '(' || t.value === '{')) depth++;
+    else if (t.type === 'punct' && (t.value === ')' || t.value === '}')) depth--;
+    else if (depth === 0 && t.type === 'punct' && t.value === ',') {
+      flush(i);
+      start = i + 1;
+    }
+  }
+  flush(inner.length);
+  return args.slice(1);
+}
+
 export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCustomHit[] {
   const hits: MalformedCustomHit[] = [];
   const check = (text: string | undefined, kind: MalformedCustomHit['kind']): void => {
@@ -540,17 +612,30 @@ export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCus
     if ((kind === 'field' || kind === 'trailingField') && parseEmptyTableColumns(text) !== undefined) return;
     hits.push({ kind, text });
   };
+  const checkExpressionSlot = (text: string | undefined, kind: MalformedCustomHit['kind']): void => {
+    if (text === undefined || text.trim() === '' || !isOrdinaryExpressionSlot(text)) return;
+    check(text, kind);
+  };
   const walkConditions = (conditions: Condition[] | undefined): void => {
     for (const c of conditions ?? []) {
       if (c.custom) {
         check(c.expression, 'condition');
         check(c.leftExpr, 'condition');
+      } else {
+        checkExpressionSlot(c.leftExpr, 'condition');
+        if (c.operator !== 'МЕЖДУ' && c.operator !== 'В') checkExpressionSlot(c.param, 'condition');
       }
       if (c.subquery) walkDocument(c.subquery);
     }
   };
   const walkModel = (model: QueryModel): void => {
     for (const t of model.tables) {
+      if (t.virtual) {
+        for (const key of VT_EXPRESSION_KEYS) {
+          const value = t.virtual[key];
+          if (typeof value === 'string') checkExpressionSlot(value, 'virtualTableArg');
+        }
+      }
       if (t.subquery) walkDocument(t.subquery);
     }
     for (const j of model.joins ?? []) {
@@ -566,6 +651,7 @@ export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCus
       if (f.expression !== undefined) check(f.expression, 'trailingField');
     }
     for (const tsf of model.tabSectionFields ?? []) {
+      checkExpressionSlot(tsf.castPrefix, 'castPrefix');
       for (const ef of tsf.exprFields ?? []) check(ef.expression, 'tabSectionExpr');
       for (const col of tsf.columns ?? []) {
         if (col.kind === 'expr') check(col.expression, 'tabSectionExpr');
@@ -585,6 +671,9 @@ export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCus
     }
     for (const f of model.totals?.groupFields ?? []) {
       if (f.expression !== undefined) check(f.expression, 'totalGroupField');
+      if (f.periodBy) {
+        for (const expr of periodByDateExpressions(f.periodBy)) checkExpressionSlot(expr, 'periodBy');
+      }
     }
     for (const f of model.totals?.totalFields ?? []) {
       if (f.expression !== undefined) check(f.expression, 'totalField');

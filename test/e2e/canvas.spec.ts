@@ -208,3 +208,29 @@ test.describe('Canvas editing and save guards', () => {
     expect(types).not.toContain('insertText');
   });
 });
+
+test.describe('C11: malformed VT and ПЕРИОДАМИ slots disable Apply with an explanation', () => {
+  const CLASSIC_REASON = 'Произвольное условие или выражение выглядит синтаксически некорректным. Применение заблокировано';
+  const CANVAS_REASON = 'Произвольное условие или выражение выглядит синтаксически некорректным. Сохранение заблокировано';
+  for (const surface of ['classic', 'canvas'] as const) {
+    for (const [name, input] of [
+      ['VT condition', 'ВЫБРАТЬ Т.Период ИЗ РегистрСведений.Курсы.СрезПоследних(, Код = = &Код) КАК Т'],
+      ['ПЕРИОДАМИ', 'ВЫБРАТЬ 1 КАК Число ИТОГИ ПО Число ПЕРИОДАМИ(Месяц, &А = = 1, &Б)'],
+    ] as const) {
+      test(`${surface}: ${name} stays disabled with a reason and no insertText`, async ({ page }) => {
+        await open(page, surface, input);
+        if (surface === 'classic') {
+          const err = page.locator('[data-testid="ok-error"]');
+          await expect(err).toBeVisible();
+          await expect(err).toContainText(CLASSIC_REASON);
+          await expect(page.getByRole('button', { name: 'ОК', exact: true })).toBeDisabled();
+        } else {
+          const saveBtn = page.getByRole('button', { name: 'Сохранить', exact: true });
+          await expect(saveBtn).toBeDisabled();
+          await expect(saveBtn).toHaveAttribute('title', new RegExp(CANVAS_REASON));
+        }
+        expect(await insertions(page)).toEqual([]);
+      });
+    }
+  }
+});

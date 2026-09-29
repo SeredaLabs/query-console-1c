@@ -1,0 +1,16 @@
+{"id":"vt-double-eq","metadata":false,"open":true,"hits":[{"kind":"virtualTableArg","text":"Код = = &Код"}],"blocker":{"kind":"malformedCustom"},"decision":{"ok":false,"kind":"blocked"},"hasC16marker":false}
+{"id":"period-double-eq","metadata":false,"open":true,"hits":[{"kind":"periodBy","text":"&А = = 1"}],"blocker":{"kind":"malformedCustom"},"decision":{"ok":false,"kind":"blocked"},"hasC16marker":false}
+{"id":"dcs","metadata":false,"open":true,"hits":[],"blocker":null,"decision":{"ok":true},"hasC16marker":false}
+{"id":"between","metadata":false,"open":true,"hits":[],"blocker":null,"decision":{"ok":true},"hasC16marker":false}
+{"id":"characteristics","metadata":false,"open":true,"hits":[],"blocker":null,"decision":{"ok":true},"hasC16marker":false}
+{"id":"period-ok","metadata":false,"open":true,"hits":[],"blocker":null,"decision":{"ok":true},"hasC16marker":false}
+{"id":"c16-vt","metadata":false,"open":true,"hits":[],"blocker":null,"decision":{"ok":true},"hasC16marker":false}
+{"id":"c16-period","metadata":false,"open":true,"hits":[],"blocker":null,"decision":{"ok":true},"hasC16marker":false}
+{"id":"vt-double-eq","metadata":true,"open":true,"hits":[{"kind":"virtualTableArg","text":"Код = = &Код"}],"blocker":{"kind":"malformedCustom"},"decision":{"ok":false,"kind":"blocked"},"hasC16marker":false}
+{"id":"period-double-eq","metadata":true,"open":true,"hits":[{"kind":"periodBy","text":"&А = = 1"}],"blocker":{"kind":"malformedCustom"},"decision":{"ok":false,"kind":"blocked"},"hasC16marker":false}
+{"id":"dcs","metadata":true,"open":true,"hits":[],"blocker":null,"decision":{"ok":true},"hasC16marker":false}
+{"id":"between","metadata":true,"open":true,"hits":[],"blocker":null,"decision":{"ok":true},"hasC16marker":false}
+{"id":"characteristics","metadata":true,"open":true,"hits":[],"blocker":null,"decision":{"ok":true},"hasC16marker":false}
+{"id":"period-ok","metadata":true,"open":true,"hits":[],"blocker":null,"decision":{"ok":true},"hasC16marker":false}
+{"id":"c16-vt","metadata":true,"open":true,"hits":[],"blocker":null,"decision":{"ok":true},"hasC16marker":false}
+{"id":"c16-period","metadata":true,"open":true,"hits":[],"blocker":null,"decision":{"ok":true},"hasC16marker":false}
