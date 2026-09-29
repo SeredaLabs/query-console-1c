@@ -1083,7 +1083,7 @@ function parseSingleQueryBody(
     let end = open.pos;
     for (;;) {
       const t = cur.peek();
-      if (t.type === 'eof') break;
+      if (t.type === 'eof') throw cur.error('ожидался символ «}»', t);
       if (t.type === 'punct' && t.value === '{') depth++;
       else if (t.type === 'punct' && t.value === '}') {
         depth--;

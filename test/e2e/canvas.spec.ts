@@ -119,6 +119,25 @@ test.describe('Classic / Canvas browser parity', () => {
   }
 });
 
+test.describe('C12: unterminated characteristics never reach Apply', () => {
+  for (const surface of ['classic', 'canvas'] as const) {
+    for (const block of [
+      '{ХАРАКТЕРИСТИКИ ТИП(Справочник.Валюты)',
+      '{ХАРАКТЕРИСТИКИ {ТИП(Справочник.Валюты)}',
+    ]) {
+      test(`${surface}: rejects ${block}`, async ({ page }) => {
+        await open(page, surface, 'ВЫБРАТЬ 1 КАК Число ' + block);
+        await expect(page.getByText(/ожидался символ «}»/)).toBeVisible();
+        expect(await insertions(page)).toEqual([]);
+        await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
+        const messages = await page.evaluate(() => (window as any).__webviewMessages.map((m: any) => m.type));
+        expect(messages).toContain('cancel');
+        expect(messages).not.toContain('insertText');
+      });
+    }
+  }
+});
+
 test.describe('Canvas editing and save guards', () => {
   test('incomplete lexical input survives editing and blocks Save until corrected', async ({ page }) => {
     await open(page, 'canvas', query);

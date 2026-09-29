@@ -52,6 +52,31 @@ fix, including synthetic characteristics preservation (absent from the corpus).
 See [step 1 evidence](audits/store-parity-2026-09-29.md) and
 [C10 fix and verification](audits/c10-preserved-sections-2026-09-29.md).
 
+Additional correctness findings from the [C11 slot audit](audits/c11-slot-audit-2026-09-29.md):
+
+- **C11 · OPEN · P1**: static malformed-expression traversal omits virtual-table
+  arguments. `Код = = &Код` in a VT condition reaches Apply with `ok: true`.
+  Other opaque-slot gaps and specialized argument syntax are inventoried in the audit;
+  do not apply the ordinary expression grammar blindly to DCS sections.
+- **C12 · CLOSED · P1**: the characteristics reader now rejects EOF before the
+  matching outer `}` with the existing localized expected-symbol error. Closed
+  raw blocks remain unchanged. Seventeen unit cases and four Classic/Canvas
+  cases cover rejection before LOAD_BATCH/Apply, nested braces, metadata modes,
+  localization and IDE failure handling. [Fix and audit](audits/c12-characteristics-eof-2026-09-29.md);
+  [implementation commit, located by its unique subject](https://github.com/SeredaLabs/query-console-1c/commits/main/?query=fix%28parser%29%3A%20reject%20unterminated%20characteristics%20blocks%20%28C12%29).
+- **C13 · OPEN · P1**: `parseGroupFieldRef` checks EOF only at zero parenthesis
+  depth. An unfinished GROUP BY function call loops appending EOF tokens until
+  heap exhaustion. Independently reproduced during the C12 read-only audit;
+  no fix in C12. [Reproduction](audits/c12-characteristics-eof-2026-09-29.md).
+- **C14 · OPEN · P1**: the function-call and comparison-operand readers in
+  `parseOrder` likewise fail to stop at EOF with open parentheses. Both shapes
+  exhausted the bounded audit process heap. Separate parser-safety follow-up;
+  [reproductions](audits/c12-characteristics-eof-2026-09-29.md).
+- **C15 · OPEN · P1**: the function-expression reader in `parseIndexField` has
+  the same depth-dependent EOF loop; an unfinished INDEX BY function call
+  exhausts the bounded audit process heap. Separate follow-up, unchanged here;
+  [reproduction](audits/c12-characteristics-eof-2026-09-29.md).
+
 ## Architecture
 
 | ID / status / severity | Area, evidence and impact | Dependency → next action |
