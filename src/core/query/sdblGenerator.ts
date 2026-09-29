@@ -928,10 +928,50 @@ function selectionModifiers(selection: QueryModel['selection']): string {
 }
 
 /**
- * Есть ли в выражении верхнеуровневый (вне скобок и строк) булев оператор И/ИЛИ.
+ * Есть ли в выражении верхнеуровневый (вне скобок) булев оператор И/ИЛИ.
  * Используется, чтобы отличить одиночное условие соединения от составного.
+ *
+ * Лексические факты (строки, даты, комментарии, параметры `&И`, имена `#И`,
+ * границы слов, регистр) берутся из токенов лексера (A1). Здесь остаётся только
+ * синтаксическое правило: `И` диапазона `МЕЖДУ a И b` — не булев оператор
+ * (фаза 6.15.8). `{…}` глубиной не считается, `ВЫБОР…КОНЕЦ` не отслеживается —
+ * как и раньше. Экспортирована для тестов.
  */
-function hasTopLevelBooleanOp(expr: string): boolean {
+export function hasTopLevelBooleanOp(expr: string): boolean {
+  let tokens;
+  try {
+    tokens = tokenize(expr);
+  } catch {
+    // Лексически незавершённое выражение (ручной ввод): прежний посимвольный
+    // разбор, чтобы не появилось новых исключений и форматирование не менялось.
+    return hasTopLevelBooleanOpRaw(expr);
+  }
+  let depth = 0;
+  let betweenPending = 0;
+  for (const t of tokens) {
+    if (t.type === 'punct') {
+      if (t.value === '(') depth++;
+      else if (t.value === ')') depth--;
+      continue;
+    }
+    if (depth !== 0 || (t.type !== 'ident' && t.type !== 'keyword')) continue;
+    // `ИЛИ` лексер отдаёт как ident в исходном регистре, `И`/`МЕЖДУ` — как keyword.
+    const word = t.value.toUpperCase();
+    if (word === 'МЕЖДУ') betweenPending++;
+    else if (word === 'ИЛИ') return true;
+    else if (word === 'И') {
+      if (betweenPending > 0) betweenPending--;
+      else return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Прежний посимвольный вариант `hasTopLevelBooleanOp` — только для выражений,
+ * которые лексер не принимает. Не использовать для других целей.
+ */
+function hasTopLevelBooleanOpRaw(expr: string): boolean {
   const n = expr.length;
   const isWordChar = (c: string | undefined): boolean => c !== undefined && /[\p{L}\p{N}_]/u.test(c);
   let depth = 0;
