@@ -28,6 +28,28 @@ async function save(page: Page, surface: Surface): Promise<string> {
 
 test.describe('Classic / Canvas browser parity', () => {
   for (const surface of ['classic', 'canvas'] as const) {
+    test(`${surface}: HAVING survives an unrelated alias edit and save/reopen (C9)`, async ({ page }) => {
+      const input = 'ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В СГРУППИРОВАТЬ ПО В.Код ИМЕЮЩИЕ В.Код <> ""';
+      await open(page, surface, input);
+      if (surface === 'canvas') {
+        await page.getByRole('button', { name: /Поля$/ }).click();
+        await page.getByPlaceholder('Псевдоним', { exact: true }).first().fill('НовыйКод');
+      } else {
+        await page.locator('[data-tab="Объединения/Псевдонимы"]').click();
+        const alias = page.locator('input').filter({ visible: true }).last();
+        await alias.fill('НовыйКод');
+        await alias.press('Tab');
+      }
+      const output = await save(page, surface);
+      const model = parseBatch(output).members[0].members[0].model;
+      expect(model.fields[0].alias).toBe('НовыйКод');
+      expect(model.having).toEqual(parseBatch(input).members[0].members[0].model.having);
+      await open(page, surface, output);
+      expect(await save(page, surface)).toBe(output);
+    });
+  }
+
+  for (const surface of ['classic', 'canvas'] as const) {
     test(`${surface}: preserves entered hierarchy on a string field through load/save (C3)`, async ({ page }) => {
       await open(page, surface, query + ' ИЕРАРХИЯ УБЫВ');
       const output = await save(page, surface);

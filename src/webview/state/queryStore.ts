@@ -71,6 +71,8 @@ export interface SavedQuery {
   tabSectionFields: SelectedTabSectionField[];
   grouping: Grouping;
   conditions: Condition[];
+  /** Preserved independently of WHERE; older snapshots may omit HAVING. */
+  having?: Condition[];
   joins: Join[];
   selection: Selection;
   queryType: QueryType;
@@ -121,6 +123,7 @@ export interface QueryState {
   tabSectionFields: SelectedTabSectionField[];
   grouping: Grouping;
   conditions: Condition[];
+  having?: Condition[];
   joins: Join[];
   selection: Selection;
   queryType: QueryType;

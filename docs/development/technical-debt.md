@@ -33,11 +33,13 @@ No current item is promoted to P0 solely because Stage 0 used that label.
 | C6 · OPEN · P3 | Cosmetic JOIN idempotence: `booleanGroupingSemantics.test.ts` explicitly exempts two shapes from text equality on pass two; both passes pass truth-table checks. | A1 → bounded canonical-layout task; no semantic-corruption claim. |
 | C8 · CLOSED · P1 | Apply safety: static malformed-expression checks covered the input model, but generated output could reparse successfully while swallowing later sections into an unbalanced opaque expression; Apply now applies the same malformed-expression guard to reparsed generated output (`decideApply`, shared by Classic and Canvas). Known trigger: a manually entered JOIN conjunct ending in a `//` comment, whose wrapper `)` lands inside the comment. Regressions in `applyGeneratedOutput.test.ts`; corpus probe 0 new blockers (1976 × with/without resolver). | No valid-but-semantically-different output was reproduced during the audit; that is not proven impossible. Broader structural equivalence stays V3. The comment rendering that triggers it is a separate issue. |
 
-Additional correctness finding **C9 · OPEN · P1**: the flat webview store omits
-top-level `QueryModel.having` in both `modelToFlat` and `buildModelFromFlat`.
-`LOAD_BATCH → assembleBatch` loses HAVING even with GROUP BY. This predates the
-A1 lexical-contract change and needs a separate store-preservation fix with
-load/edit/save coverage; see [reproduction and evidence limits](expression-lexical-contract.md).
+Additional correctness finding **C9 · CLOSED · P1**: the flat webview store now
+preserves `QueryModel.having` through conversion, snapshots and restore. Optional
+state fields retain compatibility with older snapshots. Ten unit regressions and
+Classic/Canvas edit/save/reopen checks cover preservation and malformed-HAVING
+Apply refusal. The store corpus sweep restores HAVING in 33/1976 queries in each
+metadata mode, with no unexplained differences or golden updates.
+See [scope and verification](audits/c9-having-2026-09-29.md).
 
 ## Architecture
 

@@ -27,7 +27,7 @@ export function tempTableDialogInitial(state: QueryState, editId: string): { nam
 export function snapshotActive(state: QueryState): SavedQuery {
   return {
     selectedTables: state.selectedTables, selectedFields: state.selectedFields, tabSectionFields: state.tabSectionFields,
-    grouping: state.grouping, conditions: state.conditions, joins: state.joins, selection: state.selection,
+    grouping: state.grouping, conditions: state.conditions, having: state.having, joins: state.joins, selection: state.selection,
     queryType: state.queryType, tempTableName: state.tempTableName, lockForUpdate: state.lockForUpdate,
     lockEnabled: state.lockEnabled,
     order: state.order, totals: state.totals, builder: state.builder, indexing: state.indexing,
@@ -43,7 +43,7 @@ export function restoreSaved(_state: QueryState, saved: SavedQuery | null): Part
   const base = saved ?? {
     selectedTables: [], selectedFields: [], tabSectionFields: [],
     grouping: { multiple: false, groupFields: [], groupSets: [], aggregates: [] } as Grouping,
-    conditions: [], joins: [], selection: {}, queryType: 'select' as QueryType, tempTableName: '', lockForUpdate: [],
+    conditions: [], having: undefined, joins: [], selection: {}, queryType: 'select' as QueryType, tempTableName: '', lockForUpdate: [],
     lockEnabled: false,
     order: { fields: [], auto: false } as Order,
     totals: { groupFields: [], totalFields: [], grand: false } as Totals,
@@ -51,7 +51,7 @@ export function restoreSaved(_state: QueryState, saved: SavedQuery | null): Part
   };
   return {
     selectedTables: base.selectedTables, selectedFields: base.selectedFields, tabSectionFields: base.tabSectionFields,
-    grouping: base.grouping, conditions: base.conditions, joins: base.joins, selection: base.selection,
+    grouping: base.grouping, conditions: base.conditions, having: base.having, joins: base.joins, selection: base.selection,
     queryType: base.queryType, tempTableName: base.tempTableName, lockForUpdate: base.lockForUpdate,
     order: base.order, totals: base.totals, builder: base.builder, indexing: base.indexing,
     queryComments: base.comments, lockEnabled: base.lockEnabled,
@@ -63,7 +63,7 @@ export function restoreSaved(_state: QueryState, saved: SavedQuery | null): Part
 export function buildModelFromFlat(flat: SavedQuery): QueryModel {
   return {
     tables: flat.selectedTables, fields: flat.selectedFields, tabSectionFields: flat.tabSectionFields,
-    grouping: flat.grouping, conditions: flat.conditions, joins: flat.joins, selection: flat.selection,
+    grouping: flat.grouping, conditions: flat.conditions, having: flat.having, joins: flat.joins, selection: flat.selection,
     queryType: flat.queryType, tempTableName: flat.tempTableName, lockForUpdate: flat.lockForUpdate,
     // Блокировка включена, но ни одной таблицы не выбрано — это голая `ДЛЯ ИЗМЕНЕНИЯ`
     // (блокировка всех источников), а не отсутствие секции (см. комментарий у
@@ -81,7 +81,7 @@ export function modelToFlat(model: QueryModel): SavedQuery {
   return {
     selectedTables: model.tables, selectedFields: model.fields, tabSectionFields: model.tabSectionFields ?? [],
     grouping: model.grouping ?? { multiple: false, groupFields: [], groupSets: [], aggregates: [] },
-    conditions: model.conditions ?? [], joins: model.joins ?? [], selection: model.selection ?? {},
+    conditions: model.conditions ?? [], having: model.having, joins: model.joins ?? [], selection: model.selection ?? {},
     queryType: model.queryType ?? 'select', tempTableName: model.tempTableName ?? '', lockForUpdate: model.lockForUpdate ?? [],
     lockEnabled: (model.lockForUpdate?.length ?? 0) > 0 || !!model.lockForUpdateBare,
     order: model.order ?? { fields: [], auto: false }, totals: model.totals ?? { groupFields: [], totalFields: [], grand: false },

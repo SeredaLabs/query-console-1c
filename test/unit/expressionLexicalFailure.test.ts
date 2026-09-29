@@ -33,19 +33,11 @@ describe('lexically invalid expressions: preserve text, keep preview, refuse App
       const original = JSON.stringify(doc);
       expect(generateBatch(doc)).toContain(expression);
       expect(JSON.stringify(doc)).toBe(original);
-      // The existing flat store omits top-level HAVING. Exercise its preview
-      // through a retained source-subquery model; direct generation is checked above.
-      let previewDoc = doc;
-      if (placement === 'having') {
-        previewDoc = parseBatch('ВЫБРАТЬ П.А ИЗ (ВЫБРАТЬ Т.А ИЗ Спр.Т КАК Т) КАК П');
-        previewDoc.members[0].members[0].model.tables[0].subquery = doc.members[0];
-      }
-      const state = reducer(initialState(), { type: 'LOAD_BATCH', doc: previewDoc });
+      const state = reducer(initialState(), { type: 'LOAD_BATCH', doc });
       const before = JSON.stringify(state);
       const preview = computeBatchTextSafe(state, true);
       expect(preview.error).toBeNull();
-      // An enclosing subquery adds layout indentation to continuation lines.
-      expect(preview.text.replace(/\n\t+/g, '\n')).toContain(expression);
+      expect(preview.text).toContain(expression);
       expect(decideApply(preview.text, preview.error, findStaticApplyBlocker(state), undefined).ok).toBe(false);
       expect(JSON.stringify(state)).toBe(before);
     });

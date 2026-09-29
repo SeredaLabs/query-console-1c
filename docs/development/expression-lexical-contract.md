@@ -74,8 +74,9 @@ An existing store gap was exposed by these tests: `modelToFlat` and
 `buildModelFromFlat` omit top-level `QueryModel.having`, even with GROUP BY.
 Direct generation preserves it; `LOAD_BATCH → assembleBatch` does not. Reproduced
 with `ВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В СГРУППИРОВАТЬ ПО В.Код ИМЕЮЩИЕ В.Код > 0`.
-This is tracked separately as C9. HAVING preview/Apply coverage here uses a retained
-source-subquery model; it does not claim top-level HAVING survives the flat store.
+This was subsequently fixed separately as [C9](audits/c9-having-2026-09-29.md).
+The initial A1 tests used a retained source-subquery model for HAVING preview/Apply;
+after C9 they exercise the top-level HAVING path directly.
 
 No live 1C execution was performed. The independent tree-sitter WASM oracle remains
 unavailable. No parser replacement, AST, new recovery grammar, IDE behavior change,
