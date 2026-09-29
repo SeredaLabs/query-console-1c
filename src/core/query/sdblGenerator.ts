@@ -134,6 +134,10 @@ function renderConditionSubquery(subquery: QueryDocument, baseTabs: number, lead
  * otherwise the comment would swallow it together with everything after it.
  */
 function closeAfterLastLine(text: string, pad: string): string {
+  // Lexer-rejected *whole* prefix: `)` on the next line so a trailing `//`
+  // cannot swallow it. Do not lex `lastLine` alone — a valid multiline string
+  // ends with `b"`, which looks unclosed out of context.
+  if (!tryTokenize(text)) return `${text}\n${pad})`;
   const lastLine = text.slice(text.lastIndexOf('\n') + 1);
   let endsInComment: boolean;
   try {
@@ -142,6 +146,18 @@ function closeAfterLastLine(text: string, pad: string): string {
     endsInComment = lastLine.includes('//');
   }
   return endsInComment ? `${text}\n${pad})` : `${text})`;
+}
+
+/**
+ * Surrounding call layout for lexically invalid positional arguments: each
+ * argument keeps the slot indent on its own line; `closeAfterLastLine` places
+ * `)` on the next line when the whole prefix is lexically invalid, so a
+ * trailing `//` cannot swallow it. No in-expression rewriting.
+ */
+function emitRawCall(fullName: string, positions: string[], bodyTabs: number): string {
+  const pad = '\t'.repeat(bodyTabs + 2);
+  const close = '\t'.repeat(bodyTabs);
+  return closeAfterLastLine(`${fullName}(\n${positions.map(p => pad + p).join(',\n')}`, close);
 }
 
 function renderSource(t: SelectedTable, bodyTabs = 1): string {
@@ -167,6 +183,7 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
   // если аргумента нет и во вводе скобок не было.
   if (kind === 'КритерийОтбора') {
     if ((v.period ?? '') === '' && !v.hadParens) return t.fullName;
+    if (v.period && !tryTokenize(v.period)) return emitRawCall(t.fullName, [v.period], bodyTabs);
     return `${t.fullName}(${v.period ? normalizeLeafCase(v.period) : ''})`;
   }
 
@@ -175,7 +192,7 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
   if (kind === 'РегистрБухгалтерии') {
     let positions = accountingPositions(slice, v);
     if (!positions.some(p => p !== '') && !v.hadParens) return t.fullName;
-    if (positions.some(p => !tryTokenize(p))) return `${t.fullName}(${positions.join(', ')})`;
+    if (positions.some(p => !tryTokenize(p))) return emitRawCall(t.fullName, positions, bodyTabs);
     // Автопсевдоним `Поле<2k>` для выражений в DCS-скобках `{(…)}` (как в renderVirtualParams).
     const dcsStateAcc = { k: 0 };
     positions = positions.map(p => (p ? aliasDcsBraceExprs(wrapDcsBraceParam(p), dcsStateAcc) : p));
@@ -329,7 +346,7 @@ function mergeDcsBraces(text: string): string {
 function renderVirtualParams(fullName: string, positions: string[], condition: string, bodyTabs: number): string {
   // An unknown lexical structure must not authorize DCS/Boolean rewrites.
   if (!tryTokenize(condition) || positions.some(p => !tryTokenize(p))) {
-    return `${fullName}(${positions.join(', ')})`;
+    return emitRawCall(fullName, positions, bodyTabs);
   }
   // Регистровая нормализация параметров виртуальной таблицы (период, условие):
   // конструктор приводит зарезервированные слова/функции/литералы к ВЕРХНЕМУ
@@ -1323,8 +1340,7 @@ function hasLineComment(expr: string): boolean {
  * Verbatim `(…)` wrapping of a commented JOIN conjunct. A comment at the very end
  * would swallow the closing `)`, so it moves after it: `(expr) // comment`. Code
  * tokens and the comment text stay as written; a comment on an earlier line is
- * already ended by its line break. Text the lexer rejects gets `)` on a line of
- * its own, which no line comment can reach.
+ * already ended by its line break. Text the lexer rejects is not wrapped.
  */
 function wrapJoinConjunctCommentSafe(expr: string): string {
   const text = expr.trim();
@@ -1332,7 +1348,7 @@ function wrapJoinConjunctCommentSafe(expr: string): string {
   try {
     tokens = tokenize(text, { comments: true });
   } catch {
-    return `(${text}\n)`;
+    return text;
   }
   const last = tokens.filter(t => t.type !== 'eof').pop();
   if (last?.type !== 'comment') return `(${text})`;
@@ -1536,7 +1552,8 @@ function renderFrom(model: QueryModel, aliases: Map<string, string>): string[] {
  * Блок построителя `{<ключевое слово> …}`. Возвращает [] если полей нет. Иначе:
  * первая строка `'{' + keyword`; затем по строке на поле `'\t' + render(f)` с
  * запятой после всех, кроме последнего; закрывающая `}` дописывается к строке
- * последнего поля (без отдельной строки). Поле:
+ * последнего поля (без отдельной строки). Лексически невалидное поле: без
+ * скобок условия, а `}` / запятая — на следующей строке слота. Поле:
  * `ref + (child ? '.*' : '') + (alias ? ' КАК ' + alias : '')`.
  */
 function builderBlock(keyword: string, fields: BuilderField[]): string[] {
@@ -1569,7 +1586,8 @@ function builderBlock(keyword: string, fields: BuilderField[]): string[] {
       // Группа `НЕ(…)` несёт лишний +1 (НЕ — отдельный уровень), который reindentLeafBool
       // НЕ учитывает; такие условия не реиндентируем (оставляем геометрию как есть).
       !/(?:^|[^\p{L}\p{N}_&])НЕ\s*\(/u.test(f.ref);
-    const ref = !tryTokenize(f.ref) ? f.ref : isMultilineCase
+    const lexOk = !!tryTokenize(f.ref);
+    const ref = !lexOk ? f.ref : isMultilineCase
       ? reindentLeafCase(normalizeLeafCase(f.ref), 2)
       : isMultilineBool
         // Условие построителя оборачивается ещё одной парой `(…)` ниже (render), чья
@@ -1577,14 +1595,20 @@ function builderBlock(keyword: string, fields: BuilderField[]): string[] {
         // база reindentLeafBool = 2 (1 поле + 1 охватывающая скобка).
         ? reindentLeafBool(normalizeLeafCase(f.ref), 2)
         : normalizeLeafCase(f.ref);
-    return f.condition
+    return f.condition && lexOk
       ? `(${ref})` + (f.child ? '.*' : '') + (f.alias ? ' КАК ' + f.alias : '')
       : ref + (f.child ? '.*' : '') + (f.alias ? ' КАК ' + f.alias : '');
   };
   const lines = ['{' + keyword];
   fields.forEach((f, i) => {
     const last = i === fields.length - 1;
-    lines.push('\t' + render(f) + (last ? '}' : ','));
+    const body = render(f);
+    if (!tryTokenize(f.ref)) {
+      lines.push('\t' + body);
+      lines.push(last ? '}' : '\t,');
+      return;
+    }
+    lines.push('\t' + body + (last ? '}' : ','));
   });
   return lines;
 }
@@ -1795,7 +1819,9 @@ function renderTabProjection(
   };
   const tsExprLines = (expression: string, alias: string | undefined, comma: string): string[] => {
     const rows = formatSelectExpression(expression).split('\n');
-    const shifted = rows.map((l, j) => (j === 0 ? '\t\t' + l : '\t' + l));
+    const shifted = !tryTokenize(expression)
+      ? rows.map((l, j) => (j === 0 ? '\t\t' + l : l))
+      : rows.map((l, j) => (j === 0 ? '\t\t' + l : '\t' + l));
     const tail = !opts.suppress && alias !== undefined ? ' КАК ' + alias : '';
     shifted[shifted.length - 1] = shifted[shifted.length - 1] + tail + comma;
     return shifted;
@@ -1815,12 +1841,8 @@ function renderTabProjection(
     });
   } else if (tsf.exprFields && tsf.exprFields.length > 0) {
     subLines = tsf.exprFields.flatMap((ef, i) => {
-      const rows = formatSelectExpression(ef.expression).split('\n');
-      const shifted = rows.map((l, j) => (j === 0 ? '\t\t' + l : '\t' + l));
       const comma = i < tsf.exprFields!.length - 1 ? ',' : '';
-      const tail = opts.suppress ? '' : ' КАК ' + ef.alias;
-      shifted[shifted.length - 1] = shifted[shifted.length - 1] + tail + comma;
-      return shifted;
+      return tsExprLines(ef.expression, opts.suppress ? undefined : ef.alias, comma);
     });
   } else {
     subLines = tsf.fields.map((f, i) => {
@@ -2018,6 +2040,7 @@ function indentStringLiteralNewlines(text: string, tabs: number): string {
  * только нормализацию регистра/пробелов листа.
  */
 export function formatSelectExpression(expression: string): string {
+  if (!tryTokenize(expression)) return expression;
   // `ПУСТАЯТАБЛИЦА.(Код, Наименование)` → канон конструктора 1С (live, RP14): каждый
   // элемент — пустое значение + ` КАК Имя`, элементы через `, `
   // (`ПУСТАЯТАБЛИЦА.( КАК Код,  КАК Наименование)`); пустой список конструктор
@@ -2271,6 +2294,7 @@ export function renderTotals(totals: Totals | undefined, model: QueryModel): str
   const renderAgg = (f: typeof totals.totalFields[number]): string => {
     if (f.func && f.operandAlias !== undefined) return wrapAggregate(f.func, f.operandAlias);
     if (f.expression === undefined) return `СУММА(${selectAliasFor(model, f.tableId, f.path)})`;
+    if (!tryTokenize(f.expression)) return f.expression;
     // Многострочный ВЫБОР…КОНЕЦ в ИТОГИ (агрегат-в-CASE, напр. `ВЫБОР … ТОГДА
     // МАКСИМУМ(…) ИНАЧЕ СУММА(…) КОНЕЦ КАК …`) конструктор раскладывает по канону
     // относительно отступа агрегата (база 1; `withCommas` ниже добавляет ведущий таб

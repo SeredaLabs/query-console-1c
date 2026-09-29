@@ -39,15 +39,37 @@ The old `hasTopLevelBooleanOpRaw`, `splitTopLevelAndRaw`, `hasTopLevelCommaRaw`
 and `findTupleCloseRaw` are removed, not relocated.
 
 Boundary guards precede formatting of custom JOIN conjuncts and legacy JOIN text,
-custom WHERE/HAVING conditions, generic/accounting virtual-table arguments and
-builder field references. These are necessary because merely returning false from
-a detector could route unknown text into another formatter. DCS wrappers and the
-NOT-operand parenthesis remover also require known negative facts. Valid expressions
-keep existing formatting, including current BETWEEN, case and depth rules.
+custom WHERE/HAVING conditions, generic/accounting virtual-table arguments,
+builder field references, and `formatSelectExpression` / `formatExpression`.
+These are necessary because merely returning false from a detector could route
+unknown text into another formatter. DCS wrappers and the NOT-operand parenthesis
+remover also require known negative facts. Valid expressions keep existing
+formatting, including current BETWEEN, case and depth rules.
+
+## Invalid text: one rule for every slot
+
+When `tryTokenize` is undefined, generator and formatter emit the stored text
+verbatim in the slot's normal position. They do not wrap, trim, split, reindent
+continuations, canonicalize case, or invent in-expression layout.
+
+Surrounding query syntax still uses the slot's indent and line breaks (the
+leading tab of a SELECT field, `ПО` before a JOIN conjunct, each virtual-table
+argument on its own indented line). When the *complete* slot/prefix text fails
+`tryTokenize`, a slot delimiter such as `)` is placed on the following line so
+a trailing `//` cannot swallow it. An unclosed string literal is multiline and
+still absorbs the rest of the query; that is acceptable because Apply refuses
+the text and the preview shows it verbatim. The extra line is not claimed to
+protect against strings, and a valid multiline `"a` / `b"` must not be treated
+as lexer-failure of its last line alone.
+
+That is not a second wrapper around the expression: JOIN no longer adds
+`(invalid\n)` for lexer-rejected text; builder `{ГДЕ}` does not wrap an invalid
+condition in extra parentheses.
 
 The shared Classic/Canvas Apply checks are unchanged. Tests verify lexically broken
-expressions stay in the model and preview while Apply refuses them. This does not
-certify platform validity or repair unrelated store/persistence gaps.
+expressions stay in the model and preview while Apply refuses them, for every
+expression slot the generator prints. This does not certify platform validity or
+repair unrelated store/persistence gaps.
 
 ## Evidence and limits
 
@@ -63,8 +85,14 @@ their raw-fallback contracts are superseded by this document.
   one original fragment; NOT is no longer moved in `(А, &) НЕ В (&П)`.
 - Eight new `tryTokenize` cases cover spelling/positions/comments, empty input,
   no partial facts, and propagation of unexpected failures.
-- 49 new preservation cases cover seven input shapes in seven placements,
-  checking generator/model preservation, preview availability and Apply refusal.
+- 49 new preservation cases originally covered seven input shapes in seven
+  placements. The same seven shapes now run in every generator expression slot
+  (JOIN, WHERE/HAVING, virtual tables, builder, SELECT/trailing, GROUP, ORDER,
+  INDEX, totals, periodBy, tabular-section expressions, castPrefix, selection
+  criterion), plus layout checks that a trailing `//` cannot swallow a slot
+  delimiter. Generator/model preservation, preview availability and Apply
+  refusal remain the gate. Valid multiline string literals keep HEAD layout
+  (closing `)` stays on the last line of the literal).
 - Before/after generation of 1976 committed queries, with and without metadata:
   zero output differences. No golden, snapshot, fixture or classification changes.
 - A browser regression enters three lexical errors, navigates away and back,

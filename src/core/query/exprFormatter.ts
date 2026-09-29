@@ -12,7 +12,7 @@
  * лексера). Распознаёт не-ключевые слова ИЛИ/НЕ/ВЫБОР/КОГДА/ТОГДА/ИНАЧЕ/КОНЕЦ/ЕСТЬ
  * по `.value.toUpperCase()`.
  */
-import { tokenize, type Token } from './sdblLexer';
+import { tokenize, tryTokenize, type Token } from './sdblLexer';
 import { FUNCTION_CATALOG, type FunctionGroup, type FunctionLeaf } from './functionCatalog';
 import { LITERAL_WORDS, AGGREGATE_WORDS, COMPARISON_OPERATORS, PERIOD_WORDS as SHARED_PERIOD_WORDS } from './sdblKeywordSets';
 
@@ -4635,6 +4635,7 @@ function caseHasNestedVyborInWhen(text: string): boolean {
  * таб слота); продолжения — с абсолютными табами.
  */
 export function formatExpression(raw: string, slot: ExprSlot, rootSubDelta?: number): string {
+  if (!tryTokenize(raw)) return raw;
   const trimmed = raw.trim();
   // Сплющивание многострочных листьев в одну строку — только для полей выборки
   // (слот select); в ГДЕ/ИМЕЮЩИЕ/ПО структура исходника сохраняется дословно
