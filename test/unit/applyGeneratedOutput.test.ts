@@ -3,9 +3,9 @@
  * malformed-expression check covers the input model, but a balanced model can
  * be generated into text whose own custom expression is unbalanced: the
  * tolerant parser then reparses it successfully by swallowing the following
- * sections into that opaque expression. Known trigger: a line comment at the end
- * of a manually entered JOIN conjunct, whose synthetic wrapper `)` lands inside
- * the comment.
+ * sections into that opaque expression. The trigger found in the audit, a line
+ * comment at the end of a manually entered JOIN conjunct whose wrapper `)` landed
+ * inside the comment, is fixed in the renderer; the gate is pinned on that output.
  */
 import { describe, it, expect } from 'vitest';
 import { parseBatch } from '../../src/core/query/sdblParser';
@@ -36,26 +36,35 @@ function applyOf(state: QueryState) {
 }
 
 describe('C8: generated output with a malformed custom expression is not applied', () => {
-  for (const legacy of [false, true]) {
-    it(`JOIN ПО with a trailing line comment (${legacy ? 'expression' : 'conditions[]'})`, () => {
-      const state = withJoinCondition('Т.А = Б.А // к', legacy);
-      // The input model itself is balanced and passes the static C5 check.
-      expect(findStaticApplyBlocker(state)).toBeNull();
-      const { out, decision } = applyOf(state);
-      expect(out.text).toContain('Б.А // к)');
-      // The generated text formally reparses and validates…
-      expect(validateBatchText(out.text!).ok).toBe(true);
+  // The generated texts the JOIN renderer produced for a trailing `//` comment before
+  // it became comment-safe: the wrapper `)` lands inside the comment. The gate is
+  // pinned on these texts directly, independent of any current generator path.
+  const HEAD = 'ВЫБРАТЬ\n\tТ.А КАК А,\n\tСУММА(Т.Б) КАК Б\nИЗ\n\tСпр.Т КАК Т\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Спр.Б КАК Б\n\t\tПО ';
+  const TAIL = '\nГДЕ\n\tТ.А = 1\n\nСГРУППИРОВАТЬ ПО\n\tТ.А';
+  for (const [name, po] of [
+    ['trailing comment swallows the wrapper `)`', '(Т.А = Б.А // к)'],
+    ['comment text turned into a conjunct', '(Т.А = Б.А //)\n\t\t\tИ (к)\n\t\t\tИ Т.Б = Б.Б'],
+  ]) {
+    it(name, () => {
+      const text = HEAD + po + TAIL;
+      // The text formally reparses and validates…
+      expect(validateBatchText(text).ok).toBe(true);
       // …only because the unbalanced `(` swallowed ГДЕ/СГРУППИРОВАТЬ ПО into the join text.
-      const reparsed = parseBatch(out.text!);
+      const reparsed = parseBatch(text);
       expect(reparsed.members[0].members[0].model.conditions).toBeUndefined();
       expect(findMalformedCustomExpressions(reparsed).length).toBeGreaterThan(0);
-      expect(decision).toEqual({ ok: false, kind: 'invalid', error: GENERATED_MALFORMED_EXPRESSION });
+      expect(decideApply(text, null, null, undefined)).toEqual({ ok: false, kind: 'invalid', error: GENERATED_MALFORMED_EXPRESSION });
     });
   }
 
-  it('JOIN ПО where the comment also splits the conjunct (`// И к`)', () => {
-    const { decision } = applyOf(withJoinCondition('Т.А = Б.А // И к\nИ Т.Б = Б.Б'));
-    expect(decision).toEqual({ ok: false, kind: 'invalid', error: GENERATED_MALFORMED_EXPRESSION });
+  it('the former trigger (balanced model, `//` in a JOIN conjunct) now generates valid output', () => {
+    for (const legacy of [false, true]) {
+      for (const expression of ['Т.А = Б.А // к', 'Т.А = Б.А // И к\nИ Т.Б = Б.Б']) {
+        const state = withJoinCondition(expression, legacy);
+        expect(findStaticApplyBlocker(state)).toBeNull();
+        expect(applyOf(state).decision).toEqual({ ok: true });
+      }
+    }
   });
 
   it('the message is localized (not the generic unknown-diagnostic text)', () => {

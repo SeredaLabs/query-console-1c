@@ -119,12 +119,29 @@ function renderConditionSubquery(subquery: QueryDocument, baseTabs: number, lead
     const nextKw = k + 1 < raw.length && isUKw(raw[k + 1]);
     return prevKw || nextKw;
   });
-  return inner
+  return closeAfterLastLine(inner
     .map((l, k) => {
       if (l === '') return padBlank;
       return k === 0 ? `${pad}(${l}` : `${pad}${l}`;
     })
-    .join('\n') + ')';
+    .join('\n'), pad);
+}
+
+/**
+ * Appends a subquery's closing `)`. When the last line ends in a user-authored
+ * line comment (e.g. a manually entered JOIN condition; the parser strips such
+ * comments from text it reads), the `)` goes on a line of its own at `pad`,
+ * otherwise the comment would swallow it together with everything after it.
+ */
+function closeAfterLastLine(text: string, pad: string): string {
+  const lastLine = text.slice(text.lastIndexOf('\n') + 1);
+  let endsInComment: boolean;
+  try {
+    endsInComment = tokenize(lastLine, { comments: true }).filter(t => t.type !== 'eof').pop()?.type === 'comment';
+  } catch {
+    endsInComment = lastLine.includes('//');
+  }
+  return endsInComment ? `${text}\n${pad})` : `${text})`;
 }
 
 function renderSource(t: SelectedTable, bodyTabs = 1): string {
@@ -135,7 +152,7 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
     // соединения — на 2+depth табах, его тело глубже соответственно (фаза 6.15.19, MCP).
     const inner = generateDocument(t.subquery).split('\n');
     const pad = '\t'.repeat(bodyTabs);
-    return inner.map((l, k) => (k === 0 ? '(' + l : pad + l)).join('\n') + ')';
+    return closeAfterLastLine(inner.map((l, k) => (k === 0 ? '(' + l : pad + l)).join('\n'), pad);
   }
   if (!t.virtual) return t.fullName;
   const v = t.virtual;
@@ -1205,6 +1222,9 @@ function renderJoinConjuncts(conditions: NonNullable<Join['conditions']>, aliase
       const ra = aliases.get(c.rightTableId ?? '') ?? c.rightTableId ?? '';
       const op = c.operator ?? '=';
       sub = [`${la}.${c.leftPath ?? ''} ${op} ${ra}.${c.rightPath ?? ''}`];
+    } else if (hasLineComment(c.expression ?? '')) {
+      // A user-authored line comment: verbatim, never split or reformatted.
+      sub = wrapJoinConjunctCommentSafe(c.expression ?? '').split('\n');
     } else if (conjunctNeedsComplexFormat(c)) {
       sub = formatJoinConjunct((c.expression ?? '').trim(), k === 0, 2 + depth).split('\n');
     } else {
@@ -1285,7 +1305,7 @@ function expandAndChainConjuncts(conditions: NonNullable<Join['conditions']>): N
   const out: NonNullable<Join['conditions']> = [];
   for (const c of conditions) {
     const e = (c.expression ?? '').trim();
-    if (c.custom && e && hasTopLevelBooleanOp(e) && !/(^|[^\p{L}\p{N}_&])(ИЛИ|ВЫБОР)([^\p{L}\p{N}_]|$)/iu.test(e)) {
+    if (c.custom && e && !hasLineComment(e) && hasTopLevelBooleanOp(e) && !/(^|[^\p{L}\p{N}_&])(ИЛИ|ВЫБОР)([^\p{L}\p{N}_]|$)/iu.test(e)) {
       const parts = splitTopLevelAnd(e);
       if (parts.length > 1) {
         // Помечаем пьесы как полученные расщеплением И-цепочки (фаза 6.16.78):
@@ -1310,6 +1330,41 @@ function conjunctNeedsComplexFormat(c: NonNullable<Join['conditions']>[number]):
   return hasTopLevelBooleanOp(e) || needsFormatting(e);
 }
 
+/**
+ * Whether a JOIN condition/conjunct contains a user-authored line comment
+ * (`// …`). The parser strips comments from JOIN text it reads, so such a
+ * comment only comes from a manual edit. Decided by the lexer (`"a//b"` is a
+ * string, not a comment); text the lexer rejects counts as commented when it has
+ * `//` at all, so it takes the conservative verbatim path.
+ */
+function hasLineComment(expr: string): boolean {
+  try {
+    return tokenize(expr, { comments: true }).some(t => t.type === 'comment');
+  } catch {
+    return expr.includes('//');
+  }
+}
+
+/**
+ * Verbatim `(…)` wrapping of a commented JOIN conjunct. A comment at the very end
+ * would swallow the closing `)`, so it moves after it: `(expr) // comment`. Code
+ * tokens and the comment text stay as written; a comment on an earlier line is
+ * already ended by its line break. Text the lexer rejects gets `)` on a line of
+ * its own, which no line comment can reach.
+ */
+function wrapJoinConjunctCommentSafe(expr: string): string {
+  const text = expr.trim();
+  let tokens;
+  try {
+    tokens = tokenize(text, { comments: true });
+  } catch {
+    return `(${text}\n)`;
+  }
+  const last = tokens.filter(t => t.type !== 'eof').pop();
+  if (last?.type !== 'comment') return `(${text})`;
+  return `(${text.slice(0, last.pos).trimEnd()}) ${last.text}`;
+}
+
 function renderJoinCondition(join: Join, aliases: Map<string, string>, depth = 0, poOwnLine = false): string {
   // Поконъюнктная модель (фаза 6.13): при наличии conditions[] рендерим из неё —
   // скобки решаются пер-конъюнкт по флагу custom, сложные конъюнкты — форматером
@@ -1324,6 +1379,11 @@ function renderJoinCondition(join: Join, aliases: Map<string, string>, depth = 0
     // они уже распределены по подконъюнктам (`(a) И (b)`).
     const expr = (join.expression ?? '').trim();
     if (!expr) return '';
+    if (hasLineComment(expr)) {
+      // A user-authored line comment: verbatim, never reformatted.
+      const body = wrapJoinConjunctCommentSafe(expr);
+      return poOwnLine ? `${'\t'.repeat(3 + depth)}${body}` : body;
+    }
     if (hasTopLevelBooleanOp(expr)) return formatExpression(expr, 'join');
     if (needsFormatting(expr)) return formatExpression(expr, 'join');
     // Одиночное произвольное условие. Решение о внешних скобках (фаза 6.12):

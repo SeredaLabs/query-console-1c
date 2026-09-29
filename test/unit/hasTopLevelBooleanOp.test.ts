@@ -33,6 +33,11 @@ describe('hasTopLevelBooleanOp', () => {
     ["Д = 'x И y'", false],
     ["Д = 'x ИЛИ y'", false],
     ['А = 1 // коммент\nИ Б = 2', true],
+    // a comment's (, ) or " does not change lexical depth or string state
+    ['А = 1 // (\nИ Б = 2', true],
+    ['А = 1 // )\nИ Б = 2', true],
+    ['А = 1 // "\nИ Б = 2', true],
+    ['(А = 1 // )\nИ Б = 2)', false],
   ] as const) {
     it(`${JSON.stringify(expr)} → ${expected}`, () => {
       expect(hasTopLevelBooleanOp(expr)).toBe(expected);
