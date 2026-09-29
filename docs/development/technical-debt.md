@@ -41,6 +41,16 @@ Apply refusal. The store corpus sweep restores HAVING in 33/1976 queries in each
 metadata mode, with no unexplained differences or golden updates.
 See [scope and verification](audits/c9-having-2026-09-29.md).
 
+Additional correctness finding **C10 · OPEN · P1**: the flat store omits
+`QueryModel.trailingFields` and `QueryModel.characteristics`. The permanent
+store/core parity gate reproduces trailing-field loss in 13/1976 queries without
+metadata and 18/1976 with metadata. Every observed corpus difference is explained
+by that omission; the corpus contains no characteristics blocks. The static
+property-coverage gate detects both missing mappings. These are explicit known
+failures, not accepted behavior: step 2 must preserve both fields through flat
+conversion and snapshots, then remove the temporary expected-failure annotations.
+See [step 1 evidence and gate boundaries](audits/store-parity-2026-09-29.md).
+
 ## Architecture
 
 | ID / status / severity | Area, evidence and impact | Dependency → next action |
