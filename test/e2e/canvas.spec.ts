@@ -1,16 +1,19 @@
 import { test, expect, type Page } from '@playwright/test';
 import { parseBatch } from '../../src/core/query/sdblParser';
+import { generateBatch } from '../../src/core/query/sdblGenerator';
+import type { MetaTable } from '../../src/core/metadata/types';
 
 type Surface = 'classic' | 'canvas';
 const BASE = 'http://localhost:5555';
 const query = 'ВЫБРАТЬ В.Код КАК Код, В.Наименование КАК Название ИЗ Справочник.Валюты КАК В ГДЕ В.Код = &Код УПОРЯДОЧИТЬ ПО В.Код';
 
-async function open(page: Page, surface: Surface, text: string): Promise<void> {
+async function open(page: Page, surface: Surface, text: string, tables?: MetaTable[]): Promise<void> {
   await page.goto(`${BASE}/?surface=${surface}`);
   await expect(page.getByTestId(surface === 'canvas' ? 'canvas-loading-overlay' : 'loading-overlay')).toBeHidden();
-  await page.evaluate(text => {
+  await page.evaluate(({ text, tables }) => {
+    if (tables) window.dispatchEvent(new MessageEvent('message', { data: { type: 'metadataTree', tables } }));
     window.dispatchEvent(new MessageEvent('message', { data: { type: 'loadModel', text } }));
-  }, text);
+  }, { text, tables });
 }
 
 async function insertions(page: Page): Promise<string[]> {
@@ -27,6 +30,44 @@ async function save(page: Page, surface: Surface): Promise<string> {
 }
 
 test.describe('Classic / Canvas browser parity', () => {
+  for (const surface of ['classic', 'canvas'] as const) {
+    for (const property of ['trailingFields', 'characteristics'] as const) {
+      test(`${surface}: ${property} survives alias edit and save/reopen (C10)`, async ({ page }) => {
+        const tables: MetaTable[] = [{
+          kind: 'Справочник', name: 'Заказы', fullName: 'Справочник.Заказы',
+          fields: [
+            { name: 'Ссылка', kind: 'standard', types: [] },
+            { name: 'Предопределенный', kind: 'standard', types: [{ primitive: 'Булево' }] },
+          ],
+          tabularSections: [{
+            kind: 'ТабличнаяЧасть', name: 'Товары', fullName: 'Справочник.Заказы.Товары',
+            fields: [{ name: 'Количество', kind: 'attribute', types: [{ primitive: 'Число' }] }],
+          }],
+        }];
+        const input = property === 'trailingFields'
+          ? 'ВЫБРАТЬ З.Ссылка КАК Ссылка, З.Товары.(Количество) КАК Товары, З.Предопределенный КАК Хвост ИЗ Справочник.Заказы КАК З'
+          : 'ВЫБРАТЬ 1 КАК Число {ХАРАКТЕРИСТИКИ ТИП(Справочник.Валюты)}';
+        await open(page, surface, input, tables);
+        if (surface === 'canvas') {
+          await page.getByRole('button', { name: /Поля$/ }).click();
+          await page.getByPlaceholder('Псевдоним', { exact: true }).first().fill('НовоеИмя');
+        } else {
+          await page.locator('[data-tab="Объединения/Псевдонимы"]').click();
+          const alias = page.locator('input').filter({ visible: true }).last();
+          await alias.fill('НовоеИмя');
+          await alias.press('Tab');
+        }
+        const expected = parseBatch(input);
+        expect(expected.members[0].members[0].model[property]).toBeDefined();
+        expected.members[0].members[0].model.fields[0].alias = 'НовоеИмя';
+        const output = await save(page, surface);
+        expect(output).toBe(generateBatch(expected));
+        await open(page, surface, output, tables);
+        expect(await save(page, surface)).toBe(output);
+      });
+    }
+  }
+
   for (const surface of ['classic', 'canvas'] as const) {
     test(`${surface}: HAVING survives an unrelated alias edit and save/reopen (C9)`, async ({ page }) => {
       const input = 'ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В СГРУППИРОВАТЬ ПО В.Код ИМЕЮЩИЕ В.Код <> ""';

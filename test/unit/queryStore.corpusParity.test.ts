@@ -13,7 +13,6 @@ const rows: { file: string; valid: boolean; input: string }[] = readFileSync(res
 for (const withMetadata of [false, true]) {
   describe(`store corpus parity (${withMetadata ? 'with' : 'without'} metadata)`, () => {
     const mismatches: string[] = [];
-    const unexplained: string[] = [];
     beforeAll(() => {
       const resolver = withMetadata ? buildYamlResolver(resolve(corpus, 'metadata/cf')) : undefined;
       for (const row of rows.filter(row => row.valid)) {
@@ -23,13 +22,6 @@ for (const withMetadata of [false, true]) {
         const stored = generateBatch(assembleBatch(reducer(initialState(), { type: 'LOAD_BATCH', doc: structuredClone(doc) })));
         if (stored === direct) continue;
         mismatches.push(row.file);
-        // Temporary C10 classifier, NOT the parity expectation: only removing
-        // top-level trailingFields may explain a known loss. Delete on C10 fix.
-        const withoutTrailing = structuredClone(doc);
-        for (const batch of withoutTrailing.members) {
-          for (const member of batch.members) delete member.model.trailingFields;
-        }
-        if (generateBatch(withoutTrailing) !== stored) unexplained.push(row.file);
       }
     }, 30_000);
 
@@ -37,14 +29,7 @@ for (const withMetadata of [false, true]) {
       expect(rows.filter(row => row.valid)).toHaveLength(1976);
     });
 
-    it('has no differences beyond the recorded C10 trailingFields loss', () => {
-      expect(unexplained).toEqual([]);
-      expect(mismatches).toHaveLength(withMetadata ? 18 : 13);
-    });
-
-    // C10 OPEN: docs/development/technical-debt.md. Remove .fails and the
-    // classifier/count test above when C10 is fixed; never update golden here.
-    it.fails('C10 OPEN: every store output equals direct core output byte-for-byte', () => {
+    it('every store output equals direct core output byte-for-byte', () => {
       expect(mismatches).toEqual([]);
     });
   });

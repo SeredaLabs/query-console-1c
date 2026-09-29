@@ -69,6 +69,9 @@ export interface SavedQuery {
   selectedTables: SelectedTable[];
   selectedFields: SelectedField[];
   tabSectionFields: SelectedTabSectionField[];
+  /** Preserve parser-owned sections; older snapshots may omit these fields. */
+  trailingFields?: SelectedField[];
+  characteristics?: string;
   grouping: Grouping;
   conditions: Condition[];
   /** Preserved independently of WHERE; older snapshots may omit HAVING. */
@@ -121,6 +124,8 @@ export interface QueryState {
   selectedTables: SelectedTable[];
   selectedFields: SelectedField[];
   tabSectionFields: SelectedTabSectionField[];
+  trailingFields?: SelectedField[];
+  characteristics?: string;
   grouping: Grouping;
   conditions: Condition[];
   having?: Condition[];

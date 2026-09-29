@@ -3,6 +3,9 @@
 Baseline: `527e314` (C9 HAVING preservation). This step adds tests and records
 C10; production code and persisted contracts are unchanged.
 
+Historical step 1 report. [Step 2](c10-preserved-sections-2026-09-29.md) fixes C10
+and removes the temporary expected-failure annotations described below.
+
 ## Tests and known failures
 
 `test/unit/queryStore.corpusParity.test.ts` compares direct core generation with

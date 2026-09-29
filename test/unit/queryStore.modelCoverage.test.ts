@@ -47,13 +47,7 @@ const missing = keys.filter(key => {
 });
 
 describe('QueryModel flat-store property coverage', () => {
-  it('has no unmapped property beyond C10 (including future QueryModel additions)', () => {
-    expect(missing).toEqual(['characteristics', 'trailingFields']);
-  });
-
-  // C10 OPEN: docs/development/technical-debt.md. These are known bugs, not
-  // legitimate exceptions. Remove .fails and the quarantine assertion on fix.
-  it.fails('C10 OPEN: every QueryModel property has mappings in both directions', () => {
+  it('every QueryModel property has mappings in both directions', () => {
     expect(missing).toEqual([]);
   });
 });
