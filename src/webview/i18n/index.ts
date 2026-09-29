@@ -48,6 +48,9 @@ export function localizeDiagnostic(message: string): string {
   if (match) return t('diagnostic.unionColumnCount', { counts: match[1] });
   match = message.match(/^Поле "(.*)" не найдено в "(.*)"$/s);
   if (match) return t('diagnostic.fieldNotFound', { field: match[1], table: match[2] });
+  if (message === 'Сгенерированный текст запроса содержит некорректное выражение; применение заблокировано') {
+    return t('diagnostic.generatedMalformed');
+  }
   if (activeLocale !== 'ru' && /[А-Яа-яЁё]/.test(message)) return t('diagnostic.unknownCoreError');
   return message;
 }

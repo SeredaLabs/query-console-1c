@@ -366,6 +366,7 @@
   "diagnostic.unclosedString": "unclosed string literal",
   "diagnostic.unclosedDate": "unclosed date literal",
   "diagnostic.unsupportedSyntax": "syntax near this position is incomplete or unsupported",
+  "diagnostic.generatedMalformed": "The generated query text contains a malformed expression; applying is blocked",
   "diagnostic.unknownCoreError": "Query analysis failed with an unsupported diagnostic",
   "warning.likeLeadingWildcard": "A LIKE pattern starts with \"%\" and cannot use an index",
   "warning.fullJoin": "A full join can be inefficient because it scans both tables",

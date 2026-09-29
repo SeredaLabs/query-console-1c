@@ -1,4 +1,5 @@
 import { validateBatchText } from '../core/query/validateBatch';
+import { parseBatch } from '../core/query/sdblParser';
 import { findUnsafeVirtualTables, findMalformedCustomExpressions } from '../core/query/semanticValidator';
 import type { MetadataResolver } from '../core/query/metadataResolver';
 import { assembleBatch, type QueryState } from './state/queryStore';
@@ -46,6 +47,13 @@ export type ApplyDecision =
  * tables, fields, duplicate aliases, UNION column counts), so the constructor
  * never writes back a query it would itself refuse to open. Deliberately run
  * on click only, not on every render — it re-parses the whole batch.
+ *
+ * C8: the static malformed-expression check (`findStaticApplyBlocker`) covers the
+ * INPUT model. The generator can still turn a balanced model into text with an
+ * unbalanced custom expression (e.g. a wrapper `)` landing inside a line
+ * comment); the tolerant parser then reparses it by swallowing the following
+ * sections into that expression, so validation alone passes. The same
+ * malformed-expression check therefore also runs on the reparsed output.
  */
 export function decideApply(
   text: string,
@@ -55,5 +63,16 @@ export function decideApply(
 ): ApplyDecision {
   if (!text.trim() || generationError !== null || blocker !== null) return { ok: false, kind: 'blocked' };
   const v = validateBatchText(text, resolver);
-  return v.ok ? { ok: true } : { ok: false, kind: 'invalid', error: v.error };
+  if (!v.ok) return { ok: false, kind: 'invalid', error: v.error };
+  if (findMalformedCustomExpressions(parseBatch(text, resolver)).length > 0) {
+    return { ok: false, kind: 'invalid', error: GENERATED_MALFORMED_EXPRESSION };
+  }
+  return { ok: true };
 }
+
+/**
+ * C8 message: the GENERATED text (not the user's input) contains a malformed
+ * expression. Localized by `localizeDiagnostic` (`diagnostic.generatedMalformed`).
+ */
+export const GENERATED_MALFORMED_EXPRESSION =
+  'Сгенерированный текст запроса содержит некорректное выражение; применение заблокировано';
