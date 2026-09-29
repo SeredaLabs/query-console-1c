@@ -3,6 +3,24 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## 0.1.93 - 2026-09-29
+
+### Fixed
+
+- `ИМЕЮЩИЕ` conditions, fields after tabular-section projections, and
+  `{ХАРАКТЕРИСТИКИ …}` blocks now survive loading, unrelated edits, switching
+  UNION members or batch queries, and saving/reopening in Classic and Canvas.
+  Previously the constructor could apply a query with these parts silently
+  omitted. Existing saved snapshots remain compatible.
+- Apply now rejects generated text containing a malformed expression even when
+  the parser accepts it. This prevents writing a query whose following sections
+  were swallowed into a broken expression.
+- User-entered line comments in JOIN conditions are preserved during generation.
+  Lexically incomplete expressions keep their entered contents instead of being
+  rewritten by fallback scanners.
+- Alias assistance remains available after lexical errors while typing, with
+  recovery confined to the analysis snapshot.
+
 ## 0.1.92 - 2026-09-28
 
 ### Fixed
