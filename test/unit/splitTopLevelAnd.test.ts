@@ -33,17 +33,17 @@ describe('splitTopLevelAnd', () => {
     expect(splitTopLevelAnd('А = 1 // (\nИ Б = 2')).toEqual(['А = 1 // (', 'Б = 2']);
   });
 
-  describe('text the lexer rejects: no throw, former scanner result', () => {
-    for (const [what, expr, expected] of [
-      ['unclosed string', 'А = 1 И Б = "x И', ['А = 1', 'Б = "x И']],
-      ['unclosed date', "А = 1 И Д = 'x И", ['А = 1', "Д = 'x", '']],
-      ['bare &', 'А = & И Б', ['А = &', 'Б']],
-      ['bare #', 'А = # И Б', ['А = #', 'Б']],
-      ['unexpected character', 'А = § И Б', ['А = §', 'Б']],
+  describe('text the lexer rejects: keep the original text unsplit', () => {
+    for (const [what, expr] of [
+      ['unclosed string', 'А = 1 И Б = "x И'],
+      ['unclosed date', "А = 1 И Д = 'x И"],
+      ['bare &', 'А = & И Б'],
+      ['bare #', 'А = # И Б'],
+      ['unexpected character', 'А = § И Б'],
     ] as const) {
       it(what, () => {
         expect(() => splitTopLevelAnd(expr)).not.toThrow();
-        expect(splitTopLevelAnd(expr)).toEqual(expected);
+        expect(splitTopLevelAnd(expr)).toEqual([expr]);
       });
     }
   });

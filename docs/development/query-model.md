@@ -72,5 +72,7 @@ leaves template markers unjudgeable; boolean preservation is currently verified
 by targeted regression truth tables and recorded canonical examples.
 
 Opaque text is intentional, but repeatedly reinterpreting its lexical structure
-is architecture debt (A1). CanonicalToken/ExpressionTokens is a proposed shared
-boundary, not implemented, and does not require replacing the runtime parser.
+is architecture debt (A1). The [expression lexical contract](expression-lexical-contract.md)
+uses existing lexer tokens and explicit unknown results; the first four migrated
+generator operations no longer fall back to independent raw scanners. Other
+consumers remain to be migrated; no runtime parser replacement is required.

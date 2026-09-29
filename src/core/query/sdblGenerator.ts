@@ -6,7 +6,7 @@ import type { BatchDocument } from './batchModel';
 import { parseDocument } from './sdblParser';
 import { resolveAliases, isTabularSectionSource, qualifiedAutoAlias, synthesizedFieldAlias, joinKeyword } from './queryModelUtils';
 import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpression, formatJoinConjunct, normalizeLeafCase, stripNegatedFieldParens, stripNotFieldParens, stripRedundantLeafParens, appendIsNotNullTrailingSpace, renderOperatorRhs, flattenMultilineLeaf, reindentLeafSubquery, reindentLeafCase, reindentLeafBool, wrapBareCastOperand, reprintLeafArithmetic, canonicalizeComparisonOperands, setInlineSubqueryReflow, tightenLeafInOperator } from './exprFormatter';
-import { tokenize } from './sdblLexer';
+import { tokenize, tryTokenize } from './sdblLexer';
 import { parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { BARE_PARAM, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
@@ -175,6 +175,7 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
   if (kind === 'РегистрБухгалтерии') {
     let positions = accountingPositions(slice, v);
     if (!positions.some(p => p !== '') && !v.hadParens) return t.fullName;
+    if (positions.some(p => !tryTokenize(p))) return `${t.fullName}(${positions.join(', ')})`;
     // Автопсевдоним `Поле<2k>` для выражений в DCS-скобках `{(…)}` (как в renderVirtualParams).
     const dcsStateAcc = { k: 0 };
     positions = positions.map(p => (p ? aliasDcsBraceExprs(wrapDcsBraceParam(p), dcsStateAcc) : p));
@@ -185,7 +186,7 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
     // НЕ последней позицией (Обороты-корр), поэтому реиндентируем КАЖДУЮ составную
     // позицию, а не только последнюю. Простые параметры (период, ровные условия `=`/`В`)
     // остаются инлайн.
-    const multiline = positions.some(p => p && (hasTopLevelBooleanOp(p) || (p.includes('\n') && /\(ВЫБРАТЬ/u.test(p))));
+    const multiline = positions.some(p => p && (hasTopLevelBooleanOp(p) === true || (p.includes('\n') && /\(ВЫБРАТЬ/u.test(p))));
     if (multiline) {
       return renderAccountingParams(t.fullName, positions, v.condition ?? '', bodyTabs);
     }
@@ -257,7 +258,7 @@ function wrapDcsBraceParam(text: string): string {
     if (!c.startsWith('&')) return whole;
     if (c.startsWith('(')) return whole;
     // Верхнеуровневая запятая или `КАК` → не одиночный параметр, не трогаем.
-    if (hasTopLevelComma(c) || /(^|[^\p{L}\p{N}_&])КАК([^\p{L}\p{N}_]|$)/iu.test(c)) return whole;
+    if (hasTopLevelComma(c) !== false || /(^|[^\p{L}\p{N}_&])КАК([^\p{L}\p{N}_]|$)/iu.test(c)) return whole;
     return `{(${c})}`;
   });
 }
@@ -283,7 +284,7 @@ function aliasDcsBraceExprs(text: string, state: { k: number }): string {
     // Голый параметр `&Имя` — не нумеруется.
     if (/^&[\p{L}\p{N}_]+$/u.test(innerExpr)) return whole;
     // Список полей DCS (верхнеуровневая запятая) — не наш случай.
-    if (hasTopLevelComma(c)) return whole;
+    if (hasTopLevelComma(c) !== false) return whole;
     state.k += 1;
     return `{${c} КАК Поле${2 * state.k}}`;
   });
@@ -326,6 +327,10 @@ function mergeDcsBraces(text: string): string {
 }
 
 function renderVirtualParams(fullName: string, positions: string[], condition: string, bodyTabs: number): string {
+  // An unknown lexical structure must not authorize DCS/Boolean rewrites.
+  if (!tryTokenize(condition) || positions.some(p => !tryTokenize(p))) {
+    return `${fullName}(${positions.join(', ')})`;
+  }
   // Регистровая нормализация параметров виртуальной таблицы (период, условие):
   // конструктор приводит зарезервированные слова/функции/литералы к ВЕРХНЕМУ
   // регистру и здесь (`Значение(` → `ЗНАЧЕНИЕ(`, `Есть NULL` → `ЕСТЬ NULL`).
@@ -379,7 +384,7 @@ function renderVirtualParams(fullName: string, positions: string[], condition: s
   if (condIsDcsBrace) {
     return `${fullName}(${positions.join(', ')})`;
   }
-  const hasBool = !!condition && hasTopLevelBooleanOp(condition);
+  const hasBool = !!condition && hasTopLevelBooleanOp(condition) === true;
   // Условие-подзапрос (`(поля) В (ВЫБРАТЬ …)`) тоже разносит параметры по строкам,
   // даже без верхнеуровневого И/ИЛИ: конструктор 1С печатает каждый параметр на своей
   // строке, а тело подзапроса перебазирует на base+1 (фаза 6.16, MCP). Признак —
@@ -478,7 +483,7 @@ function renderAccountingParams(fullName: string, positions: string[], _conditio
   // подзапроса — глубже. Простые позиции (период, периодичность) — инлайн на pad.
   const renderPos = (p: string): string => {
     if (!p) return pad;
-    const hasBool = hasTopLevelBooleanOp(p);
+    const hasBool = hasTopLevelBooleanOp(p) === true;
     const text = hasBool
       ? reindentVtCondition(p.trim(), base)
       : (p.includes('\n') && /\(ВЫБРАТЬ/u.test(p) ? reindentLeafSubquery(p.trim(), base + 1) : p.trim());
@@ -952,17 +957,12 @@ function selectionModifiers(selection: QueryModel['selection']): string {
  * границы слов, регистр) берутся из токенов лексера (A1). Здесь остаётся только
  * синтаксическое правило: `И` диапазона `МЕЖДУ a И b` — не булев оператор
  * (фаза 6.15.8). `{…}` глубиной не считается, `ВЫБОР…КОНЕЦ` не отслеживается —
- * как и раньше. Экспортирована для тестов.
+ * как и раньше. Ошибка лексера → undefined (неизвестно, а не false).
+ * Экспортирована для тестов.
  */
-export function hasTopLevelBooleanOp(expr: string): boolean {
-  let tokens;
-  try {
-    tokens = tokenize(expr);
-  } catch {
-    // Лексически незавершённое выражение (ручной ввод): прежний посимвольный
-    // разбор, чтобы не появилось новых исключений и форматирование не менялось.
-    return hasTopLevelBooleanOpRaw(expr);
-  }
+export function hasTopLevelBooleanOp(expr: string): boolean | undefined {
+  const tokens = tryTokenize(expr);
+  if (!tokens) return undefined;
   let depth = 0;
   let betweenPending = 0;
   for (const t of tokens) {
@@ -979,41 +979,6 @@ export function hasTopLevelBooleanOp(expr: string): boolean {
     else if (word === 'И') {
       if (betweenPending > 0) betweenPending--;
       else return true;
-    }
-  }
-  return false;
-}
-
-/**
- * Прежний посимвольный вариант `hasTopLevelBooleanOp` — только для выражений,
- * которые лексер не принимает. Не использовать для других целей.
- */
-function hasTopLevelBooleanOpRaw(expr: string): boolean {
-  const n = expr.length;
-  const isWordChar = (c: string | undefined): boolean => c !== undefined && /[\p{L}\p{N}_]/u.test(c);
-  let depth = 0;
-  let inStr = false;
-  let betweenPending = 0;
-  for (let i = 0; i < n; i++) {
-    const c = expr[i];
-    if (inStr) {
-      if (c === '"') inStr = false;
-      continue;
-    }
-    if (c === '"') { inStr = true; continue; }
-    if (c === '(') { depth++; continue; }
-    if (c === ')') { depth--; continue; }
-    if (depth !== 0) continue;
-    // Граница слова на глубине 0: проверяем И и ИЛИ (регистронезависимо).
-    // `И` диапазона `МЕЖДУ a И b` — не булев оператор (фаза 6.15.8).
-    if (!blocksKeywordStart(expr[i - 1])) {
-      const up = expr.slice(i, i + 6).toUpperCase();
-      if (up.startsWith('МЕЖДУ') && !isWordChar(expr[i + 5])) { betweenPending++; continue; }
-      if (up.startsWith('ИЛИ') && !isWordChar(expr[i + 3])) return true;
-      if (expr[i].toUpperCase() === 'И' && !isWordChar(expr[i + 1])) {
-        if (betweenPending > 0) { betweenPending--; continue; }
-        return true;
-      }
     }
   }
   return false;
@@ -1118,24 +1083,24 @@ function renderArbitraryConjunct(expr: string, depth = 0, caseEndBase?: number, 
  * ПЕРЕД кортеж (как печатает конструктор 1С). Срабатывает СТРОГО когда выражение
  * НАЧИНАЕТСЯ с охватывающего кортежа `(…)` с верхнеуровневой запятой, за которым
  * сразу следует `НЕ В` (или `НЕ В ИЕРАРХИИ`). Иначе текст без изменений.
+ * Парную скобку ищем по токенам; при ошибке лексера текст не меняем.
+ * Экспортирована для тестов.
  */
-function moveNotBeforeTuple(text: string): string {
+export function moveNotBeforeTuple(text: string): string {
   if (text[0] !== '(') return text;
-  // Закрывающая скобка кортежа.
-  let depth = 0;
-  let inStr = false;
+  const tokens = tryTokenize(text);
+  if (!tokens) return text;
   let close = -1;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inStr) { if (c === '"') inStr = false; continue; }
-    if (c === '"') { inStr = true; continue; }
-    if (c === '(') depth++;
-    else if (c === ')') { depth--; if (depth === 0) { close = i; break; } }
+  let depth = 0;
+  for (const t of tokens) {
+    if (t.type !== 'punct') continue;
+    if (t.value === '(') depth++;
+    else if (t.value === ')') { depth--; if (depth === 0) { close = t.pos; break; } }
   }
   if (close < 0) return text;
   const tuple = text.slice(0, close + 1);
   // Кортеж = скобка с верхнеуровневой запятой (а не группировка/вызов).
-  if (!hasTopLevelComma(text.slice(1, close))) return text;
+  if (hasTopLevelComma(text.slice(1, close)) !== true) return text;
   const rest = text.slice(close + 1);
   const m = /^\s+НЕ\s+(В)(\s+ИЕРАРХИИ)?(?![\p{L}\p{N}_])/u.exec(rest);
   if (!m) return text;
@@ -1143,17 +1108,21 @@ function moveNotBeforeTuple(text: string): string {
   return `НЕ ${tuple} В${m[2] ?? ''}${tail}`;
 }
 
-/** Есть ли запятая на ВЕРХНЕМ уровне скобок/строк (признак списка/кортежа). */
-function hasTopLevelComma(text: string): boolean {
+/**
+ * Есть ли запятая вне круглых скобок (признак списка/кортежа).
+ * Строки, даты и комментарии распознаёт лексер; фигурные и квадратные скобки,
+ * как и раньше, глубиной не считаются. Экспортирована для тестов (A1).
+ * Ошибка лексера → undefined (неизвестно, а не false).
+ */
+export function hasTopLevelComma(text: string): boolean | undefined {
+  const tokens = tryTokenize(text);
+  if (!tokens) return undefined;
   let depth = 0;
-  let inStr = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inStr) { if (c === '"') inStr = false; continue; }
-    if (c === '"') { inStr = true; continue; }
-    if (c === '(') depth++;
-    else if (c === ')') depth--;
-    else if (c === ',' && depth === 0) return true;
+  for (const t of tokens) {
+    if (t.type !== 'punct') continue;
+    if (t.value === '(') depth++;
+    else if (t.value === ')') depth--;
+    else if (t.value === ',' && depth === 0) return true;
   }
   return false;
 }
@@ -1184,7 +1153,7 @@ function stripLeadingNotOperandParens(text: string): string {
         const inner = text.slice(open + 1, i).trim();
         // Список (`НЕ (a, b)`) или булева цепочка (`НЕ (a И b)`) — НЕ снимаем: смысл/
         // раскладка изменятся (такие конъюнкты обычно идут отдельным сложным путём).
-        if (hasTopLevelComma(inner) || hasTopLevelBooleanOp(inner)) return text;
+        if (hasTopLevelComma(inner) !== false || hasTopLevelBooleanOp(inner) !== false) return text;
         return `НЕ ${inner}`;
       }
     }
@@ -1222,6 +1191,8 @@ function renderJoinConjuncts(conditions: NonNullable<Join['conditions']>, aliase
       const ra = aliases.get(c.rightTableId ?? '') ?? c.rightTableId ?? '';
       const op = c.operator ?? '=';
       sub = [`${la}.${c.leftPath ?? ''} ${op} ${ra}.${c.rightPath ?? ''}`];
+    } else if (!tryTokenize(c.expression ?? '')) {
+      sub = [c.expression ?? ''];
     } else if (hasLineComment(c.expression ?? '')) {
       // A user-authored line comment: verbatim, never split or reformatted.
       sub = wrapJoinConjunctCommentSafe(c.expression ?? '').split('\n');
@@ -1258,16 +1229,11 @@ function renderJoinConjuncts(conditions: NonNullable<Join['conditions']>, aliase
  * Лексические факты (строки, даты, комментарии, параметры `&И`, имена `#И`,
  * границы слов, регистр) берутся из токенов лексера (A1); синтаксическое правило
  * `МЕЖДУ … И` остаётся здесь. Экспортирована для тестов.
+ * При ошибке лексера возвращаем один исходный фрагмент без trim.
  */
 export function splitTopLevelAnd(expr: string): string[] {
-  let tokens;
-  try {
-    tokens = tokenize(expr);
-  } catch {
-    // Лексически незавершённое выражение (ручной ввод): прежний посимвольный
-    // разбор, чтобы не появилось новых исключений и форматирование не менялось.
-    return splitTopLevelAndRaw(expr);
-  }
+  const tokens = tryTokenize(expr);
+  if (!tokens) return [expr];
   const parts: string[] = [];
   let depth = 0;
   let betweenPending = 0;
@@ -1285,39 +1251,6 @@ export function splitTopLevelAnd(expr: string): string[] {
       if (betweenPending > 0) { betweenPending--; continue; }
       parts.push(expr.slice(start, t.pos).trim());
       start = t.pos + t.text.length;
-    }
-  }
-  parts.push(expr.slice(start).trim());
-  return parts;
-}
-
-/**
- * Прежний посимвольный вариант `splitTopLevelAnd` — только для выражений,
- * которые лексер не принимает. Не использовать для других целей.
- */
-function splitTopLevelAndRaw(expr: string): string[] {
-  const n = expr.length;
-  const isWordChar = (c: string | undefined): boolean => c !== undefined && /[\p{L}\p{N}_]/u.test(c);
-  const parts: string[] = [];
-  let depth = 0;
-  let inStr = false;
-  let betweenPending = 0;
-  let start = 0;
-  for (let i = 0; i < n; i++) {
-    const c = expr[i];
-    if (inStr) { if (c === '"') inStr = false; continue; }
-    if (c === '"') { inStr = true; continue; }
-    if (c === '(') { depth++; continue; }
-    if (c === ')') { depth--; continue; }
-    if (depth !== 0) continue;
-    if (!blocksKeywordStart(expr[i - 1])) {
-      const up = expr.slice(i, i + 5).toUpperCase();
-      if (up.startsWith('МЕЖДУ') && !isWordChar(expr[i + 5])) { betweenPending++; continue; }
-      if (expr[i].toUpperCase() === 'И' && !isWordChar(expr[i + 1])) {
-        if (betweenPending > 0) { betweenPending--; continue; }
-        parts.push(expr.slice(start, i).trim());
-        start = i + 1;
-      }
     }
   }
   parts.push(expr.slice(start).trim());
@@ -1346,7 +1279,7 @@ function expandAndChainConjuncts(conditions: NonNullable<Join['conditions']>): N
   const out: NonNullable<Join['conditions']> = [];
   for (const c of conditions) {
     const e = (c.expression ?? '').trim();
-    if (c.custom && e && !hasLineComment(e) && hasTopLevelBooleanOp(e) && !/(^|[^\p{L}\p{N}_&])(ИЛИ|ВЫБОР)([^\p{L}\p{N}_]|$)/iu.test(e)) {
+    if (c.custom && e && !hasLineComment(e) && hasTopLevelBooleanOp(e) === true && !/(^|[^\p{L}\p{N}_&])(ИЛИ|ВЫБОР)([^\p{L}\p{N}_]|$)/iu.test(e)) {
       const parts = splitTopLevelAnd(e);
       if (parts.length > 1) {
         // Помечаем пьесы как полученные расщеплением И-цепочки (фаза 6.16.78):
@@ -1368,7 +1301,7 @@ function expandAndChainConjuncts(conditions: NonNullable<Join['conditions']>): N
 function conjunctNeedsComplexFormat(c: NonNullable<Join['conditions']>[number]): boolean {
   if (!c.custom) return false;
   const e = (c.expression ?? '').trim();
-  return hasTopLevelBooleanOp(e) || needsFormatting(e);
+  return hasTopLevelBooleanOp(e) === true || needsFormatting(e);
 }
 
 /**
@@ -1415,6 +1348,8 @@ function renderJoinCondition(join: Join, aliases: Map<string, string>, depth = 0
     return renderJoinConjuncts(join.conditions, aliases, depth, poOwnLine, join.parenthesized ?? true);
   }
   if (join.custom) {
+    const original = join.expression ?? '';
+    if (!tryTokenize(original)) return poOwnLine ? `${'\t'.repeat(3 + depth)}${original}` : original;
     // Составное условие (верхнеуровневый И/ИЛИ) или структура (ИЛИ/ВЫБОР) —
     // переотрисовываем форматером (фаза 6.10); внешние скобки тут НЕ ставятся,
     // они уже распределены по подконъюнктам (`(a) И (b)`).
@@ -1425,7 +1360,7 @@ function renderJoinCondition(join: Join, aliases: Map<string, string>, depth = 0
       const body = wrapJoinConjunctCommentSafe(expr);
       return poOwnLine ? `${'\t'.repeat(3 + depth)}${body}` : body;
     }
-    if (hasTopLevelBooleanOp(expr)) return formatExpression(expr, 'join');
+    if (hasTopLevelBooleanOp(expr) === true) return formatExpression(expr, 'join');
     if (needsFormatting(expr)) return formatExpression(expr, 'join');
     // Одиночное произвольное условие. Решение о внешних скобках (фаза 6.12):
     //  - конструктор СОХРАНЯЕТ скобки, если разработчик обернул всё во вводе
@@ -1629,12 +1564,12 @@ function builderBlock(keyword: string, fields: BuilderField[]): string[] {
     // вложенные группы И/ИЛИ отбиваются по глубине скобок). Гейт узкий: условие, есть
     // перенос строки, есть верхнеуровневый булев оператор, нет ВЫБОР/подзапроса (фаза 6.16).
     const isMultilineBool = !isMultilineCase && f.condition && f.ref.includes('\n') &&
-      hasTopLevelBooleanOp(f.ref) &&
+      hasTopLevelBooleanOp(f.ref) === true &&
       !/(?:^|[^\p{L}\p{N}_&])(?:ВЫБОР|ВЫБРАТЬ)(?:[^\p{L}\p{N}_]|$)/u.test(f.ref) &&
       // Группа `НЕ(…)` несёт лишний +1 (НЕ — отдельный уровень), который reindentLeafBool
       // НЕ учитывает; такие условия не реиндентируем (оставляем геометрию как есть).
       !/(?:^|[^\p{L}\p{N}_&])НЕ\s*\(/u.test(f.ref);
-    const ref = isMultilineCase
+    const ref = !tryTokenize(f.ref) ? f.ref : isMultilineCase
       ? reindentLeafCase(normalizeLeafCase(f.ref), 2)
       : isMultilineBool
         // Условие построителя оборачивается ещё одной парой `(…)` ниже (render), чья
@@ -3106,6 +3041,10 @@ function buildConditionStrings(
     // рендерится структурным путём ниже (многострочный перенос подзапроса);
     // заданное пользователем expression имеет приоритет.
     if (c.custom && ((c.expression ?? '').trim() || !c.subquery)) {
+      if (!tryTokenize(c.expression ?? '')) {
+        conds.push(c.expression ?? '');
+        continue;
+      }
       // `(a, b) НЕ В …` → `НЕ (a, b) В …` (фаза 6.16.59): конструктор 1С печатает
       // отрицание членства КОРТЕЖА с `НЕ` ПЕРЕД кортежем, а не между кортежем и `В`.
       // Ведущее `НЕ` подхватывает reindentLeafSubquery (+1 к отступу подзапроса) —

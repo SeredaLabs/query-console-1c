@@ -2,7 +2,7 @@
  * A1, first slice: `hasTopLevelBooleanOp` takes its lexical facts from lexer
  * tokens. Pinned behavior, including the accepted fixes over the former raw
  * scanner (И/ИЛИ inside comments, date literals and `#`-names are not
- * operators) and the fallback for text the lexer rejects.
+ * operators). Lexer-rejected text has an explicitly unknown result.
  */
 import { describe, it, expect } from 'vitest';
 import { hasTopLevelBooleanOp } from '../../src/core/query/sdblGenerator';
@@ -44,18 +44,18 @@ describe('hasTopLevelBooleanOp', () => {
     });
   }
 
-  describe('text the lexer rejects: no throw, former scanner result', () => {
-    for (const [what, expr, expected] of [
-      ['unclosed string', 'А = "x И', false],
-      ['unclosed string after an operator', 'А = 1 И Б = "x', true],
-      ['unclosed date', "Д = 'x И", true],
-      ['bare &', 'А = & И Б', true],
-      ['bare #', 'А = # И Б', true],
-      ['unexpected character', 'А = § И Б', true],
+  describe('text the lexer rejects: unknown, never a negative fact', () => {
+    for (const [what, expr] of [
+      ['unclosed string', 'А = "x И'],
+      ['unclosed string after an operator', 'А = 1 И Б = "x'],
+      ['unclosed date', "Д = 'x И"],
+      ['bare &', 'А = & И Б'],
+      ['bare #', 'А = # И Б'],
+      ['unexpected character', 'А = § И Б'],
     ] as const) {
       it(what, () => {
         expect(() => hasTopLevelBooleanOp(expr)).not.toThrow();
-        expect(hasTopLevelBooleanOp(expr)).toBe(expected);
+        expect(hasTopLevelBooleanOp(expr)).toBeUndefined();
       });
     }
   });

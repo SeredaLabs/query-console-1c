@@ -33,6 +33,12 @@ No current item is promoted to P0 solely because Stage 0 used that label.
 | C6 · OPEN · P3 | Cosmetic JOIN idempotence: `booleanGroupingSemantics.test.ts` explicitly exempts two shapes from text equality on pass two; both passes pass truth-table checks. | A1 → bounded canonical-layout task; no semantic-corruption claim. |
 | C8 · CLOSED · P1 | Apply safety: static malformed-expression checks covered the input model, but generated output could reparse successfully while swallowing later sections into an unbalanced opaque expression; Apply now applies the same malformed-expression guard to reparsed generated output (`decideApply`, shared by Classic and Canvas). Known trigger: a manually entered JOIN conjunct ending in a `//` comment, whose wrapper `)` lands inside the comment. Regressions in `applyGeneratedOutput.test.ts`; corpus probe 0 new blockers (1976 × with/without resolver). | No valid-but-semantically-different output was reproduced during the audit; that is not proven impossible. Broader structural equivalence stays V3. The comment rendering that triggers it is a separate issue. |
 
+Additional correctness finding **C9 · OPEN · P1**: the flat webview store omits
+top-level `QueryModel.having` in both `modelToFlat` and `buildModelFromFlat`.
+`LOAD_BATCH → assembleBatch` loses HAVING even with GROUP BY. This predates the
+A1 lexical-contract change and needs a separate store-preservation fix with
+load/edit/save coverage; see [reproduction and evidence limits](expression-lexical-contract.md).
+
 ## Architecture
 
 | ID / status / severity | Area, evidence and impact | Dependency → next action |
@@ -40,6 +46,13 @@ No current item is promoted to P0 solely because Stage 0 used that label.
 | A1 · OPEN · P1 | `sdblLexer.Token` (with `sdblKeywordSets`) is already the shared lexical foundation: lexical identity, original spelling, position, atomic parameters. Duplication starts after lexing. Raw character/regex expression scanners exist in `sdblGenerator` (~12) and in `exprFormatter` (~12, besides its justified Boolean/arithmetic trees). Several consumers re-decide contextual-word and token roles (`(ident\|\|keyword) && value ===` checks, five local `isWord`-like helpers). `inferUndefinedTempTables` scans raw text by regex (A1+A2). RP13/grouping/RP14 needed coordinated fixes. | Incremental only: replace one raw scanner at a time with a `Token[]`-based one, byte-identical output. Canonical word identity (including future RU/EN for C2) gets one source of truth in shared token predicates, not a new token layer. No expression AST, no parser rewrite. |
 | A2 · OPEN · P2 | Three temp-table models remain. Parser/designer use head fields; semantic schema uses all ordered select elements. Projection + trailing-field probe expands `В.*` to `Ссылка` while semantic schema contains `Ссылка, Товары, Код`. | Live projection/schema oracle → shared lifetime and producer-column facts. Keep incremental registry, undefined-temp inference and parser-local literal typing separate. |
 | A3 · PARTIAL · P2 | Expression type inference: single resolved field types exist; arbitrary-expression types remain unknown. The former independent token-walker plan is STALE and absorbed into A1's contract design. | A1 + capability to obtain real result types → display-only inference over shared representation; no separate grammar or automatic expression AST. |
+
+A1 migration evidence: [A1.3 — top-level comma detection](audits/a1-comma-2026-09-29.md).
+[A1.4 — tuple closing-parenthesis search](audits/a1-tuple-2026-09-29.md) continues
+the token migration. These bounded slices do not close A1.
+Their temporary raw fallbacks have now been removed under the
+[expression lexical contract](expression-lexical-contract.md): one lexer,
+explicit unknown facts, and preservation of lexically incomplete expressions.
 
 A2 remains a required follow-up, not optional cleanup. Its exit gate is one
 owner for designer/semantic lifetimes and one producer-column function used by

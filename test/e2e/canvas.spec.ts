@@ -57,6 +57,23 @@ test.describe('Classic / Canvas browser parity', () => {
 });
 
 test.describe('Canvas editing and save guards', () => {
+  test('incomplete lexical input survives editing and blocks Save until corrected', async ({ page }) => {
+    await open(page, 'canvas', query);
+    await page.getByRole('button', { name: /Условия$/ }).click();
+    const editor = page.locator('textarea:visible');
+    for (const expression of ['В.Код = & И В.Наименование = "x"', 'В.Код = "unfinished', 'НЕ (В.Код = §)']) {
+      await editor.fill(expression);
+      await expect(editor).toHaveValue(expression);
+      await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toBeDisabled();
+      await page.getByRole('button', { name: /Поля$/ }).click();
+      await page.getByRole('button', { name: /Условия$/ }).click();
+      await expect(editor).toHaveValue(expression);
+      expect(await insertions(page)).toEqual([]);
+    }
+    await editor.fill('В.Код = &Исправлено');
+    expect(await save(page, 'canvas')).toContain('В.Код = &Исправлено');
+  });
+
   test('edits alias, condition and sorting through Canvas controls; Classic reopens the result', async ({ page }) => {
     await open(page, 'canvas', query);
     await page.getByRole('button', { name: /Поля$/ }).click();

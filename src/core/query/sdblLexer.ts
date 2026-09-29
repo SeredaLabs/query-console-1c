@@ -318,6 +318,21 @@ export class SdblLexError extends Error {
   }
 }
 
+/**
+ * Strict lexical facts for optional expression transformations. Undefined means
+ * unknown, never an empty token stream or a negative structural fact. Consumers
+ * must preserve the original expression when a transformation cannot be proven.
+ * Unlike IDE recovery, this does not repair, mask or partially tokenize input.
+ */
+export function tryTokenize(text: string, opts?: { comments?: boolean }): Token[] | undefined {
+  try {
+    return tokenize(text, opts);
+  } catch (error) {
+    if (error instanceof SdblLexError) return undefined;
+    throw error;
+  }
+}
+
 function lexError(message: string, line: number, col: number, pos: number, extent: SdblLexError['extent']): Error {
   return new SdblLexError(`Лексическая ошибка ${line}:${col} — ${message}`, pos, extent);
 }
