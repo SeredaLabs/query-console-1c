@@ -376,5 +376,10 @@
   "diagnostic.commentLoss": "The constructor cannot preserve all comments in this query. Saving will remove some comments. Continue? The original editor text remains unchanged until you save.",
   "dialog.commentLoss.title": "Some comments cannot be preserved",
   "dialog.commentLoss.continue": "Continue with comment loss",
-  "dialog.commentLoss.more": "{count} more"
+  "dialog.commentLoss.more": "{count} more",
+  "designer.mode.label": "Designer mode",
+  "designer.mode.classic": "Classic mode",
+  "designer.mode.canvas": "Canvas",
+  "designer.mode.blocked": "Cannot switch the designer mode: {reason}",
+  "designer.mode.commentLoss": "switching would lose comments in this query"
 }

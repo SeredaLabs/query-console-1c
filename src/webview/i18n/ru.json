@@ -376,5 +376,10 @@
   "diagnostic.commentLoss": "Конструктор не может сохранить все комментарии этого запроса. При сохранении часть комментариев будет потеряна. Продолжить? Исходный текст редактора не изменяется до сохранения.",
   "dialog.commentLoss.title": "Часть комментариев невозможно сохранить",
   "dialog.commentLoss.continue": "Продолжить с потерей комментариев",
-  "dialog.commentLoss.more": "Ещё {count}"
+  "dialog.commentLoss.more": "Ещё {count}",
+  "designer.mode.label": "Режим конструктора",
+  "designer.mode.classic": "Классический режим",
+  "designer.mode.canvas": "Канвас",
+  "designer.mode.blocked": "Невозможно переключить режим конструктора: {reason}",
+  "designer.mode.commentLoss": "переключение потеряет комментарии этого запроса"
 }

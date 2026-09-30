@@ -7,14 +7,14 @@ const ROOT = path.resolve(__dirname, '../..');
 describe('Query Designer panel icon', () => {
   it('keeps the editor-tab icon only when the webview has no inline title icon', () => {
     const panelSource = fs.readFileSync(path.join(ROOT, 'src/extension/panel.ts'), 'utf8');
-    const canvasSource = fs.readFileSync(path.join(ROOT, 'src/extension/canvasPanel.ts'), 'utf8');
-
-    expect(panelSource).toContain('if (kind.hasInlineTitleIcon) {');
+    // The icon follows the UI currently loaded in the panel (`current`), which the
+    // Classic/Canvas toggle can change; both UI kinds are described in panel.ts.
+    expect(panelSource).toContain('if (current.hasInlineTitleIcon) {');
     expect(panelSource).toContain("'transparent.svg'");
     expect(panelSource).toContain('panel.iconPath = {');
     expect(panelSource).toContain("'query-builder-schema-light.svg'");
     expect(panelSource).toContain("'query-builder-schema-dark.svg'");
-    expect(canvasSource).toContain('hasInlineTitleIcon: true');
+    expect(panelSource).toMatch(/script: 'canvasApp\.js',\s*hasInlineTitleIcon: true,/);
   });
 
   it.each(['light', 'dark'])('keeps the %s asset small, vector and text-free', theme => {

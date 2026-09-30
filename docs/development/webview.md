@@ -11,7 +11,21 @@ The host sends `init`, `metadataTree`, `refFields`, `refreshResult`, and
 `loadModel` through `src/shared/messages.ts`. **loadModel carries source text**;
 `useDesignerSession` parses/validates it locally before loading shared state.
 Generation is local. Outgoing messages are `ready`, `expandRef`, `insertText`,
-`cancel`, and `refreshCache`; there is no model/selection/apply message type.
+`cancel`, `refreshCache`, and `switchDesigner`; there is no model/selection/apply
+message type.
+
+`switchDesigner` is the Classic/Canvas toggle. It carries the target UI and the
+current model's generated text, like the text `insertText` would carry but
+without writing it. The host reloads the **same panel** with the other bundle and
+opens that text through the ordinary `loadModel` path; the editor binding and
+its stale-document guards, metadata and window stay. Both UIs send it only after
+`prepareDesignerSwitch` confirms the text reopens through the designer-open gate
+without loss; otherwise the current UI keeps its state and shows why. UI-local
+state (active tab, selection, canvas layout) is not carried. Canvas is offered
+only while it is available as a preview (`init.canvasAvailable`, from
+`queryConsole.enableNewBuilderPreview`). The separate Canvas command is
+transitional; removing it leaves the toggle unchanged (`designerKind` in
+`panel.ts`).
 
 Classic handles refresh and lazy reference-field responses. Canvas uses initial
 metadata but has no corresponding assisted controls/response wiring yet (UX-C8).

@@ -22,6 +22,7 @@ import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
 import { CodeEditor } from './CodeEditor';
 import { IconButton } from './IconButton';
 import { CommentLossDialog } from './CommentLossDialog';
+import { DesignerModeToggle } from './DesignerModeToggle';
 import type { BatchDocument } from '../../core/query/batchModel';
 import { QueryTextDialog } from './QueryTextDialog';
 import type { VirtualParams } from '../../core/query/queryModel';
@@ -60,15 +61,21 @@ export interface ConstructorViewProps {
   onSetPreserveComments?: (value: boolean) => void;
   /** Стадия 1 плана «Текст запроса v2» — см. queryConsole.queryTextEditorV2. */
   queryTextEditorV2?: boolean;
+  /** Top-level designer only: Classic/Canvas toggle. `onSwitch` returns why the
+   * switch was refused (the current state is kept), or null once requested. */
+  designerSwitch?: { onSwitch: () => string | null; disabled?: boolean };
 }
 
 export function ConstructorView(props: ConstructorViewProps): React.ReactElement {
   const {
-    state, dispatch, onExpandRef, onOk, onCancel, okDisabled, okError, nested,
+    state, dispatch, onExpandRef, onOk, onCancel, okDisabled, okError, nested, designerSwitch,
     refreshState, onRefreshCache, preserveComments, onSetPreserveComments, queryTextEditorV2,
   } = props;
   const [activeTab, setActiveTab] = useState('Таблицы и поля');
   const [queryModalText, setQueryModalText] = useState<string | null>(null);
+  const [switchError, setSwitchError] = useState<string | null>(null);
+  // A refused switch explains the current state; any edit makes it stale.
+  React.useEffect(() => { setSwitchError(null); }, [state]);
   const [commentLoss, setCommentLoss] = useState<{ doc: BatchDocument; lost: string[] } | null>(null);
   const [queryModalError, setQueryModalError] = useState<string | null>(null);
   const [vtDialogTableId, setVtDialogTableId] = useState<string | null>(null);
@@ -620,6 +627,13 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
       {/* Bottom bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderTop: '1px solid var(--qc-border)', flexShrink: 0 }}>
         <button style={BTN_SECONDARY} onClick={handleShowQuery}>{t('common.query')}</button>
+        {designerSwitch && (
+          <DesignerModeToggle
+            active="classic"
+            disabled={designerSwitch.disabled}
+            onSwitch={() => setSwitchError(designerSwitch.onSwitch())}
+          />
+        )}
         {okError != null && (
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, color: 'var(--vscode-errorForeground, #f44747)', fontSize: 12 }}>
             <span className="codicon codicon-error" style={{ fontSize: 14, flexShrink: 0 }} />
@@ -628,9 +642,17 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
             </span>
           </span>
         )}
+        {switchError != null && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, color: 'var(--vscode-errorForeground, #f44747)', fontSize: 12 }}>
+            <span className="codicon codicon-error" style={{ fontSize: 14, flexShrink: 0 }} />
+            <span data-testid="designer-switch-error" role="alert" style={{ minWidth: 0 }}>
+              {switchError}
+            </span>
+          </span>
+        )}
         <div style={{ flex: 1 }} />
-        <button style={{ ...BTN, opacity: okDisabled ? 0.5 : 1 }} disabled={okDisabled} onClick={onOk}>{t('actions.ok')}</button>
         <button style={BTN_SECONDARY} onClick={onCancel}>{t('actions.cancel')}</button>
+        <button style={{ ...BTN, opacity: okDisabled ? 0.5 : 1 }} disabled={okDisabled} onClick={onOk}>{t('actions.ok')}</button>
       </div>
 
       {/* Virtual table params modal */}

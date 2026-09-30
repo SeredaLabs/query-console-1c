@@ -9,6 +9,7 @@ import { computeBatchTextSafe } from './computeBatchText';
 import { findStaticApplyBlocker, decideApply } from './applyGate';
 import { BTN } from './sharedStyles';
 import { localizeDiagnostic, setLocale, t } from './i18n';
+import { prepareDesignerSwitch } from './designerSwitch';
 
 export type RefreshState = 'idle' | 'loading' | { ok: boolean; message: string };
 
@@ -23,6 +24,8 @@ export function App(): React.ReactElement {
   // Стадия 1 плана «Текст запроса v2» — прокидывается хостом из настройки
   // `queryConsole.queryTextEditorV2` (по умолчанию выключено).
   const [queryTextEditorV2, setQueryTextEditorV2] = useState(false);
+  // Canvas is an opt-in preview; the host says whether the toggle may offer it.
+  const [canvasAvailable, setCanvasAvailable] = useState(false);
   // Лише примусовий ре-рендер при зміні локалі (повідомлення рахуються в рендері).
   const [, setLocaleRevision] = useState(0);
   // Сессия с хостом (ready → metadataTree → loadModel, загрузка/ошибка открытия) —
@@ -37,6 +40,7 @@ export function App(): React.ReactElement {
         setLocaleRevision(revision => revision + 1);
       }
       setQueryTextEditorV2(msg.queryTextEditorV2);
+      setCanvasAvailable(msg.canvasAvailable === true);
     } else if (msg.type === 'refFields') {
       dispatch({ type: 'SET_REF_FIELDS', ref: msg.ref, fields: msg.fields });
     } else if (msg.type === 'refreshResult') {
@@ -107,6 +111,15 @@ export function App(): React.ReactElement {
           handleInsert(batchText);
         }}
         onCancel={handleCancel}
+        designerSwitch={canvasAvailable ? {
+          disabled: commentLossPending || loadError != null,
+          onSwitch: () => {
+            const prepared = prepareDesignerSwitch(state, buildResolver());
+            if (!prepared.ok) return prepared.error;
+            postToHost({ type: 'switchDesigner', target: 'canvas', text: prepared.text });
+            return null;
+          },
+        } : undefined}
         okDisabled={commentLossPending || !batchText.trim() || generationError !== null || unsafeVtError !== null || malformedCustomError !== null}
         okError={generationError ? t('constructor.generationError', { error: localizeDiagnostic(generationError) }) : (unsafeVtError ?? malformedCustomError ?? (okError && localizeDiagnostic(okError)))}
       />

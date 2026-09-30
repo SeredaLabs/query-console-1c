@@ -27,7 +27,8 @@
           if (msg.type === 'ready') {
             setTimeout(function() {
               window.dispatchEvent(new MessageEvent('message', {
-                data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: false, locale: locale }
+                data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: false, locale: locale,
+                  canvasAvailable: new URLSearchParams(location.search).get('canvas') === '1' }
               }));
               window.dispatchEvent(new MessageEvent('message', {
                 data: {

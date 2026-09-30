@@ -8,10 +8,11 @@ import { setMetadataResolver } from './metadataResolverCache';
 import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
 import { insertResult } from './insertResult';
 import type { SavedEditorState } from './insertResult';
-import type { HostMsg, WebviewMsg } from '../shared/messages';
+import type { DesignerMode, HostMsg, WebviewMsg } from '../shared/messages';
 import type { MetadataModel } from '../core/metadata/types';
 import { normalizeLocale } from '../shared/locale';
 import { moveDesignerToCompactWindow } from './designerWindow';
+import { isCanvasPreviewEnabled } from './canvasPreview';
 
 function nonce(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -36,6 +37,7 @@ function getHtml(webview: vscode.Webview, scriptUri: vscode.Uri, codiconCssUri: 
 
 /** What differs between the Classic designer and the Canvas preview panels. */
 export interface DesignerPanelKind {
+  mode: DesignerMode;
   viewType: string;
   /** Already localized panel/tab title. */
   title: string;
@@ -47,6 +49,33 @@ export interface DesignerPanelKind {
   queryTextEditorV2: () => boolean;
 }
 
+/** The two designer UIs served by one panel host; `switchDesigner` swaps them in place. */
+export function designerKind(mode: DesignerMode): DesignerPanelKind {
+  return mode === 'canvas'
+    ? {
+      mode,
+      viewType: '1c.queryConstructorCanvas',
+      title: vscode.l10n.t('1C: Query Builder (Preview)'),
+      script: 'canvasApp.js',
+      hasInlineTitleIcon: true,
+      queryTextEditorV2: () => false,
+    }
+    : {
+      mode,
+      viewType: '1c.queryConstructor',
+      title: vscode.l10n.t('1C: Query Designer'),
+      script: 'main.js',
+      queryTextEditorV2: () => vscode.workspace.getConfiguration('queryConsole').get<boolean>('queryTextEditorV2', false),
+    };
+}
+
+/** Canvas is an opt-in preview: the same condition as its command-palette entry,
+ * plus the development-host switch. */
+function isCanvasAvailable(context: vscode.ExtensionContext): boolean {
+  return vscode.workspace.getConfiguration('queryConsole').get<boolean>('enableNewBuilderPreview', false)
+    || isCanvasPreviewEnabled(context.extensionMode === vscode.ExtensionMode.Development);
+}
+
 export function createPanel(
   context: vscode.ExtensionContext,
   cfPath: string,
@@ -54,12 +83,7 @@ export function createPanel(
   savedEditor?: SavedEditorState,
   initialQueryText?: string
 ): vscode.WebviewPanel {
-  return createDesignerPanel(context, cfPath, channel, {
-    viewType: '1c.queryConstructor',
-    title: vscode.l10n.t('1C: Query Designer'),
-    script: 'main.js',
-    queryTextEditorV2: () => vscode.workspace.getConfiguration('queryConsole').get<boolean>('queryTextEditorV2', false),
-  }, savedEditor, initialQueryText);
+  return createDesignerPanel(context, cfPath, channel, designerKind('classic'), savedEditor, initialQueryText);
 }
 
 /**
@@ -87,24 +111,31 @@ export function createDesignerPanel(
       retainContextWhenHidden: true,
     }
   );
-  // Canvas already renders this identity mark inside its document bar. VS Code
-  // otherwise adds either our icon or its generic webview icon to the editor
-  // tab, leaving two visible glyphs whenever compact mode is disabled. Keep its
-  // tab icon intentionally transparent; Classic has no inline identity mark and
-  // therefore keeps the themed editor-tab icon.
-  if (kind.hasInlineTitleIcon) {
-    panel.iconPath = vscode.Uri.joinPath(context.extensionUri, 'assets', 'images', 'transparent.svg');
-  } else {
-    panel.iconPath = {
-      light: vscode.Uri.joinPath(context.extensionUri, 'assets', 'images', 'query-builder-schema-light.svg'),
-      dark: vscode.Uri.joinPath(context.extensionUri, 'assets', 'images', 'query-builder-schema-dark.svg'),
-    };
-  }
-
-  const scriptUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', kind.script);
-  const codiconCssUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', 'codicon.css');
-  const n = nonce();
-  panel.webview.html = getHtml(panel.webview, scriptUri, codiconCssUri, n, kind.title);
+  // The UI currently loaded in this panel and the query it opens on `ready`.
+  // `switchDesigner` replaces both; the editor binding (`savedEditor`), metadata
+  // and message bridge stay the same, so Save keeps its stale-document guards.
+  let current = kind;
+  let queryText = initialQueryText;
+  const showKind = (): void => {
+    panel.title = current.title;
+    // Canvas already renders this identity mark inside its document bar. VS Code
+    // otherwise adds either our icon or its generic webview icon to the editor
+    // tab, leaving two visible glyphs whenever compact mode is disabled. Keep its
+    // tab icon intentionally transparent; Classic has no inline identity mark and
+    // therefore keeps the themed editor-tab icon.
+    if (current.hasInlineTitleIcon) {
+      panel.iconPath = vscode.Uri.joinPath(context.extensionUri, 'assets', 'images', 'transparent.svg');
+    } else {
+      panel.iconPath = {
+        light: vscode.Uri.joinPath(context.extensionUri, 'assets', 'images', 'query-builder-schema-light.svg'),
+        dark: vscode.Uri.joinPath(context.extensionUri, 'assets', 'images', 'query-builder-schema-dark.svg'),
+      };
+    }
+    const scriptUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', current.script);
+    const codiconCssUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', 'codicon.css');
+    panel.webview.html = getHtml(panel.webview, scriptUri, codiconCssUri, nonce(), current.title);
+  };
+  showKind();
 
   const outPath = resolveOutPath(context);
   let metadataModel: MetadataModel = { version: 1, tables: [] };
@@ -116,9 +147,10 @@ export function createDesignerPanel(
       // показало индикатор загрузки и не мигало пустым конструктором до заполнения.
       const initMsg: HostMsg = {
         type: 'init',
-        hasInitialQuery: !!initialQueryText,
-        queryTextEditorV2: kind.queryTextEditorV2(),
+        hasInitialQuery: !!queryText,
+        queryTextEditorV2: current.queryTextEditorV2(),
         locale: normalizeLocale(vscode.env.language),
+        canvasAvailable: current.mode === 'classic' && isCanvasAvailable(context),
       };
       panel.webview.postMessage(initMsg);
       await metadataReady;
@@ -130,8 +162,8 @@ export function createDesignerPanel(
       const repository = createMetadataRepository(metadataModel.tables);
       const reply: HostMsg = { type: 'metadataTree', tables: [...repository.getTables()] };
       panel.webview.postMessage(reply);
-      if (initialQueryText) {
-        const loadMsg: HostMsg = { type: 'loadModel', text: initialQueryText };
+      if (queryText) {
+        const loadMsg: HostMsg = { type: 'loadModel', text: queryText };
         panel.webview.postMessage(loadMsg);
       }
       if (repository.getTables().length === 0 && !cfPath) {
@@ -151,6 +183,11 @@ export function createDesignerPanel(
       panel.dispose();
     } else if (msg.type === 'cancel') {
       panel.dispose();
+    } else if (msg.type === 'switchDesigner') {
+      if (msg.target === current.mode || (msg.target === 'canvas' && !isCanvasAvailable(context))) return;
+      queryText = msg.text || undefined;
+      current = designerKind(msg.target);
+      showKind();
     } else if (msg.type === 'refreshCache') {
       if (!cfPath) {
         const reply: HostMsg = {

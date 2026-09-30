@@ -833,3 +833,58 @@ test.describe('Canvas roadmap reconciliation focus', () => {
     expect(await save(page, 'canvas')).toBe(generateBatch(parseBatch(input)));
   });
 });
+
+test.describe('Classic / Canvas designer toggle', () => {
+  const switches = (page: Page) => page.evaluate(() => (window as unknown as {
+    __webviewMessages: { type: string; target?: string; text?: string }[];
+  }).__webviewMessages.filter(m => m.type === 'switchDesigner'));
+
+  async function openWithToggle(page: Page, surface: Surface, text: string): Promise<void> {
+    await page.goto(`${BASE}/?surface=${surface}&canvas=1`);
+    await expect(page.getByTestId(surface === 'canvas' ? 'canvas-loading-overlay' : 'loading-overlay')).toBeHidden();
+    await page.evaluate(t => window.dispatchEvent(new MessageEvent('message', { data: { type: 'loadModel', text: t } })), text);
+  }
+
+  test('Classic footer: Query, then the toggle; Cancel before the primary OK', async ({ page }) => {
+    await openWithToggle(page, 'classic', query);
+    const classic = page.getByTestId('designer-mode-classic');
+    const canvas = page.getByTestId('designer-mode-canvas');
+    await expect(classic).toHaveAttribute('aria-pressed', 'true');
+    await expect(canvas).toHaveAttribute('aria-pressed', 'false');
+    await expect(classic).toHaveAttribute('title', 'Классический режим');
+    await expect(canvas).toHaveAttribute('title', 'Канвас');
+    const order = await page.evaluate(() => {
+      const bar = document.querySelector('[data-testid="designer-mode-classic"]')!.closest('div[role="group"]')!.parentElement!;
+      return [...bar.querySelectorAll('button')].map(b => b.dataset.testid ?? b.textContent!.trim());
+    });
+    expect(order).toEqual(['Запрос', 'designer-mode-classic', 'designer-mode-canvas', 'Отмена', 'ОК']);
+  });
+
+  test('without the Canvas preview the Classic toggle is hidden', async ({ page }) => {
+    await open(page, 'classic', query);
+    await expect(page.getByTestId('designer-mode-canvas')).toHaveCount(0);
+  });
+
+  test('switching carries the current model both ways without changing it', async ({ page }) => {
+    await openWithToggle(page, 'classic', query);
+    await page.getByTestId('designer-mode-classic').click();
+    expect(await switches(page)).toEqual([]);
+    await page.getByTestId('designer-mode-canvas').click();
+    const [toCanvas] = await switches(page);
+    expect(toCanvas).toEqual({ type: 'switchDesigner', target: 'canvas', text: generateBatch(parseBatch(query)) });
+    expect(await insertions(page)).toEqual([]);
+
+    // The host reloads the panel with Canvas and that text; switching back returns it unchanged.
+    await openWithToggle(page, 'canvas', toCanvas.text!);
+    await expect(page.getByTestId('designer-mode-canvas')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('designer-mode-classic').click();
+    expect(await switches(page)).toEqual([{ type: 'switchDesigner', target: 'classic', text: toCanvas.text }]);
+    expect(await insertions(page)).toEqual([]);
+  });
+
+  test('a pending comment-loss confirmation disables switching', async ({ page }) => {
+    await openWithToggle(page, 'classic', 'ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = &Код // lost\nИЛИ В.Код = &Другой');
+    await expect(page.getByTestId('comment-loss-confirm')).toBeVisible();
+    await expect(page.getByTestId('designer-mode-canvas')).toBeDisabled();
+  });
+});

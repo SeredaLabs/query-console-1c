@@ -6,6 +6,7 @@ import { computeBatchTextSafe } from '../webview/computeBatchText';
 import { initialState, reducer } from '../webview/state/queryStore';
 import { postToHost } from '../webview/bridge';
 import { CommentLossDialog } from '../webview/components/CommentLossDialog';
+import { prepareDesignerSwitch } from '../webview/designerSwitch';
 import { useDesignerSession } from '../webview/hooks/useDesignerSession';
 import { DocumentBar } from './components/DocumentBar';
 import { PackageNav } from './components/PackageNav';
@@ -144,6 +145,14 @@ export function App(): React.ReactElement {
             : undefined
         }
         saveError={saveError ?? undefined}
+        designerSwitch={{
+          disabled: commentLossPending || loadError != null,
+          onSwitch: () => {
+            const prepared = prepareDesignerSwitch(state, buildResolver());
+            if (!prepared.ok) { setSaveError(prepared.error); return; }
+            postToHost({ type: 'switchDesigner', target: 'classic', text: prepared.text });
+          },
+        }}
       />
       <PackageNav locale={locale} state={state} dispatch={dispatch} onOpenAdditional={() => setWorkspaceTab('additional')} />
       <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>

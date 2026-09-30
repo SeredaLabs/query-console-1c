@@ -19,7 +19,7 @@ host and the WebView, and it is small and closed by construction: a
 discriminated union `HostMsg` (host → WebView: `init`, `metadataTree`,
 `refFields`, `refreshResult`, `loadModel`) and a
 discriminated union `WebviewMsg` (WebView → host: `ready`, `expandRef`,
-`insertText`, `cancel`, `refreshCache`). Query generation stays inside the
+`insertText`, `cancel`, `refreshCache`, `switchDesigner`). Query generation stays inside the
 WebView and does not cross this boundary. `loadModel` contains source text;
 `insertText` carries accepted generated text. Both sides import these
 types instead of hand-rolling ad hoc message shapes; `panel.ts`

@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { SupportedLocale } from '../../shared/locale';
 import { t } from '../i18n';
 import { DIMENSIONS, TOKENS } from '../theme';
+import { DesignerModeToggle } from '../../webview/components/DesignerModeToggle';
 
 const BAR_STYLE: React.CSSProperties = {
   height: DIMENSIONS.documentBar,
@@ -147,6 +148,7 @@ export function DocumentBar({
   saveDisabled,
   saveDisabledReason,
   saveError,
+  designerSwitch,
 }: {
   locale: SupportedLocale;
   onSave: () => void;
@@ -159,6 +161,8 @@ export function DocumentBar({
   /** Why the last Save click was refused by the click-time check
    * (`webview/applyGate.ts` `decideApply`, same as Classic's okError). */
   saveError?: string;
+  /** Classic/Canvas toggle; a refused switch reports through `saveError`. */
+  designerSwitch?: { onSwitch: () => void; disabled?: boolean };
 }): React.ReactElement {
   return (
     <div style={BAR_STYLE}>
@@ -172,6 +176,9 @@ export function DocumentBar({
           <span data-testid="canvas-save-error" role="alert" style={SAVE_ERROR_STYLE} title={saveError}>
             {saveError}
           </span>
+        )}
+        {designerSwitch && (
+          <DesignerModeToggle active="canvas" disabled={designerSwitch.disabled} onSwitch={designerSwitch.onSwitch} />
         )}
         <button
           type="button"
