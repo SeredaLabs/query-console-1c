@@ -20,44 +20,37 @@ hardening or maintenance. Historic severity labels do not set current priority.
 | C6 | OPEN · P3 | Two JOIN shapes add parentheses on a second pass; [truth-table tests](../../test/unit/booleanGroupingSemantics.test.ts) verify both outputs but exempt text equality. | Bounded canonical-layout work over A1; no semantic defect inferred. |
 | C17 | OPEN · P1 | Raw ГДЕ/ИМЕЮЩИЕ/JOIN/field/group/TOTALS slices still lose comments in core generation. The shared designer warns and requests confirmation before LOAD_BATCH; Cancel keeps original text unchanged, confirmation permits a candidate whose Save can lose comments. The check compares only exact comment text/counts, not placement: a standalone ГДЕ comment relocated to `afterFrom` after ИЗ counts as preserved ([contract](contracts/safety-and-preservation.md#original-text-and-designer-loading)). [Core boundary](../../test/unit/rawSliceComments.c16.test.ts), [open gate](../../test/unit/openDesignerBatch.test.ts). | Comment-aware expression rendering over shared lexical facts. Explicit consent to loss does not close preservation support. |
 | C18 | OPEN · P2 | Negated condition subquery with keyword alias `В` is misparsed; malformed-expression guard blocks Apply. [Regression](../../test/unit/canvasPreserveBoundaries.test.ts). | Narrow disambiguation with corpus evidence; separate from Canvas UX. |
-| C21 | UNKNOWN · P2 | Field-headed binary ORDER expressions such as `Т.Код + 1` fail during parsing on `main 3c2e66e` and the current branch. Platform documentation allows ORDER expressions generally; this exact query has no type-valid live attestation and no matching golden form. [Investigation](#c21-order-expression-evidence). | Attest an arithmetic sort key over a known numeric field, then scope a narrow `parseOrder` change under A1. No parser change in this finding. |
+| C21 | OPEN · P2 | `parseOrder` rejects ORDER keys headed by a field/path, `(` or unary `-` (`Т.Количество + 1`, `Т.Количество * Т.Сумма`, `(Т.Количество + 1)`, `-Т.Количество`), while a function-headed key such as `ЕСТЬNULL(Т.Количество, 0) + 1` opens and round-trips. The failure is syntactic and independent of field types. Such queries do not open, so no data is lost. [Investigation](#c21-order-expression-evidence). | Narrow `parseOrder` extension for these key heads with corpus parity, under A1's token rules. A live 1C probe of one numeric form is welcome but not a prerequisite. |
 
 The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
 comment handling and recovery limits. No outstanding correctness item is P0.
 
 ### C21 ORDER expression evidence
 
-Investigation: 2026-09-30. UNKNOWN concerns **platform validity of the reported
-arithmetic form**, not whether the local parser rejects it. This is pre-existing
-shared-parser behavior, not a regression from Canvas or comment-loss confirmation.
+Investigation: 2026-09-30. Pre-existing shared-parser behavior on `main 3c2e66e`,
+not a regression from Canvas or comment-loss confirmation. Probes via
+`tryOpenBatch` (with and without the corpus metadata resolver), source
+`РегистрНакопления.Продажи КАК Т`:
 
-```sdbl
-ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т УПОРЯДОЧИТЬ ПО Т.Код + 1
-```
+| `УПОРЯДОЧИТЬ ПО …` | Result |
+|---|---|
+| `Т.Количество + 1` | rejected: «после конца запроса остались нераспознанные данные (получено «+»)» |
+| `Т.Количество * Т.Сумма УБЫВ` | rejected at `*` |
+| `-Т.Количество` | rejected: «ожидался псевдоним поля упорядочивания (получено «-»)» |
+| `(Т.Количество + 1)` | rejected at `(` |
+| `ЕСТЬNULL(Т.Количество, 0) + 1 УБЫВ` | opens; generated text is identical |
 
-`tryOpenBatch` returns `ok: false` with:
-
-```text
-Ошибка разбора 1:69 — после конца запроса остались нераспознанные данные (получено «+»)
-```
-
-The failure reproduces with and without the corpus metadata resolver on both
-`main 3c2e66e` and this branch. The baseline probe bundles core source read
-from `git show 3c2e66e:<path>`; it does not switch or modify the main checkout.
-The same query ordered by `Т.Код` or `ЕСТЬNULL(Т.Код, "")` opens in all four
-revision/resolver combinations.
+The originally reported `Справочник.Валюты … УПОРЯДОЧИТЬ ПО Т.Код + 1` fails the
+same way. `Валюты.Код` is `Строка(3)` in the corpus metadata, but the parser
+rejects the form before any typing, as the numeric-field probes show; field
+types do not affect this finding.
 
 Platform evidence: the official [1C Practical developer guide, Lesson 13,
 ordering query results](https://kb.1ci.com/1C_Enterprise_Platform/Tutorials/Practical_developer_guide_8.3/Lesson_13._Reports/Selecting_data_from_a_single_table/In_Designer_mode/)
-describes ORDER BY as a list of fields **or expressions**, so expression-based
-ordering is not universally unsupported by 1C. The [official 8.1 → 8.2
+describes ORDER BY as a list of fields **or expressions**; the [official 8.1 → 8.2
 compatibility guidance](https://its.1c.ru/db/content/metod8dev/src/developers/additional/guides/i8103272.htm)
 also discusses ORDER expressions and the separate DISTINCT/selection-list
-restriction. These are documentation evidence, not execution of this fixture.
-The reported query has no DISTINCT, but the [corpus metadata](../../test/fixtures/corpus/metadata/cf/Catalogs/Валюты.yaml)
-defines `Валюты.Код` as `Строка(3)`. It must not be presented as an attested numeric
-addition example. A string-concatenation variant `Т.Код + ""` locally hits the
-same `+` parse failure; neither variant was executed in a live 1C base.
+restriction. No form above was executed in a live 1C base.
 
 Corpus check: all 1976 `valid: true` records in [golden.jsonl](../../test/fixtures/corpus/golden.jsonl)
 were inspected in both `input` and `query_text`. Each column parses without
@@ -71,7 +64,8 @@ Absence from this positive corpus is not proof of platform rejection.
 
 Code/test boundary: [parseOrder](../../src/core/query/sdblParser.ts) has special
 branches for parameters, CASE, calls, comparisons and IS NULL. A field/path
-followed by `+` falls through to a bare reference, leaving the operator unread.
+followed by an operator falls through to a bare reference, leaving the operator
+unread; a leading `(` or `-` is not accepted as a key head at all.
 The [parser ORDER round-trip tests](../../test/unit/sdblParser.test.ts) cover
 field/alias/direction/auto/qualification cases; [hierarchy tests](../../test/unit/orderHierarchyDirection.test.ts)
 cover modifier order and metadata behavior. They do not establish arithmetic
