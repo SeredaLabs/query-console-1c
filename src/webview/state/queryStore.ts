@@ -913,9 +913,10 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
 
       // Обрезать выбранные поля этой таблицы, чьи пути исчезли из набора колонок.
       const keep = new Set(newFields.map(f => f.name));
+      // Navigation (Ссылка.Код) remains valid while its exported head column exists.
       const removedPaths = new Set(
         state.selectedFields
-          .filter(f => f.tableId === action.tableId && f.path !== '' && !keep.has(f.path))
+          .filter(f => f.tableId === action.tableId && f.path !== '' && !keep.has(f.path) && !keep.has(f.path.split('.')[0]))
           .map(f => f.path)
       );
       const selectedFields = state.selectedFields.filter(
@@ -967,9 +968,10 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
 
       // Обрезать выбранные поля этой таблицы, чьи пути исчезли из набора колонок.
       const keep = new Set(action.columns);
+      // Navigation (Ссылка.Код) remains valid while its exported head column exists.
       const removedPaths = new Set(
         state.selectedFields
-          .filter(f => f.tableId === action.tableId && f.path !== '' && !keep.has(f.path))
+          .filter(f => f.tableId === action.tableId && f.path !== '' && !keep.has(f.path) && !keep.has(f.path.split('.')[0]))
           .map(f => f.path)
       );
       const selectedFields = state.selectedFields.filter(
