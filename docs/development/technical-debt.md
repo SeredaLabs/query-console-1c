@@ -19,7 +19,6 @@ hardening or maintenance. Historic severity labels do not set current priority.
 | C2 | OPEN · P1 | English SDBL is platform-valid in recorded RP06/07 but rejected by the Russian parser/detection; contextual keywords and metadata names also need language handling. [Platform results](audits/stage-0/platform-reprobe-results.jsonl). | Token identity spike under A1, then attested RU/EN acceptance/canonicalization pairs. |
 | C6 | OPEN · P3 | Two JOIN shapes add parentheses on a second pass; [truth-table tests](../../test/unit/booleanGroupingSemantics.test.ts) verify both outputs but exempt text equality. | Bounded canonical-layout work over A1; no semantic defect inferred. |
 | C17 | OPEN · P1 | Raw ГДЕ/ИМЕЮЩИЕ/JOIN/field/group/TOTALS slices still lose comments in core generation. The shared designer warns and requests confirmation before LOAD_BATCH; Cancel keeps original text unchanged, confirmation permits a candidate whose Save can lose comments. The check compares only exact comment text/counts, not placement: a standalone ГДЕ comment relocated to `afterFrom` after ИЗ counts as preserved ([contract](contracts/safety-and-preservation.md#original-text-and-designer-loading)). [Core boundary](../../test/unit/rawSliceComments.c16.test.ts), [open gate](../../test/unit/openDesignerBatch.test.ts). | Comment-aware expression rendering over shared lexical facts. Explicit consent to loss does not close preservation support. |
-| C18 | OPEN · P2 | Negated condition subquery with keyword alias `В` is misparsed; malformed-expression guard blocks Apply. [Regression](../../test/unit/canvasPreserveBoundaries.test.ts). | Narrow disambiguation with corpus evidence; separate from Canvas UX. |
 
 The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
 comment handling and recovery limits. No outstanding correctness item is P0.
@@ -120,7 +119,7 @@ not missing critical baseline work or a continuation of phase numbering.
 |---|---|---|---|
 | UX-C1 | OPEN · P2 | Contextual grouping-set, dynamic report block and tabular projection editors. | Loaded representations survive unrelated edits; reuse domain/actions. |
 | UX-C2 | OPEN · P2 | Package move controls and advanced source alias / ORDER hierarchy controls. | Keep loaded order/properties; use existing shared actions where available. |
-| UX-C3 | OPEN · P2 | HAVING, recursive condition-subquery GUI and structured Boolean-tree UX. | Preserve current representation; C18 parser limitation is separate. |
+| UX-C3 | OPEN · P2 | HAVING, recursive condition-subquery GUI and structured Boolean-tree UX. | Preserve current representation. |
 | UX-C4 | OPEN · P2 | Responsive, keyboard, accessibility and release review of recursive workflows. | Baseline Enter/Space exists. Spatial navigation, all-workspace contrast/focus, minimap/viewport and screen-reader review remain before Preview removal. |
 | UX-C5 | OPEN · P2 | UI → generated SDBL cross-highlight. | Generator has no semantic output-range contract; parser input maps are insufficient. Design stable model/output ranges first; no heuristic text search. Read-only dock/highlight/copy/resize/collapse is complete. |
 | UX-C6 | OPEN · P2 | Advanced field-to-field JOIN drag, shortcuts and find/focus helpers. | Existing drag/pan/zoom/search/basic activation stays; narrow UX design, no domain duplication. |
@@ -152,6 +151,15 @@ Long discovery/fix histories, reviewed output changes and former severity/counts
 are retained in the [pre-consolidation ledger](audits/archive/technical-debt-e3b36a5.md)
 and [audit index](audits/README.md).
 
+C18 is absorbed into C5 / RP11: the [recorded RP11 platform evidence](audits/stage-0/platform-reprobe-results.jsonl)
+rejects the source alias at `КАК В` with “Name expected”. The C18 input opens,
+but the malformed-expression guard blocks Apply, satisfying C5's invalid-input
+contract. Rejecting every `КАК В` on open was deliberately not adopted in C5
+because existing tests and fixtures use that alias. The same negated
+`В ИЕРАРХИИ` condition subquery with the valid alias `Вал` parses structurally
+and has a stable generated round trip; there is no parser defect for this valid
+input. The existing C18 regression remains unchanged and pins the Apply blocker.
+
 | ID | Status | Resolved class / regression reference |
 |---|---|---|
 | C1 | CLOSED | Missing accounting metadata preserves fallback arguments; virtualTableRoundTrip.test.ts. Live fixture validity unverified. |
@@ -166,6 +174,7 @@ and [audit index](audits/README.md).
 | C12 | CLOSED | Reject unclosed characteristics; [report](audits/c12-characteristics-eof-2026-09-29.md). |
 | C13–C15 | CLOSED | EOF readers terminate instead of exhausting host heap; [report](audits/c13-c15-raw-expression-eof-2026-09-29.md). |
 | C16 | CLOSED | VT/ПЕРИОДАМИ argument comment preservation; [report](audits/c16-raw-slice-comments-2026-09-30.md), rawSliceComments.c16.test.ts. |
+| C18 | CLOSED | DUPLICATE/ABSORBED in C5 / RP11: platform-invalid source alias `В`; [RP11 platform evidence](audits/stage-0/platform-reprobe-results.jsonl), unchanged [Apply-blocking regression](../../test/unit/canvasPreserveBoundaries.test.ts) and [C5 invalid-input coverage](../../test/unit/invalidInputPreservation.test.ts). |
 | C19 | CLOSED | Exported navigation-head paths retained; queryStore/sourceQueryDraft tests. |
 | C20 | CLOSED | Shared UNION tail ORDER/TOTALS/INDEX editing; compoundSections tests and archived Canvas report. |
 | C21 | CLOSED | Arithmetic ORDER keys headed by a field/path, `(` or unary `-` use the existing token reader and expression model; [report](audits/c21-order-expressions-2026-09-30.md), [regressions](../../test/unit/orderExpressions.c21.test.ts). Full platform expression/type validity remains outside this fix. |

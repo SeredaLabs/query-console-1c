@@ -46,9 +46,10 @@ browser/real-host gates are bounded and do not replace UX/accessibility/release 
 Unsupported raw-expression `//` comments trigger a warning and confirmation
 before loading/replacing the model (C17). Cancel keeps the prior model/text;
 continuing allows known comment loss on Save/OK. The original editor text stays
-unchanged until Save. Consent is not preservation support. A negated condition-
-subquery expression with keyword alias `В` can still be misparsed and Apply-blocked
-(C18); confirmation does not bypass that guard. Supported comments remain preserved.
+unchanged until Save. Consent is not preservation support. A negated condition
+subquery using the platform-invalid source alias `В` opens but cannot be applied
+(C5/RP11, formerly C18). The same subquery with a valid alias such as `Вал` works.
+Confirmation does not bypass Apply checks. Supported comments remain preserved.
 
 ## ⛔ Round-trip exclusions
 

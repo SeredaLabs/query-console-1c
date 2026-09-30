@@ -73,7 +73,7 @@ and trailing fields are intentional preserve-only families. They are verified
 through unrelated edits, not advertised as complete contextual editors.
 Advanced UNION projections suppress scalar-only mapping edits with an explicit
 notice. The shared [safety/preservation contract](../../development/contracts/safety-and-preservation.md)
-defines refusal and state invariants; the ledger lists UX-C1–10, C17/C18 and A2
+defines refusal and state invariants; the ledger lists UX-C1–10, C17 and A2
 where further support or evidence is needed.
 
 Canvas reuses the Classic ExpressionBuilder for field/WHERE/JOIN/VT contexts.

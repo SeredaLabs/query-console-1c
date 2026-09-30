@@ -7,7 +7,7 @@ Canvas phase numbers. The ledger owns status/priority and exit boundaries;
 ## Recommended engineering sequence
 
 1. **Preservation/correctness:** support currently refused raw-expression comments
-   (C17) with comment-safe rendering; separately disambiguate C18's keyword alias.
+   (C17) with comment-safe rendering.
    Keep safe open/Apply refusal and both-UI corpus regressions throughout.
 2. **Incremental architecture:** migrate A1 lexical consumers one at a time;
    obtain A2 producer/projection evidence, then unify lifetime/column facts.

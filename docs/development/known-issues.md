@@ -19,8 +19,10 @@ Ukrainian/Russian. Historical platform observations are indexed in [audits](audi
   (C17). Cancel preserves prior model/text; proceeding permits comment loss on
   Save/OK. Original BSL text stays unchanged until Save. Bound/supported argument
   comments are preserved; explicit consent to loss is not raw-slice support.
-- Negated condition-subquery input with keyword alias `В` can be misparsed and
-  Apply-blocked (C18); an unambiguous alias has positive regression coverage.
+- Negated condition-subquery input with the platform-invalid source alias `В`
+  opens but is Apply-blocked under C5. C18 is CLOSED, absorbed into C5 / RP11
+  ([platform evidence](audits/stage-0/platform-reprobe-results.jsonl)); the same
+  subquery with the valid alias `Вал` works.
 - Aliases in condition subqueries kept as opaque custom text (for example an ИЛИ
   chain) are unindexed. Structured condition subqueries and ordinary source/batch
   scopes have position-aware assistance. Advisory recovery does not authorize Apply.
