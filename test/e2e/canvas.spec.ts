@@ -733,3 +733,26 @@ test.describe('Canvas roadmap reconciliation expression contexts', () => {
     expect(parseBatch(output).members[0].members[0].model.joins).toHaveLength(1);
   });
 });
+
+test.describe('Canvas roadmap reconciliation focus', () => {
+  test('source focus stops at neighbors and JOIN focus uses only its endpoints', async ({ page }) => {
+    const input = 'ВЫБРАТЬ А.Код ИЗ Справочник.Валюты КАК А ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО А.Код = Б.Код ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Г ПО Б.Код = Г.Код, Справочник.Валюты КАК Д';
+    await open(page, 'canvas', input);
+    const card = (alias: string) => page.locator(`[data-testid="canvas-source-card"][data-source-alias="${alias}"]`);
+    await page.getByRole('button', { name: 'А (Справочник.Валюты)', exact: true }).press('Enter');
+    await expect(card('А')).toHaveCSS('opacity', '1');
+    await expect(card('Б')).toHaveCSS('opacity', '1');
+    await expect(card('Г')).toHaveCSS('opacity', '0.45');
+    await expect(card('Д')).toHaveCSS('opacity', '0.45');
+    const otherJoin = page.getByRole('button', { name: 'Б ↔ Г (LEFT)', exact: true });
+    await expect(otherJoin.locator('xpath=preceding-sibling::*[local-name()="path"][1]')).toHaveAttribute('opacity', '0.35');
+    await otherJoin.press('Space');
+    await expect(card('А')).toHaveCSS('opacity', '0.45');
+    await expect(card('Б')).toHaveCSS('opacity', '1');
+    await expect(card('Г')).toHaveCSS('opacity', '1');
+    await expect(card('Д')).toHaveCSS('opacity', '0.45');
+    await expect(page.getByRole('button', { name: 'А ↔ Б (LEFT)', exact: true })
+      .locator('xpath=preceding-sibling::*[local-name()="path"][1]')).toHaveAttribute('opacity', '0.35');
+    expect(await save(page, 'canvas')).toBe(generateBatch(parseBatch(input)));
+  });
+});
