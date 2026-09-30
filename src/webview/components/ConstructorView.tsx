@@ -32,7 +32,7 @@ import { SideTabsRail } from './SideTabsRail';
 import { computeBatchTextSafe } from '../computeBatchText';
 import { deriveUnionColumns } from '../../core/query/unionModel';
 import type { QueryDocument } from '../../core/query/unionModel';
-import { tryOpenBatch } from '../../core/query/validateBatch';
+import { tryOpenDesignerBatch } from '../openDesignerBatch';
 import { buildResolverFromTables } from '../../core/metadata/buildModelResolver';
 import type { RefreshState } from '../App';
 import { BTN, BTN_SECONDARY, GLOBAL_FORM_CSS, DIALOG_PANEL, DIALOG_TITLE } from '../sharedStyles';
@@ -135,11 +135,11 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
   // Ручная правка текста запроса (кнопка «Применить» в модалке «Текст запроса»):
   // тот же разбор + семантическая проверка, что при открытии существующего запроса
-  // из .bsl (tryOpenBatch), поэтому правки из свободного текста возвращаются в модель
+  // из .bsl (tryOpenDesignerBatch), поэтому правки из свободного текста возвращаются в модель
   // конструктора, а не остаются «в стороне» от визуальных вкладок.
   function handleApplyQueryEdit() {
     if (queryModalText === null) return;
-    const r = tryOpenBatch(queryModalText, queryModalResolver, { preserveComments: true });
+    const r = tryOpenDesignerBatch(queryModalText, queryModalResolver);
     if (!r.ok) { setQueryModalError(r.error); return; }
     // Пустой/из одних пробелов текст `tryOpenBatch` считает валидным ПУСТЫМ пакетом
     // (`{ok:true, doc:{members:[]}}`) — это осознанное поведение парсера, но здесь
