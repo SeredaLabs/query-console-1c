@@ -20,8 +20,8 @@ registration, editor insertion, and metadata flow inside a real Extension Host.
 The independent tree-sitter SDBL grammar is currently an opt-in local check,
 not part of the standard gate: `test/fixtures/tree-sitter-sdbl.wasm` is not
 committed and CI does not build it. `assertValidSdbl` prints a warning and
-falls back to the committed corpus/structural checks when the fixture is
-absent. `tooling/scripts/build-wasm.sh` documents the current local build path;
+returns without an independent grammar assertion when the fixture is
+absent; other corpus/structural tests still run. `tooling/scripts/build-wasm.sh` documents the current local build path;
 do not report the grammar oracle as executed unless the fixture was present.
 
 Snapshot, corpus, or generated-output changes require an explanation of affected
@@ -72,12 +72,13 @@ A test-only script drives those controls under the panel's existing CSP nonce;
 it does not synthesize `insertText` or replace the production UI. Existing host
 tests also cover stale-document rejection.
 
-Verified locally on 2026-09-30: 128 browser tests and 39 Extension Host tests. This is a representative regression gate, not
-exhaustive Canvas editing coverage or proof of live 1C semantic equivalence.
-[Canvas Feature Baseline](../design/new-builder/feature-baseline.md) is complete,
-including Phase 13, while the opt-in preview boundary remains. These tests
-run through the existing browser and Extension Host CI commands; no new runtime
-dependency or test hook is added to the extension.
+This is a representative regression gate, not exhaustive UI coverage or live 1C
+semantic equivalence. The [functional Canvas matrix](../design/new-builder/feature-baseline.md)
+and [ledger](technical-debt.md) own capability/debt status; UX/accessibility/release
+review remains necessary before removing Preview. Browser and real-host checks
+run through the existing CI commands. Exact checkpoint counts and commands are
+[historical implementation evidence](audits/archive/canvas-feature-baseline-2026-09-30.md),
+not a current test-count contract.
 
 ## Packaging
 

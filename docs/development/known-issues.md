@@ -1,157 +1,78 @@
-# Known issues
+# Known issues and product boundaries
 
-Current product boundaries, updated 2026-09-28. Engineering status and evidence live
-in the [technical-debt ledger](technical-debt.md); historical verdicts remain in
-[Stage 0](audits/stage-0.md).
+Current user/developer-visible limitations. The [ledger](technical-debt.md) owns
+engineering status; [safety contracts](contracts/safety-and-preservation.md) own
+invariants/exclusions. [User limitations](../en/limitations.md) are mirrored in
+Ukrainian/Russian. Historical platform observations are indexed in [audits](audits/README.md).
 
-## Active product limitations
+## Query editing and IDE assistance
 
-- English SDBL is rejected even though the recorded live platform accepts it
-  and canonicalizes it to Russian. Editor query detection recognizes only
-  `ВЫБРАТЬ`/`УНИЧТОЖИТЬ` (ledger C2).
-- Aliases inside a condition subquery kept as custom text (inside an `ИЛИ`
-  chain, `НЕ ИСТИНА В (…)`) are not resolved; structured `ГДЕ`/`ИМЕЮЩИЕ … В
-  (ВЫБРАТЬ …)` subqueries are (S1). Typing recovery (S2) keeps assistance for an
-  unclosed `(` and for broken ORDER/GROUP/TOTALS/INDEX sections, including inside
-  subqueries. Source-subquery and ordinary batch alias scoping already
-  use the position-aware resolver; the old flat resolver is tooling-only.
-- A temporary-table producer with a tabular-section projection/trailing fields
-  yields different column sets in star expansion, designer and semantic schema
-  (A2). The platform-correct schema for this shape still needs confirmation.
-- Apply checks supported syntax/structure, selected metadata semantics and
-  recorded unsafe markers; it does not establish semantic equivalence to the
-  source query (V3). Platform-invalid inputs are either rejected on open or
-  open with Apply blocked (C5); some, such as source aliases `В`/`И`, still
-  open and are shown in the designer.
+- Detection recognizes static BSL strings beginning with `ВЫБРАТЬ`/`УНИЧТОЖИТЬ`.
+  English SDBL is unsupported despite recorded platform acceptance (C2). Dynamic
+  string composition cannot be evaluated; the extension does not execute queries.
+- Parsing/Apply checks supported structure and selected metadata semantics, not
+  full grammar, arbitrary-expression validity or input/output equivalence. Unknown
+  schema/reference types stay fail-open. Editor diagnostics check syntax/structural
+  expressions, not metadata fields; concatenated fragments may receive warnings.
+- Raw-expression comments unsupported by the current renderer can **refuse designer
+  opening/manual-text Apply** before model replacement (C17). Original text is
+  retained. Bound comments and supported argument comments are preserved; safe
+  rejection is not support for those remaining raw slices.
+- Negated condition-subquery input with keyword alias `В` can be misparsed and
+  Apply-blocked (C18); an unambiguous alias has positive regression coverage.
+- Aliases in condition subqueries kept as opaque custom text (for example an ИЛИ
+  chain) are unindexed. Structured condition subqueries and ordinary source/batch
+  scopes have position-aware assistance. Advisory recovery does not authorize Apply.
+- Without metadata for an inner sole source, bare condition fields retain the
+  existing inner-source binding even when intended as outer correlation. With
+  known metadata they use the verified nearest enclosing owner. The validator
+  skips subquery-condition field checks to avoid false negatives.
+- Temp producers with tabular/trailing projections can expose different column
+  sets in star expansion/designer versus semantic schema (A2). A complete inferred
+  scalar temp schema supports position-aware field validation/assistance; inferred
+  columns do not provide reference types for deeper navigation.
 
-- Cursor detection cannot evaluate dynamically composed BSL query strings.
-- Validation is intentionally incomplete for arbitrary custom expressions and
-  platform-specific SDBL. Partially mitigated: `findMalformedCustomExpressions`
-  (`semanticValidator.ts`) blocks Apply when a stored custom/raw expression
-  fails a structural acceptor for the SDBL expression/condition grammar
-  (`expressionSyntaxCheck.ts`) -- unbalanced parentheses/braces, double or
-  dangling operators, an unclosed `ВЫБОР…КОНЕЦ`, a malformed `ВЫРАЗИТЬ(… КАК …)`
-  cast, and similar. This is a syntax-SHAPE check, not full grammar coverage --
-  it deliberately does not validate exact argument counts for specific
-  built-in functions (semantics, not syntax) and treats any text containing
-  1C's own template-substitution marker characters (`%`, `#`, `@`, `[`, `]`)
-  as unjudgeable rather than invalid (found on real production code: query
-  templates built via string substitution use these). Verified against the
-  committed 1976-query golden corpus and two independent real production 1C
-  configurations before shipping -- zero false positives on complete queries;
-  the only hits on real code were already-incomplete fragments from runtime
-  string concatenation (not something the constructor itself ever produces,
-  since it always edits one complete query string). C11 additionally walks
-  virtual-table period/condition/account-condition arguments, `ПЕРИОДАМИ`
-  date operands, tabular-section `castPrefix`, and non-custom comparison
-  operands; DCS `{…}` aliases, VT order/limit/lists, BETWEEN right-hand sides
-  and the characteristics section are excluded (ledger C11).
-- User `//` comments are kept on open/Apply only in virtual-table, accounting and
-  selection-criterion arguments and in `ПЕРИОДАМИ(…)` (C16). Comments inside
-  ГДЕ, ИМЕЮЩИЕ, JOIN ПО, field expressions, СГРУППИРОВАТЬ ПО and ИТОГИ are still
-  dropped when the query is opened, so Apply writes it without them (C17).
-- `Последовательность.*.Границы` still falls back to a generic, unverified
-  `[period, condition]` layout -- a third positional argument cannot be
-  losslessly reconstructed; marked models are blocked from apply.
-  `РегистрРасчета.*.ДанныеГрафика`/`ФактическийПериодДействия` (arity 1:
-  `Условие`) and `<ОсновнойРегистр>.База<БазовыйРегистр>` (arity 4) are no
-  longer part of this gap -- their real layout was confirmed (Хрусталёва,
-  «Язык запросов "1С:Предприятия 8"», 2nd ed., pp. 327-334) and modeled
-  directly in `parseVirtualParams`/the generator; an argument beyond their
-  own confirmed arity is still correctly blocked, just at the right
-  threshold now.
-- Auto-discovery is bounded and may require an explicit metadata path.
-- Query-parse diagnostics (`queryConsole.queryDiagnosticsEnabled`) scan one
-  string literal at a time and can flag a query assembled by string
-  concatenation, where an individual fragment is not meant to parse on its
-  own -- there is no full BSL AST to distinguish that from a genuinely broken
-  query. Mitigated by `Warning` severity, non-committal wording, and the
-  setting to disable it entirely; not something a corpus/production sweep can
-  fully rule out the way `findMalformedCustomExpressions` above was, since it
-  depends on how a given codebase happens to build query text at runtime.
-- Field existence (`checkFieldPaths` in `semanticValidator.ts`) is checked
-  only when a query is opened in, or applied from, a designer (Classic OK and
-  Canvas Save share `src/webview/applyGate.ts`), and only for qualified
-  references in the select list, grouping, ordering, indexing, standard join
-  conditions (any level) and standard `ГДЕ`/`ИМЕЮЩИЕ` conditions of the
-  top-level query. Not checked: custom expressions, `ИТОГИ` aggregates,
-  virtual-table parameters, unknown/ad-hoc temporary tables, package temporary
-  tables whose producer still contains an unresolved `*`, and conditions
-  inside subqueries -- see the next item. Package temporary tables with a
-  complete inferred output schema are position-aware in field validation,
-  hover, and completion (including drop/recreate lifetimes). Their inferred
-  columns intentionally carry no reference types, so deeper dot navigation
-  remains fail-open. Editor diagnostics run the parser plus the structural
-  expression check that gates Apply (`findMalformedCustomExpressions`); they
-  do not check metadata (unknown fields or tables).
-- Without metadata for the inner source, a bare field in a condition of a
-  sole-source subquery is still bound to that source even when it belongs to an
-  enclosing query: `ГДЕ Цена > 0` inside `(ВЫБРАТЬ … ИЗ Справочник.В КАК В)` is
-  generated as `В.Цена`. With metadata it is rebound to the single nearest
-  enclosing owner (C4), matching the query wizard's text observed live. The validator still skips
-  conditions inside subqueries instead of reporting a false "field not found".
+## Canvas Preview
 
-These are documented user boundaries, not permission to weaken tests. Add a
-regression test when fixing one and update all three limitations pages.
+The [functional capability matrix](../design/new-builder/feature-baseline.md)
+records editing and intentional preserve-only families. Canvas uses shared
+parser/model/state/generation/Apply checks. Its generated SDBL dock is read-only;
+Classic retains manual query-text editors. Contextual advanced editors and
+metadata refresh/lazy reference expansion parity are separate UX work. Preview
+removal still needs UX/accessibility/release review; V4 is a bounded regression
+gate, not exhaustive coverage or platform equivalence.
 
-## Active verification limitation
+## Virtual-table and metadata boundaries
 
-- The independent tree-sitter SDBL grammar oracle is not a standard CI gate.
-  `assertValidSdbl.ts` uses it only when
-  `test/fixtures/tree-sitter-sdbl.wasm` exists; that fixture is not committed
-  and `.github/workflows/release.yml` does not build it. Ordinary local/CI
-  runs emit a skip warning and rely on the repository parser, structural
-  checks, and committed corpus. `tooling/scripts/build-wasm.sh` is the current
-  opt-in local path, not evidence that the oracle ran in CI.
+`Последовательность.*.Границы` has an unconfirmed generic two-slot fallback;
+marked extra arguments block Apply (U2). Calculation-register `ДанныеГрафика`/
+`ФактическийПериодДействия` have the book-confirmed one-condition layout, and
+`База<Имя>` has four slots. Accounting Субконто argument preservation is supported;
+old blanket unsafe claims are obsolete. Unique signature/book evidence is in the
+[archived investigation](audits/archive/canvas/scratch_phase2x2_virtual_table_design.md).
 
-## Intentional metadata fallback behavior
+VT assistance resolves condition fields/reference paths and suggests closed
+periodicity/fill-method enums. Two completion families are deliberately outside
+the current metadata-only product scope:
 
-- A direct/YAML metadata scan that completes successfully with zero tables
-  returns that empty model for the current call. It does not substitute the
-  last-known-good model, because a successful but unknown result is not
-  classified as an invalid one. The empty model cannot overwrite the saved
-  last-known-good snapshot, and the next call rescans normally, so this is not
-  the former persistent warm-cache failure. Last-known-good is used only when
-  the normal metadata paths actually fail.
+- Accounting Субконто-family values are actual ПВХ/database items, not XML schema;
+  there is no metadata-only path to enumerate ordinary user-entered values.
+- Calculation База dimension/cut strings need register→base-register linkage and
+  suffix resolution absent from the importer/signature catalog. This would need
+  separately scoped metadata extraction; no partial guessed completion is planned.
 
-## Permanent scope boundary: virtual-table `Субконто`/`Разрезы`/`Измерения*` hover and completion
+Revisit these boundaries only with the required new capability. They are not
+forgotten implementation increments. Discovery is bounded; configure an explicit
+XML metadata path when necessary. A successfully empty direct/YAML scan is shown
+as empty for that call; it does not overwrite saved last-known-good metadata.
+Fallback to the saved nonempty model occurs only after normal loading fails.
+[Metadata contract](metadata.md) owns cache/import safety.
 
-Hover and completion for virtual-table positional arguments (semantic-core
-roadmap Phase 2x-2) cover the `Период`/`Условие`/`УсловиеСчета`-family
-condition arguments (hover resolves bare fields against the real register,
-including reference dereferencing) and the `Периодичность`/`МетодДополнения`
-keyword arguments (completion suggests the closed enum). Two argument
-families were investigated and are **deliberately, permanently out of
-scope**, not simply deferred:
+## Verification limits
 
-- **`Субконто`/`СубконтоДт`/`СубконтоКт`/`КорСубконто`** (accounting
-  registers): these name specific VALUES of a
-  `ПланВидовХарактеристикСсылка.<name>` (e.g.
-  `ПланВидовХарактеристик.ВидыСубконто.Контрагенты`). The metadata parser
-  (`chartOfCharacteristicTypes.ts`) only reads a ПВХ's own STRUCTURE
-  (`Ссылка`/`Наименование`/`Предопределенный`, etc.), never its items — and
-  it structurally cannot, since a ПВХ's items are DATA rows in the real 1C
-  database, not something a `Configuration.xml` export (the only thing this
-  extension ever reads) describes. There is no metadata-only path to
-  enumerate real Субконто values.
-- **`ИзмеренияОсновногоРегистра`/`ИзмеренияБазовогоРегистра`/`Разрезы`**
-  (calculation register `База<Имя>` form): these are field-NAME STRINGS from
-  the register's own BASE register (the one named by the `<Имя>` slice
-  suffix). `calculationRegister.ts` does not parse the "base registers"
-  association from `Configuration.xml` at all (regs расчета virtual tables
-  aren't modeled as `MetaTable.virtual` entries beyond their bare slice
-  name), and `virtualTableSignatures.ts` only prefix-matches the literal
-  `'База'` — it has no way to know WHICH register a given `<Имя>` suffix
-  names. Supporting this would need a new, disproportionately large
-  metadata-extraction feature (register→base-register linkage) as a
-  prerequisite, for a comparatively low-value completion feature.
-
-If this extension ever gains real database access (a much bigger,
-separate architectural change), or a future contributor adds explicit
-calc-register base-register parsing for an unrelated reason, revisit this
-boundary — but do not attempt a partial/best-guess implementation of
-either in the meantime.
-
-Internal task details formerly duplicated here are maintained only in the
-[ledger](technical-debt.md). Historical resolved alias-scoping work remains
-covered by the semantic resolver and shadow-baseline tests.
+[Testing/release](testing-and-release.md) and [corpus policy](corpus-testing.md)
+distinguish repository regression checks, recorded platform canonical output and
+optional live/independent grammar workflows. Missing grammar WASM means the
+independent oracle skipped even when tests are green. U1–U3 remain evidence gaps,
+not platform-invalid verdicts. Historical scope/provenance claims and complete
+former narratives are retained in the [checkpoint](audits/archive/known-issues-e3b36a5.md).

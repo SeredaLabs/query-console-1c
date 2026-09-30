@@ -25,9 +25,9 @@ npm run setup -- --e2e
 |---|---|
 | `npm run typecheck` | Check extension/core, Classic WebView and Canvas WebView TypeScript projects (test files are not type-checked) |
 | `npm run test:unit` | Run Vitest tests |
-| `npm run test:e2e` | Run the static Classic WebView Playwright suite (Canvas has no e2e suite yet) |
+| `npm run test:e2e` | Build both bundles and run Classic/Canvas WebView Playwright tests |
 | `npm run test:integration` | Run real VS Code Extension Host tests |
-| `npm run docs:check` | Validate localized docs and links |
+| `npm run docs:check` | Validate all repository Markdown links and localized parity |
 | `npm run package` | Build the release VSIX |
 | `npm run parse -- --cf <dir> --out <dir>` | Generate a metadata YAML tree from an XML export (defaults: `src/cf`, `tmp/parser_data`) |
 

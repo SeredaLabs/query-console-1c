@@ -59,3 +59,12 @@ historical provenance, not live imports or current instructions.
 | 2026-09, audit procedure | [Prompt](archive/canvas/prompts/new_builder_audit.md) | Historical workflow → HISTORICAL; not active agent instructions |
 | 2026-09, virtual tables | [Signature/completion investigation](archive/canvas/scratch_phase2x2_virtual_table_design.md) | Book-cited signatures and completion boundaries, database-value/base-register blockers → STILL RELEVANT evidence |
 | 2026-09, semantic proposals | [Plan review](archive/canvas/scratch_semantic_core_plan_review.md) | Former index/walker design → SUPERSEDED by current semantic contract/A1/A3; no arbitrary release threshold |
+
+## Superseded planning/boundary checkpoints
+
+- [Roadmap at e3b36a5](archive/roadmap-e3b36a5.md), 2026-09-30: detailed former
+  expression-typing proposal and architecture options → SUPERSEDED sequencing;
+  constraints/actual remaining work are retained by architecture and ledger.
+- [Known issues at e3b36a5](archive/known-issues-e3b36a5.md), 2026-09-30: original
+  scope/provenance statements and VT completion rationale → HISTORICAL;
+  current safety, visible boundaries and debt have separate owners.
