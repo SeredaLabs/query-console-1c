@@ -14,11 +14,21 @@ Classic and Canvas use `tryOpenDesignerBatch` through `useDesignerSession`.
 Strict parsing/selected semantic checks run before LOAD_BATCH. A failed load
 leaves the prior editable model and original BSL editor text intact.
 
-With `preserveComments`, the wrapper compares original user comment occurrences
-against the initial generated model. Repeated identical comments count separately;
-slash-only package separators are excluded. Missing occurrences produce a warning
-and a validated candidate requiring explicit confirmation. Both UIs show the
-same modal; its Cancel button receives initial focus, Escape cancels, focus stays
+With `preserveComments`, the wrapper compares **only exact comment text and
+occurrence counts** in the input and initial generated model. Repeated identical
+comments count separately; slash-only package separators are excluded. It does
+not compare source positions, section anchors or relative placement. A comment
+relocated by the binder counts as preserved if its text occurrence survives.
+For example, a standalone `// WHERE note` between `ГДЕ` and its condition is
+bound to `comments.afterFrom` and generated after `ИЗ`, before the source; this
+opens without a comment-loss warning. That result proves text retention only,
+not preservation of the comment's original location or contextual meaning.
+
+Missing occurrences produce a warning and a validated candidate requiring
+explicit confirmation. `lost` lists all missing occurrences in input order;
+identical missing comments remain repeated. Both UIs and Classic text editors
+show the first five verbatim as monospace text, plus a localized remaining count.
+The same modal's Cancel button receives initial focus, Escape cancels, focus stays
 inside, and background editing/Save is blocked. Only confirmation authorizes
 LOAD_BATCH; a newer host load supersedes the pending candidate. Cancel closes the
 designer without insertion. Loading itself never changes the original editor text;
