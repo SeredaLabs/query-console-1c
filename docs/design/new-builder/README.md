@@ -47,7 +47,14 @@ editing and the existing six workspaces/package/UNION navigation. The
 records advanced preserve-only boundaries and safely rejected C17/C18 inputs.
 [Verification](../../development/testing-and-release.md#canvas-verification)
 includes full browser gates and real VS Code nested edit/back/Save insertion.
-Preview remains intentional pending separate UX/release hardening.
+The [complete roadmap reconciliation](phase-reconciliation.md) covers Phases
+0–18, subphases and historical STOP gates, with code/test evidence and a future
+archive manifest. Contextual ExpressionBuilder and basic keyboard graph/dock
+activation are implemented. Phase 14 advanced projection mapping and Phase 15
+cross-highlight remain explicitly deferred; the scalar mapping and required dock
+behavior are verified. Preview remains intentional pending separate UX/release
+hardening. Current remaining requirements live in the technical-debt ledger;
+historical phase statements do not determine current completion.
 
 For contributor debugging, `F5` or `npm run preview:canvas` starts an Extension
 Development Host and opens Canvas automatically.

@@ -1,6 +1,6 @@
 # Canvas Feature Baseline
 
-Audit date: 2026-09-30. Baseline: `main` at the start of this task.
+Audit date: 2026-09-30. Baseline: `main` at `3c2e66e`, at the start of this task.
 Code and tests, rather than phase numbering, determine this checkpoint.
 Canvas remains opt-in Preview; V4 verifies a bounded set of paths and is not
 feature completion.
@@ -40,13 +40,16 @@ preserve-only subproperties; these are listed separately below.
 | Manual temp source description create/update | EDIT | MISSING UI | EDIT |
 | Package-derived temp schema | Producer owns schema | Producer owns schema | EDIT through producer; no manual override |
 | Package add/remove/switch, UNION add/remove/switch/ALL/distinct | EDIT | EDIT | EDIT |
-| UNION column alias/reorder mapping | EDIT | EDIT | EDIT |
+| UNION column alias/reorder mapping | EDIT scalar | EDIT scalar; incomplete advanced projection view | EDIT scalar; tabular/trailing mapping guarded PRESERVE |
 | Package reordering | EDIT | PRESERVE order | PRESERVE; UX follow-up |
 | Report builder dynamic blocks | EDIT | PRESERVE | PRESERVE; advanced UX follow-up |
 | Characteristics raw block, trailingFields | PRESERVE | PRESERVE | PRESERVE |
 | Bound SELECT/FROM/field comments, VT/ПЕРИОДАМИ argument comments | PRESERVE | PRESERVE | PRESERVE |
 | C17 raw expression comments lost on open | MISSING safety | MISSING safety | Explicit safe rejection; renderer remains C17 |
-| Metadata cache refresh, execution, IDE assistance | Separate workflow | N/A | N/A |
+| Contextual expression helper (field/WHERE/JOIN/VT) | EDIT | MISSING contextual helper | EDIT via shared Classic editor |
+| Metadata cache refresh / lazy reference-field expansion | EDIT via existing bridge/actions | MISSING assisted workflow | MISSING noncritical UX-C8; existing loaded navigation retained |
+| Generated SDBL text editing / reparse | EDIT Classic dialog | Read-only by design | Read-only dock; raw editor remains available outside Canvas |
+| Execution / IDE assistance | Separate editor workflow | N/A | N/A |
 
 ## Missing workflows and chosen scope
 
@@ -107,9 +110,13 @@ browser E2E and Extension Host integration. Never regenerate golden/snapshots.
 
 ## Completion evidence
 
-**Canvas Feature Baseline Complete / CLOSED**, verified 2026-09-30. Phase 13
-source editing and manual temp descriptions are implemented, all required gaps
-above are closed, and advanced workflows have explicit preservation boundaries.
+**Canvas Feature Baseline Complete / CLOSED**, verified 2026-09-30. The
+[complete historical reconciliation](phase-reconciliation.md) covers Phases
+0–18 and supersedes the earlier inference from Phase 13 alone. This is completion
+of the explicitly classified editing baseline, not closure of every historical
+UX phase. Phase 13
+source editing and manual temp descriptions are implemented, all MUST gaps in
+the classified scope are closed, and advanced workflows have explicit preservation boundaries.
 Preview and Classic remain. This checkpoint is not a production-ready release.
 
 
@@ -149,11 +156,11 @@ Implementation findings:
 
 | Command | Result |
 |---|---|
-| `npm run docs:check` | PASS: 75 Markdown files, 66 reachable pages |
+| `npm run docs:check` | PASS: 76 Markdown files, 67 reachable pages |
 | `npm run typecheck` | PASS: extension, Classic, Canvas |
 | `npm run build` | PASS: extension, Classic, Canvas production bundles |
-| `npm run test:unit` | PASS: 160 files, 3774 tests |
-| `npm run test:e2e` | PASS: 128 tests; Canvas file 50 tests, including 22 new cases |
+| `npm run test:unit` | PASS: 161 files, 3776 tests |
+| `npm run test:e2e` | PASS: 138 tests; Canvas file 60 tests, including 32 new cases |
 | `npm run test:integration` | PASS: 39 tests in real VS Code 1.139.1, including nested Canvas source edit/back/Save |
 
 Additional targeted commands executed during implementation:
@@ -166,12 +173,18 @@ Additional targeted commands executed during implementation:
 - `npm run test:e2e -- test/e2e/canvas.spec.ts -g 'confirmation'`: 2 PASS (VT safety flags, manual-temp referenced-column refusal).
 - `npm run test:integration -- --grep 'production Canvas'`: 2 PASS before final full integration.
 
-Added 33 unit cases in five new files and two corpus gate assertions.
+Added 35 unit cases in six new files and two corpus gate assertions (33 cases
+in the original implementation, two shared expression-source cases after full
+roadmap reconciliation).
 New units cover cloned recursive drafts/cancel, shared validation, UNION slots and
 first-column aliases, navigation retention, C17 controlled refusal and the C18
 boundary. Browser tests cover all six nested workspaces, recursive sources/JOIN,
 source-less creation, UNION/temp packages, manual descriptions, VT arguments,
 TOTALS/INDEX, Classic→Canvas→Classic, preservation families and unsafe edits.
+Ten additional browser cases cover advanced UNION preserve-only mapping,
+scalar mapping edits/ALL/create/remove, source/JOIN focus and keyboard controls,
+read-only highlighted/copyable/resizable/collapsible generated SDBL and contextual
+expression editing/Cancel/malformed recovery/nested Escape/JOIN creation.
 The real host test verifies production nested editing changes only the captured
 BSL literal through the actual bridge.
 
@@ -199,11 +212,20 @@ run. Platform/live oracle execution and release hardening were outside this task
   survive unrelated edits, with C18 classified as a safely blocked exception.
 - UX-C4: narrow-viewport, keyboard and accessibility/release review of recursive
   workflows before changing Preview status.
+- UX-C5: UI-to-SDBL cross-highlight, pending an output-range contract.
+- UX-C6: field-to-field JOIN drag, advanced shortcuts/find/focus.
+- UX-C7: sort-priority reorder, requiring a shared action.
+- UX-C8: metadata refresh and lazy reference-field expansion parity; the earlier
+  matrix's N/A classification was incorrect. These assisted workflows are missing
+  but do not prevent primary editing or preserving loaded query properties.
+- UX-C9: full advanced positional UNION mapping, pending the shared schema
+  contract; current mapping suppresses misleading edits for preserved projections.
+- UX-C10: stable global scope-ID hardening only when a concrete consumer exists.
 - C17: comment-aware raw-expression rendering remains required to support the
   safely rejected inputs. C18 requires narrow keyword-alias disambiguation.
 
 No A1/A2/A3, English SDBL, core rewrite, new domain/store, dependency or visual
-redesign was introduced. Historical audits were not reorganized.
+redesign was introduced. Historical audits/phase documents were retained unchanged.
 
 
 ### Logical commits
@@ -217,5 +239,9 @@ redesign was introduced. Historical audits were not reorganized.
 - `7af95c1` — recursive source/VT/manual-temp workflows and draft regressions.
 - `9487cf0` — browser, production host and full-corpus preservation evidence.
 
-A final documentation commit records the closed checkpoint and UX-C1--C4.
+The original documentation commit `3edace9` recorded the initial checkpoint.
+The continuation adds `b25bf32` (full roadmap reconciliation) and `6a59ed6`
+(contextual expression/keyboard/UNION safety controls and regressions), `fa03e07`
+(source/JOIN focus regression), followed by final UX-C1–UX-C10 documentation.
+See the reconciliation's final verification for continuation commits and commands.
 No history rewrite, force push, temporary probe or generated fixture was committed.

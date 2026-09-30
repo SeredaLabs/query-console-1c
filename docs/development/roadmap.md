@@ -25,12 +25,15 @@ with the extension but remains hidden by default behind the
 `queryConsole.enableNewBuilderPreview` experimental setting, so it does not
 replace the Classic Constructor.
 
-The [Canvas Feature Baseline](../design/new-builder/feature-baseline.md) is complete:
-Phases 0--13, recursive source create/edit, manual temp descriptions and the
-required VT/TOTALS/INDEX editors are verified over the shared core/store/session.
-UNION UX (Phase 14) and most read-only SDBL assistance (Phase 15) were completed
-ahead of sequence. Advanced editing remains bounded by explicit preserve-only
-capabilities and UX-C1--C4 in the ledger; C17/C18 have controlled refusal.
+The [Canvas Feature Baseline](../design/new-builder/feature-baseline.md) is complete
+within its explicit editing/preservation boundary. The
+[historical Phase 0–18 reconciliation](../design/new-builder/phase-reconciliation.md)
+checks every phase against code/tests: Phase 13 recursive sources/manual temp
+and Phase 16 contextual expression help are closed. Phase 14 scalar mapping is
+verified, with advanced projections guarded as preserve-only; Phase 15 mandatory
+read-only dock behavior is verified, with cross-highlight deferred. Boolean UX,
+sort priority, advanced interactions and final polish remain PARTIAL, with
+requirements carried by UX-C1–UX-C10 in the ledger. C17/C18 have controlled refusal.
 The [verification gate](testing-and-release.md#canvas-verification) includes
 recursive editing and real VS Code source insertion. Canvas stays opt-in Preview
 until a separate UX/release review; Classic stays available.
@@ -65,8 +68,9 @@ Current tasks and evidence are tracked once in the [ledger](technical-debt.md).
    representation and cosmetic JOIN stability. Parameter-consumer consistency
    (C7) is closed.
 8. **Preview release.** V4 now has a recorded regression gate and D1 source
-   comments are corrected. Keep Canvas opt-in while UX-C1--C4 and
-   the broader release review remain unfinished.
+   comments are corrected. Keep Canvas opt-in pending the UX-C4 release review.
+   Other UX-C1–UX-C10 items retain their own capability/dependency boundaries;
+   optional global scope IDs are not a release prerequisite.
 
 This is one recommended sequence, not authorization to implement these stages.
 Resolve U1–U3 when the relevant stage needs their platform evidence. Existing

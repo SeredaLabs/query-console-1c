@@ -47,6 +47,15 @@ in `test/e2e/canvas.spec.ts` cover:
   ПЕРИОДАМИ, INDEX sets/unique, and UNION tail ORDER/TOTALS/INDEX editing (C20).
 - Preserve-only grouping sets, dynamic report blocks, condition subqueries,
   raw ORDER/TOTALS and calculation VT through unrelated edit/Save/reopen.
+- Scalar UNION alias/reorder/ALL and first-member create/remove transitions;
+  tabular/trailing projections use a preserve-only mapping guard and survive an
+  unrelated edit/Save/Classic reopen.
+- Read-only highlighted SDBL dock, exact clipboard text, resize, keyboard
+  collapse/expand and generated text updates; basic source/JOIN/overview/minimap
+  Enter/Space activation; source focus stops at direct neighbors and JOIN focus
+  includes only the selected endpoints.
+- Contextual shared ExpressionBuilder for fields/WHERE/JOIN create/edit,
+  Cancel/malformed recovery and nested-source Escape/OK/Back safety.
 - C17 controlled open refusal on both surfaces and Classic text Apply, keeping
   original editor/model data intact; this is rejection, not preservation.
 - Duplicate-alias rejection and recovery, unsafe VT and malformed-expression

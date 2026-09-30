@@ -50,11 +50,26 @@ P0 = the extension host can crash or hang during ordinary editing (C13–C15); n
 
 | ID / status / severity | Area, evidence and impact | Dependency → next action |
 |---|---|---|
-| Canvas Feature Baseline · CLOSED | Phase 13 recursive source create/edit and manual temp descriptions, common VT forms, TOTALS, INDEX and source-less fields are implemented over the shared reducer/model/session/Apply bridge. The [before/after matrix and verification](../design/new-builder/feature-baseline.md) record all editing and preserve-only boundaries. C17/C18 are safely refused, not claimed as preserved. V4 remains a bounded verification gate. | Full unit/corpus, browser and real Extension Host gates pass. Canvas remains opt-in Preview; Classic remains available. |
+| Canvas Feature Baseline · CLOSED | Recursive source/manual-temp editing, common VT forms, TOTALS, INDEX, source-less fields and contextual ExpressionBuilder are implemented over the shared reducer/model/session/Apply bridge. The [full Phase 0–18 reconciliation](../design/new-builder/phase-reconciliation.md) classifies every historical remainder; phase sequence is not current status. Scalar UNION edits are verified; advanced projection mapping is guarded as preserve-only. Basic graph/dock keyboard activation is implemented. The [before/after matrix and verification](../design/new-builder/feature-baseline.md) record all editing and preserve-only boundaries. C17/C18 are safely refused, not claimed as preserved. V4 remains a bounded verification gate. | Full unit/corpus, browser and real Extension Host gates pass. Canvas remains opt-in Preview; Classic remains available. |
 | UX-C1 · OPEN · P2 | Contextual editors for grouping sets, dynamic report blocks and tabular projections. | Current baseline preserves loaded representations through unrelated edits; extend the existing domain/actions per capability. |
 | UX-C2 · OPEN · P2 | Package move controls and advanced source alias / ORDER hierarchy controls. | Loaded order and properties remain preserved; use existing actions where available, no new Canvas state. |
-| UX-C3 · OPEN · P2 | HAVING and recursive condition-subquery GUI. | Preserve existing representations; C18 is a separate narrow parser dependency. |
-| UX-C4 · OPEN · P2 | Responsive, keyboard, accessibility and release review of recursive workflows. | Required before changing the Preview boundary; baseline verification is not exhaustive UX hardening. |
+| UX-C3 · OPEN · P2 | HAVING, recursive condition-subquery GUI and structured Boolean-tree UX (historical Phase 8). | Preserve existing representations; C18 is a separate narrow parser dependency. |
+| UX-C4 · OPEN · P2 | Responsive, keyboard, accessibility and release review of recursive workflows. | Required before changing the Preview boundary; baseline Enter/Space activation is implemented, but spatial navigation, all-workspace contrast/focus, minimap tuning, viewport and screen-reader review remain. |
+| UX-C5 · OPEN · P2 | UI-to-generated-SDBL cross-highlight (historical Phase 15 investigation). | Generator has no output-range contract; input source maps are insufficient. Approve a stable model/output range design before implementation; no heuristic text search. Dock read-only/highlight/copy/resize/collapse is verified, not reopened. |
+| UX-C6 · OPEN · P2 | Advanced field-to-field JOIN drag, keyboard shortcuts and find/focus helpers (Phase 17). | Existing drag/pan/zoom/search and baseline Enter/Space controls remain; add narrow workflows after separate UX design, without domain duplication. |
+| UX-C7 · OPEN · P2 | Sort-priority reorder UI (Phase 10). | Model keeps array order but has no MOVE_ORDER action; introduce a narrow shared action and both-UI tests in a separate task. Loaded order is preserved now. |
+| UX-C8 · OPEN · P2 | Canvas metadata refresh and lazy reference-field expansion parity. | Classic has refreshCache/refreshResult, expandRef/refFields and SET_REF_FIELDS; Canvas has no corresponding controls/response wiring. Reuse the existing host/session/metadata infrastructure. Existing metadata selection and loaded navigation paths are supported; these missing assisted workflows do not block the primary baseline. |
+| UX-C9 · OPEN · P2 | Complete positional UNION mapping for tabular/trailing projections (Phase 14). | Shared deriveUnionColumns covers scalar fields only; generator orderedSelectElements covers all projections. Requires shared alignment over all ordered select elements and a safe alias/reorder action contract; coordinate with A2 schema work without making full A2 unification a prerequisite. Canvas shows a preserve-only notice, suppresses misleading mapping edits and verifies unrelated edit/save/reopen. |
+| UX-C10 · OPEN · P3 | Historical global stable Query/Scope ID hardening idea. | Deferred until a concrete consumer needs persistent cross-tree identity. Recursive local drafts already work with parent SelectedTable.id; no new persisted format is required for baseline. |
+
+Contextual ExpressionBuilder (Phase 16) is closed: shared Classic editor,
+metadata-source helper/resolver and string actions; VT forms retain their
+existing context. No new CodeMirror dependency was added (dock/VT already use it).
+Historical EXISTS/NOT EXISTS, scalar SELECT subqueries and structured JOIN
+subqueries are unsupported shared grammar/model ideas, not promised Canvas
+features. Raw JOIN expressions remain editable. Their history and the
+condition-subquery asymmetries are retained in the reconciliation; supporting
+new grammar needs a separately approved shared scope, not a Canvas simulation.
 
 ## Architecture
 
