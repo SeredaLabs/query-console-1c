@@ -1,5 +1,6 @@
 import * as React from 'react';
 import type { HostMsg } from '../../shared/messages';
+import type { BatchDocument } from '../../core/query/batchModel';
 import type { MetaTable } from '../../core/metadata/types';
 import type { MetadataResolver } from '../../core/query/metadataResolver';
 import { buildResolverFromTables } from '../../core/metadata/buildModelResolver';
@@ -18,6 +19,9 @@ export interface DesignerSession {
    * designer must block editing and offer only Close, never an empty canvas
    * whose Apply would overwrite the original text. */
   loadError: string | null;
+  /** Initial query is validated but awaits explicit consent to comment loss. */
+  commentLossPending: boolean;
+  confirmCommentLoss: () => void;
   /** Resolver over the received metadata, or `undefined` (fail-open) when none. */
   buildResolver: () => MetadataResolver | undefined;
 }
@@ -37,6 +41,8 @@ export function useDesignerSession(
   const [loading, setLoading] = React.useState(true);
   const [metadataLoaded, setMetadataLoaded] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [commentLossPending, setCommentLossPending] = React.useState(false);
+  const pendingCommentLossRef = React.useRef<BatchDocument | null>(null);
   const expectModelRef = React.useRef(false);
   const metaTablesRef = React.useRef<MetaTable[]>([]);
   const onMessageRef = React.useRef(onMessage);
@@ -46,6 +52,15 @@ export function useDesignerSession(
     () => (metaTablesRef.current.length ? buildResolverFromTables(metaTablesRef.current) : undefined),
     [],
   );
+
+  const confirmCommentLoss = React.useCallback(() => {
+    const doc = pendingCommentLossRef.current;
+    if (!doc) return;
+    pendingCommentLossRef.current = null;
+    dispatch({ type: 'LOAD_BATCH', doc });
+    setCommentLossPending(false);
+    setLoadError(null);
+  }, [dispatch]);
 
   React.useEffect(() => {
     const unsub = onHostMessage(msg => {
@@ -58,13 +73,16 @@ export function useDesignerSession(
         // Нет входного запроса — конструктор готов сразу после метаданных.
         if (!expectModelRef.current) setLoading(false);
       } else if (msg.type === 'loadModel') {
-        // Открытие из текста и проверка при применении используют ЕДИНЫЙ критерий
-        // (`tryOpenBatch`: синтаксис + локальная семантика по кэшу метаданных).
-        // Текст корректен — загружаем модель; иначе ошибка вместо пустого
-        // конструктора. В любом случае снимаем оверлей загрузки.
+        // A new host load supersedes any candidate still awaiting confirmation.
+        pendingCommentLossRef.current = null;
+        setCommentLossPending(false);
         const r = tryOpenDesignerBatch(msg.text, buildResolver());
         if (r.ok) { dispatch({ type: 'LOAD_BATCH', doc: r.doc }); setLoadError(null); }
-        else setLoadError(r.error);
+        else if ('commentLossDoc' in r) {
+          pendingCommentLossRef.current = r.commentLossDoc;
+          setCommentLossPending(true);
+          setLoadError(null);
+        } else setLoadError(r.error);
         setLoading(false);
       }
       onMessageRef.current?.(msg);
@@ -73,5 +91,5 @@ export function useDesignerSession(
     return unsub;
   }, [dispatch, buildResolver]);
 
-  return { loading, metadataLoaded, loadError, buildResolver };
+  return { loading, metadataLoaded, loadError, buildResolver, commentLossPending, confirmCommentLoss };
 }

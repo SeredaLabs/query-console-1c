@@ -14,10 +14,11 @@ Ukrainian/Russian. Historical platform observations are indexed in [audits](audi
   full grammar, arbitrary-expression validity or input/output equivalence. Unknown
   schema/reference types stay fail-open. Editor diagnostics check syntax/structural
   expressions, not metadata fields; concatenated fragments may receive warnings.
-- Raw-expression comments unsupported by the current renderer can **refuse designer
-  opening/manual-text Apply** before model replacement (C17). Original text is
-  retained. Bound comments and supported argument comments are preserved; safe
-  rejection is not support for those remaining raw slices.
+- Raw-expression comments unsupported by the renderer trigger a **warning and
+  confirmation** before designer opening/manual-text Apply replaces the model
+  (C17). Cancel preserves prior model/text; proceeding permits comment loss on
+  Save/OK. Original BSL text stays unchanged until Save. Bound/supported argument
+  comments are preserved; explicit consent to loss is not raw-slice support.
 - Negated condition-subquery input with keyword alias `В` can be misparsed and
   Apply-blocked (C18); an unambiguous alias has positive regression coverage.
 - Aliases in condition subqueries kept as opaque custom text (for example an ИЛИ

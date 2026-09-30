@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildYamlResolver } from '../../src/core/metadata/buildYamlResolver';
 import { COMMENT_LOSS_ON_OPEN, tryOpenDesignerBatch } from '../../src/webview/openDesignerBatch';
+import * as generator from '../../src/core/query/sdblGenerator';
 import { generateBatch } from '../../src/core/query/sdblGenerator';
+
+afterEach(() => vi.restoreAllMocks());
 
 const resolver = buildYamlResolver('test/fixtures/corpus/metadata/cf');
 for (const metadata of [false, true]) describe(`designer comment-loss boundary (metadata=${metadata})`, () => {
@@ -13,8 +16,11 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
     'ВЫБРАТЬ Т.Код // keep\n+ 1 КАК А ИЗ Справочник.Валюты КАК Т',
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т СГРУППИРОВАТЬ ПО Т.Код // keep\n',
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ИТОГИ КОЛИЧЕСТВО(А) // keep\nКАК Н ПО ОБЩИЕ',
-  ])('rejects loss before LOAD_BATCH: %s', input => {
-    expect(tryOpenDesignerBatch(input, active)).toEqual({ ok: false, error: COMMENT_LOSS_ON_OPEN });
+  ])('requires confirmation with a validated candidate: %s', input => {
+    const opened = tryOpenDesignerBatch(input, active);
+    expect(opened).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: expect.any(Object) });
+    if (!('commentLossDoc' in opened)) throw new Error('missing confirmation candidate');
+    expect(opened.commentLossDoc.members.length).toBeGreaterThan(0);
   });
   it.each([
     '// keep\nВЫБРАТЬ 1 КАК А',
@@ -31,6 +37,24 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
   });
   it('detects one dropped occurrence even when an identical comment survives', () => {
     const input = '// keep\nВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 // keep\nИЛИ Т.Код = 2';
-    expect(tryOpenDesignerBatch(input, active)).toEqual({ ok: false, error: COMMENT_LOSS_ON_OPEN });
+    const opened = tryOpenDesignerBatch(input, active);
+    expect(opened).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: expect.any(Object) });
+    if (!('commentLossDoc' in opened)) throw new Error('missing confirmation candidate');
+    expect(opened.commentLossDoc.members.length).toBeGreaterThan(0);
   });
+});
+
+
+it.each([
+  'ВЫБРАТЬ ИЗ ИЗ // keep',
+  'ВЫБРАТЬ А.Код ИЗ Справочник.Валюты КАК А, Справочник.Валюты КАК А // keep',
+])('syntax/semantic failure never offers a comment-loss override: %s', input => {
+  const opened = tryOpenDesignerBatch(input);
+  expect(opened.ok).toBe(false);
+  expect(opened).not.toHaveProperty('commentLossDoc');
+});
+
+it('generation failure remains an error without a confirmation candidate', () => {
+  vi.spyOn(generator, 'generateBatch').mockImplementation(() => { throw new Error('generation failed'); });
+  expect(tryOpenDesignerBatch('// keep\nВЫБРАТЬ 1 КАК А')).toEqual({ ok: false, error: 'generation failed' });
 });

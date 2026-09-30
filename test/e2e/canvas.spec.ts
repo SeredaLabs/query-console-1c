@@ -394,28 +394,82 @@ test.describe('Canvas feature baseline: source editing', () => {
 });
 
 
+const commentLossQuery = '// bound\nВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = 1 // lost\nИЛИ В.Код = 2';
+
 for (const surface of ['classic', 'canvas'] as const) {
-  test(`${surface}: C17 loss is rejected with original text untouched`, async ({ page }) => {
-    await open(page, surface, 'ВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = 1 // комментарий\nИЛИ В.Код = 2');
-    await expect(page.getByText(/не может сохранить все комментарии/)).toBeVisible();
+  for (const cancel of ['button', 'Escape'] as const) {
+    test(`${surface}: C17 warning ${cancel} keeps original text untouched`, async ({ page }) => {
+      await open(page, surface, commentLossQuery);
+      await expect(page.getByTestId('comment-loss-confirm')).toBeVisible();
+      await expect(page.getByTestId('comment-loss-cancel')).toBeFocused();
+      await expect(page.getByRole('button', { name: surface === 'canvas' ? 'Сохранить' : 'ОК', exact: true })).toBeDisabled();
+      await page.keyboard.press('Shift+Tab');
+      await expect(page.getByTestId('comment-loss-continue')).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(page.getByTestId('comment-loss-cancel')).toBeFocused();
+      expect(await insertions(page)).toEqual([]);
+      if (cancel === 'Escape') await page.keyboard.press('Escape');
+      else await page.getByTestId('comment-loss-cancel').click();
+      expect(await insertions(page)).toEqual([]);
+      expect(await page.evaluate(() => (window as unknown as { __webviewMessages: { type: string }[] }).__webviewMessages.filter(m => m.type === 'cancel').length)).toBe(1);
+    });
+  }
+  test(`${surface}: C17 loads only after confirmation, writes only on Save`, async ({ page }) => {
+    await open(page, surface, commentLossQuery);
+    await page.getByTestId('comment-loss-continue').click();
+    await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
     expect(await insertions(page)).toEqual([]);
-    await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
+    const output = await save(page, surface);
+    expect(output).toBe(generateBatch(parseBatch(commentLossQuery, undefined, { preserveComments: true })));
+    expect(output).toContain('// bound');
+    expect(output).not.toContain('// lost');
+    await open(page, surface, output);
+    await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
+    expect(await save(page, surface)).toBe(output);
+  });
+  test(`${surface}: C17 confirmation does not bypass malformed Save guard`, async ({ page }) => {
+    await open(page, surface, commentLossQuery.replace('В.Код = 1', 'В.Код = = 1'));
+    await page.getByTestId('comment-loss-continue').click();
+    await expect(page.getByRole('button', { name: surface === 'canvas' ? 'Сохранить' : 'ОК', exact: true })).toBeDisabled();
     expect(await insertions(page)).toEqual([]);
+  });
+  test(`${surface}: C17 pending candidate is superseded by a new host load`, async ({ page }) => {
+    await open(page, surface, commentLossQuery);
+    await page.evaluate(text => window.dispatchEvent(new MessageEvent('message', { data: { type: 'loadModel', text } })), query);
+    await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
+    expect(await save(page, surface)).toBe(generateBatch(parseBatch(query)));
   });
 }
 
-
-test('Classic text Apply also rejects C17 without replacing the current model', async ({ page }) => {
-  await open(page, 'classic', query);
-  await page.getByRole('button', { name: 'Запрос', exact: true }).click();
-  const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
-  await editor.fill('ВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = 1 // keep\nИЛИ В.Код = 2');
-  await page.getByRole('button', { name: 'Применить', exact: true }).click();
-  await expect(page.getByText(/не может сохранить все комментарии/)).toBeVisible();
-  expect(await insertions(page)).toEqual([]);
-  await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
-  expect(await save(page, 'classic')).toBe(generateBatch(parseBatch(query)));
-});
+for (const v2 of [false, true]) {
+  for (const proceed of [false, true]) {
+    test(`Classic text v2=${v2}: C17 ${proceed ? 'confirm' : 'cancel'} keeps model until consent`, async ({ page }) => {
+      await open(page, 'classic', query);
+      if (v2) await page.evaluate(() => window.dispatchEvent(new MessageEvent('message', { data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true, locale: 'ru' } })));
+      await page.getByRole('button', { name: 'Запрос', exact: true }).click();
+      const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+      await editor.fill(commentLossQuery);
+      await page.getByRole('button', { name: 'Применить', exact: true }).click();
+      await expect(page.getByTestId('comment-loss-confirm')).toBeVisible();
+      expect(await insertions(page)).toEqual([]);
+      if (proceed) {
+        await page.getByTestId('comment-loss-continue').click();
+        await expect(editor).toBeHidden();
+      } else {
+        await page.keyboard.press('Escape');
+        await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
+        await expect(editor).toBeVisible();
+        expect(await editor.innerText()).toBe(commentLossQuery);
+        if (v2) {
+          await page.getByTestId('query-text-cancel').click();
+          await page.getByRole('button', { name: 'Закрыть без сохранения', exact: true }).click();
+        } else await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
+      }
+      const output = await save(page, 'classic');
+      expect(output).toBe(generateBatch(parseBatch(proceed ? commentLossQuery : query, undefined, { preserveComments: true })));
+    });
+  }
+}
 
 test.describe('Canvas feature baseline: contextual editors and preservation', () => {
   test('virtual parameters edit retains argument comments and Save/reopen', async ({ page }) => {

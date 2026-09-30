@@ -56,8 +56,10 @@ in `test/e2e/canvas.spec.ts` cover:
   includes only the selected endpoints.
 - Contextual shared ExpressionBuilder for fields/WHERE/JOIN create/edit,
   Cancel/malformed recovery and nested-source Escape/OK/Back safety.
-- C17 controlled open refusal on both surfaces and Classic text Apply, keeping
-  original editor/model data intact; this is rejection, not preservation.
+- C17 warning/confirmation on both surfaces and both Classic text editors:
+  Cancel/Escape/focus isolation, loading only after consent, writing only on
+  Save, superseding host loads and unchanged malformed Save guards. Consent
+  permits known comment loss; it is not preservation support.
 - Duplicate-alias rejection and recovery, unsafe VT and malformed-expression
   Save blocking, C11 VT/`ПЕРИОДАМИ` Apply refusal with an explanation on both
   surfaces, and a failed load that emits cancel without replacement text.

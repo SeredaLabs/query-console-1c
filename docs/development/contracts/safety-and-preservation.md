@@ -16,12 +16,22 @@ leaves the prior editable model and original BSL editor text intact.
 
 With `preserveComments`, the wrapper compares original user comment occurrences
 against the initial generated model. Repeated identical comments count separately;
-slash-only package separators are excluded. Missing occurrences, or generation/
-lexing errors during that check, refuse loading. Classic manual-text Apply uses
-this wrapper before replacing its model too. The check detects loss; it does not
-prove comment placement, semantic equivalence or universal preservation.
+slash-only package separators are excluded. Missing occurrences produce a warning
+and a validated candidate requiring explicit confirmation. Both UIs show the
+same modal; its Cancel button receives initial focus, Escape cancels, focus stays
+inside, and background editing/Save is blocked. Only confirmation authorizes
+LOAD_BATCH; a newer host load supersedes the pending candidate. Cancel closes the
+designer without insertion. Loading itself never changes the original editor text;
+Save/OK remains a separate checked action.
 
-Regressions: [openDesignerBatch](../../../test/unit/openDesignerBatch.test.ts),
+Classic manual-text Apply uses the same detection/dialog before replacing its
+model. Cancel/Escape leaves both prior model and draft text intact; confirmation
+loads the candidate but does not write the BSL editor. Generation/lexing failures
+and parse/semantic errors remain errors with no confirmation override. The check
+detects loss; it does not prove placement, equivalence or universal preservation.
+
+Regressions: [session confirmation/supersession](../../../test/unit/designerSession.commentLoss.test.ts),
+[openDesignerBatch](../../../test/unit/openDesignerBatch.test.ts),
 [invalidInputPreservation](../../../test/unit/invalidInputPreservation.test.ts),
 Classic/Canvas load-failure and text-edit browser cases.
 
@@ -70,7 +80,8 @@ on a safe line. Raw continuation indentation is retained; omitted argument
 content does not manufacture comment slots. Reopening is stable.
 
 Other raw expression slices can still lose comments in core parsing/generation
-(C17); the designer wrapper refuses initial loss. **Safe refusal is not
+(C17); the designer warns before loading and asks for explicit consent. Saving
+a confirmed candidate can remove those comments. **Consent to comment loss is not
 PRESERVE-ONLY support.** Classic's preserve-comments toggle deliberately changes
 the user's output policy; Canvas keeps preservation enabled. Parsing without
 `preserveComments` is a separate core API mode, not evidence that user comments

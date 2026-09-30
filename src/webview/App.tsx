@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useReducer, useMemo, useState } from 'react';
+import { CommentLossDialog } from './components/CommentLossDialog';
 import { ConstructorView } from './components/ConstructorView';
 import { postToHost } from './bridge';
 import { useDesignerSession } from './hooks/useDesignerSession';
@@ -26,7 +27,7 @@ export function App(): React.ReactElement {
   const [, setLocaleRevision] = useState(0);
   // Сессия с хостом (ready → metadataTree → loadModel, загрузка/ошибка открытия) —
   // общая с Canvas (`hooks/useDesignerSession.ts`); здесь только Classic-сообщения.
-  const { loading, loadError, buildResolver } = useDesignerSession(dispatch, msg => {
+  const { loading, loadError, buildResolver, commentLossPending, confirmCommentLoss } = useDesignerSession(dispatch, msg => {
     if (msg.type === 'init') {
       // `locale` was added to a versionless host/WebView contract. A restored
       // panel or older harness may still send the previous shape; keep the
@@ -92,6 +93,7 @@ export function App(): React.ReactElement {
         preserveComments={preserveComments}
         onSetPreserveComments={setPreserveComments}
         onOk={() => {
+          if (commentLossPending) return;
           // generationError/unsafeVtError уже делают okDisabled=true (см. ниже) —
           // эта проверка на случай прямого вызова/будущей развязки условий, чтобы
           // «ОК» никогда не мог отправить insertText при известной ошибке генерации
@@ -105,9 +107,11 @@ export function App(): React.ReactElement {
           handleInsert(batchText);
         }}
         onCancel={handleCancel}
-        okDisabled={!batchText.trim() || generationError !== null || unsafeVtError !== null || malformedCustomError !== null}
+        okDisabled={commentLossPending || !batchText.trim() || generationError !== null || unsafeVtError !== null || malformedCustomError !== null}
         okError={generationError ? t('constructor.generationError', { error: localizeDiagnostic(generationError) }) : (unsafeVtError ?? malformedCustomError ?? (okError && localizeDiagnostic(okError)))}
       />
+
+      {commentLossPending && <CommentLossDialog onConfirm={confirmCommentLoss} onCancel={handleCancel} />}
 
       {/* Синтаксическая ошибка открытия из текста — поверх конструктора, с номером строки. */}
       {loadError != null && (

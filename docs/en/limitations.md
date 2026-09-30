@@ -1,5 +1,5 @@
 <!--
-source_version: 10
+source_version: 11
 translation_status: canonical
 -->
 
@@ -43,11 +43,12 @@ expansion remain Classic-only assisted workflows. The
 [current matrix](../design/new-builder/feature-baseline.md) defines the surface;
 browser/real-host gates are bounded and do not replace UX/accessibility/release review.
 
-Raw-expression `//` comments that the model would lose cause safe open/manual-text
-Apply refusal before replacement (C17). Original text is unchanged; this is not
-preservation support. A negated condition-subquery expression with keyword alias
-`В` can be misparsed and Apply-blocked (C18). Other supported comments/arguments
-remain preserved.
+Unsupported raw-expression `//` comments trigger a warning and confirmation
+before loading/replacing the model (C17). Cancel keeps the prior model/text;
+continuing allows known comment loss on Save/OK. The original editor text stays
+unchanged until Save. Consent is not preservation support. A negated condition-
+subquery expression with keyword alias `В` can still be misparsed and Apply-blocked
+(C18); confirmation does not bypass that guard. Supported comments remain preserved.
 
 ## ⛔ Round-trip exclusions
 

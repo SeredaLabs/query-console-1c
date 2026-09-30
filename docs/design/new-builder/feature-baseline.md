@@ -11,7 +11,7 @@ The [ledger](../../development/technical-debt.md) alone owns current debt status
 EDIT = accessible editing workflow. PRESERVE = a successfully loaded supported
 representation survives unrelated edit/Save/reopen; dedicated controls may be
 absent. MISSING = an absent workflow with its stated scope. N/A = outside this
-constructor surface. Safe rejection is not preservation.
+constructor surface. Confirmation of comment loss is not preservation; other unsafe input remains refused.
 
 | Capability | Classic | Canvas |
 |---|---|---|
@@ -46,7 +46,7 @@ constructor surface. Safe rejection is not preservation.
 | Report builder dynamic blocks | EDIT | PRESERVE; advanced UX follow-up |
 | Characteristics raw block, trailingFields | PRESERVE | PRESERVE |
 | Bound SELECT/FROM/field comments, VT/ПЕРИОДАМИ argument comments | PRESERVE | PRESERVE |
-| Raw-expression comments unsupported by core rendering | Explicit safe rejection | Explicit safe rejection |
+| Raw-expression comments unsupported by core rendering | Warning + explicit consent before loading | Warning + explicit consent before loading |
 | Contextual expression helper (field/WHERE/JOIN/VT) | EDIT | EDIT via shared Classic editor |
 | Metadata cache refresh / lazy reference-field expansion | EDIT via existing bridge/actions | MISSING noncritical UX-C8; existing loaded navigation retained |
 | Generated SDBL text editing / reparse | EDIT Classic dialog | Read-only dock; raw editor remains available outside Canvas |

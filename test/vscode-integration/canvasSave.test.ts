@@ -9,7 +9,9 @@ import { t } from '../../src/webview-canvas/i18n';
 import { FIXTURE_CF, REPO_ROOT, waitUntil } from './testUtil';
 
 describe('Extension Host: Canvas load → edit → Save → source document', () => {
-  for (const nested of [false, true]) it(`production Canvas ${nested ? 'nested source edit/back' : 'field alias edit'} replaces only the captured BSL literal through the real bridge`, async function () {
+  for (const mode of ['alias', 'nested', 'comment-cancel', 'comment-save'] as const) it(`production Canvas ${mode} uses the real bridge and preserves surrounding BSL`, async function () {
+    const nested = mode === 'nested';
+    const commentLoss = mode === 'comment-cancel' || mode === 'comment-save';
     this.timeout(25000);
     const config = vscode.workspace.getConfiguration('queryConsole');
     const previous = config.inspect<boolean>('openInNewWindow')?.globalValue;
@@ -18,12 +20,15 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
     const channel = vscode.window.createOutputChannel('Canvas save integration');
     let panel: vscode.WebviewPanel | undefined;
     try {
-      const query = nested
+      const query = commentLoss
+        ? '// bound\nВЫБРАТЬ В.Ссылка КАК Код ИЗ Справочник.Тест КАК В ГДЕ В.Ссылка = &Код // lost\nИЛИ В.Ссылка = &Другой'
+        : nested
         ? 'ВЫБРАТЬ П.Код ИЗ (ВЫБРАТЬ В.Ссылка КАК Код, В.Ссылка КАК Дополнительное ИЗ Справочник.Тест КАК В) КАК П'
         : 'ВЫБРАТЬ В.Ссылка КАК Код ИЗ Справочник.Тест КАК В';
       const prefix = 'Процедура Тест()\nЗапрос.Текст = ';
       const suffix = ';\nХ = 1;\nКонецПроцедуры';
-      const original = `${prefix}"${query}"${suffix}`;
+      const literal = query.replace(/\n/g, '\n|');
+      const original = `${prefix}"${literal}"${suffix}`;
       const doc = await vscode.workspace.openTextDocument({ language: 'plaintext', content: original });
       const editor = await vscode.window.showTextDocument(doc);
       const context = {
@@ -32,7 +37,7 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
       } as vscode.ExtensionContext;
       panel = createCanvasPanel(context, FIXTURE_CF, channel, {
         document: doc, selection: editor.selection, documentVersion: doc.version,
-        queryRange: { start: prefix.length, end: prefix.length + query.length + 2 },
+        queryRange: { start: prefix.length, end: prefix.length + literal.length + 2 },
         wrapAsBslString: true,
       }, query);
       let disposed = false;
@@ -46,6 +51,7 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
       const labels = JSON.stringify({
         fields: t(locale, 'workspaceFields'), alias: t(locale, 'fieldsWorkspaceAliasPlaceholder'),
         save: t(locale, 'save'), nested,
+        commentDecision: commentLoss ? (mode === 'comment-cancel' ? 'cancel' : 'continue') : null,
       });
       panel.webview.html = html.replace('</body>', `<script nonce="${nonce}">
         const labels = ${labels};
@@ -55,6 +61,19 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
           const nestedEditor = document.querySelector('[data-testid="canvas-source-query-editor"]');
           const scope = nestedEditor || document;
           const buttons = [...scope.querySelectorAll('button')];
+          if (labels.commentDecision && step === 0) {
+            const warning = document.querySelector('[data-testid="comment-loss-confirm"]');
+            const save = buttons.find(b => b.textContent.trim() === labels.save);
+            if (!warning || !save || !save.disabled) return;
+            if (labels.commentDecision === 'cancel') {
+              clearInterval(timer);
+              warning.querySelector('[data-testid="comment-loss-cancel"]').click();
+            } else {
+              warning.querySelector('[data-testid="comment-loss-continue"]').click();
+              step = 2;
+            }
+            return;
+          }
           if (labels.nested && step === 0 && !nestedEditor) {
             const card = document.querySelector('[data-source-alias="П"]');
             const enter = document.querySelector('[data-testid="canvas-edit-source"]');
@@ -84,10 +103,18 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
 
       assert.ok(await waitUntil(() => disposed, 15000), 'Canvas did not complete Save through the host bridge');
       const result = doc.getText();
+      if (mode === 'comment-cancel') {
+        assert.strictEqual(result, original, 'Cancel changed the source document');
+        return;
+      }
       assert.notStrictEqual(result, original);
       assert.ok(result.startsWith(`${prefix}"`), result);
       assert.ok(result.endsWith(`"${suffix}`), result);
-      assert.ok(result.includes('В.Ссылка КАК КодИзCanvas'), result);
+      if (mode === 'comment-save') {
+        assert.ok(result.includes('// bound'), result);
+        assert.ok(!result.includes('// lost'), result);
+        assert.ok(result.includes('В.Ссылка = &Код'), result);
+      } else assert.ok(result.includes('В.Ссылка КАК КодИзCanvas'), result);
       assert.ok(result.includes('Справочник.Тест КАК В'), result);
     } finally {
       panel?.dispose();

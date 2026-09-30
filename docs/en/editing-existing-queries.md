@@ -1,5 +1,5 @@
 <!--
-source_version: 3
+source_version: 4
 translation_status: canonical
 -->
 
@@ -23,11 +23,12 @@ SDBL and replaces the detected string. Line comments in supported locations are
 preserved, but formatting can be normalized. Review the diff before saving a
 complex handwritten query.
 
-If the current model cannot retain every user comment during opening, both
-designers refuse the load before replacing their model. Classic manual-text Apply
-uses the same check. The original editor text stays unchanged; refusal is not
-comment-preservation support. Unsupported raw-expression comments and a known
-negated condition-subquery alias case are described in [limitations](limitations.md).
+If the current model cannot preserve every user comment, both designers warn
+and ask for confirmation before replacing their model. Cancel keeps the previous
+model; confirming allows editing, but Save/OK can remove those comments. Classic
+manual-text Apply uses the same dialog; cancel leaves its draft text intact.
+Original BSL editor text changes only on Save/OK. See [limitations](limitations.md)
+for unsupported raw-expression comments and the known negated condition-subquery alias case.
 
 ## 🛡️ Safe workflow
 

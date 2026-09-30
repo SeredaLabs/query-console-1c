@@ -5,6 +5,7 @@ import type { SupportedLocale } from '../shared/locale';
 import { computeBatchTextSafe } from '../webview/computeBatchText';
 import { initialState, reducer } from '../webview/state/queryStore';
 import { postToHost } from '../webview/bridge';
+import { CommentLossDialog } from '../webview/components/CommentLossDialog';
 import { useDesignerSession } from '../webview/hooks/useDesignerSession';
 import { DocumentBar } from './components/DocumentBar';
 import { PackageNav } from './components/PackageNav';
@@ -69,7 +70,7 @@ export function App(): React.ReactElement {
   // перезапише LOAD_BATCH) і `loadError` (блокуючий overlay нижче, лише Close —
   // жодного `insertText` поверх оригінального тексту, який Canvas не відкрив).
   // Тут лише Canvas-специфічне: локаль.
-  const { loading, metadataLoaded, loadError, buildResolver } = useDesignerSession(dispatch, msg => {
+  const { loading, metadataLoaded, loadError, buildResolver, commentLossPending, confirmCommentLoss } = useDesignerSession(dispatch, msg => {
     if (msg.type === 'init' && msg.locale) {
       setLocale(msg.locale);
       // Texts Canvas reuses from Classic instead of duplicating (core diagnostics
@@ -100,6 +101,7 @@ export function App(): React.ReactElement {
    * з тими самими stale-document/`documentVersion` guard'ами, що й Classic.
    */
   const handleSave = React.useCallback(() => {
+    if (commentLossPending) return;
     const decision = decideApply(batchText.text, batchText.error, applyBlocker, buildResolver());
     if (!decision.ok) {
       if (decision.kind === 'invalid') setSaveError(localizeDiagnostic(decision.error));
@@ -107,7 +109,7 @@ export function App(): React.ReactElement {
     }
     setSaveError(null);
     postToHost({ type: 'insertText', text: batchText.text });
-  }, [batchText, applyBlocker, buildResolver]);
+  }, [batchText, applyBlocker, buildResolver, commentLossPending]);
 
   /** Load-failure fix (2026-09-22): closes the panel WITHOUT ever sending
    * `insertText` --- `canvasPanel.ts` disposes on `cancel`, same as Classic's
@@ -133,7 +135,7 @@ export function App(): React.ReactElement {
       <DocumentBar
         locale={locale}
         onSave={handleSave}
-        saveDisabled={!!batchText.error || !batchText.text.trim() || saveBlocked}
+        saveDisabled={commentLossPending || !!batchText.error || !batchText.text.trim() || saveBlocked}
         saveDisabledReason={
           applyBlocker?.kind === 'unsafeVirtualTable'
             ? t(locale, 'saveBlockedUnsafeVirtual')
@@ -168,6 +170,8 @@ export function App(): React.ReactElement {
         onResize={resizeSdbl}
       />
     </div>
+
+    {commentLossPending && <CommentLossDialog onConfirm={confirmCommentLoss} onCancel={handleClose} />}
 
     {/* Load-failure fix (2026-09-22, audit P1 #2): blocking overlay, same intent
         as Classic's `loadError` banner --- covers the whole panel so the user

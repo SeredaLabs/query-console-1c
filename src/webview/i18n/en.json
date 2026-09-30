@@ -373,5 +373,7 @@
   "warning.joinWithSubquery": "A join with subquery ({source}) can be inefficient",
   "warning.topWithoutOrder": "TOP N without ORDER BY is non-deterministic",
   "warning.unknownCoreWarning": "Query analysis reported a warning",
-  "diagnostic.commentLoss": "The constructor cannot preserve all comments in this query. Opening is blocked; the original text is unchanged."
+  "diagnostic.commentLoss": "The constructor cannot preserve all comments in this query. Saving will remove some comments. Continue? The original editor text remains unchanged until you save.",
+  "dialog.commentLoss.title": "Some comments cannot be preserved",
+  "dialog.commentLoss.continue": "Continue with comment loss"
 }

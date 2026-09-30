@@ -21,6 +21,8 @@ import { TempTableDialog } from './TempTableDialog';
 import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
 import { CodeEditor } from './CodeEditor';
 import { IconButton } from './IconButton';
+import { CommentLossDialog } from './CommentLossDialog';
+import type { BatchDocument } from '../../core/query/batchModel';
 import { QueryTextDialog } from './QueryTextDialog';
 import type { VirtualParams } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
@@ -67,6 +69,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   } = props;
   const [activeTab, setActiveTab] = useState('Таблицы и поля');
   const [queryModalText, setQueryModalText] = useState<string | null>(null);
+  const [commentLossDoc, setCommentLossDoc] = useState<BatchDocument | null>(null);
   const [queryModalError, setQueryModalError] = useState<string | null>(null);
   const [vtDialogTableId, setVtDialogTableId] = useState<string | null>(null);
   const [exprBuilder, setExprBuilder] = useState<null | {
@@ -144,7 +147,11 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   function handleApplyQueryEdit() {
     if (queryModalText === null) return;
     const r = tryOpenDesignerBatch(queryModalText, queryModalResolver);
-    if (!r.ok) { setQueryModalError(r.error); return; }
+    if (!r.ok) {
+      if ('commentLossDoc' in r) setCommentLossDoc(r.commentLossDoc);
+      else setQueryModalError(r.error);
+      return;
+    }
     // Пустой/из одних пробелов текст `tryOpenBatch` считает валидным ПУСТЫМ пакетом
     // (`{ok:true, doc:{members:[]}}`) — это осознанное поведение парсера, но здесь
     // означало бы «Применить» молча стирает всю модель конструктора (проверено вручную:
@@ -706,6 +713,15 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           умолчанию выключено) переключает на новую раскладку из QueryTextDialog —
           обе ветки ниже используют один и тот же handleApplyQueryEdit/onClose, так
           что флаг — чистый UI-свитч, безопасно выключаемый в рантайме без revert кода. */}
+      {commentLossDoc && <CommentLossDialog
+        onCancel={() => setCommentLossDoc(null)}
+        onConfirm={() => {
+          dispatch({ type: 'LOAD_BATCH', doc: commentLossDoc });
+          setCommentLossDoc(null);
+          setQueryModalError(null);
+          setQueryModalText(null);
+        }}
+      />}
       {queryModalText !== null && queryTextEditorV2 && (
         <QueryTextDialog
           text={queryModalText}
