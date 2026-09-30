@@ -40,6 +40,15 @@ in `test/e2e/canvas.spec.ts` cover:
   through load/save/reopen (C3).
 - Canvas alias, custom-condition and sort-direction edits, semantic assertions
   on the saved model, then reopening/saving that result through Classic.
+- Recursive source create/edit in all six workspaces, JOIN conditions, cancel /
+  context retention, referenced-column refusal, nested UNION/temp packages,
+  source-less expressions and manual temp descriptions.
+- Contextual common VT forms with argument comments/safety flags, TOTALS with
+  ПЕРИОДАМИ, INDEX sets/unique, and UNION tail ORDER/TOTALS/INDEX editing (C20).
+- Preserve-only grouping sets, dynamic report blocks, condition subqueries,
+  raw ORDER/TOTALS and calculation VT through unrelated edit/Save/reopen.
+- C17 controlled open refusal on both surfaces and Classic text Apply, keeping
+  original editor/model data intact; this is rejection, not preservation.
 - Duplicate-alias rejection and recovery, unsafe VT and malformed-expression
   Save blocking, C11 VT/`ПЕРИОДАМИ` Apply refusal with an explanation on both
   surfaces, and a failed load that emits cancel without replacement text.
@@ -47,15 +56,17 @@ in `test/e2e/canvas.spec.ts` cover:
 The browser harness captures `insertText`; it does not modify a VS Code document.
 `npm run test:integration` additionally runs `canvasSave.test.ts`: a real VS Code
 webview loads the production Canvas bundle, receives metadata/query through the
-host, changes a field alias through DOM controls and clicks Save. The actual
+host, changes a field alias or enters a nested source, edits and returns through
+Back, then clicks Save. The actual
 `acquireVsCodeApi` bridge and `insertResult` replace only the captured BSL literal.
 A test-only script drives those controls under the panel's existing CSP nonce;
 it does not synthesize `insertText` or replace the production UI. Existing host
 tests also cover stale-document rejection.
 
-Verified locally on 2026-09-28. This is a representative regression gate, not
+Verified locally on 2026-09-30: 128 browser tests and 39 Extension Host tests. This is a representative regression gate, not
 exhaustive Canvas editing coverage or proof of live 1C semantic equivalence.
-Phase 13 features and the opt-in preview boundary remain unchanged. These tests
+[Canvas Feature Baseline](../design/new-builder/feature-baseline.md) is complete,
+including Phase 13, while the opt-in preview boundary remains. These tests
 run through the existing browser and Extension Host CI commands; no new runtime
 dependency or test hook is added to the extension.
 

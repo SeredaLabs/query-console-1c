@@ -39,14 +39,15 @@ To test it, enable `queryConsole.enableNewBuilderPreview` in VS Code Settings,
 then run `1C: New Builder (Preview)` from Command Palette. The visual interface
 is still under development and does not replace the Classic Constructor.
 
-Current checkpoint: the baseline roadmap through Phase 12 is implemented,
-including real query load/save, all six workspaces, package/UNION navigation,
-and temporary-table continuity. Phase 13 (manual temporary-table editing and
-source-subquery drill-down) is the next main implementation phase.
-[Verification now covers](../../development/testing-and-release.md#canvas-verification)
-representative Classic/Canvas parity, Canvas edits/Save guards and real VS Code
-source insertion. Broader feature coverage remains incomplete; the preview flag
-remains intentional.
+Current checkpoint: [Canvas Feature Baseline Complete](feature-baseline.md),
+verified 2026-09-30. Phase 13 source-subquery creation/recursive drill-down and
+manual temporary descriptions are implemented, with contextual VT/TOTALS/INDEX
+editing and the existing six workspaces/package/UNION navigation. The
+[before/after capability matrix](feature-baseline.md#capability-matrix-before--after)
+records advanced preserve-only boundaries and safely rejected C17/C18 inputs.
+[Verification](../../development/testing-and-release.md#canvas-verification)
+includes full browser gates and real VS Code nested edit/back/Save insertion.
+Preview remains intentional pending separate UX/release hardening.
 
 For contributor debugging, `F5` or `npm run preview:canvas` starts an Extension
 Development Host and opens Canvas automatically.

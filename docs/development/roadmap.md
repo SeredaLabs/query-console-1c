@@ -25,13 +25,15 @@ with the extension but remains hidden by default behind the
 `queryConsole.enableNewBuilderPreview` experimental setting, so it does not
 replace the Classic Constructor.
 
-The current Canvas baseline covers roadmap Phases 0--12. UNION UX (Phase 14)
-and most of the read-only SDBL developer experience (Phase 15) were completed
-ahead of sequence. Phase 13 remains the next main implementation step:
-source-subquery drill-down and manual temporary-table editing. The [Canvas verification gate](testing-and-release.md#canvas-verification) now
-records representative Classic/Canvas parity, editing/Save guards and a real
-VS Code load → edit → Save → source insertion scenario. Canvas remains an
-opt-in preview; this gate does not complete Phase 13 or prove all editing paths.
+The [Canvas Feature Baseline](../design/new-builder/feature-baseline.md) is complete:
+Phases 0--13, recursive source create/edit, manual temp descriptions and the
+required VT/TOTALS/INDEX editors are verified over the shared core/store/session.
+UNION UX (Phase 14) and most read-only SDBL assistance (Phase 15) were completed
+ahead of sequence. Advanced editing remains bounded by explicit preserve-only
+capabilities and UX-C1--C4 in the ledger; C17/C18 have controlled refusal.
+The [verification gate](testing-and-release.md#canvas-verification) includes
+recursive editing and real VS Code source insertion. Canvas stays opt-in Preview
+until a separate UX/release review; Classic stays available.
 
 ## Required follow-up tasks
 
@@ -63,8 +65,8 @@ Current tasks and evidence are tracked once in the [ledger](technical-debt.md).
    representation and cosmetic JOIN stability. Parameter-consumer consistency
    (C7) is closed.
 8. **Preview release.** V4 now has a recorded regression gate and D1 source
-   comments are corrected. Keep Canvas opt-in while its feature roadmap and
-   broader release review remain unfinished.
+   comments are corrected. Keep Canvas opt-in while UX-C1--C4 and
+   the broader release review remain unfinished.
 
 This is one recommended sequence, not authorization to implement these stages.
 Resolve U1–U3 when the relevant stage needs their platform evidence. Existing
