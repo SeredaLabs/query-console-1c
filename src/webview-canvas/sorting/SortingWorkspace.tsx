@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { compoundSections, dispatchCompoundSection } from '../../webview/compoundSections';
 import { defaultTableAlias, type SortDirection } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
@@ -8,12 +9,12 @@ import { distinctFieldRefs } from '../../webview/fieldSource';
 
 /**
  * Phase 10 — Sorting Workspace. Той самий мінімальний грід-патерн, що й
- * Grouping (Phase 9): список `state.order.fields` (ADD_ORDER_FIELD/
+ * Grouping (Phase 9): список `order.fields` (ADD_ORDER_FIELD/
  * REMOVE_ORDER_FIELD/SET_ORDER_DIRECTION) + "Автоупорядочивание"
  * (SET_ORDER_AUTO) — жодних нових reducer actions.
  *
  * Кандидати для "+ Сортування" — ЛИШЕ прості (не-expression) поля з уже
- * вибраного SELECT-списку (`state.selectedFields`), той самий обсяг, що й
+ * вибраного SELECT-списку (`selectedFields`), той самий обсяг, що й
  * Classic OrderTab.tsx (`distinctFieldRefs(selectedFields)`), а НЕ всі поля
  * джерел (як у Grouping/Conditions) — `OrderField` адресує лише
  * (tableId,path)/selectAlias/літеральний `&Параметр`, без довільних
@@ -111,7 +112,7 @@ const PANEL_INPUT: React.CSSProperties = {
 export function SortingWorkspace({
   locale,
   state,
-  dispatch,
+  dispatch: rootDispatch,
   onGoToFields,
 }: {
   locale: SupportedLocale;
@@ -119,19 +120,24 @@ export function SortingWorkspace({
   dispatch: React.Dispatch<QueryAction>;
   onGoToFields?: () => void;
 }): React.ReactElement {
+  const { first, last } = compoundSections(state);
+  const order = last.order ?? { fields: [], auto: false };
+  const selectedFields = first.fields;
+  const selectedTables = first.tables;
+  const dispatch = (action: QueryAction) => dispatchCompoundSection(state, rootDispatch, action);
   const [query, setQuery] = React.useState('');
   const [addOpen, setAddOpen] = React.useState(false);
   const [addQuery, setAddQuery] = React.useState('');
 
   const tableLabelOf = React.useCallback(
     (tableId: string) => {
-      const tb = state.selectedTables.find(t2 => t2.id === tableId);
+      const tb = selectedTables.find(t2 => t2.id === tableId);
       return tb ? defaultTableAlias(tb) : tableId;
     },
-    [state.selectedTables]
+    [selectedTables]
   );
 
-  const orderFields = state.order.fields;
+  const orderFields = order.fields;
   const isSearching = query.trim().length > 0;
   const visible = orderFields
     .map((f, idx) => ({ f, idx }))
@@ -146,14 +152,14 @@ export function SortingWorkspace({
   // OrderField не вміє адресувати довільний вираз/поле поза SELECT.
   const addableFields = React.useMemo(() => {
     const out: { tableId: string; path: string; label: string }[] = [];
-    for (const sf of distinctFieldRefs(state.selectedFields)) {
+    for (const sf of distinctFieldRefs(selectedFields)) {
       const already = orderFields.some(o => o.tableId === sf.tableId && o.path === sf.path);
       if (already) continue;
       out.push({ tableId: sf.tableId, path: sf.path, label: `${tableLabelOf(sf.tableId)}.${sf.path}` });
     }
     const q = addQuery.trim().toLowerCase();
     return q ? out.filter(f => f.label.toLowerCase().includes(q)) : out;
-  }, [state.selectedFields, orderFields, tableLabelOf, addQuery]);
+  }, [selectedFields, orderFields, tableLabelOf, addQuery]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0, minHeight: 0 }}>
@@ -227,7 +233,7 @@ export function SortingWorkspace({
         <span style={{ width: 1, height: 18, background: TOKENS.border, margin: '0 2px', flexShrink: 0 }} />
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: TOKENS.textSecondary, cursor: 'pointer', flexShrink: 0 }}>
-          <input type="checkbox" checked={state.order.auto} onChange={e => dispatch({ type: 'SET_ORDER_AUTO', auto: e.target.checked })} />
+          <input type="checkbox" checked={order.auto} onChange={e => dispatch({ type: 'SET_ORDER_AUTO', auto: e.target.checked })} />
           {t(locale, 'sortingWorkspaceAutoOrder')}
         </label>
 
@@ -270,7 +276,7 @@ export function SortingWorkspace({
                   {t(locale, 'sortingWorkspaceEmptyTitle')}
                 </div>
                 <div style={{ fontSize: 12, color: TOKENS.textMuted, marginBottom: 12 }}>{t(locale, 'sortingWorkspaceEmptySubtitle')}</div>
-                {onGoToFields && state.selectedFields.length === 0 && (
+                {onGoToFields && selectedFields.length === 0 && (
                   <button
                     type="button"
                     onClick={onGoToFields}

@@ -16,6 +16,7 @@ import { BuilderTab } from './BuilderTab';
 import { BatchTab } from './BatchTab';
 import { VirtualTableParamsDialog } from './VirtualTableParamsDialog';
 import { ExpressionBuilder, type ExpressionSource } from './ExpressionBuilder';
+import { compoundSections, dispatchCompoundSection } from '../compoundSections';
 import { TempTableDialog } from './TempTableDialog';
 import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
 import { CodeEditor } from './CodeEditor';
@@ -84,6 +85,9 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   // 8.3.7: перетаскиваемые границы трёх панелей вкладки «Таблицы и поля».
   const [dbPanelWidth, setDbPanelWidth] = useState(300);
   const [tablesPanelWidth, setTablesPanelWidth] = useState(300);
+
+  const tailSections = compoundSections(state);
+  const dispatchTail = (action: QueryAction) => dispatchCompoundSection(state, dispatch, action);
 
   // ТЗ §56 P1.7: allTables(state) аллоцирует НОВЫЙ массив на каждый вызов —
   // мемоизируем ОДИН раз на рендер (а не зовём напрямую в ~13 местах ниже),
@@ -521,18 +525,18 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
       {activeTab === 'Индексы' && (
         <IndexTab
-          selectedFields={state.selectedFields}
-          indexing={state.indexing}
-          onAddIndex={() => dispatch({ type: 'ADD_INDEX' })}
-          onCopyIndex={index => dispatch({ type: 'COPY_INDEX', index })}
-          onRemoveIndex={index => dispatch({ type: 'REMOVE_INDEX', index })}
-          onMoveIndex={(index, dir) => dispatch({ type: 'MOVE_INDEX', index, dir })}
-          onSetUnique={(index, unique) => dispatch({ type: 'SET_INDEX_UNIQUE', index, unique })}
-          onAddField={(index, tableId, path) => dispatch({ type: 'ADD_INDEX_FIELD', index, tableId, path })}
-          onAddAllFields={(index, fields) => dispatch({ type: 'ADD_ALL_INDEX_FIELDS', index, fields })}
-          onRemoveField={(index, tableId, path) => dispatch({ type: 'REMOVE_INDEX_FIELD', index, tableId, path })}
-          onClearFields={index => dispatch({ type: 'CLEAR_INDEX_FIELDS', index })}
-          onMoveField={(index, tableId, path, dir) => dispatch({ type: 'MOVE_INDEX_FIELD', index, tableId, path, dir })}
+          selectedFields={tailSections.first.fields}
+          indexing={tailSections.last.indexing ?? { indexes: [] }}
+          onAddIndex={() => dispatchTail({ type: 'ADD_INDEX' })}
+          onCopyIndex={index => dispatchTail({ type: 'COPY_INDEX', index })}
+          onRemoveIndex={index => dispatchTail({ type: 'REMOVE_INDEX', index })}
+          onMoveIndex={(index, dir) => dispatchTail({ type: 'MOVE_INDEX', index, dir })}
+          onSetUnique={(index, unique) => dispatchTail({ type: 'SET_INDEX_UNIQUE', index, unique })}
+          onAddField={(index, tableId, path) => dispatchTail({ type: 'ADD_INDEX_FIELD', index, tableId, path })}
+          onAddAllFields={(index, fields) => dispatchTail({ type: 'ADD_ALL_INDEX_FIELDS', index, fields })}
+          onRemoveField={(index, tableId, path) => dispatchTail({ type: 'REMOVE_INDEX_FIELD', index, tableId, path })}
+          onClearFields={index => dispatchTail({ type: 'CLEAR_INDEX_FIELDS', index })}
+          onMoveField={(index, tableId, path, dir) => dispatchTail({ type: 'MOVE_INDEX_FIELD', index, tableId, path, dir })}
         />
       )}
 
@@ -553,30 +557,30 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
       {activeTab === 'Порядок' && (
         <OrderTab
-          selectedTables={state.selectedTables}
-          selectedFields={state.selectedFields}
-          order={state.order}
-          onAddOrderField={(tableId, path) => dispatch({ type: 'ADD_ORDER_FIELD', tableId, path })}
-          onRemoveOrderField={(tableId, path) => dispatch({ type: 'REMOVE_ORDER_FIELD', tableId, path })}
-          onSetOrderDirection={(tableId, path, direction) => dispatch({ type: 'SET_ORDER_DIRECTION', tableId, path, direction })}
-          onSetOrderAuto={auto => dispatch({ type: 'SET_ORDER_AUTO', auto })}
+          selectedTables={tailSections.first.tables}
+          selectedFields={tailSections.first.fields}
+          order={tailSections.last.order ?? { fields: [], auto: false }}
+          onAddOrderField={(tableId, path) => dispatchTail({ type: 'ADD_ORDER_FIELD', tableId, path })}
+          onRemoveOrderField={(tableId, path) => dispatchTail({ type: 'REMOVE_ORDER_FIELD', tableId, path })}
+          onSetOrderDirection={(tableId, path, direction) => dispatchTail({ type: 'SET_ORDER_DIRECTION', tableId, path, direction })}
+          onSetOrderAuto={auto => dispatchTail({ type: 'SET_ORDER_AUTO', auto })}
         />
       )}
 
       {activeTab === 'Итоги' && (
         <TotalsTab
-          selectedTables={state.selectedTables}
-          selectedFields={state.selectedFields}
+          selectedTables={tailSections.first.tables}
+          selectedFields={tailSections.first.fields}
           metaTables={tables}
-          totals={state.totals}
-          onAddGroupField={(tableId, path) => dispatch({ type: 'ADD_TOTAL_GROUP_FIELD', tableId, path })}
-          onRemoveGroupField={(tableId, path) => dispatch({ type: 'REMOVE_TOTAL_GROUP_FIELD', tableId, path })}
-          onSetGroupKind={(tableId, path, kind) => dispatch({ type: 'SET_TOTAL_GROUP_KIND', tableId, path, kind })}
-          onSetGroupAlias={(tableId, path, alias) => dispatch({ type: 'SET_TOTAL_GROUP_ALIAS', tableId, path, alias })}
-          onAddTotalField={(tableId, path) => dispatch({ type: 'ADD_TOTAL_FIELD', tableId, path })}
-          onRemoveTotalField={index => dispatch({ type: 'REMOVE_TOTAL_FIELD', index })}
-          onSetTotalFieldFunc={(index, func) => dispatch({ type: 'SET_TOTAL_FIELD_FUNC', index, func })}
-          onSetGrand={grand => dispatch({ type: 'SET_TOTAL_GRAND', grand })}
+          totals={tailSections.last.totals ?? { groupFields: [], totalFields: [], grand: false }}
+          onAddGroupField={(tableId, path) => dispatchTail({ type: 'ADD_TOTAL_GROUP_FIELD', tableId, path })}
+          onRemoveGroupField={(tableId, path) => dispatchTail({ type: 'REMOVE_TOTAL_GROUP_FIELD', tableId, path })}
+          onSetGroupKind={(tableId, path, kind) => dispatchTail({ type: 'SET_TOTAL_GROUP_KIND', tableId, path, kind })}
+          onSetGroupAlias={(tableId, path, alias) => dispatchTail({ type: 'SET_TOTAL_GROUP_ALIAS', tableId, path, alias })}
+          onAddTotalField={(tableId, path) => dispatchTail({ type: 'ADD_TOTAL_FIELD', tableId, path })}
+          onRemoveTotalField={index => dispatchTail({ type: 'REMOVE_TOTAL_FIELD', index })}
+          onSetTotalFieldFunc={(index, func) => dispatchTail({ type: 'SET_TOTAL_FIELD_FUNC', index, func })}
+          onSetGrand={grand => dispatchTail({ type: 'SET_TOTAL_GRAND', grand })}
         />
       )}
 

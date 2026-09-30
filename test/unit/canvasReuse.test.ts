@@ -32,7 +32,9 @@ describe('Canvas reuses Classic code instead of copying it', () => {
   });
 
   it('Canvas sorting takes its source fields from Classic distinctFieldRefs', () => {
-    expect(read('webview-canvas/sorting/SortingWorkspace.tsx')).toContain('distinctFieldRefs(state.selectedFields)');
+    const sorting = read('webview-canvas/sorting/SortingWorkspace.tsx');
+    expect(sorting).toContain('distinctFieldRefs(selectedFields)');
+    expect(sorting).toContain('compoundSections(state)');
   });
 
   it('the Canvas panel host is the Classic designer host (panel.ts createDesignerPanel)', () => {

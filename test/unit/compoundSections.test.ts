@@ -1,0 +1,34 @@
+import { expect, it } from 'vitest';
+import { parseBatch } from '../../src/core/query/sdblParser';
+import { generateBatch } from '../../src/core/query/sdblGenerator';
+import { compoundSections, dispatchCompoundSection } from '../../src/webview/compoundSections';
+import { assembleBatch, initialState, reducer } from '../../src/webview/state/queryStore';
+
+it('UNION tail actions use the final member and first-member column aliases, preserving the active member (C20)', () => {
+  const input = 'ВЫБРАТЬ А.Код КАК Первый ПОМЕСТИТЬ ВТ ИЗ Справочник.Валюты КАК А ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ Б.Наименование ИЗ Справочник.Валюты КАК Б УПОРЯДОЧИТЬ ПО Первый ИТОГИ ПО ОБЩИЕ ИНДЕКСИРОВАТЬ ПО НАБОРАМ ((Первый), (Первый))';
+  let state = reducer(initialState(), { type: 'LOAD_BATCH', doc: parseBatch(input) });
+  state = reducer(state, { type: 'FOCUS_SELECTED_TABLE', id: state.selectedTables[0].id });
+  state = reducer(state, { type: 'FOCUS_SELECTED_FIELD', idx: 0 });
+  const firstFields = state.selectedFields;
+  const focusedTable = state.focusedSelectedTableId;
+  const dispatch = (action: Parameters<typeof reducer>[1]) => { state = reducer(state, action); };
+  dispatchCompoundSection(state, dispatch, { type: 'SET_INDEX_UNIQUE', index: 0, unique: true });
+  dispatchCompoundSection(state, dispatch, { type: 'SET_TOTAL_GRAND', grand: false });
+  const first = compoundSections(state).first.fields[0];
+  dispatchCompoundSection(state, dispatch, { type: 'ADD_TOTAL_FIELD', tableId: first.tableId, path: first.path });
+  dispatchCompoundSection(state, dispatch, { type: 'ADD_TOTAL_GROUP_FIELD', tableId: first.tableId, path: first.path });
+  dispatchCompoundSection(state, dispatch, { type: 'SET_ORDER_DIRECTION', tableId: first.tableId, path: first.path, direction: 'desc' });
+  expect(state.activeQuery).toBe(0);
+  expect(state.focusedSelectedTableId).toBe(focusedTable);
+  expect(state.focusedSelectedFieldIdx).toBe(0);
+  expect(state.selectedFields).toEqual(firstFields);
+  const sections = compoundSections(state);
+  expect(sections.last.indexing!.indexes[0].unique).toBe(true);
+  expect(sections.last.totals!.totalFields[0].operandAlias).toBe('Первый');
+  expect(sections.last.order!.fields[0].direction).toBe('desc');
+  const output = generateBatch(assembleBatch(state));
+  expect(output).toContain('УНИКАЛЬНО');
+  expect(output).toContain('КОЛИЧЕСТВО(Первый)');
+  expect(output).toContain('Первый УБЫВ');
+  expect(parseBatch(output).members[0].members).toHaveLength(2);
+});

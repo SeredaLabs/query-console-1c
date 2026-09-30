@@ -499,7 +499,8 @@ function synthesizeSubqueryTables(doc: BatchDocument, taken: Set<string>): MetaT
  * ФУНКЦИЯ(<операнд>).
  */
 function totalOperandAlias(state: QueryState, tableId: string, path: string): string {
-  const col = state.selectedFields.find(f => !f.expression && f.tableId === tableId && f.path === path);
+  const fields = state.queryList.length > 1 ? assembleMembers(state)[0].model.fields : state.selectedFields;
+  const col = fields.find(f => !f.expression && f.tableId === tableId && f.path === path);
   return col?.alias ?? (path.split('.').pop() ?? path);
 }
 
