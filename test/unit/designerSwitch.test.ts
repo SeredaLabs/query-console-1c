@@ -43,4 +43,19 @@ describe('prepareDesignerSwitch', () => {
       setLocale('en');
     }
   });
+
+  it('carries C21 arithmetic ORDER keys through switching and reopening twice', () => {
+    const input = 'ВЫБРАТЬ Т.Количество КАК Количество ИЗ РегистрНакопления.Продажи КАК Т ' +
+      'УПОРЯДОЧИТЬ ПО Т.Количество + 1 УБЫВ, Т.Количество * Т.Сумма, (Т.Количество + 1) * 2, -Т.Количество УБЫВ';
+    const prepared = prepareDesignerSwitch(load(input), undefined);
+    expect(prepared.ok).toBe(true);
+    if (!prepared.ok) throw new Error(prepared.error);
+    expect(parseBatch(prepared.text).members[0].members[0].model.order!.fields).toEqual([
+      { tableId: '', path: '', expression: 'Т.Количество + 1', direction: 'desc' },
+      { tableId: '', path: '', expression: 'Т.Количество * Т.Сумма', direction: 'asc' },
+      { tableId: '', path: '', expression: '(Т.Количество + 1) * 2', direction: 'asc' },
+      { tableId: '', path: '', expression: '-Т.Количество', direction: 'desc' },
+    ]);
+    expect(prepareDesignerSwitch(load(prepared.text), undefined)).toEqual(prepared);
+  });
 });

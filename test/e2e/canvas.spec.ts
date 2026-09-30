@@ -31,6 +31,39 @@ async function save(page: Page, surface: Surface): Promise<string> {
 
 test.describe('Classic / Canvas browser parity', () => {
   for (const surface of ['classic', 'canvas'] as const) {
+    test(`${surface}: arithmetic ORDER keys survive alias edit and save/reopen (C21)`, async ({ page }) => {
+      const tables: MetaTable[] = [{
+        kind: 'РегистрНакопления', name: 'Продажи', fullName: 'РегистрНакопления.Продажи',
+        fields: ['Количество', 'Сумма'].map(name => ({ name, kind: 'resource', types: [{ primitive: 'Число' }] })),
+      }];
+      const input = 'ВЫБРАТЬ Т.Количество КАК Количество ИЗ РегистрНакопления.Продажи КАК Т ' +
+        'УПОРЯДОЧИТЬ ПО Т.Количество + 1 УБЫВ, Т.Количество * Т.Сумма, (Т.Количество + 1), -Т.Количество УБЫВ';
+      await open(page, surface, input, tables);
+      if (surface === 'canvas') {
+        await page.getByRole('button', { name: /Поля$/ }).click();
+        await page.getByPlaceholder('Псевдоним', { exact: true }).first().fill('НовоеКоличество');
+      } else {
+        await page.locator('[data-tab="Объединения/Псевдонимы"]').click();
+        const alias = page.locator('input').filter({ visible: true }).last();
+        await alias.fill('НовоеКоличество');
+        await alias.press('Tab');
+      }
+      const output = await save(page, surface);
+      const model = parseBatch(output).members[0].members[0].model;
+      expect(model.fields[0].alias).toBe('НовоеКоличество');
+      expect(model.order!.fields).toEqual([
+        { tableId: '', path: '', expression: 'Т.Количество + 1', direction: 'desc' },
+        { tableId: '', path: '', expression: 'Т.Количество * Т.Сумма', direction: 'asc' },
+        // The existing formatter removes redundant outer parentheses.
+        { tableId: '', path: '', expression: 'Т.Количество + 1', direction: 'asc' },
+        { tableId: '', path: '', expression: '-Т.Количество', direction: 'desc' },
+      ]);
+      await open(page, surface, output, tables);
+      expect(await save(page, surface)).toBe(output);
+    });
+  }
+
+  for (const surface of ['classic', 'canvas'] as const) {
     for (const property of ['trailingFields', 'characteristics'] as const) {
       test(`${surface}: ${property} survives alias edit and save/reopen (C10)`, async ({ page }) => {
         const tables: MetaTable[] = [{
@@ -886,5 +919,24 @@ test.describe('Classic / Canvas designer toggle', () => {
     await openWithToggle(page, 'classic', 'ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = &Код // lost\nИЛИ В.Код = &Другой');
     await expect(page.getByTestId('comment-loss-confirm')).toBeVisible();
     await expect(page.getByTestId('designer-mode-canvas')).toBeDisabled();
+  });
+
+  test('switching carries C21 arithmetic ORDER keys both ways', async ({ page }) => {
+    const input = query.replace('УПОРЯДОЧИТЬ ПО В.Код',
+      'УПОРЯДОЧИТЬ ПО В.Код + 1 УБЫВ, (В.Код + 1) * 2, -В.Код УБЫВ');
+    await openWithToggle(page, 'classic', input);
+    await page.getByTestId('designer-mode-canvas').click();
+    const [toCanvas] = await switches(page);
+    expect(toCanvas.target).toBe('canvas');
+    expect(parseBatch(toCanvas.text!).members[0].members[0].model.order!.fields).toEqual([
+      { tableId: '', path: '', expression: 'В.Код + 1', direction: 'desc' },
+      { tableId: '', path: '', expression: '(В.Код + 1) * 2', direction: 'asc' },
+      { tableId: '', path: '', expression: '-В.Код', direction: 'desc' },
+    ]);
+    expect(await insertions(page)).toEqual([]);
+    await openWithToggle(page, 'canvas', toCanvas.text!);
+    await page.getByTestId('designer-mode-classic').click();
+    expect(await switches(page)).toEqual([{ type: 'switchDesigner', target: 'classic', text: toCanvas.text }]);
+    expect(await insertions(page)).toEqual([]);
   });
 });

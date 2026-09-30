@@ -20,17 +20,22 @@ hardening or maintenance. Historic severity labels do not set current priority.
 | C6 | OPEN · P3 | Two JOIN shapes add parentheses on a second pass; [truth-table tests](../../test/unit/booleanGroupingSemantics.test.ts) verify both outputs but exempt text equality. | Bounded canonical-layout work over A1; no semantic defect inferred. |
 | C17 | OPEN · P1 | Raw ГДЕ/ИМЕЮЩИЕ/JOIN/field/group/TOTALS slices still lose comments in core generation. The shared designer warns and requests confirmation before LOAD_BATCH; Cancel keeps original text unchanged, confirmation permits a candidate whose Save can lose comments. The check compares only exact comment text/counts, not placement: a standalone ГДЕ comment relocated to `afterFrom` after ИЗ counts as preserved ([contract](contracts/safety-and-preservation.md#original-text-and-designer-loading)). [Core boundary](../../test/unit/rawSliceComments.c16.test.ts), [open gate](../../test/unit/openDesignerBatch.test.ts). | Comment-aware expression rendering over shared lexical facts. Explicit consent to loss does not close preservation support. |
 | C18 | OPEN · P2 | Negated condition subquery with keyword alias `В` is misparsed; malformed-expression guard blocks Apply. [Regression](../../test/unit/canvasPreserveBoundaries.test.ts). | Narrow disambiguation with corpus evidence; separate from Canvas UX. |
-| C21 | OPEN · P2 | `parseOrder` rejects ORDER keys headed by a field/path, `(` or unary `-` (`Т.Количество + 1`, `Т.Количество * Т.Сумма`, `(Т.Количество + 1)`, `-Т.Количество`), while a function-headed key such as `ЕСТЬNULL(Т.Количество, 0) + 1` opens and round-trips. The failure is syntactic and independent of field types. Such queries do not open, so no data is lost. [Investigation](#c21-order-expression-evidence). | Narrow `parseOrder` extension for these key heads with corpus parity, under A1's token rules. A live 1C probe of one numeric form is welcome but not a prerequisite. |
 
 The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
 comment handling and recovery limits. No outstanding correctness item is P0.
 
 ### C21 ORDER expression evidence
 
+Current status: CLOSED for the bounded arithmetic-key parser gap. The
+[implementation report](audits/c21-order-expressions-2026-09-30.md) records the
+token-based change, regression gates and unchanged corpus outputs. The following
+table records the **pre-fix** behavior; it is not the current acceptance matrix.
+
 Investigation: 2026-09-30. Pre-existing shared-parser behavior on `main 3c2e66e`,
-not a regression from Canvas or comment-loss confirmation. Probes via
-`tryOpenBatch` (with and without the corpus metadata resolver), source
-`РегистрНакопления.Продажи КАК Т`:
+not a regression from Canvas or comment-loss confirmation. Syntax probes used
+source `РегистрНакопления.Продажи КАК Т`. This source is absent from the corpus
+metadata, so the acceptance result below describes the metadata-free path,
+not successful metadata-backed opening of that table:
 
 | `УПОРЯДОЧИТЬ ПО …` | Result |
 |---|---|
@@ -62,22 +67,24 @@ and `МАКСИМУМ(ЕСТЬNULL(ТаблицаРегистра.Период, 
 (CommonModules-ОбновлениеИнформационнойБазы-Ext-Module.bsl_2.txt).
 Absence from this positive corpus is not proof of platform rejection.
 
-Code/test boundary: [parseOrder](../../src/core/query/sdblParser.ts) has special
+Pre-fix code/test boundary: [parseOrder](../../src/core/query/sdblParser.ts) had special
 branches for parameters, CASE, calls, comparisons and IS NULL. A field/path
-followed by an operator falls through to a bare reference, leaving the operator
-unread; a leading `(` or `-` is not accepted as a key head at all.
+followed by an operator fell through to a bare reference, leaving the operator
+unread; a leading `(` or `-` was not accepted as a key head at all.
 The [parser ORDER round-trip tests](../../test/unit/sdblParser.test.ts) cover
 field/alias/direction/auto/qualification cases; [hierarchy tests](../../test/unit/orderHierarchyDirection.test.ts)
-cover modifier order and metadata behavior. They do not establish arithmetic
+cover modifier order and metadata behavior. Those existing tests alone did not establish arithmetic
 ORDER support. The [malformed-expression test](../../test/unit/semanticValidator.test.ts)
 accepts a manually constructed `order.expression = 'Т.Код + 1'` structurally;
 that is neither text-parser acceptance nor live type validity.
 
-Executed investigation gate: `npx vitest run test/unit/sdblParser.test.ts test/unit/orderHierarchyDirection.test.ts`
+Historical investigation gate: `npx vitest run test/unit/sdblParser.test.ts test/unit/orderHierarchyDirection.test.ts`
 — 303 tests / 2 files passed unchanged. No parser, test, golden, snapshot or
-classification changes; no live 1C execution. The next evidence must include
-known numeric metadata and platform acceptance/canonical text before promoting
-this arithmetic-form finding to OPEN or implementing it.
+classification changes were made in that investigation; no live 1C execution.
+Its initial UNKNOWN/live-probe prerequisite was superseded by the numeric-form
+classification and the scoped C21 implementation. Regression tests use explicit
+numeric test metadata: the corpus has no `РегистрНакопления.Продажи` table, so
+that source name alone does not attest numeric metadata or live acceptance.
 
 ## Architecture
 
@@ -161,6 +168,7 @@ and [audit index](audits/README.md).
 | C16 | CLOSED | VT/ПЕРИОДАМИ argument comment preservation; [report](audits/c16-raw-slice-comments-2026-09-30.md), rawSliceComments.c16.test.ts. |
 | C19 | CLOSED | Exported navigation-head paths retained; queryStore/sourceQueryDraft tests. |
 | C20 | CLOSED | Shared UNION tail ORDER/TOTALS/INDEX editing; compoundSections tests and archived Canvas report. |
+| C21 | CLOSED | Arithmetic ORDER keys headed by a field/path, `(` or unary `-` use the existing token reader and expression model; [report](audits/c21-order-expressions-2026-09-30.md), [regressions](../../test/unit/orderExpressions.c21.test.ts). Full platform expression/type validity remains outside this fix. |
 | S1 | CLOSED | Structured condition-subquery scopes; conditionSubqueryScope.test.ts. Opaque conditions remain unindexed. |
 | S2 | CLOSED | Offset-preserving advisory recovery; recoveryS2/queryParameters tests. Never used for Apply. |
 | S3 | CLOSED | Removed unused semantic maps/partial state; semanticSnapshot tests. |
