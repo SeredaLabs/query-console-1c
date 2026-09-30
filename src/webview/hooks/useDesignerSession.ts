@@ -21,6 +21,7 @@ export interface DesignerSession {
   loadError: string | null;
   /** Initial query is validated but awaits explicit consent to comment loss. */
   commentLossPending: boolean;
+  lostComments: string[];
   confirmCommentLoss: () => void;
   /** Resolver over the received metadata, or `undefined` (fail-open) when none. */
   buildResolver: () => MetadataResolver | undefined;
@@ -41,7 +42,8 @@ export function useDesignerSession(
   const [loading, setLoading] = React.useState(true);
   const [metadataLoaded, setMetadataLoaded] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
-  const [commentLossPending, setCommentLossPending] = React.useState(false);
+  const [lostComments, setLostComments] = React.useState<string[]>([]);
+  const commentLossPending = lostComments.length > 0;
   const pendingCommentLossRef = React.useRef<BatchDocument | null>(null);
   const expectModelRef = React.useRef(false);
   const metaTablesRef = React.useRef<MetaTable[]>([]);
@@ -58,7 +60,7 @@ export function useDesignerSession(
     if (!doc) return;
     pendingCommentLossRef.current = null;
     dispatch({ type: 'LOAD_BATCH', doc });
-    setCommentLossPending(false);
+    setLostComments([]);
     setLoadError(null);
   }, [dispatch]);
 
@@ -75,12 +77,12 @@ export function useDesignerSession(
       } else if (msg.type === 'loadModel') {
         // A new host load supersedes any candidate still awaiting confirmation.
         pendingCommentLossRef.current = null;
-        setCommentLossPending(false);
+        setLostComments([]);
         const r = tryOpenDesignerBatch(msg.text, buildResolver());
         if (r.ok) { dispatch({ type: 'LOAD_BATCH', doc: r.doc }); setLoadError(null); }
         else if ('commentLossDoc' in r) {
           pendingCommentLossRef.current = r.commentLossDoc;
-          setCommentLossPending(true);
+          setLostComments(r.lost);
           setLoadError(null);
         } else setLoadError(r.error);
         setLoading(false);
@@ -91,5 +93,5 @@ export function useDesignerSession(
     return unsub;
   }, [dispatch, buildResolver]);
 
-  return { loading, metadataLoaded, loadError, buildResolver, commentLossPending, confirmCommentLoss };
+  return { loading, metadataLoaded, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss };
 }

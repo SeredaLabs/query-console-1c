@@ -375,5 +375,6 @@
   "warning.unknownCoreWarning": "Query analysis reported a warning",
   "diagnostic.commentLoss": "The constructor cannot preserve all comments in this query. Saving will remove some comments. Continue? The original editor text remains unchanged until you save.",
   "dialog.commentLoss.title": "Some comments cannot be preserved",
-  "dialog.commentLoss.continue": "Continue with comment loss"
+  "dialog.commentLoss.continue": "Continue with comment loss",
+  "dialog.commentLoss.more": "{count} more"
 }

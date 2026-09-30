@@ -27,7 +27,7 @@ export function App(): React.ReactElement {
   const [, setLocaleRevision] = useState(0);
   // Сессия с хостом (ready → metadataTree → loadModel, загрузка/ошибка открытия) —
   // общая с Canvas (`hooks/useDesignerSession.ts`); здесь только Classic-сообщения.
-  const { loading, loadError, buildResolver, commentLossPending, confirmCommentLoss } = useDesignerSession(dispatch, msg => {
+  const { loading, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss } = useDesignerSession(dispatch, msg => {
     if (msg.type === 'init') {
       // `locale` was added to a versionless host/WebView contract. A restored
       // panel or older harness may still send the previous shape; keep the
@@ -111,7 +111,7 @@ export function App(): React.ReactElement {
         okError={generationError ? t('constructor.generationError', { error: localizeDiagnostic(generationError) }) : (unsafeVtError ?? malformedCustomError ?? (okError && localizeDiagnostic(okError)))}
       />
 
-      {commentLossPending && <CommentLossDialog onConfirm={confirmCommentLoss} onCancel={handleCancel} />}
+      {commentLossPending && <CommentLossDialog lost={lostComments} onConfirm={confirmCommentLoss} onCancel={handleCancel} />}
 
       {/* Синтаксическая ошибка открытия из текста — поверх конструктора, с номером строки. */}
       {loadError != null && (

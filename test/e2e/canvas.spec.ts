@@ -401,6 +401,7 @@ for (const surface of ['classic', 'canvas'] as const) {
     test(`${surface}: C17 warning ${cancel} keeps original text untouched`, async ({ page }) => {
       await open(page, surface, commentLossQuery);
       await expect(page.getByTestId('comment-loss-confirm')).toBeVisible();
+      await expect(page.getByTestId('comment-loss-list').locator('pre')).toHaveText(['// lost']);
       await expect(page.getByTestId('comment-loss-cancel')).toBeFocused();
       await expect(page.getByRole('button', { name: surface === 'canvas' ? 'Сохранить' : 'ОК', exact: true })).toBeDisabled();
       await page.keyboard.press('Shift+Tab');
@@ -451,6 +452,7 @@ for (const v2 of [false, true]) {
       await editor.fill(commentLossQuery);
       await page.getByRole('button', { name: 'Применить', exact: true }).click();
       await expect(page.getByTestId('comment-loss-confirm')).toBeVisible();
+      await expect(page.getByTestId('comment-loss-list').locator('pre')).toHaveText(['// lost']);
       expect(await insertions(page)).toEqual([]);
       if (proceed) {
         await page.getByTestId('comment-loss-continue').click();
@@ -469,6 +471,27 @@ for (const v2 of [false, true]) {
       expect(output).toBe(generateBatch(parseBatch(proceed ? commentLossQuery : query, undefined, { preserveComments: true })));
     });
   }
+}
+
+for (const surface of ['classic', 'canvas'] as const) {
+  test(`${surface}: C17 displays the first five lost comments literally and the remaining count`, async ({ page }) => {
+    const lost = ['//  first  ', '// repeat', '// <b>literal</b>', '// repeat', '// fifth', '// sixth', '// seventh'];
+    const input = '// repeat\nВЫБРАТЬ В.Код ' + lost.map((comment, i) => `${comment}\n+ ${i + 1}`).join(' ') + ' КАК А ИЗ Справочник.Валюты КАК В';
+    await open(page, surface, input);
+    const list = page.getByTestId('comment-loss-list');
+    await expect(list.locator('pre')).toHaveCount(5);
+    expect(await list.locator('pre').allTextContents()).toEqual(lost.slice(0, 5));
+    await expect(list.locator('b')).toHaveCount(0);
+    await expect(list.locator('pre').first()).toHaveCSS('font-family', /monospace/);
+    await expect(page.getByTestId('comment-loss-more')).toHaveText('Ещё 2');
+    await expect(page.getByTestId('comment-loss-cancel')).toBeFocused();
+    expect(await insertions(page)).toEqual([]);
+    await page.evaluate(text => window.dispatchEvent(new MessageEvent('message', { data: { type: 'loadModel', text } })), commentLossQuery);
+    await expect(list.locator('pre')).toHaveText(['// lost']);
+    await expect(page.getByTestId('comment-loss-more')).toBeHidden();
+    await page.getByTestId('comment-loss-continue').click();
+    expect(await save(page, surface)).toBe(generateBatch(parseBatch(commentLossQuery, undefined, { preserveComments: true })));
+  });
 }
 
 test.describe('Canvas feature baseline: contextual editors and preservation', () => {

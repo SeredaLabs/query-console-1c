@@ -69,7 +69,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   } = props;
   const [activeTab, setActiveTab] = useState('Таблицы и поля');
   const [queryModalText, setQueryModalText] = useState<string | null>(null);
-  const [commentLossDoc, setCommentLossDoc] = useState<BatchDocument | null>(null);
+  const [commentLoss, setCommentLoss] = useState<{ doc: BatchDocument; lost: string[] } | null>(null);
   const [queryModalError, setQueryModalError] = useState<string | null>(null);
   const [vtDialogTableId, setVtDialogTableId] = useState<string | null>(null);
   const [exprBuilder, setExprBuilder] = useState<null | {
@@ -148,7 +148,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
     if (queryModalText === null) return;
     const r = tryOpenDesignerBatch(queryModalText, queryModalResolver);
     if (!r.ok) {
-      if ('commentLossDoc' in r) setCommentLossDoc(r.commentLossDoc);
+      if ('commentLossDoc' in r) setCommentLoss({ doc: r.commentLossDoc, lost: r.lost });
       else setQueryModalError(r.error);
       return;
     }
@@ -713,11 +713,12 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           умолчанию выключено) переключает на новую раскладку из QueryTextDialog —
           обе ветки ниже используют один и тот же handleApplyQueryEdit/onClose, так
           что флаг — чистый UI-свитч, безопасно выключаемый в рантайме без revert кода. */}
-      {commentLossDoc && <CommentLossDialog
-        onCancel={() => setCommentLossDoc(null)}
+      {commentLoss && <CommentLossDialog
+        lost={commentLoss.lost}
+        onCancel={() => setCommentLoss(null)}
         onConfirm={() => {
-          dispatch({ type: 'LOAD_BATCH', doc: commentLossDoc });
-          setCommentLossDoc(null);
+          dispatch({ type: 'LOAD_BATCH', doc: commentLoss.doc });
+          setCommentLoss(null);
           setQueryModalError(null);
           setQueryModalText(null);
         }}

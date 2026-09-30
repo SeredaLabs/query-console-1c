@@ -18,7 +18,7 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ИТОГИ КОЛИЧЕСТВО(А) // keep\nКАК Н ПО ОБЩИЕ',
   ])('requires confirmation with a validated candidate: %s', input => {
     const opened = tryOpenDesignerBatch(input, active);
-    expect(opened).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: expect.any(Object) });
+    expect(opened).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: expect.any(Object), lost: ['// keep'] });
     if (!('commentLossDoc' in opened)) throw new Error('missing confirmation candidate');
     expect(opened.commentLossDoc.members.length).toBeGreaterThan(0);
   });
@@ -38,7 +38,7 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
   it('detects one dropped occurrence even when an identical comment survives', () => {
     const input = '// keep\nВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 // keep\nИЛИ Т.Код = 2';
     const opened = tryOpenDesignerBatch(input, active);
-    expect(opened).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: expect.any(Object) });
+    expect(opened).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: expect.any(Object), lost: ['// keep'] });
     if (!('commentLossDoc' in opened)) throw new Error('missing confirmation candidate');
     expect(opened.commentLossDoc.members.length).toBeGreaterThan(0);
   });
@@ -57,4 +57,13 @@ it.each([
 it('generation failure remains an error without a confirmation candidate', () => {
   vi.spyOn(generator, 'generateBatch').mockImplementation(() => { throw new Error('generation failed'); });
   expect(tryOpenDesignerBatch('// keep\nВЫБРАТЬ 1 КАК А')).toEqual({ ok: false, error: 'generation failed' });
+});
+
+for (const metadata of [false, true]) it(`returns all lost occurrences in source order, including repeats and more than five (metadata=${metadata})`, () => {
+  const lost = ['//  first  ', '// repeat', '// <b>literal</b>', '// repeat', '// fifth', '// sixth', '// seventh'];
+  const input = '// repeat\nВЫБРАТЬ Т.Код ' + lost.map((comment, i) => `${comment}\n+ ${i + 1}`).join(' ') + ' КАК А ИЗ Справочник.Валюты КАК Т';
+  const opened = tryOpenDesignerBatch(input, metadata ? resolver : undefined);
+  expect(opened).toMatchObject({ ok: false, lost });
+  if (!('commentLossDoc' in opened)) throw new Error('missing confirmation candidate');
+  expect(generateBatch(opened.commentLossDoc)).toContain('// repeat');
 });

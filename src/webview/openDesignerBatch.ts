@@ -15,6 +15,7 @@ export type DesignerOpenAttempt = ParseAttempt | {
   error: string;
   /** Validated candidate, only loadable after explicit comment-loss consent. */
   commentLossDoc: BatchDocument;
+  lost: string[];
 };
 
 /** Detect comment loss before replacing the editable model. Count repeated
@@ -30,12 +31,13 @@ export function tryOpenDesignerBatch(text: string, resolver?: MetadataResolver):
     const generated = userComments(generateBatch(result.doc));
     const remaining = new Map<string, number>();
     for (const comment of generated) remaining.set(comment, (remaining.get(comment) ?? 0) + 1);
+    const lost: string[] = [];
     for (const comment of original) {
       const count = remaining.get(comment) ?? 0;
-      if (count === 0) return { ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: result.doc };
-      remaining.set(comment, count - 1);
+      if (count === 0) lost.push(comment);
+      else remaining.set(comment, count - 1);
     }
-    return result;
+    return lost.length ? { ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: result.doc, lost } : result;
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
