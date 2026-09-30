@@ -3,6 +3,34 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## 0.1.95 - 2026-09-30
+
+### Added
+
+- Opening a query whose comments the constructor cannot keep (for example,
+  comments inside ГДЕ, ИМЕЮЩИЕ or JOIN conditions) now shows a confirmation
+  that lists the affected comments. Cancel leaves the original text unchanged;
+  Continue loads the query, and Save/OK stays a separate step. The same check
+  applies to manually edited query text in Classic.
+- Canvas Preview: contextual TOTALS and INDEX editors; creating and recursively
+  editing subquery and temporary-table sources; virtual-table argument dialogs;
+  the expression builder for fields, conditions, JOIN and virtual-table
+  arguments; keyboard activation for sources and joins.
+
+### Fixed
+
+- Apply is blocked for malformed expressions in virtual-table arguments and
+  `ПЕРИОДАМИ(…)` dates, such as `Код = = &Код`, instead of writing them.
+- Lexically incomplete expressions (for example, an unclosed string) are shown
+  verbatim in their usual place, without wrappers that the broken text could
+  swallow. Valid queries are formatted exactly as before.
+- Line comments in virtual-table, accounting-register and selection-criterion
+  arguments and in `ПЕРИОДАМИ(…)` are preserved when opening and saving.
+- Updating a subquery or temporary-table source no longer drops selected
+  navigation fields such as `Ссылка.Код` while `Ссылка` is still exported.
+- In UNION queries, ORDER BY, TOTALS and INDEX BY are edited in the shared
+  final section in both Classic and Canvas, so the change is saved.
+
 ## 0.1.94 - 2026-09-29
 
 ### Fixed
