@@ -1,134 +1,114 @@
 # Technical debt
 
-Authoritative current engineering-debt ledger. Baseline reconciliation: 2026-09-27
-against `b6286c57cfa64ff8cb9f937347c376d4b98d55c8`; implementation follow-up: 2026-09-28. Update status here; keep historical findings in
-[audits](audits/stage-0.md), product boundaries in [known issues](known-issues.md),
-and execution sequencing in [roadmap](roadmap.md).
+The sole current engineering status ledger, revalidated against code/tests on
+2026-09-30. [Architecture](architecture.md) explains dependencies,
+[known issues](known-issues.md) describes visible limitations, and
+[roadmap](roadmap.md) owns sequencing. [Audits](audits/README.md) preserve discovery
+and platform evidence; their statuses are historical.
 
-Evidence and the complete RP01–RP25 disposition are in the
-[baseline reconciliation](audits/reconciliation-b6286c57.md). That reconciliation used recorded platform verdicts and local reproduction.
-The subsequent [C3 live observation and fix](audits/c3-hierarchy-2026-09-28.md)
-records the supplied web-client probe and its evidence limits.
-The [2026-09-28 implementation report](audits/near-term-2026-09-28.md) records
-C1/D1/V4 closure and exact test commands; the linked C3 follow-up closes its
-initial evidence boundary.
-
-Statuses: **CLOSED** resolved/no remaining finding; **OPEN** confirmed outstanding;
-**PARTIAL** some capability exists, work remains; **UNKNOWN** evidence insufficient;
-**STALE** superseded claim/plan; **DUPLICATE** tracked elsewhere; **ABSORBED** included
-in a named broader task. P1 = meaningful capability loss or preservation risk;
-P2 = bounded behavior/verification gap; P3 = hardening, cosmetic, or maintenance.
-P0 = the extension host can crash or hang during ordinary editing (C13–C15); no item is P0 solely because Stage 0 used that label.
+OPEN = confirmed work; PARTIAL = capability exists with a defined gap;
+UNKNOWN = platform evidence is insufficient; CLOSED = resolved within the stated
+scope. P0 = ordinary editing can crash/hang the host; P1 = meaningful capability
+loss or preservation risk; P2 = bounded behavior/verification gap; P3 = cosmetic,
+hardening or maintenance. Historic severity labels do not set current priority.
 
 ## Correctness
 
-| ID / status / severity | Area, evidence and impact | Dependency → next action |
-|---|---|---|
-| C1 · CLOSED · P1 | Missing-register metadata no longer triggers accounting argument remapping: `applyAccountingMeta` retains the existing no-metadata fallback. Six regressions cover absent/empty/corpus/compatible metadata, unrelated edits, reopening and the known no-subconto layout. `09-rb-oboroty.sdbl` is unchanged. | Local preservation loss fixed; live validity of the fixture remains unverified and is not claimed by these tests. |
-| C2 · OPEN · P1 | English SDBL, RP06/RP07: recorded platform-valid input is rejected at `SELECT`; Russian-only detection, contextual words and metadata names also block end-to-end support. | A1 spike → English acceptance/canonicalization stage with platform-recorded RU/EN pairs. |
-| C3 · CLOSED · P2 | Live query-wizard text confirms RP20: `Г.Наименование ИЕРАРХИЯ` survives for `ИдентификаторыОбъектовМетаданных`. Unknown metadata now preserves the entered modifier; known-metadata rules remain. Added 18 unit regressions and Classic/Canvas browser checks; corrected only curated fixture 0078. | [Evidence, compatibility and baseline impact](audits/c3-hierarchy-2026-09-28.md). No new universal nonhierarchical-source or platform-build claim. |
-| C4 · CLOSED · P1 | With metadata, a bare condition field of a sole-source subquery in ГДЕ/ИМЕЮЩИЕ/ПО binds to the enclosing owner when the inner source lacks it and the nearest enclosing level has exactly one owner — the live-verified nearest-ancestor rule already used for the select list. Explicit `Внешний.Поле` paths there are no longer double-qualified (`В.А.Флаг`). No metadata, unknown inner schema or same-level ambiguity keep the previous binding. 24 regressions in `correlatedConditions.test.ts`; golden output unchanged in both modes (1976/1976). | [Live wizard check](audits/c4-correlated-2026-09-28.md): three condition shapes are byte-identical to the 1C query wizard with metadata. Without metadata the old binding remains (documented limitation). `checkFieldPaths` still skips subquery conditions (fail-open kept). |
-| C5 · CLOSED · P3 | Contract for platform-invalid input: reject on open, or open but block Apply; never write text with lost or altered content. RP04/05: nonempty extra `Обороты`/`ОстаткиИОбороты` args now set `unsafeExtraArgs` (Apply blocked; trailing empty slots still accepted). RP17: INDEX BY without the first member's ПОМЕСТИТЬ is rejected on open. RP23: `'…'` literals are rejected on open (lexer still tokenizes them). RP11/12 (malformed blocker) and RP15 (final reparse fails) already refused Apply; now locked by regressions. All in `invalidInputPreservation.test.ts`. | RP11/12/15 still open successfully: rejecting В/И aliases on open would contradict many existing tests/fixtures using `КАК В`, so it is not done here. |
-| C6 · OPEN · P3 | Cosmetic JOIN idempotence: `booleanGroupingSemantics.test.ts` explicitly exempts two shapes from text equality on pass two; both passes pass truth-table checks. | A1 → bounded canonical-layout task; no semantic-corruption claim. |
-| C7 · CLOSED · P2 | Result-processing boilerplate (`extractQueryParamNames`) and Query Text analysis now take parameters from the lexer-backed, typing-tolerant `collectQueryParameters`. Nothing from strings or comments; case variants are one parameter with the first spelling; names with non-Russian letters stay whole (the old regex cut `&Ціна` to `&Ц`); `usageCount` counts tokens. 5 regressions in `resultProcessingTemplate.test.ts`/`queryAnalysisService.test.ts`. | No BSL data-flow feature (the Level 0 boundary in `resultProcessingTemplate.ts` is unchanged). |
-| C8 · CLOSED · P1 | Apply safety: static malformed-expression checks covered the input model, but generated output could reparse successfully while swallowing later sections into an unbalanced opaque expression; Apply now applies the same malformed-expression guard to reparsed generated output (`decideApply`, shared by Classic and Canvas). Known trigger: a manually entered JOIN conjunct ending in a `//` comment, whose wrapper `)` lands inside the comment. Regressions in `applyGeneratedOutput.test.ts`; corpus probe 0 new blockers (1976 × with/without resolver). | No valid-but-semantically-different output was reproduced during the audit; that is not proven impossible. Broader structural equivalence stays V3. The comment rendering that triggers it is a separate issue. |
-| C9 · CLOSED · P1 | The flat webview store now preserves `QueryModel.having` through conversion, snapshots and restore; optional state fields keep older snapshots compatible. Ten unit regressions and Classic/Canvas edit/save/reopen checks cover preservation and malformed-HAVING Apply refusal. The store corpus sweep restores HAVING in 33/1976 queries in each metadata mode, with no unexplained differences or golden updates. | [Scope and verification](audits/c9-having-2026-09-29.md). |
-| C10 · CLOSED · P1 | The flat store preserves `QueryModel.trailingFields` and `QueryModel.characteristics` through conversion, snapshots and restore (optional fields, older snapshots compatible). The permanent store/core corpus gate passes all 1976 queries in both metadata modes without expected failures; 13 outputs without metadata and 18 with metadata regain their trailing fields. Core output and golden data unchanged. Seventeen unit and four Classic/Canvas browser regressions, including synthetic characteristics preservation (absent from the corpus). | [Step 1 evidence](audits/store-parity-2026-09-29.md); [fix and verification](audits/c10-preserved-sections-2026-09-29.md). |
-| C11 · CLOSED · P1 | `findMalformedCustomExpressions` now walks virtual-table *expression* slots (`period`/`condition`/account conditions), `periodBy` date operands, tabular-section `castPrefix` and non-custom comparison operands. `Код = = &Код` in a VT condition and `&А = = 1` in `ПЕРИОДАМИ` set `malformedCustom` (Apply disabled) with and without metadata. A `{` inside a string literal is not a DCS argument. | DCS `{…}` / `КАК Отбор`, VT order/limit/lists/periodicity/fill method, BETWEEN RHS and characteristics stay excluded. [Slot audit](audits/c11-slot-audit-2026-09-29.md); [fix, exclusions and verification](audits/c11-malformed-slots-2026-09-29.md). |
-| C12 · CLOSED · P1 | An unterminated `{ХАРАКТЕРИСТИКИ …` block was accepted on open but sliced to an empty string, so Apply wrote the query without it. The reader now rejects EOF before the matching outer `}` with the existing localized expected-symbol error; closed raw blocks are unchanged. Seventeen unit and four Classic/Canvas cases cover rejection before LOAD_BATCH/Apply, nested braces, metadata modes, localization and IDE failure handling. | [Fix and audit](audits/c12-characteristics-eof-2026-09-29.md). |
-| C13 · CLOSED · P0 | `parseGroupFieldRef` checked EOF only at depth zero: an unclosed call in СГРУППИРОВАТЬ ПО looped until the extension-host heap was exhausted (IDE diagnostics parse while typing). It now rejects EOF at every depth with the positioned parser error. | P0 because ordinary typing could crash the extension host. [Fix, audit and verification for C13–C15](audits/c13-c15-raw-expression-eof-2026-09-29.md); the loop audit found no other EOF loop of this class. |
-| C14 · CLOSED · P0 | Same EOF loop in both the function-call and the comparison-operand readers of `parseOrder` (УПОРЯДОЧИТЬ ПО); both now terminate at EOF and reject unclosed parentheses. | See C13. |
-| C15 · CLOSED · P0 | Same EOF loop in the function reader of `parseIndexField` (ИНДЕКСИРОВАТЬ ПО); it now terminates and rejects unclosed parentheses. Balanced expressions keep existing behavior. Twenty isolated regressions cover all four readers and their IDE consumers. | See C13. |
-| C16 · CLOSED · P1 | With `preserveComments` (the production open path) user `//` comments in virtual-table, accounting-register and selection-criterion arguments and in `ПЕРИОДАМИ(…)` survive open → store → preview → Apply exactly once. Comments are assigned deterministically: on the argument's line or its comma's line → trailing; on their own line → leading of the next argument (trailing of the last one before `)`); the comma is written before a trailing comment, so a comment never swallows `,` or `)`, and reopening is stable. `commentBinder` no longer also relocates such comments after ИЗ. Other raw slices are unchanged (C17). Calls without comments, and parsing without `preserveComments`, are byte-identical; corpus 1976 × both metadata modes × with/without `preserveComments` unchanged. | Continuation lines after an inner comment keep their source indentation (verbatim rule). A call whose arguments are all omitted keeps no comment. [Fix and evidence](audits/c16-raw-slice-comments-2026-09-30.md); `rawSliceComments.c16.test.ts`. |
-| C17 · OPEN · P1 | Other raw slices still drop user `//` comments on open even with `preserveComments`: ГДЕ, ИМЕЮЩИЕ, JOIN ПО (top level and in subqueries), field expressions, СГРУППИРОВАТЬ ПО, ИТОГИ. Apply then writes the query without them. Keeping them naively is unsafe: the Boolean/expression renderers are not comment-safe (a kept `// c` in ИМЕЮЩИЕ swallowed the generated `И`, blocking a valid Apply). The known-loss cells are pinned in `rawSliceComments.c16.test.ts`. | The shared designer session and Classic text Apply now refuse a lossy initial model before LOAD_BATCH (26 unit regressions plus Classic/Canvas browser checks). Original editor content remains untouched. Comment-aware expression rendering (A1 risk) remains required to support these inputs; safe rejection is not preservation. |
-| C18 · OPEN · P2 | A negated condition subquery using keyword alias `В` (`НЕ В.Ссылка В ИЕРАРХИИ (…)`) is misread as `В.НЕ В .Ссылка …`. The shared malformed-expression guard refuses Apply, so this is inability to edit, not silent document loss. Pinned in `canvasPreserveBoundaries.test.ts`; the unambiguous alias `Т` is covered by Canvas edit/save/reopen. | Narrow parser disambiguation with corpus evidence in a separate task; no broad A1 work in the Canvas baseline. |
-| C19 · CLOSED · P1 | UPDATE_SUBQUERY_TABLE / UPDATE_TEMP_TABLE compared full navigation paths against exported column names, deleting `Ссылка.Код` even when `Ссылка` remained. The two pruning checks now retain paths with an existing head column. Two regressions failed on the baseline and pass after the fix; Canvas nested Back/save/reopen covers the workflow. | Root load/generation unchanged; no golden changes. Canvas also refuses a draft that would implicitly prune referenced parent scalar fields. |
+| ID | Status / priority | Remaining work and evidence | Next boundary |
+|---|---|---|---|
+| C2 | OPEN · P1 | English SDBL is platform-valid in recorded RP06/07 but rejected by the Russian parser/detection; contextual keywords and metadata names also need language handling. [Platform results](audits/stage-0/platform-reprobe-results.jsonl). | Token identity spike under A1, then attested RU/EN acceptance/canonicalization pairs. |
+| C6 | OPEN · P3 | Two JOIN shapes add parentheses on a second pass; [truth-table tests](../../test/unit/booleanGroupingSemantics.test.ts) verify both outputs but exempt text equality. | Bounded canonical-layout work over A1; no semantic defect inferred. |
+| C17 | OPEN · P1 | Raw ГДЕ/ИМЕЮЩИЕ/JOIN/field/group/TOTALS slices still lose comments in core generation. The shared designer open gate safely refuses initial comment loss before LOAD_BATCH; original text stays unchanged. [Core boundary](../../test/unit/rawSliceComments.c16.test.ts), [open gate](../../test/unit/openDesignerBatch.test.ts). | Comment-aware expression rendering over shared lexical facts. Safe rejection does not close preservation support. |
+| C18 | OPEN · P2 | Negated condition subquery with keyword alias `В` is misparsed; malformed-expression guard blocks Apply. [Regression](../../test/unit/canvasPreserveBoundaries.test.ts). | Narrow disambiguation with corpus evidence; separate from Canvas UX. |
 
-| C20 · CLOSED · P1 | ORDER/TOTALS/INDEX controls edited the active UNION member while the generator reads the last member and references first-member columns. Both UIs now share that selector/action composition and preserve active member/focus; totals use first-member operand aliases. Unit plus UNION/package edit/save/reopen browser evidence; no parser/generator or golden changes. | [Feature baseline evidence](../design/new-builder/feature-baseline.md#findings-and-output-changes). |
-
-## Canvas product completion
-
-| ID / status / severity | Area, evidence and impact | Dependency → next action |
-|---|---|---|
-| Canvas Feature Baseline · CLOSED | Recursive source/manual-temp editing, common VT forms, TOTALS, INDEX, source-less fields and contextual ExpressionBuilder are implemented over the shared reducer/model/session/Apply bridge. The [full Phase 0–18 reconciliation](../design/new-builder/phase-reconciliation.md) classifies every historical remainder; phase sequence is not current status. Scalar UNION edits are verified; advanced projection mapping is guarded as preserve-only. Basic graph/dock keyboard activation is implemented. The [before/after matrix and verification](../design/new-builder/feature-baseline.md) record all editing and preserve-only boundaries. C17/C18 are safely refused, not claimed as preserved. V4 remains a bounded verification gate. | Full unit/corpus, browser and real Extension Host gates pass. Canvas remains opt-in Preview; Classic remains available. |
-| UX-C1 · OPEN · P2 | Contextual editors for grouping sets, dynamic report blocks and tabular projections. | Current baseline preserves loaded representations through unrelated edits; extend the existing domain/actions per capability. |
-| UX-C2 · OPEN · P2 | Package move controls and advanced source alias / ORDER hierarchy controls. | Loaded order and properties remain preserved; use existing actions where available, no new Canvas state. |
-| UX-C3 · OPEN · P2 | HAVING, recursive condition-subquery GUI and structured Boolean-tree UX (historical Phase 8). | Preserve existing representations; C18 is a separate narrow parser dependency. |
-| UX-C4 · OPEN · P2 | Responsive, keyboard, accessibility and release review of recursive workflows. | Required before changing the Preview boundary; baseline Enter/Space activation is implemented, but spatial navigation, all-workspace contrast/focus, minimap tuning, viewport and screen-reader review remain. |
-| UX-C5 · OPEN · P2 | UI-to-generated-SDBL cross-highlight (historical Phase 15 investigation). | Generator has no output-range contract; input source maps are insufficient. Approve a stable model/output range design before implementation; no heuristic text search. Dock read-only/highlight/copy/resize/collapse is verified, not reopened. |
-| UX-C6 · OPEN · P2 | Advanced field-to-field JOIN drag, keyboard shortcuts and find/focus helpers (Phase 17). | Existing drag/pan/zoom/search and baseline Enter/Space controls remain; add narrow workflows after separate UX design, without domain duplication. |
-| UX-C7 · OPEN · P2 | Sort-priority reorder UI (Phase 10). | Model keeps array order but has no MOVE_ORDER action; introduce a narrow shared action and both-UI tests in a separate task. Loaded order is preserved now. |
-| UX-C8 · OPEN · P2 | Canvas metadata refresh and lazy reference-field expansion parity. | Classic has refreshCache/refreshResult, expandRef/refFields and SET_REF_FIELDS; Canvas has no corresponding controls/response wiring. Reuse the existing host/session/metadata infrastructure. Existing metadata selection and loaded navigation paths are supported; these missing assisted workflows do not block the primary baseline. |
-| UX-C9 · OPEN · P2 | Complete positional UNION mapping for tabular/trailing projections (Phase 14). | Shared deriveUnionColumns covers scalar fields only; generator orderedSelectElements covers all projections. Requires shared alignment over all ordered select elements and a safe alias/reorder action contract; coordinate with A2 schema work without making full A2 unification a prerequisite. Canvas shows a preserve-only notice, suppresses misleading mapping edits and verifies unrelated edit/save/reopen. |
-| UX-C10 · OPEN · P3 | Historical global stable Query/Scope ID hardening idea. | Deferred until a concrete consumer needs persistent cross-tree identity. Recursive local drafts already work with parent SelectedTable.id; no new persisted format is required for baseline. |
-
-Contextual ExpressionBuilder (Phase 16) is closed: shared Classic editor,
-metadata-source helper/resolver and string actions; VT forms retain their
-existing context. No new CodeMirror dependency was added (dock/VT already use it).
-Historical EXISTS/NOT EXISTS, scalar SELECT subqueries and structured JOIN
-subqueries are unsupported shared grammar/model ideas, not promised Canvas
-features. Raw JOIN expressions remain editable. Their history and the
-condition-subquery asymmetries are retained in the reconciliation; supporting
-new grammar needs a separately approved shared scope, not a Canvas simulation.
+The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
+comment handling and recovery limits. No outstanding correctness item is P0.
 
 ## Architecture
 
-| ID / status / severity | Area, evidence and impact | Dependency → next action |
+| ID | Status / priority | Remaining work and evidence | Next boundary |
+|---|---|---|---|
+| A1 | OPEN · P1 | Shared lexer already supplies tokens/spelling/positions; generator/formatter still re-scan raw characters and repeat contextual-word roles. Undefined-temp inference also scans raw text. Four migrated generator operations follow the [lexical contract](expression-lexical-contract.md), with no raw fallback. | One consumer at a time, identical valid output and explicit unknown facts. No new token layer, parser rewrite or independent expression grammar. |
+| A2 | OPEN · P2 | Parser/designer producer schemas use scalar heads; semantic schemas use all `orderedSelectElements`, including tabular/trailing projections. [Lifetimes](../../src/core/query/tempTableSemantics.ts), [parser](../../src/core/query/sdblParser.ts), [store](../../src/webview/state/queryStore.ts). | Live projection/schema evidence, then one lifetime owner and producer-column function for all consumers, with corpus/validator coverage. Keep undefined-temp inference and parser-local literal typing separate. Preserve synthetic parser kind and non-reference literal markers until evidence supports change. |
+| A3 | PARTIAL · P2 | [Expression context](../../src/webview/expressionEditor/expressionContext.ts) types a lone resolved field; arbitrary expressions remain unknown ([tests](../../test/unit/expressionContext.test.ts)). | Display-only inference using A1 representation and attested result types. The old independent walker proposal is obsolete; no separate grammar. |
+
+The import cycle, module-load hooks and synchronous resolver stack are accepted
+[decomposition constraints](architecture.md#known-internal-coupling), not extra
+urgent refactor tickets. A1/A2 remain required engineering work.
+
+## Verification
+
+| ID | Status / priority | Remaining work and evidence | Next boundary |
+|---|---|---|---|
+| V1 | PARTIAL · P2 | Positive recorded golden cases have no per-entry platform-build/metadata attestation; negative/English attested corpus is absent. Template-marker substitution remains unproven. Generator-derived fixtures are not an independent oracle. [Corpus policy](corpus-testing.md). | Attested negative/English/metadata-mode cases and provenance; retain ADR 0004 canonical contract. Private corpus availability is a qualification here. |
+| V2 | OPEN · P2 | Grammar WASM absent in ordinary checkout/CI: [helper](../../test/helpers/assertValidSdbl.ts) warns then returns, so green tests do not mean the independent oracle ran. Artifact/toolchain unpinned; historical ABI mismatch was source-inferred. | Compatible reproducible dev-only artifact, manifest/checksum and explicit missing-oracle CI policy; no runtime dependency. |
+| V3 | PARTIAL · P2 | Shared Apply gate validates structure/selected semantics and malformed generated output, but never compares input/output semantics. Structural acceptor ignores precedence; Boolean truth tables cover a subset. [Apply regressions](../../test/unit/applyGeneratedOutput.test.ts). | Bounded transformation-preservation checks and reviewed canonical evidence over A1; no mandatory live execution or theorem prover. |
+
+V4 is CLOSED for the bounded [Canvas browser/real-host gate](testing-and-release.md#canvas-verification).
+It does not certify every UI action, live-platform equivalence or release readiness.
+
+## Canvas UX and release work
+
+Functional capabilities and preserve-only boundaries live in the
+[current Canvas matrix](../design/new-builder/feature-baseline.md). The functional
+baseline is CLOSED; Canvas remains opt-in Preview. These are separate follow-ups,
+not missing critical baseline work or a continuation of phase numbering.
+
+| ID | Status / priority | Remaining work | Contract / dependency |
+|---|---|---|---|
+| UX-C1 | OPEN · P2 | Contextual grouping-set, dynamic report block and tabular projection editors. | Loaded representations survive unrelated edits; reuse domain/actions. |
+| UX-C2 | OPEN · P2 | Package move controls and advanced source alias / ORDER hierarchy controls. | Keep loaded order/properties; use existing shared actions where available. |
+| UX-C3 | OPEN · P2 | HAVING, recursive condition-subquery GUI and structured Boolean-tree UX. | Preserve current representation; C18 parser limitation is separate. |
+| UX-C4 | OPEN · P2 | Responsive, keyboard, accessibility and release review of recursive workflows. | Baseline Enter/Space exists. Spatial navigation, all-workspace contrast/focus, minimap/viewport and screen-reader review remain before Preview removal. |
+| UX-C5 | OPEN · P2 | UI → generated SDBL cross-highlight. | Generator has no semantic output-range contract; parser input maps are insufficient. Design stable model/output ranges first; no heuristic text search. Read-only dock/highlight/copy/resize/collapse is complete. |
+| UX-C6 | OPEN · P2 | Advanced field-to-field JOIN drag, shortcuts and find/focus helpers. | Existing drag/pan/zoom/search/basic activation stays; narrow UX design, no domain duplication. |
+| UX-C7 | OPEN · P2 | Sort-priority reorder UI. | Array order is preserved; no MOVE_ORDER action exists. Add a narrow shared action with both-UI tests. |
+| UX-C8 | OPEN · P2 | Canvas cache refresh and lazy reference-field expansion parity. | Classic has refresh/ref message handling and SET_REF_FIELDS; Canvas lacks controls/response wiring. Reuse host/session; loaded navigation already works. |
+| UX-C9 | OPEN · P2 | Full positional UNION mapping for tabular/trailing projections. | Scalar-only deriveUnionColumns differs from generator orderedSelectElements. Preserve-only guard suppresses partial mapping. Shared alignment plus safe alias/reorder contract; coordinate A2 without requiring full A2 completion first. |
+| UX-C10 | OPEN · P3 · DEFERRED | Global stable Query/Scope ID proposal. | No current consumer needs persistent cross-tree identity. Local recursive drafts work with parent source IDs; this is not a baseline or release prerequisite. |
+
+EXISTS/NOT EXISTS, scalar SELECT subqueries and structured JOIN subqueries remain
+unsupported shared grammar/model ideas, not promised Canvas features. Raw JOIN
+expressions are editable; new grammar needs a separately scoped shared task.
+
+## Platform unknowns
+
+| ID | Status / priority | Evidence boundary | Needed evidence |
+|---|---|---|---|
+| U1 | UNKNOWN · P2 | RP22: `#Имя` lexically accepted but live metadata-unresolved; template golden validity/substitution semantics unestablished. | Validator provenance plus reproducible metadata/substitution context. |
+| U2 | UNKNOWN · P2 | RP24: live base had no sequences; `Границы` real argument layout unconfirmed. Marked models are Apply-blocked. | Sequence-enabled base and canonical output. |
+| U3 | UNKNOWN · P2 | Disconnected FROM roots deliberately see each other in computeJoinVisibility; [fallback regression](../../test/unit/joinVisibility.test.ts) is not platform attestation. | Minimal live comma-source/JOIN scope probes before narrowing visibility. |
+
+C1 accounting-fixture validity and A2 projection output remain evidence
+qualifications on those items, not duplicate UNKNOWN tickets. Metadata cannot
+provide database values; dynamic BSL/execution and unresolved reference types are
+product boundaries, not automatic debt.
+
+## Closed regression register
+
+Long discovery/fix histories, reviewed output changes and former severity/counts
+are retained in the [pre-consolidation ledger](audits/archive/technical-debt-e3b36a5.md)
+and [audit index](audits/README.md).
+
+| ID | Status | Resolved class / regression reference |
 |---|---|---|
-| A1 · OPEN · P1 | `sdblLexer.Token` (with `sdblKeywordSets`) is already the shared lexical foundation: lexical identity, original spelling, position, atomic parameters. Duplication starts after lexing. Raw character/regex expression scanners exist in `sdblGenerator` (~12) and in `exprFormatter` (~12, besides its justified Boolean/arithmetic trees). Several consumers re-decide contextual-word and token roles (`(ident\|\|keyword) && value ===` checks, five local `isWord`-like helpers). `inferUndefinedTempTables` scans raw text by regex (A1+A2). RP13/grouping/RP14 needed coordinated fixes. | Incremental only: replace one raw scanner at a time with a `Token[]`-based one, byte-identical output. Canonical word identity (including future RU/EN for C2) gets one source of truth in shared token predicates, not a new token layer. No expression AST, no parser rewrite. |
-| A2 · OPEN · P2 | Three temp-table models remain. Parser/designer use head fields; semantic schema uses all ordered select elements. Projection + trailing-field probe expands `В.*` to `Ссылка` while semantic schema contains `Ссылка, Товары, Код`. | Live projection/schema oracle → shared lifetime and producer-column facts. Keep incremental registry, undefined-temp inference and parser-local literal typing separate. |
-| A3 · PARTIAL · P2 | Expression type inference: single resolved field types exist; arbitrary-expression types remain unknown. The former independent token-walker plan is STALE and absorbed into A1's contract design. | A1 + capability to obtain real result types → display-only inference over shared representation; no separate grammar or automatic expression AST. |
-
-A1 migration evidence: [A1.3 — top-level comma detection](audits/a1-comma-2026-09-29.md).
-[A1.4 — tuple closing-parenthesis search](audits/a1-tuple-2026-09-29.md) continues
-the token migration. These bounded slices do not close A1.
-Their temporary raw fallbacks have now been removed under the
-[expression lexical contract](expression-lexical-contract.md): one lexer,
-explicit unknown facts, and preservation of lexically incomplete expressions.
-
-A2 remains a required follow-up, not optional cleanup. Its exit gate is one
-owner for designer/semantic lifetimes and one producer-column function used by
-all three consumers, with corpus/validator/oracle coverage. Preserve the parser's
-synthetic `kind: 'Справочник'` unless evidence requires a change; literal columns
-use `Строка` as an internal non-reference marker, not a shared inferred type.
-
-Accepted coupling: the parser/generator/union/comment cycle, module-load hooks and
-synchronous resolver state remain as described in [architecture](architecture.md).
-They are decomposition constraints for A1, not extra urgent refactor tickets.
-
-## IDE semantics / recovery
-
-| ID / status / severity | Area, evidence and impact | Dependency → next action |
-|---|---|---|
-| S1 · CLOSED · P2 | Structured ГДЕ/ИМЕЮЩИЕ `В (ВЫБРАТЬ …)` subqueries now record source-map events (`whereSubquery`/`havingSubquery`, written after member post-passes) and get a model-path segment; `collectSourceAliasSymbols`, `resolveSymbolTable` and `resolveAliasAt.descend` traverse them, so C21/C12 hover and completion resolve inner aliases with outer correlation. Events carry `depth`; descent matches by depth and parent range. That also fixed a latent bug: inside a source subquery with ОБЪЕДИНИТЬ every member resolved like member 0. 12 regressions in `conditionSubqueryScope.test.ts`; model/text unchanged with positions recorded. | Shadow baseline regenerated after review: 413 changed entries. 192 now agree with the legacy lookup. Of the other 221, 208 point to the source declared in the enclosing block, 11 point to subquery sources that the check cannot inspect, and 2 now return unknown instead of a wrong answer: a metadata name inside `ТИП(…)`, and an unstructured `НЕ ИСТИНА В (…)`. Subqueries kept as custom text (`ИЛИ` chains, `НЕ ИСТИНА В`) remain unindexed. |
-| S2 · CLOSED · P2 | Recovery for the Stage 0 probes, semantic snapshot only (Apply never uses it). C06/C13: an unclosed `(` is repaired first even when the plain parse succeeds (a non-subquery `(` becomes a space). C11: an unclosed `(ВЫБРАТЬ` gets `)` at its statement end: appended after the last statement, otherwise written over the whitespace before or after its `;`, or inserted before it when there is none; inserted characters are listed and the snapshot maps event positions back to the source. So the inner aliases resolve through S1. Parentheses are counted per batch statement. C18/C19: ГРУППИРОВКА/ИМЕЮЩИЕ/ПОРЯДОК/ИТОГИ/ИНДЕКС sections are blanked at statement level, then also inside subqueries. The blank ends with a placeholder (`ДЛЯ ИЗМЕНЕНИЯ`, or `И 1`/`ГДЕ 1` for short sections; `ГДЕ 1` always fits) so the cursor stays inside the member range. A broken section inside a condition subquery does not fail the parse (the subquery silently becomes custom text): with such sections the nested repair is also tried and kept only when it yields more aliases. Bare `&`/unclosed literals: `SdblLexError` carries its offset; `repairLexicalErrorsForRecovery` blanks each failure (length-preserving, rethrows when it cannot make progress) and serves both the parameter scan and the snapshot, so alias assistance survives too. An unclosed string still swallows the statements after it. Every repair keeps original offsets. 21 + 5 regressions (`recoveryS2.test.ts`, `queryParameters.test.ts`). Corpus: all 1976 still `complete` (19 texts get the extra nested attempt), shadow baseline unchanged. | No known residual among the Stage 0 recovery probes; recovery stays a snapshot-only aid and is never used for Apply. |
-| S3 · CLOSED · P3 | Snapshot contract narrowed to what is produced and consumed: `SemanticIndex` keeps only `symbolsById`. The always-empty `scopesById`/`referencesBySymbolId` (only a unit test read them) and their `Scope`/`Reference` types were removed. So was the never-produced `partial` completeness value (no consumer branched on it). Compatibility: internal in-memory type, not persisted, exported or part of any message protocol. | Scopes stay on-demand via source-map events (`resolveAliasAt`). A reference index or partial-tree state is added only with its first consumer. The frozen Stage 0 probe script under `audits/` still names the old maps and is not compiled. |
-
-## Verification / corpus
-
-| ID / status / severity | Area, evidence and impact | Dependency → next action |
-|---|---|---|
-| V1 · PARTIAL · P2 | 1976 golden entries pass, all positive and none starting with English SELECT. Negative unit examples exist, but no platform-attested negative/English corpus. Golden provenance lacks per-entry platform build/metadata attestation; 85 inputs contain `#`. Query fixtures are generator-derived, hence not an independent oracle. | Preserve ADR 0004 canonical contract → attested negative/English/metadata-mode cases and explicit provenance; U1 remains unknown. |
-| V2 · OPEN · P2 | Tree-sitter oracle unavailable in ordinary checkout/CI. Helper warns then returns; Vitest counts tests as passed. Source/toolchain/artifact are unpinned; Stage 0 recorded ABI 15 vs runtime 13–14 incompatibility. | Reproducible compatible dev-only artifact + manifest/checksum → explicit CI missing-oracle policy. Never add a runtime dependency. |
-| V3 · PARTIAL · P2 | Apply has parser acceptance, selected semantic checks and static unsafe/malformed guards. It has no input/output semantic-equivalence check, and the expression acceptor deliberately ignores precedence. Boolean truth-table regressions cover a subset. | A1 → bounded transformation-preservation checks and reviewed canonical evidence; not a theorem prover or mandatory live query execution. |
-| V4 · CLOSED · P2 | Recorded gate added: six Classic/Canvas browser round-trips, Canvas alias/condition/sort edits, duplicate-alias recovery, unsafe/malformed Save guards and load failure. A real VS Code webview test loads the production Canvas bundle, edits an alias, clicks Save and verifies only the captured BSL literal changes through the real bridge. | See [verification scope](testing-and-release.md#canvas-verification). This is a bounded regression gate, not exhaustive UI coverage or live-platform equivalence; Canvas stays opt-in preview. |
-
-## Documentation
-
-| ID / status / severity | Area, evidence and impact | Dependency → next action |
-|---|---|---|
-| D1 · CLOSED · P3 | Corrected source comments for symbol wiring, recovered source maps, semantic Apply checks, shipped parameter support, unsafe-marker coverage, malformed-expression traversal and lexer failures (D03–D09 in the reconciliation). | Comment-only maintenance; no remaining implementation dependency. |
-
-## Unknown / awaiting evidence
-
-| ID / status / severity | Area, evidence and impact | Dependency → next action |
-|---|---|---|
-| U1 · UNKNOWN · P2 | RP22: `#Имя` is lexically accepted but unresolved by live metadata; template golden validity/substitution semantics are not established. | Validator provenance + reproducible metadata/substitution context. |
-| U2 · UNKNOWN · P2 | RP24: sequence `Границы` layout unknown because the recorded live base had no sequences; marked models remain Apply-blocked. | A base with sequence metadata + canonical output. |
-| U3 · UNKNOWN · P2 | `computeJoinVisibility` deliberately treats disconnected FROM roots as mutually visible; fallback is tested, platform scope behavior is not verified. | Minimal live comma-source/JOIN scope probes before narrowing visibility. |
-
-Accounting input validity (C1), temporary projection canonical output (A2), and
-private-corpus availability/provenance (V1) remain evidence qualifications on those
-tasks, not duplicate UNKNOWN tickets. Dynamic BSL, metadata-only inability to
-list database values, unknown reference types and accepted fallback behavior are
-product/design boundaries, not automatic debt.
+| C1 | CLOSED | Missing accounting metadata preserves fallback arguments; virtualTableRoundTrip.test.ts. Live fixture validity unverified. |
+| C3 | CLOSED | ORDER hierarchy retained without metadata; [case-specific live evidence](audits/c3-hierarchy-2026-09-28.md). |
+| C4 | CLOSED | Nearest-ancestor condition correlation with known metadata; [live evidence](audits/c4-correlated-2026-09-28.md), correlatedConditions.test.ts. No-metadata fallback retained. |
+| C5 | CLOSED | Invalid input rejected on open or blocked on Apply; invalidInputPreservation.test.ts. |
+| C7 | CLOSED | Lexer-backed parameter extraction; resultProcessingTemplate/queryAnalysisService tests. |
+| C8 | CLOSED | Malformed reparsed generated output blocked; applyGeneratedOutput.test.ts. |
+| C9 | CLOSED | HAVING retained by store/snapshots; [report](audits/c9-having-2026-09-29.md). |
+| C10 | CLOSED | trailingFields/characteristics retained; [report](audits/c10-preserved-sections-2026-09-29.md), queryStore.corpusParity.test.ts. |
+| C11 | CLOSED | Malformed expression-slot traversal; [report](audits/c11-malformed-slots-2026-09-29.md). |
+| C12 | CLOSED | Reject unclosed characteristics; [report](audits/c12-characteristics-eof-2026-09-29.md). |
+| C13–C15 | CLOSED | EOF readers terminate instead of exhausting host heap; [report](audits/c13-c15-raw-expression-eof-2026-09-29.md). |
+| C16 | CLOSED | VT/ПЕРИОДАМИ argument comment preservation; [report](audits/c16-raw-slice-comments-2026-09-30.md), rawSliceComments.c16.test.ts. |
+| C19 | CLOSED | Exported navigation-head paths retained; queryStore/sourceQueryDraft tests. |
+| C20 | CLOSED | Shared UNION tail ORDER/TOTALS/INDEX editing; compoundSections tests and archived Canvas report. |
+| S1 | CLOSED | Structured condition-subquery scopes; conditionSubqueryScope.test.ts. Opaque conditions remain unindexed. |
+| S2 | CLOSED | Offset-preserving advisory recovery; recoveryS2/queryParameters tests. Never used for Apply. |
+| S3 | CLOSED | Removed unused semantic maps/partial state; semanticSnapshot tests. |
+| V4 | CLOSED | Bounded Canvas browser/host regression gate; testing-and-release. |
+| D1 | CLOSED | Corrected stale source-contract comments; reconciliation/near-term reports. |
+| Canvas baseline | CLOSED | Current capability matrix; archived baseline and full history reconciliation. |
