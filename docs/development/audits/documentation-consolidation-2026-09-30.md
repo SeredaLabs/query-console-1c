@@ -163,3 +163,114 @@ Existing `docs/development/` paths remain authoritative. Historical phase
 numbering is available through the audit index only; remaining Canvas requirements
 live in UX-C1–10 and the current capability/preservation matrix. No parser,
 feature, protocol, cache, dependency or golden changes are planned.
+
+## Archive path manifest
+
+Original bodies were checked against e3b36a5 after removing only the added
+archive banner and normalized active-link targets. All 14 matched. All 16
+existing dated reports and the frozen Stage 0 payload remain unchanged.
+
+| Original | Evidence destination |
+|---|---|
+| `.claude/new_builder_capability_map.md` | [new_builder_capability_map.md](archive/canvas/new_builder_capability_map.md) |
+| `.claude/new_builder_current_state.md` | [new_builder_current_state.md](archive/canvas/new_builder_current_state.md) |
+| `.claude/new_builder_phase3_design.md` | [new_builder_phase3_design.md](archive/canvas/new_builder_phase3_design.md) |
+| `.claude/new_builder_roadmap.md` | [new_builder_roadmap.md](archive/canvas/new_builder_roadmap.md) |
+| `.claude/new_builder_visual_spec.md` | [new_builder_visual_spec.md](archive/canvas/new_builder_visual_spec.md) |
+| `.claude/prompts/new_builder_audit.md` | [new_builder_audit.md](archive/canvas/prompts/new_builder_audit.md) |
+| `.claude/scratch_phase2x2_virtual_table_design.md` | [scratch_phase2x2_virtual_table_design.md](archive/canvas/scratch_phase2x2_virtual_table_design.md) |
+| `.claude/scratch_semantic_core_plan_review.md` | [scratch_semantic_core_plan_review.md](archive/canvas/scratch_semantic_core_plan_review.md) |
+| `docs/design/new-builder/feature-baseline.md` | [canvas-feature-baseline-2026-09-30.md](archive/canvas-feature-baseline-2026-09-30.md) |
+| `docs/design/new-builder/phase-reconciliation.md` | [canvas-phase-reconciliation-2026-09-30.md](archive/canvas-phase-reconciliation-2026-09-30.md) |
+| `docs/development/expression-lexical-contract.md` | [expression-lexical-e3b36a5.md](archive/expression-lexical-e3b36a5.md) |
+| `docs/development/known-issues.md` | [known-issues-e3b36a5.md](archive/known-issues-e3b36a5.md) |
+| `docs/development/roadmap.md` | [roadmap-e3b36a5.md](archive/roadmap-e3b36a5.md) |
+| `docs/development/technical-debt.md` | [technical-debt-e3b36a5.md](archive/technical-debt-e3b36a5.md) |
+
+## Final consistency review
+
+Second pass after edits, read from current entry points rather than audit narratives.
+Each question has a current answer without reading historical reports.
+
+| New contributor question | Current answer / authority |
+|---|---|
+| What is the product? | Root README: visual metadata-aware SDBL editing/static BSL insertion; no database execution. |
+| What works? | README/user guide for supported workflows; current Canvas matrix for detailed EDIT/PRESERVE boundaries. |
+| How does core work? | Architecture: handwritten lexer/parser/generator/formatter, validator and semantic snapshot; real cycle/hooks/stack state retained. |
+| What is Classic? | Existing designer with editable text dialogs and shared domain/session/Apply infrastructure. |
+| What is Canvas? | Opt-in visual adapter over that same infrastructure; functional baseline complete with explicit preserved advanced families. |
+| What does Preview mean? | UX/accessibility/release hardening and opt-in access, separate from functional baseline/V4. |
+| What are correctness contracts? | Safety/preservation/recovery plus lexical contract; model/ADR canonical output define representation/testing boundaries. |
+| What gates exist? | Testing/release commands and corpus policy distinguish browser, real host, recorded output and missing optional oracle. |
+| What limitations exist? | Known issues/user limitations cover English, comments/alias refusal, opaque scopes, temp schemas, VT/metadata and execution boundaries. |
+| What debt is open? | Technical-debt ledger alone: C2/C6/C17/C18; A1/A2/A3; V1–V3; UX-C1–10 with consumer-gated UX-C10. |
+| What is platform-unknown? | U1 template substitution, U2 sequence layout, U3 disconnected-source visibility; scoped C1/A2/V1 evidence qualifications retained. |
+| What next? | Short roadmap: preservation/correctness → incremental architecture → compatibility/evidence → UX → release review. |
+| Where are historical audits? | Audit index points to dated reports/payload, full phase history, book/live evidence and original design notes. |
+
+No functional debt was closed by editing documentation. No new behavior bug was
+found; no new regression test or expected-output artifact was needed. Two stale
+source narratives about Canvas loading and diagnostic provenance were corrected
+in the final selective comment review. Existing current commands were checked
+against package.json; all 20 script names referenced by current root/developer/
+Canvas docs exist. Repository grep found no live source/config/tool references
+to the removed `.claude` paths or original phase-reconciliation location.
+
+## Verification executed for consolidation
+
+| Exact command / check | Result and limit |
+|---|---|
+| `npm run docs:check` (baseline and after slices; final) | PASS; final 92 Markdown files, 83 reachable doc pages, 9 user pages × 3 locales; relative/reference/HTML links, anchors, case, localized versions/heading parity and stale-history scan. All tracked Markdown is now within this check's roots. |
+| `npx vitest run test/unit/booleanGroupingSemantics.test.ts test/unit/canvasPreserveBoundaries.test.ts test/unit/rawSliceComments.c16.test.ts test/unit/openDesignerBatch.test.ts test/unit/tempTableSemantics.test.ts test/unit/unionModel.test.ts test/unit/joinVisibility.test.ts test/unit/expressionContext.test.ts test/unit/applyGeneratedOutput.test.ts test/unit/invalidInputPreservation.test.ts test/unit/recoveryS2.test.ts test/unit/semanticSnapshot.test.ts` | Baseline PASS: 635 tests / 12 files. |
+| `npm run typecheck` | PASS: extension/core, Classic and Canvas projects. |
+| `npm run build` | PASS: extension, Classic and Canvas bundles. |
+| `npm run test:unit` | PASS: 3776 tests / 161 files; committed corpus/store/classification/shadow gates included. |
+| `git diff --check` | PASS. |
+| Ad hoc TypeScript verification against e3b36a5 | All 12 edited TS/TSX/helper files have identical parser-derived non-comment syntax tokens and identical transpileModule output with removeComments. An initial context-free scanner comparison was unsuitable for regex/template syntax; parser-derived comparison resolves that false signal. |
+| Archive body comparison against captured e3b36a5 originals | PASS: 14 bodies unchanged except banner/link targets; all 16 existing reports unchanged. |
+| Fixture/payload scope and Markdown inventory checks | PASS: no golden/snapshot/classification/fixture or Stage 0 payload changes; all 92 tracked Markdown files covered. |
+| Direct golden/grammar inventory | 1976 records, all valid:true, zero English SELECT starts, 85 hash-marker inputs; grammar WASM absent. These are checkpoint measurements, not new platform attestations. |
+
+Browser E2E/real-host tests were **not rerun** for documentation/comment-only
+changes. The prior Canvas pass's exact 138 browser/39 real-host results remain
+archived evidence, not execution claimed by this task. Independent grammar oracle,
+private corpus and live 1C were not run; no platform UNKNOWN was upgraded.
+
+## Changes and disposition
+
+- Inventory: 84 original tracked Markdown documents; final 92 includes five
+  historical checkpoints and three permanent index/contract/audit documents.
+- MERGE: scattered Apply/comment/preservation/shared-state/recovery requirements
+  into one safety contract; keep existing lexical contract as its sole fact owner.
+- ARCHIVE: nine relocated notes/reports (eight `.claude` plus phase reconciliation)
+  and five full prior checkpoints (ledger, lexical contract, Canvas report,
+  roadmap, known issues). Active links/source references are updated.
+- KEEP: all 16 dated core reports and frozen payloads at their original paths,
+  preserving imports and live/book evidence. No content-only deletion.
+- UPDATE: current architecture/model/protocol, debt, roadmap/limitations, gates/
+  corpus roles, Canvas matrix/entry, README/contributor and affected user guides
+  with synchronized English/Ukrainian/Russian source versions.
+- Production: comment-only source edits; no implementation, API/protocol, cache,
+  dependency, feature or parser change. No changelog/version bump or history rewrite.
+
+Logical commits before final verification: cb707ca (inventory/plan), 8df042c
+(ledger/history), 1fdcc40 (architecture/contracts), 28a162b (Canvas/archive/index),
+b2b6777 (roadmap/limits/gates), 0204520 (README/localized product).
+Final review/verification commits follow these; use `git log e3b36a5..HEAD`
+for the complete local sequence. No push or release action is included.
+
+## Lost-information check
+
+| Category | Retained authoritative/evidence location | Result |
+|---|---|---|
+| OPEN debt | Current ledger, short roadmap dependencies, full prior ledger checkpoint | RETAINED; no unjustified closure |
+| UNKNOWN platform behavior | U1–U3 plus C1/A2/V1 qualifications; RP result payload and reconciliation | RETAINED; no local-to-platform evidence upgrade |
+| Regression rationale | Closed register/test refs, original dated fix reports and full ledger/Canvas checkpoints | RETAINED; reviewed fixture/shadow/output changes remain historical |
+| Live 1C evidence | Stage 0 setup/RP01–25 payload, C3 hierarchy and C4 correlation reports | RETAINED verbatim, with build/metadata limits |
+| Canvas remaining requirements | UX-C1–10, current matrix/safety contract; complete phase/subphase crosswalk and original specs archived | RETAINED; advanced mapping/cross-highlight/release/unsupported grammar are explicit |
+| Architecture constraints | Actual cycle/hooks/synchronous stack, A1/A2 exit boundaries, A3 shared representation; original proposal checkpoints | RETAINED; desired architecture is not presented as implemented |
+| Safety/preservation contracts | Unified safety contract and lexical contract with tests; metadata safety unchanged | RETAINED; safe rejection never relabeled preservation |
+
+All seven categories have a current owner or preserved indexed evidence; none
+exists only in deleted prose. Future work starts from the ledger/roadmap, not an
+old phase or stage statement.
