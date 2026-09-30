@@ -9,7 +9,7 @@ import { t } from '../../src/webview-canvas/i18n';
 import { FIXTURE_CF, REPO_ROOT, waitUntil } from './testUtil';
 
 describe('Extension Host: Canvas load → edit → Save → source document', () => {
-  it('the production Canvas UI replaces only the captured BSL literal through the real bridge', async function () {
+  for (const nested of [false, true]) it(`production Canvas ${nested ? 'nested source edit/back' : 'field alias edit'} replaces only the captured BSL literal through the real bridge`, async function () {
     this.timeout(25000);
     const config = vscode.workspace.getConfiguration('queryConsole');
     const previous = config.inspect<boolean>('openInNewWindow')?.globalValue;
@@ -18,7 +18,9 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
     const channel = vscode.window.createOutputChannel('Canvas save integration');
     let panel: vscode.WebviewPanel | undefined;
     try {
-      const query = 'ВЫБРАТЬ В.Ссылка КАК Код ИЗ Справочник.Тест КАК В';
+      const query = nested
+        ? 'ВЫБРАТЬ П.Код ИЗ (ВЫБРАТЬ В.Ссылка КАК Код, В.Ссылка КАК Дополнительное ИЗ Справочник.Тест КАК В) КАК П'
+        : 'ВЫБРАТЬ В.Ссылка КАК Код ИЗ Справочник.Тест КАК В';
       const prefix = 'Процедура Тест()\nЗапрос.Текст = ';
       const suffix = ';\nХ = 1;\nКонецПроцедуры';
       const original = `${prefix}"${query}"${suffix}`;
@@ -43,23 +45,36 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
       const locale = normalizeLocale(vscode.env.language);
       const labels = JSON.stringify({
         fields: t(locale, 'workspaceFields'), alias: t(locale, 'fieldsWorkspaceAliasPlaceholder'),
-        save: t(locale, 'save'),
+        save: t(locale, 'save'), nested,
       });
       panel.webview.html = html.replace('</body>', `<script nonce="${nonce}">
         const labels = ${labels};
         let step = 0;
         const timer = setInterval(() => {
           if (document.querySelector('[data-testid="canvas-loading-overlay"]')) return;
-          const buttons = [...document.querySelectorAll('button')];
+          const nestedEditor = document.querySelector('[data-testid="canvas-source-query-editor"]');
+          const scope = nestedEditor || document;
+          const buttons = [...scope.querySelectorAll('button')];
+          if (labels.nested && step === 0 && !nestedEditor) {
+            const card = document.querySelector('[data-source-alias="П"]');
+            const enter = document.querySelector('[data-testid="canvas-edit-source"]');
+            if (enter) enter.click(); else if (card) card.click();
+            return;
+          }
           if (step === 0) {
             const fields = buttons.find(b => b.textContent.trim() === labels.fields);
             if (fields) { fields.click(); step = 1; }
           } else if (step === 1) {
-            const alias = [...document.querySelectorAll('input')].find(i => i.placeholder === labels.alias);
+            const alias = [...scope.querySelectorAll('input')].find(i => i.placeholder === labels.alias);
             if (!alias || alias.value !== 'Код') return;
-            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(alias, 'КодИзCanvas');
-            alias.dispatchEvent(new Event('input', { bubbles: true }));
+            const target = labels.nested ? [...scope.querySelectorAll('input')].find(i => i.placeholder === labels.alias && i.value === 'Дополнительное') : alias;
+            if (!target) return;
+            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(target, 'КодИзCanvas');
+            target.dispatchEvent(new Event('input', { bubbles: true }));
             step = 2;
+          } else if (labels.nested && nestedEditor) {
+            const back = nestedEditor.querySelector('[data-testid="canvas-source-back"]');
+            if (back && !back.disabled) back.click();
           } else {
             const save = buttons.find(b => b.textContent.trim() === labels.save);
             if (save && !save.disabled) { clearInterval(timer); save.click(); }

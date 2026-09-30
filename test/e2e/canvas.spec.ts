@@ -234,3 +234,302 @@ test.describe('C11: malformed VT and ПЕРИОДАМИ slots disable Apply with
     }
   }
 });
+
+
+test.describe('Canvas feature baseline: source editing', () => {
+  async function enter(page: Page, alias: string) {
+    await page.locator(`[data-testid="canvas-source-card"][data-source-alias="${alias}"]:visible`).click({ position: { x: 80, y: 20 } });
+    await page.getByTestId('canvas-edit-source').filter({ visible: true }).last().click();
+    return page.getByTestId('canvas-source-query-editor').filter({ visible: true }).last();
+  }
+
+  test('Classic → Canvas recursive source/JOIN edit → back → Save → reopen', async ({ page }) => {
+    const input = 'ВЫБРАТЬ П.Код КАК Код ИЗ (ВЫБРАТЬ В.Код КАК Код ИЗ (ВЫБРАТЬ А.Код КАК Код ИЗ Справочник.Валюты КАК А ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО А.Код = Б.Код ГДЕ А.Код = &Код) КАК В) КАК П';
+    await open(page, 'classic', input);
+    const classic = await save(page, 'classic');
+    await open(page, 'canvas', classic);
+    const parentCard = page.locator('[data-source-alias="П"]');
+    await parentCard.click({ position: { x: 80, y: 20 } });
+    const before = await parentCard.boundingBox();
+    let nested = await enter(page, 'П');
+    await expect(nested.getByTestId('package-switcher')).toHaveCount(0);
+    nested = await enter(page, 'В');
+    await nested.getByRole('button', { name: /Условия$/ }).click();
+    await nested.getByLabel('Использовать как произвольное выражение').check();
+    await nested.locator('textarea:visible').fill('А.Код = &ИзCanvas');
+    await nested.getByTestId('canvas-source-back').click();
+    await page.getByTestId('canvas-source-query-editor').getByTestId('canvas-source-back').click();
+    await expect(page.getByTestId('canvas-edit-source')).toBeVisible();
+    expect(await parentCard.boundingBox()).toEqual(before);
+    const output = await save(page, 'canvas');
+    const inner = parseBatch(output).members[0].members[0].model.tables[0].subquery!.members[0].model.tables[0].subquery!.members[0].model;
+    expect(inner.conditions![0]).toEqual(expect.objectContaining({ path: 'Код', param: '&ИзCanvas' }));
+    expect(inner.joins).toHaveLength(1);
+    await open(page, 'canvas', output);
+    expect(await save(page, 'canvas')).toBe(output);
+    await open(page, 'classic', output);
+    expect(await save(page, 'classic')).toBe(output);
+  });
+
+  test('cancel preserves parent; malformed nested edit refuses back and produces no insertion', async ({ page }) => {
+    const input = 'ВЫБРАТЬ П.Код ИЗ (ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = &Код) КАК П';
+    await open(page, 'canvas', input);
+    const nested = await enter(page, 'П');
+    await nested.getByRole('button', { name: /Условия$/ }).click();
+    await nested.locator('textarea:visible').fill('В.Код = = &Код');
+    await expect(nested.getByTestId('canvas-source-back')).toBeDisabled();
+    expect(await insertions(page)).toEqual([]);
+    await nested.getByRole('button', { name: 'Отмена', exact: true }).click();
+    expect(await save(page, 'canvas')).toBe(generateBatch(parseBatch(input)));
+  });
+
+  test('referenced exported columns cannot be silently pruned by Back', async ({ page }) => {
+    const input = 'ВЫБРАТЬ П.Код ИЗ (ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В) КАК П';
+    await open(page, 'canvas', input);
+    const nested = await enter(page, 'П');
+    await nested.getByRole('button', { name: /Поля$/ }).click();
+    await nested.getByPlaceholder('Псевдоним', { exact: true }).fill('ДругойКод');
+    await nested.getByTestId('canvas-source-back').click();
+    await expect(nested.getByRole('alert')).toContainText('Родительский запрос использует удаляемые столбцы');
+    expect(await insertions(page)).toEqual([]);
+    await nested.getByRole('button', { name: 'Отмена', exact: true }).click();
+    expect(await save(page, 'canvas')).toBe(generateBatch(parseBatch(input)));
+  });
+
+  test('unchanged navigation columns survive nested Back and Save/reopen (C19)', async ({ page }) => {
+    const input = 'ВЫБРАТЬ П.Ссылка.Код КАК Код ИЗ (ВЫБРАТЬ В.Ссылка КАК Ссылка ИЗ Справочник.Валюты КАК В) КАК П';
+    await open(page, 'canvas', input);
+    const nested = await enter(page, 'П');
+    await nested.getByRole('button', { name: /Дополнительно$/ }).click();
+    await nested.getByLabel('Только разрешённые записи (РАЗРЕШЕННЫЕ)').check();
+    await nested.getByTestId('canvas-source-back').click();
+    const output = await save(page, 'canvas');
+    expect(parseBatch(output).members[0].members[0].model.fields[0].path).toBe('Ссылка.Код');
+    await open(page, 'canvas', output);
+    expect(await save(page, 'canvas')).toBe(output);
+  });
+
+  test('nested UNION in a package survives a condition edit and Save/reopen', async ({ page }) => {
+    const input = 'ВЫБРАТЬ П.Код КАК Код ПОМЕСТИТЬ ВТ ИЗ (ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = &Код ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ Б.Код ИЗ Справочник.Валюты КАК Б) КАК П; ВЫБРАТЬ Т.Код ИЗ ВТ КАК Т; УНИЧТОЖИТЬ ВТ';
+    await open(page, 'canvas', input);
+    const nested = await enter(page, 'П');
+    await nested.getByRole('button', { name: /Условия$/ }).click();
+    await nested.locator('textarea:visible').fill('В.Код = &Пакет');
+    await nested.getByTestId('canvas-source-back').click();
+    const output = await save(page, 'canvas');
+    const batch = parseBatch(output);
+    expect(batch.members).toHaveLength(3);
+    const producer = batch.members[0].members[0].model;
+    expect(producer.queryType).toBe('createTemp');
+    expect(producer.tables[0].subquery!.members).toHaveLength(2);
+    expect(producer.tables[0].subquery!.members[0].model.conditions![0].expression).toBe('В.Код = &Пакет');
+    await open(page, 'canvas', output);
+    expect(await save(page, 'canvas')).toBe(output);
+  });
+
+  test('create a source subquery and a manual temp description through the source browser', async ({ page }) => {
+    await open(page, 'canvas', 'ВЫБРАТЬ 1 КАК Число');
+    await page.getByRole('button', { name: /Источник$/, exact: false }).click();
+    await page.getByRole('button', { name: 'Новый подзапрос', exact: true }).click();
+    const nested = page.getByTestId('canvas-source-query-editor');
+    await nested.getByRole('button', { name: /Поля$/ }).click();
+    await nested.getByRole('button', { name: /Добавить выражение$/ }).click();
+    await nested.locator('textarea:visible').fill('2');
+    await nested.getByTestId('canvas-source-back').click();
+    await page.getByRole('button', { name: /Источник$/, exact: false }).click();
+    await page.getByRole('button', { name: 'Описать временную таблицу', exact: true }).click();
+    await page.getByTestId('tt-name').fill('ВнешняяВТ');
+    await page.getByTestId('tt-field-name-0').fill('Код');
+    await page.getByTestId('tt-ok').click();
+    const output = await save(page, 'canvas');
+    const model = parseBatch(output).members[0].members[0].model;
+    expect(model.tables).toHaveLength(2);
+    expect(model.tables[0].subquery!.members[0].model.fields[0].expression).toBe('2');
+    expect(model.tables[1].fullName).toBe('ВнешняяВТ');
+    await open(page, 'canvas', output);
+    expect(await save(page, 'canvas')).toBe(output);
+  });
+
+  test('nested Fields, Grouping, Sorting and Additional use shared actions', async ({ page }) => {
+    const input = 'ВЫБРАТЬ П.Код ИЗ (ВЫБРАТЬ В.Код КАК Код, В.Наименование КАК Название ИЗ Справочник.Валюты КАК В СГРУППИРОВАТЬ ПО В.Код, В.Наименование УПОРЯДОЧИТЬ ПО В.Код) КАК П';
+    await open(page, 'canvas', input);
+    const nested = await enter(page, 'П');
+    await nested.getByRole('button', { name: /Поля$/ }).click();
+    await nested.getByPlaceholder('Псевдоним', { exact: true }).nth(1).fill('Описание');
+    await nested.getByRole('button', { name: /Группировка$/ }).click();
+    await expect(nested.locator('table:visible tbody tr')).toHaveCount(2);
+    await nested.getByRole('button', { name: /Сортировка$/ }).click();
+    await nested.locator('table:visible select').selectOption('desc');
+    await nested.getByRole('button', { name: /Дополнительно$/ }).click();
+    await nested.getByLabel('Только разрешённые записи (РАЗРЕШЕННЫЕ)').check();
+    await expect(nested.getByText('Тип запроса', { exact: true })).toHaveCount(0);
+    await nested.getByTestId('canvas-source-back').click();
+    const output = await save(page, 'canvas');
+    const model = parseBatch(output).members[0].members[0].model.tables[0].subquery!.members[0].model;
+    expect(model.fields[1].alias).toBe('Описание');
+    expect(model.selection!.allowed).toBe(true);
+    expect(model.grouping!.groupFields).toHaveLength(2);
+    expect(model.order!.fields[0].direction).toBe('desc');
+    await open(page, 'classic', output);
+    expect(await save(page, 'classic')).toBe(output);
+  });
+
+  test('manual temporary source edit uses the existing description and reopens', async ({ page }) => {
+    const input = 'ВЫБРАТЬ Т.Код КАК Код ИЗ ВнешняяВТ КАК Т';
+    await open(page, 'canvas', input);
+    await page.locator('[data-source-alias="Т"]').click({ position: { x: 80, y: 20 } });
+    await page.getByTestId('canvas-edit-source').click();
+    await page.getByTestId('tt-name').fill('НоваяВТ');
+    await page.getByTestId('tt-add-row').click();
+    await page.getByTestId('tt-field-name-1').fill('Описание');
+    await page.getByTestId('tt-ok').click();
+    const output = await save(page, 'canvas');
+    const model = parseBatch(output).members[0].members[0].model;
+    expect(model.tables[0].fullName).toBe('НоваяВТ');
+    expect(model.tables[0].alias).toBe('Т');
+    expect(model.fields[0].path).toBe('Код');
+    await open(page, 'canvas', output);
+    expect(await save(page, 'canvas')).toBe(output);
+  });
+});
+
+
+for (const surface of ['classic', 'canvas'] as const) {
+  test(`${surface}: C17 loss is rejected with original text untouched`, async ({ page }) => {
+    await open(page, surface, 'ВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = 1 // комментарий\nИЛИ В.Код = 2');
+    await expect(page.getByText(/не может сохранить все комментарии/)).toBeVisible();
+    expect(await insertions(page)).toEqual([]);
+    await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
+    expect(await insertions(page)).toEqual([]);
+  });
+}
+
+
+test('Classic text Apply also rejects C17 without replacing the current model', async ({ page }) => {
+  await open(page, 'classic', query);
+  await page.getByRole('button', { name: 'Запрос', exact: true }).click();
+  const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+  await editor.fill('ВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = 1 // keep\nИЛИ В.Код = 2');
+  await page.getByRole('button', { name: 'Применить', exact: true }).click();
+  await expect(page.getByText(/не может сохранить все комментарии/)).toBeVisible();
+  expect(await insertions(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
+  expect(await save(page, 'classic')).toBe(generateBatch(parseBatch(query)));
+});
+
+test.describe('Canvas feature baseline: contextual editors and preservation', () => {
+  test('virtual parameters edit retains argument comments and Save/reopen', async ({ page }) => {
+    const input = 'ВЫБРАТЬ Т.Период КАК Период ИЗ РегистрСведений.Курсы.СрезПоследних(&Дата, ИСТИНА // keep\n) КАК Т';
+    await open(page, 'canvas', input);
+    await page.locator('[data-source-alias="Т"]').click({ position: { x: 80, y: 20 } });
+    await page.getByTestId('canvas-edit-source').click();
+    await page.getByTestId('vt-period').fill('&НоваяДата');
+    await page.getByTestId('vt-ok').click();
+    const output = await save(page, 'canvas');
+    expect(output).toContain('// keep');
+    expect(parseBatch(output).members[0].members[0].model.tables[0].virtual!.period).toBe('&НоваяДата');
+    await open(page, 'canvas', output);
+    expect(await save(page, 'canvas')).toBe(output);
+  });
+
+  test('virtual parameter confirmation retains unsafe argument guard', async ({ page }) => {
+    const input = 'ВЫБРАТЬ Т.Период ИЗ РегистрНакопления.Продажи.Обороты(&Начало, &Конец, Месяц, ИСТИНА, 1) КАК Т';
+    await open(page, 'canvas', input);
+    await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toBeDisabled();
+    await page.locator('[data-source-alias="Т"]').click({ position: { x: 80, y: 20 } });
+    await page.getByTestId('canvas-edit-source').click();
+    await page.getByTestId('vt-start').fill('&НовыйНачало');
+    await page.getByTestId('vt-ok').click();
+    await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toBeDisabled();
+    expect(await insertions(page)).toEqual([]);
+  });
+
+  test('manual temp confirmation refuses implicit deletion of referenced fields', async ({ page }) => {
+    await open(page, 'canvas', 'ВЫБРАТЬ Т.Код ИЗ ВнешняяВТ КАК Т');
+    await page.locator('[data-source-alias="Т"]').click({ position: { x: 80, y: 20 } });
+    await page.getByTestId('canvas-edit-source').click();
+    await page.getByTestId('tt-field-name-0').fill('ДругойКод');
+    await page.getByTestId('tt-ok').click();
+    await expect(page.getByRole('alert')).toBeVisible();
+    await page.getByTestId('tt-cancel').click();
+    const output = await save(page, 'canvas');
+    expect(parseBatch(output).members[0].members[0].model.fields[0].path).toBe('Код');
+  });
+
+  test('TOTALS editing changes grand total and preserves ПЕРИОДАМИ', async ({ page }) => {
+    const input = 'ВЫБРАТЬ 1 КАК Число ИТОГИ ПО ОБЩИЕ, Число ПЕРИОДАМИ(Месяц, 1, 2)';
+    await open(page, 'canvas', input);
+    await page.getByRole('button', { name: /Группировка$/ }).click();
+    await page.getByTestId('canvas-open-totals').click();
+    await page.getByLabel('Общие итоги').uncheck();
+    const output = await save(page, 'canvas');
+    const model = parseBatch(output).members[0].members[0].model;
+    expect(model.totals!.grand).toBe(false);
+    expect(output).toContain('ПЕРИОДАМИ(МЕСЯЦ, 1, 2)');
+    await open(page, 'canvas', output);
+    expect(await save(page, 'canvas')).toBe(output);
+  });
+
+  test('package producer index editing preserves consume/append/drop and reopens', async ({ page }) => {
+    const input = 'ВЫБРАТЬ В.Код КАК Код ПОМЕСТИТЬ ВТ ИЗ Справочник.Валюты КАК В ИНДЕКСИРОВАТЬ ПО НАБОРАМ ((Код), (Код)); ВЫБРАТЬ Б.Код КАК Код ДОБАВИТЬ ВТ ИЗ Справочник.Валюты КАК Б; ВЫБРАТЬ Т.Код ИЗ ВТ КАК Т; УНИЧТОЖИТЬ ВТ';
+    await open(page, 'canvas', input);
+    await page.getByRole('button', { name: /Дополнительно$/ }).click();
+    await page.getByTestId('canvas-open-indices').click();
+    await page.locator('input[type="checkbox"]:visible').first().check();
+    const output = await save(page, 'canvas');
+    const batch = parseBatch(output);
+    expect(batch.members.map(q => q.members[0].model.queryType ?? 'select')).toEqual(['createTemp', 'appendTemp', 'select', 'dropTemp']);
+    expect(batch.members[0].members[0].model.indexing!.indexes[0].unique).toBe(true);
+    await open(page, 'canvas', output);
+    expect(await save(page, 'canvas')).toBe(output);
+  });
+
+  test('UNION ORDER/TOTALS/INDEX edits use the shared tail slot from member 0 (C20)', async ({ page }) => {
+    const input = 'ВЫБРАТЬ А.Код КАК Первый ПОМЕСТИТЬ ВТ ИЗ Справочник.Валюты КАК А ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ Б.Наименование ИЗ Справочник.Валюты КАК Б УПОРЯДОЧИТЬ ПО Первый ИТОГИ КОЛИЧЕСТВО(Первый) ПО ОБЩИЕ, Первый ИНДЕКСИРОВАТЬ ПО НАБОРАМ ((Первый), (Первый)); ВЫБРАТЬ Т.Первый ИЗ ВТ КАК Т';
+    await open(page, 'classic', input);
+    const classic = await save(page, 'classic');
+    await open(page, 'canvas', classic);
+    await page.getByRole('button', { name: /Сортировка$/ }).click();
+    await page.locator('table:visible select').selectOption('desc');
+    await page.getByRole('button', { name: /Группировка$/ }).click();
+    await page.getByTestId('canvas-open-totals').click();
+    await page.getByLabel('Общие итоги').uncheck();
+    await page.getByRole('button', { name: /Дополнительно$/ }).click();
+    await page.getByTestId('canvas-open-indices').click();
+    await page.locator('input[type="checkbox"]:visible').first().check();
+    const output = await save(page, 'canvas');
+    const batch = parseBatch(output);
+    const first = batch.members[0].members[0].model;
+    const last = batch.members[0].members[1].model;
+    expect(first.queryType).toBe('createTemp');
+    expect(first.fields[0].alias).toBe('Первый');
+    expect(last.indexing!.indexes[0].unique).toBe(true);
+    expect(last.totals!.grand).toBe(false);
+    expect(last.order!.fields[0].direction).toBe('desc');
+    expect(output).toContain('КОЛИЧЕСТВО(Первый)');
+    await open(page, 'classic', output);
+    expect(await save(page, 'classic')).toBe(output);
+    await open(page, 'canvas', output);
+    expect(await save(page, 'canvas')).toBe(output);
+  });
+
+  const preserved = [
+    ['grouping sets', 'ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В СГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ ((В.Код), (В.Наименование))', 'ГРУППИРУЮЩИМ НАБОРАМ'],
+    ['dynamic builder', 'ВЫБРАТЬ В.Код КАК Код {ВЫБРАТЬ В.Код} ИЗ Справочник.Валюты КАК В {ГДЕ В.Код} {УПОРЯДОЧИТЬ ПО Код} {ИТОГИ ПО Код}', '{ВЫБРАТЬ'],
+    ['condition subquery', 'ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ НЕ Т.Ссылка В ИЕРАРХИИ (ВЫБРАТЬ Б.Ссылка ИЗ Справочник.Банки КАК Б)', 'В ИЕРАРХИИ'],
+    ['raw order and totals', 'ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В УПОРЯДОЧИТЬ ПО &Сортировка ИТОГИ КОЛИЧЕСТВО(Код) ПО ОБЩИЕ', '&Сортировка'],
+    ['calculation VT', 'ВЫБРАТЬ Т.Период КАК Период ИЗ РегистрРасчета.Начисления.БазаЗарплата(&Начало, &Конец, (Организация), (Организация)) КАК Т', 'БазаЗарплата'],
+  ];
+  for (const [name, input, marker] of preserved) test(`preserve-only ${name}: unrelated edit → Save → reopen`, async ({ page }) => {
+    await open(page, 'canvas', input);
+    await page.getByRole('button', { name: /Дополнительно$/ }).click();
+    await page.getByLabel('Разрешенные').check();
+    const expected = parseBatch(input);
+    expected.members[0].members[0].model.selection = { ...expected.members[0].members[0].model.selection, allowed: true };
+    const output = await save(page, 'canvas');
+    expect(output).toContain(marker);
+    expect(output).toBe(generateBatch(expected));
+    await open(page, 'canvas', output);
+    expect(await save(page, 'canvas')).toBe(output);
+  });
+});
