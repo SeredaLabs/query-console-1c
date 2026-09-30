@@ -26,7 +26,7 @@ import { CONDITION_OPERATORS } from '../../webview/conditionOperators';
  * умов — ці поля заповнюються лише парсингом існуючого SDBL, тому UI їх не
  * створює (лише показує/редагує, якщо вони вже є в моделі — тут не
  * зустрічаються, бо New Builder не підтягує існуючий запит, див. STOP-нотатку
- * в new_builder_current_state.md).
+ * в docs/design/new-builder/feature-baseline.md).
  */
 
 

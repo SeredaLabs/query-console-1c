@@ -27,7 +27,7 @@ replace the Classic Constructor.
 
 The [Canvas Feature Baseline](../design/new-builder/feature-baseline.md) is complete
 within its explicit editing/preservation boundary. The
-[historical Phase 0–18 reconciliation](../design/new-builder/phase-reconciliation.md)
+[historical Phase 0–18 reconciliation](audits/archive/canvas-phase-reconciliation-2026-09-30.md)
 checks every phase against code/tests: Phase 13 recursive sources/manual temp
 and Phase 16 contextual expression help are closed. Phase 14 scalar mapping is
 verified, with advanced projections guarded as preserve-only; Phase 15 mandatory

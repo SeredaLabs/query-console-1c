@@ -1,5 +1,9 @@
 # Phase 2x-2: Virtual-table parameter resolution — reference catalog + design
 
+> Historical evidence copied from `.claude/scratch_phase2x2_virtual_table_design.md` at `e3b36a5`.
+> Statements and counts describe that checkpoint. [Current status](../../../technical-debt.md)
+> is owned by the ledger; this record is not a present-day specification.
+
 Status: §1 (catalog) verified. §2.4's open question RESOLVED and its fix
 SHIPPED as v0.1.51. Increment 1 (hover shows the parameter role) shipped as
 v0.1.52. Increment 2 (bare-field resolution inside `Условие`/`УсловиеСчета`/

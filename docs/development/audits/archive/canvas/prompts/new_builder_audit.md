@@ -1,5 +1,9 @@
 # Claude Code Task --- New Builder Audit & Plan
 
+> Historical evidence copied from `.claude/prompts/new_builder_audit.md` at `e3b36a5`.
+> Statements and counts describe that checkpoint. [Current status](../../../../technical-debt.md)
+> is owned by the ledger; this record is not a present-day specification.
+
 Repository: `SeredaLabs/query-console-1c`
 
 ## Завдання

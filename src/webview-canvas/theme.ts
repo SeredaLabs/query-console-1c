@@ -1,7 +1,7 @@
 import type * as React from 'react';
 
 /**
- * New Builder shell — геометрія з .claude/new_builder_visual_spec.md (§3, §16).
+ * New Builder shell — геометрія з docs/development/audits/archive/canvas/new_builder_visual_spec.md (§3, §16).
  * Тримати константи в одному місці, щоб компоненти Phase 1 не розходились
  * у цифрах при подальших фазах.
  */

@@ -1,4 +1,8 @@
 > **STATUS (2026-09-21): SUPERSEDED / HISTORICAL.** This is a pre-implementation
+
+> Historical evidence copied from `.claude/scratch_semantic_core_plan_review.md` at `e3b36a5`.
+> Statements and counts describe that checkpoint. [Current status](../../../technical-debt.md)
+> is owned by the ledger; this record is not a present-day specification.
 > design-review document. The phases described below (1a-3f) as "deferred,
 > not started" have since shipped: Semantic Core exists at `src/core/semantic/**`,
 > `resolveAliasAt` is live in Hover/Completion for every snapshot with trustworthy

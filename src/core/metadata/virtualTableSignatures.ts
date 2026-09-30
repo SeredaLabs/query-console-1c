@@ -39,7 +39,7 @@ export interface VirtualTableSignature {
 
 const p = (name: string, role: VirtualParamRole): VirtualTableParamSpec => ({ name, role });
 
-/** Catalog from `.claude/scratch_phase2x2_virtual_table_design.md` §1, literally. */
+/** Catalog from `docs/development/audits/archive/canvas/scratch_phase2x2_virtual_table_design.md` §1, literally. */
 const VIRTUAL_TABLE_SIGNATURES: readonly VirtualTableSignature[] = [
   // 1.1 РегистрСведений (p. 213-214)
   { registerKind: 'РегистрСведений', slice: 'СрезПоследних', params: [p('Период', 'period'), p('Условие', 'condition')] },

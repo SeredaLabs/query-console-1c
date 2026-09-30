@@ -1,5 +1,9 @@
 # New Builder --- Visual Design Specification
 
+> Historical evidence copied from `.claude/new_builder_visual_spec.md` at `e3b36a5`.
+> Statements and counts describe that checkpoint. [Current status](../../../technical-debt.md)
+> is owned by the ledger; this record is not a present-day specification.
+
 ## 0. Purpose
 
 Це visual source of truth для New Builder. Він визначає layout,

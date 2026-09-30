@@ -1,5 +1,9 @@
 # New Builder --- Current State
 
+> Historical evidence copied from `.claude/new_builder_current_state.md` at `e3b36a5`.
+> Statements and counts describe that checkpoint. [Current status](../../../technical-debt.md)
+> is owned by the ledger; this record is not a present-day specification.
+
 > Updated against repository HEAD on 2026-09-24. The concise capability
 > matrix lives in `.claude/new_builder_capability_map.md`; this document keeps
 > the implementation detail and invariants.

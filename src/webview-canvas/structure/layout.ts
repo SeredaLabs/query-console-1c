@@ -27,7 +27,7 @@ const SINGLETON_COLUMNS = 4; // скільки карток без зв'язкі
 const CANVAS_MARGIN = 24;
 
 /**
- * Layered/BFS auto-layout (.claude/new_builder_phase3_design.md §layout).
+ * Layered/BFS auto-layout (docs/development/audits/archive/canvas/new_builder_phase3_design.md §layout).
  * Рахує позиції ЛИШЕ для tableId, яких ще немає в `existingPositions` —
  *既 розташовані/перетягнуті картки не чіпає (auto-layout vs manual drag,
  * design §4). У Phase 3A `joins` реалістично завжди порожній (JOIN — Phase

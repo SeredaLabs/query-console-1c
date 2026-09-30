@@ -1,5 +1,9 @@
 # New Builder --- Target UX Roadmap
 
+> Historical evidence copied from `.claude/new_builder_roadmap.md` at `e3b36a5`.
+> Statements and counts describe that checkpoint. [Current status](../../../technical-debt.md)
+> is owned by the ledger; this record is not a present-day specification.
+
 ## Current implementation checkpoint (2026-09-24)
 
 This file remains the target sequence, but implementation has not followed the

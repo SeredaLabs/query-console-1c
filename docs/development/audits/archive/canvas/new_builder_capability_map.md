@@ -1,5 +1,9 @@
 # New Builder — Current Capability Map
 
+> Historical evidence copied from `.claude/new_builder_capability_map.md` at `e3b36a5`.
+> Statements and counts describe that checkpoint. [Current status](../../../technical-debt.md)
+> is owned by the ledger; this record is not a present-day specification.
+
 > STATUS: refreshed against repository HEAD `86ab4eb`, 2026-09-24.
 >
 > This replaces the historical audit from HEAD `efc0a78`, where

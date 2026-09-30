@@ -98,7 +98,7 @@ async function runQueryConstructorCommand(context: vscode.ExtensionContext, resu
 }
 
 /**
- * Команда «New Builder (Preview)» (.claude/new_builder_roadmap.md). Save
+ * Команда «New Builder (Preview)» (docs/design/new-builder/feature-baseline.md). Save
  * support (2026-09-21): тепер, як і Classic-команда, шукає запит під курсором
  * і передає `SavedEditorState`/`initialQueryText` у панель — без цього
  * `insertText` не мав би куди й на підставі якої версії документа писати

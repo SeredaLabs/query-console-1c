@@ -1,5 +1,9 @@
 # Phase 3 — Structure Workspace: Design & Engineering Audit
 
+> Historical evidence copied from `.claude/new_builder_phase3_design.md` at `e3b36a5`.
+> Statements and counts describe that checkpoint. [Current status](../../../technical-debt.md)
+> is owned by the ledger; this record is not a present-day specification.
+
 > Design-only. No code written for this phase yet. Companion to
 > `.claude/new_builder_capability_map.md` and `.claude/new_builder_roadmap.md`.
 

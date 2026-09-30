@@ -1,9 +1,13 @@
 # Canvas roadmap reconciliation
 
-Audit: 2026-09-30, continuing the [feature-baseline implementation](feature-baseline.md).
+> Historical evidence copied from `docs/design/new-builder/phase-reconciliation.md` at `e3b36a5`.
+> Statements and counts describe that checkpoint. [Current status](../../technical-debt.md)
+> is owned by the ledger; this record is not a present-day specification.
+
+Audit: 2026-09-30, continuing the [feature-baseline implementation](canvas-feature-baseline-2026-09-30.md).
 This reconciles historical requirements; it does not restart that audit or
 supersede the shared model. Current status belongs in the
-[technical-debt ledger](../../development/technical-debt.md), with capability
+[technical-debt ledger](../../technical-debt.md), with capability
 and preservation contracts in the feature-baseline matrix. Phase numbers are
 historical references, not a completion algorithm.
 
@@ -186,33 +190,33 @@ closed; Phase 14/15 retain only their explicitly deferred advanced UX. Phases
 ## Evidence index
 
 Component names in the table refer to `src/webview-canvas/`:
-[App](../../../src/webview-canvas/App.tsx),
-[StructureWorkspace](../../../src/webview-canvas/structure/StructureWorkspace.tsx),
-[PackageNav](../../../src/webview-canvas/components/PackageNav.tsx),
-[UnionMappingPopover](../../../src/webview-canvas/components/UnionMappingPopover.tsx),
-[SdblDock](../../../src/webview-canvas/components/SdblDock.tsx),
-[SourceQueryEditor](../../../src/webview-canvas/components/SourceQueryEditor.tsx).
+[App](../../../../src/webview-canvas/App.tsx),
+[StructureWorkspace](../../../../src/webview-canvas/structure/StructureWorkspace.tsx),
+[PackageNav](../../../../src/webview-canvas/components/PackageNav.tsx),
+[UnionMappingPopover](../../../../src/webview-canvas/components/UnionMappingPopover.tsx),
+[SdblDock](../../../../src/webview-canvas/components/SdblDock.tsx),
+[SourceQueryEditor](../../../../src/webview-canvas/components/SourceQueryEditor.tsx).
 The shared contracts are
-[QueryModel](../../../src/core/query/queryModel.ts),
-[QueryState/QueryAction/reducer](../../../src/webview/state/queryStore.ts),
-[UNION representation](../../../src/core/query/unionModel.ts),
-[Classic ConstructorView](../../../src/webview/components/ConstructorView.tsx),
-[ExpressionBuilder](../../../src/webview/components/ExpressionBuilder.tsx),
-[expressionSources](../../../src/webview/expressionSources.ts),
-[session](../../../src/webview/hooks/useDesignerSession.ts) and
-[Apply gate](../../../src/webview/applyGate.ts).
+[QueryModel](../../../../src/core/query/queryModel.ts),
+[QueryState/QueryAction/reducer](../../../../src/webview/state/queryStore.ts),
+[UNION representation](../../../../src/core/query/unionModel.ts),
+[Classic ConstructorView](../../../../src/webview/components/ConstructorView.tsx),
+[ExpressionBuilder](../../../../src/webview/components/ExpressionBuilder.tsx),
+[expressionSources](../../../../src/webview/expressionSources.ts),
+[session](../../../../src/webview/hooks/useDesignerSession.ts) and
+[Apply gate](../../../../src/webview/applyGate.ts).
 
 Permanent evidence:
-[Canvas browser cases](../../../test/e2e/canvas.spec.ts),
-[real host Save](../../../test/vscode-integration/canvasSave.test.ts),
-[model coverage](../../../test/unit/queryStore.modelCoverage.test.ts),
-[corpus parity](../../../test/unit/queryStore.corpusParity.test.ts),
-[shared editor sources](../../../test/unit/expressionSources.test.ts),
-[router](../../../test/unit/webviewCanvasEdgeRouter.test.ts),
-[layout](../../../test/unit/webviewCanvasLayout.test.ts),
-[geometry](../../../test/unit/webviewCanvasGeometry.test.ts),
-[minimap](../../../test/unit/webviewCanvasMinimap.test.ts),
-[package layout](../../../test/unit/packageNavLayout.test.ts).
+[Canvas browser cases](../../../../test/e2e/canvas.spec.ts),
+[real host Save](../../../../test/vscode-integration/canvasSave.test.ts),
+[model coverage](../../../../test/unit/queryStore.modelCoverage.test.ts),
+[corpus parity](../../../../test/unit/queryStore.corpusParity.test.ts),
+[shared editor sources](../../../../test/unit/expressionSources.test.ts),
+[router](../../../../test/unit/webviewCanvasEdgeRouter.test.ts),
+[layout](../../../../test/unit/webviewCanvasLayout.test.ts),
+[geometry](../../../../test/unit/webviewCanvasGeometry.test.ts),
+[minimap](../../../../test/unit/webviewCanvasMinimap.test.ts),
+[package layout](../../../../test/unit/packageNavLayout.test.ts).
 
 Actions were cross-checked by consumer, not merely by declaration: source
 ADD/UPDATE/REMOVE and subquery/temp/VT actions; JOIN/custom/conjunct actions;

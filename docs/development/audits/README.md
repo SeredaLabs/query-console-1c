@@ -41,3 +41,21 @@ This is an indexed historical archive, not a second status ledger.
 | 2026-09-30 | [Documentation inventory and contradiction audit](documentation-consolidation-2026-09-30.md) | Complete original-path classification, cleanup plan, debt revalidation and final lost-information check |
 | 2026-09-30 | [Ledger checkpoint at e3b36a5](archive/technical-debt-e3b36a5.md) | CLOSED regression rationale, corpus/shadow changes and former status narratives → HISTORICAL; current ledger replaces it |
 | 2026-09-30 | [Lexical checkpoint at e3b36a5](archive/expression-lexical-e3b36a5.md) | Historical migration evidence → SUPERSEDED policy; current lexical contract owns invariants |
+| 2026-09-30 | [Canvas implementation](archive/canvas-feature-baseline-2026-09-30.md) | Before/after capability matrix, C19/C20/C17 safety work and browser/host gates → RESOLVED baseline |
+| 2026-09-30 | [Full Canvas roadmap history](archive/canvas-phase-reconciliation-2026-09-30.md) | Every discovered phase/subphase; remaining requirements → UX-C1–10 → HISTORICAL scope evidence |
+
+## Original design and investigation notes
+
+Archived from `.claude/` at e3b36a5. Original paths/names inside the reports are
+historical provenance, not live imports or current instructions.
+
+| Original date / scope | Archive | Result → disposition |
+|---|---|---|
+| 2026-09-18 onward, Canvas delivery | [Current-state notes](archive/canvas/new_builder_current_state.md) | Subphase/STOP observations and design constraints → HISTORICAL; current matrix supersedes status |
+| 2026-09-18 onward, original roadmap | [Roadmap](archive/canvas/new_builder_roadmap.md) | Phase definitions through later UX ideas → HISTORICAL; remaining requirements in ledger |
+| 2026-09, initial parity | [Capability map](archive/canvas/new_builder_capability_map.md) | Domain/Classic/Canvas comparison → SUPERSEDED by current matrix |
+| 2026-09, graph intent | [Graph design](archive/canvas/new_builder_phase3_design.md) | Layout/focus/keyboard invariants → HISTORICAL design evidence |
+| 2026-09, visual direction | [Visual spec](archive/canvas/new_builder_visual_spec.md) | Presentation intent → HISTORICAL; not a missing-function list |
+| 2026-09, audit procedure | [Prompt](archive/canvas/prompts/new_builder_audit.md) | Historical workflow → HISTORICAL; not active agent instructions |
+| 2026-09, virtual tables | [Signature/completion investigation](archive/canvas/scratch_phase2x2_virtual_table_design.md) | Book-cited signatures and completion boundaries, database-value/base-register blockers → STILL RELEVANT evidence |
+| 2026-09, semantic proposals | [Plan review](archive/canvas/scratch_semantic_core_plan_review.md) | Former index/walker design → SUPERSEDED by current semantic contract/A1/A3; no arbitrary release threshold |
