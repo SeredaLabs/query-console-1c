@@ -3,7 +3,7 @@ import type { HostMsg } from '../../shared/messages';
 import type { MetaTable } from '../../core/metadata/types';
 import type { MetadataResolver } from '../../core/query/metadataResolver';
 import { buildResolverFromTables } from '../../core/metadata/buildModelResolver';
-import { tryOpenBatch } from '../../core/query/validateBatch';
+import { tryOpenDesignerBatch } from '../openDesignerBatch';
 import { onHostMessage, postToHost } from '../bridge';
 import type { QueryAction } from '../state/queryStore';
 
@@ -62,7 +62,7 @@ export function useDesignerSession(
         // (`tryOpenBatch`: синтаксис + локальная семантика по кэшу метаданных).
         // Текст корректен — загружаем модель; иначе ошибка вместо пустого
         // конструктора. В любом случае снимаем оверлей загрузки.
-        const r = tryOpenBatch(msg.text, buildResolver(), { preserveComments: true });
+        const r = tryOpenDesignerBatch(msg.text, buildResolver());
         if (r.ok) { dispatch({ type: 'LOAD_BATCH', doc: r.doc }); setLoadError(null); }
         else setLoadError(r.error);
         setLoading(false);

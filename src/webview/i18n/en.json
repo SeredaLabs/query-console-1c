@@ -372,5 +372,6 @@
   "warning.fullJoin": "A full join can be inefficient because it scans both tables",
   "warning.joinWithSubquery": "A join with subquery ({source}) can be inefficient",
   "warning.topWithoutOrder": "TOP N without ORDER BY is non-deterministic",
-  "warning.unknownCoreWarning": "Query analysis reported a warning"
+  "warning.unknownCoreWarning": "Query analysis reported a warning",
+  "diagnostic.commentLoss": "The constructor cannot preserve all comments in this query. Opening is blocked; the original text is unchanged."
 }
