@@ -3921,7 +3921,8 @@ function parseOrder(cur: Cursor, ctx: SectionResolveContext): Order {
         if (cur.matchPunct(',')) continue;
         break;
       }
-      if (headTok.type !== 'ident' && headTok.type !== 'keyword') {
+      const expressionHead = headTok.type === 'punct' && (headTok.value === '(' || headTok.value === '-');
+      if (headTok.type !== 'ident' && headTok.type !== 'keyword' && !expressionHead) {
         throw cur.error('ожидался псевдоним поля упорядочивания', headTok);
       }
       // Выражение ВЫБОР…КОНЕЦ как поле упорядочивания: поглощаем весь CASE
@@ -3967,14 +3968,17 @@ function parseOrder(cur: Cursor, ctx: SectionResolveContext): Order {
         }
         segs.push(cur.next().text);
       }
-      // Вызов функции (`ДОБАВИТЬКДАТЕ(…`) или произвольное выражение — не голое поле.
+      // Вызов функции или арифметический ключ (C21) — не голое поле.
       // Поглощаем выражение целиком (баланс скобок) до запятой/секции и сохраняем
       // сырой срез как expression: конструктор 1С печатает его дословно (норм. в
       // генераторе). Без этого parseOrder терял хвост `(…)` и поле усекалось до
       // имени функции (фаза 6.15.11a, MCP).
-      if (cur.isPunct('(')) {
+      const tail = cur.peek();
+      const arithmeticTail = tail.type === 'punct' && ['+', '-', '*', '/'].includes(tail.value);
+      if (expressionHead || cur.isPunct('(') || arithmeticTail) {
         const exprTokens: Token[] = [headTok];
-        let depth = 0;
+        // Начальная `(` уже поглощена вместе с головой; её закрытие принадлежит ключу.
+        let depth = headTok.value === '(' ? 1 : 0;
         for (;;) {
           const t = cur.peek();
           if (t.type === 'eof') {

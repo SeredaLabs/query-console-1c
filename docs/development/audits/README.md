@@ -22,6 +22,7 @@ This is an indexed historical archive, not a second status ledger.
 | 2026-09-28 | [Near-term implementation](near-term-2026-09-28.md) | C1/D1/V4 bounded fixes and gates | RESOLVED |
 | 2026-09-28 | [Hierarchy live observation](c3-hierarchy-2026-09-28.md) | Case-specific wizard canonical text → C3, one reviewed curated fixture change | RESOLVED; platform evidence retained |
 | 2026-09-28 | [Correlated live observation](c4-correlated-2026-09-28.md) | Nearest enclosing owner in three condition contexts → C4; no-metadata fallback retained | RESOLVED; platform evidence retained |
+| 2026-09-30 | [ORDER expressions](c21-order-expressions-2026-09-30.md) | Field/path arithmetic, parenthesized and unary-minus keys → C21; unchanged corpus outputs | RESOLVED; bounded parser fix, no live execution |
 | 2026-09-29 | [Comma migration](a1-comma-2026-09-29.md) | Token-backed consumer; former raw fallback | SUPERSEDED by lexical contract; A1 remains |
 | 2026-09-29 | [Tuple migration](a1-tuple-2026-09-29.md) | Token-backed closing delimiter; former raw fallback | SUPERSEDED by lexical contract; A1 remains |
 | 2026-09-29 | [HAVING preservation](c9-having-2026-09-29.md) | Flat-store omission → C9 | RESOLVED |
