@@ -12,23 +12,11 @@ import { CARD, SECTION_LABEL, TOKENS } from '../theme';
 import { CONDITION_OPERATORS } from '../../webview/conditionOperators';
 
 /**
- * Phase 8 — Conditions Workspace. Той самий грід-патерн, що й Fields
- * (Phase 7): таблиця ВЖЕ доданих WHERE-умов (`state.conditions`), клік по
- * рядку → "Властивості умови" праворуч + "Вираз умови" знизу (editable
- * лише коли custom). Жодних нових reducer actions — лише ADD_CONDITION/
- * REMOVE_CONDITION/SET_CONDITION_CUSTOM/SET_CONDITION_OPERATOR/
- * SET_CONDITION_PARAM/SET_CONDITION_EXPRESSION, що вже підтримувались
- * (Classic ConditionsTab.tsx use той самий набір).
- *
- * Модель — ПЛОСКИЙ список (`Condition[]`), а не дерево AND/OR/NOT: генератор
- * (`buildConditionStrings`/`renderConditions`) з'єднує елементи неявним "І"
- * (AND). Немає reducer action для створення `subquery`/`hierarchy`/`negated`
- * умов — ці поля заповнюються лише парсингом існуючого SDBL, тому UI їх не
- * створює (лише показує/редагує, якщо вони вже є в моделі — тут не
- * зустрічаються, бо New Builder не підтягує існуючий запит, див. STOP-нотатку
- * в docs/design/new-builder/feature-baseline.md).
+ * WHERE rows edit the shared flat Condition[] through the Classic actions.
+ * The generator joins rows with implicit AND; there is no Boolean-tree model.
+ * Parsed subquery/hierarchy/negation properties survive unrelated edits but
+ * have no dedicated creation controls here. Custom text uses the shared editor.
  */
-
 
 const BAR_STYLE: React.CSSProperties = {
   height: 36,

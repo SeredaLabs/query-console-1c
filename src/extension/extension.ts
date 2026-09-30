@@ -98,19 +98,10 @@ async function runQueryConstructorCommand(context: vscode.ExtensionContext, resu
 }
 
 /**
- * Команда «New Builder (Preview)» (docs/design/new-builder/feature-baseline.md). Save
- * support (2026-09-21): тепер, як і Classic-команда, шукає запит під курсором
- * і передає `SavedEditorState`/`initialQueryText` у панель — без цього
- * `insertText` не мав би куди й на підставі якої версії документа писати
- * назад. На відміну від `runQueryConstructorCommand`, НЕ показує модальний
- * діалог «Створити новий запит?» при відсутності запиту під курсором —
- * Canvas свідомо лишається "завжди відкривається" незалежно від контексту
- * (Phase 1 рішення), просто ТЕПЕР, якщо редактор є, все одно захоплює
- * курсорну позицію як порожній insertion range, щоб «Зберегти» працювало і
- * для щойно створеного запиту (не лише для вже існуючого під курсором).
- * Якщо активного редактора взагалі немає — панель відкривається без
- * `savedEditor`, точно як і раніше (Save тоді впаде на clipboard-fallback
- * `insertResult()` вже реалізує сам).
+ * Canvas opens without Classic's new-query confirmation. Capture the existing
+ * literal or an empty cursor range and its document version before opening so
+ * Save can use the same stale-document protection as Classic. Without an active
+ * editor the panel opens without SavedEditorState; insertResult owns fallback.
  */
 function runQueryConstructorCanvasCommand(context: vscode.ExtensionContext): void {
   const cfPath = resolveCfPathWithLogging();
