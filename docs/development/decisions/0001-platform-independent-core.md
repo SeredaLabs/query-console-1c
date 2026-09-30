@@ -14,12 +14,13 @@ native/WASM dependency such as `tree-sitter-bsl`.
 
 ## Decision
 
-`src/core/**` contains zero imports of `vscode` and no DOM APIs. It is plain,
-synchronous TypeScript, runnable identically from the extension host, the
-CLI tools, and the unit-test suite. `tsconfig.json` (extension) and
-`tsconfig.webview.json` enforce the corresponding split for `src/webview`
-(excluded from the former, the only project allowed to use DOM/React) —
-neither project type-checks the other's dependency direction by construction.
+`src/core/**` contains zero imports of `vscode` and no DOM APIs. Query parsing
+and generation are synchronous TypeScript, runnable in host, browser and tests.
+Metadata filesystem importers run only in Node; browser consumers use values and
+resolvers. The extension, Classic and Canvas have separate TypeScript projects
+(`tsconfig.json`, `tsconfig.webview.json`, `tsconfig.webview-canvas.json`). Project
+boundaries alone do not prove every import direction; preserve the documented
+layer rules and review the actual graph.
 
 The SDBL lexer/parser/generator (`sdblLexer.ts`, `sdblParser.ts`,
 `sdblGenerator.ts`) are hand-written, not generated from or backed by an
@@ -32,9 +33,8 @@ fixture is present — never on the runtime parse path.
 
 - Every `src/core` function is trivially unit-testable in Vitest with no
   Extension Host or browser harness required — this is what makes the
-  1976/17933-query golden-corpus regression suite (see
-  [0004](0004-querymodel-round-trip-contract.md)) cheap enough to run on every
-  change.
+  committed golden-corpus gate cheap to run on relevant changes (see
+  [0004](0004-querymodel-round-trip-contract.md) and [corpus policy](../corpus-testing.md)).
 - Adding any `vscode`- or DOM-dependent code to `src/core` is a regression of
   this boundary, not a style nit — it would silently make that code
   untestable outside the Extension Host and break the CLI tools that import

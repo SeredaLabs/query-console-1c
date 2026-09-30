@@ -1,27 +1,38 @@
 # WebView
 
-The React WebView edits a `QueryModel` received from the extension host. It uses
-the typed messages in `src/shared/messages.ts`; it must not read workspace files
-or call the VS Code API directly.
+Classic (`src/webview`) and Canvas (`src/webview-canvas`) are React adapters over
+the shared QueryState/reducer, session, QueryModel conversion, generator and Apply
+gate. Canvas imports shared Classic helpers/components one-way. Neither UI reads
+workspace files or calls the VS Code extension API directly.
 
 ## State and messages
 
-`App.tsx` receives `init` and metadata/model updates, establishes the locale, and
-owns top-level dialogs. Stores and focused components make model changes and send
-apply, cancel, refresh, and selection requests to the host.
+The host sends `init`, `metadataTree`, `refFields`, `refreshResult`, and
+`loadModel` through `src/shared/messages.ts`. **loadModel carries source text**;
+`useDesignerSession` parses/validates it locally before loading shared state.
+Generation is local. Outgoing messages are `ready`, `expandRef`, `insertText`,
+`cancel`, and `refreshCache`; there is no model/selection/apply message type.
 
-The test harness initializes Russian to preserve historical selectors and
-fixtures. Locale-specific tests may send another `init` message and assert the
-visible labels. Never translate message types, model enums, `data-testid` values,
-or SDBL tokens.
+Classic handles refresh and lazy reference-field responses. Canvas uses initial
+metadata but has no corresponding assisted controls/response wiring yet (UX-C8).
+UI focus/coordinates/collapse and recursive draft state stay local. Loading,
+Cancel/Back and Save follow the [safety contract](contracts/safety-and-preservation.md).
+
+The test harness defaults to Russian to preserve selectors/fixtures; locale tests
+send another init. Never translate protocol discriminants, model enums,
+data-testid values or SDBL tokens. Both surfaces use the shared bridge.
 
 ## Query text editors
 
-The default query-text dialog provides formatting and apply/cancel behavior. The
-v2 editor is experimental and adds CodeMirror search, lint markers, structure,
-and parameter panels. Both must parse manual edits before replacing the model.
+Classic's default text dialog supports formatting and Apply/Cancel; experimental
+v2 adds CodeMirror search, lint, structure and parameter panels. Both validate
+manual edits before replacing the model. Canvas has a read-only generated SDBL
+dock with highlighting/copy/resize/collapse. It is not a raw-text editor; the
+[current capability matrix](../design/new-builder/feature-baseline.md) records
+editing/preservation boundaries.
 
 ## Security
 
-The panel uses a nonce-based content security policy and local resource roots.
-Keep new resources inside the extension and avoid inline executable content.
+The panel uses nonce-based CSP and local resource roots. Keep resources inside
+the extension and avoid inline executable content. The real-host integration gate
+checks actual insertion through the shared panel bridge.

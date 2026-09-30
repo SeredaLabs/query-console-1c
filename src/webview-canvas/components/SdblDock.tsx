@@ -20,19 +20,9 @@ const HEADER_STYLE: React.CSSProperties = {
 };
 
 /**
- * SDBL dock (Phase 7): реальний `generate()`, той самий client-side шлях, що
- * й Classic (`computeBatchTextSafe` — `assembleBatch` + `generateBatch`, без
- * жодного host round-trip; генерація завжди локальна в webview). Раніше тут була статична Phase-1
- * заглушка — тепер `text`/`error` приходять з `computeBatchTextSafe(state)`
- * в App.tsx.
- *
- * Рендер тексту — той самий `CodeEditor` (CodeMirror 6 + SDBL-підсвітка), що
- * й Classic-модалка "Текст запроса" (ConstructorView.tsx), а не голий
- * `<div>` з plain text — читома скарга користувача (2026-09-18): "текст
- * запросу жодним чином не форматований, так у Classic". `readOnly` (новий
- * опційний prop CodeEditor, не зачіпає інші місця використання) — підсвітка/
- * курсор/копіювання лишаються, редагування нема (New Builder ще не вміє
- * SDBL→QueryState назад).
+ * Generated text comes from the same local computeBatchTextSafe path as Classic.
+ * The shared CodeEditor provides SDBL highlighting, selection and copying; this
+ * dock is intentionally read-only. Model edits remain in the Canvas workspaces.
  */
 export function SdblDock({
   locale,

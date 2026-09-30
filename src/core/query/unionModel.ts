@@ -36,10 +36,10 @@ export interface QueryDocument {
 }
 
 /**
- * UNION + temp-table semantic audit (2026-09-20): `queryType`/`tempTableName`
+ * UNION/temp-table invariant: `queryType`/`tempTableName`
  * belong to the COMPOUND query (the whole `QueryDocument`), not to any one
  * union member — `ПОМЕСТИТЬ`/`ДОБАВИТЬ` has exactly one grammatical slot,
- * physically carried by member 0. Callers (e.g. Phase 12B's package
+ * physically carried by member 0. Callers (e.g. package
  * temp-table continuity) should read through this accessor instead of
  * indexing `doc.members[0]` directly, so the "member 0 is the carrier"
  * detail stays in one place. Mirrors `compoundQueryType`/

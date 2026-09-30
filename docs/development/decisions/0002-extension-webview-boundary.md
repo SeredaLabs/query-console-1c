@@ -4,7 +4,8 @@ Status: Accepted
 
 ## Context
 
-The visual query constructor runs as a VS Code WebView (`src/webview`, React)
+Classic and Canvas run as VS Code WebViews (`src/webview` and
+`src/webview-canvas`, React)
 hosted by the extension (`src/extension/panel.ts`). The two sides run in
 separate processes/contexts with no shared memory or direct function calls —
 only `postMessage`. Without a single, explicit, typed contract for that
@@ -19,7 +20,8 @@ discriminated union `HostMsg` (host → WebView: `init`, `metadataTree`,
 `refFields`, `refreshResult`, `loadModel`) and a
 discriminated union `WebviewMsg` (WebView → host: `ready`, `expandRef`,
 `insertText`, `cancel`, `refreshCache`). Query generation stays inside the
-WebView and does not cross this boundary. Both sides import these
+WebView and does not cross this boundary. `loadModel` contains source text;
+`insertText` carries accepted generated text. Both sides import these
 types instead of hand-rolling ad hoc message shapes; `panel.ts`
 (`postMessage`/`onDidReceiveMessage`) and `src/webview/bridge.ts`
 (`postToHost`/`onHostMessage`) are the only two files that touch the raw
@@ -28,9 +30,9 @@ types instead of hand-rolling ad hoc message shapes; `panel.ts`
 ## Consequences
 
 - Adding a new capability across the boundary means adding a new
-  discriminant to one of these two unions first — TypeScript then forces both
-  sides' `switch`/`if` handling to be updated, instead of a silent runtime
-  mismatch.
+  discriminant to one of these two unions first. TypeScript checks message
+  shapes; adapter handling still needs explicit review and both-surface tests
+  because an `if` chain is not automatically exhaustive.
 - Neither adapter can "reach through" the other layer: the WebView cannot
   call `vscode` APIs directly, and the extension host never touches DOM/React
   state directly — everything crosses through this one typed channel,

@@ -17,17 +17,17 @@ generator honest against it as both evolve.
 `generateBatch(parseBatch(input)) === query_text` is the contract, where
 `query_text` is the *real 1C platform's own* accepted, canonical output for
 `input` — not necessarily `input` itself (the platform's own normalization
-means the two differ verbatim for roughly half the committed corpus). It is
-enforced by a golden-oracle regression corpus, not by hand-written unit
-examples alone: a committed corpus of real query texts paired with 1C's
-canonical output (`test/fixtures/corpus/golden.jsonl`), currently gated at
-exactly 1976/1976 matching queries in the fast, committed suite
-(`test/unit/corpusRegression.test.ts`), with a larger 17933-query corpus run
-available via `npm run accept:oracle` for changes that need broader
-confidence than the committed subset. Surfaces that decide whether a model can
+means the two can differ verbatim). It is enforced by the committed recorded
+canonical-output corpus (`test/fixtures/corpus/golden.jsonl` and
+`test/unit/corpusRegression.test.ts`). Private/live corpora are optional workflows
+with prerequisites, not committed CI gates. Provenance, negative/English coverage
+and template-substitution limits are explicit in [corpus policy](../corpus-testing.md).
+Surfaces that decide whether a model can
 be applied, or present strict model-derived analysis, MUST reuse the production
-parse and validation path rather than implement a parallel parser. Apply and
-the read-only Query Text analysis service use `tryOpenBatch`. Advisory editor
+parse and validation path rather than implement a parallel parser. The read-only
+Query Text analysis service uses `tryOpenBatch`; the shared Apply gate revalidates
+generated text, while designer loading adds comment-loss refusal through
+`tryOpenDesignerBatch` ([safety contract](../contracts/safety-and-preservation.md)). Advisory editor
 features such as hover and completion share the `parseBatch`-backed semantic
 snapshot, but may use its explicit recovery path so that useful assistance can
 survive temporarily incomplete text. They must not introduce a separate grammar

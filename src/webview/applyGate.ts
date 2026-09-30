@@ -13,7 +13,7 @@ import { assembleBatch, type QueryState } from './state/queryStore';
 
 /**
  * A known capability/preservation boundary that makes the current model
- * unsafe to apply (ТЗ §27/28/54 P0.5), checked continuously so the apply
+ * unsafe to apply, checked continuously so the apply
  * button can be disabled with a reason:
  *  - `unsafeVirtualTable`: a VT marked with unsupported extra arguments (see
  *    `docs/development/known-issues.md`, `findUnsafeVirtualTables`) — applying

@@ -1,78 +1,47 @@
 # Query model and SDBL
 
-`src/core/query/queryModel.ts` is the shared representation edited by the UI and
-consumed by the generator. `sdblParser.ts` is intentionally tolerant: unsupported
-expressions can remain opaque so the visual editor does not need to implement the
-entire platform grammar.
+`src/core/query/queryModel.ts` is the shared representation edited by Classic
+and Canvas and consumed by `sdblGenerator`. `BatchDocument` orders statements;
+`QueryDocument` holds UNION members. The shared store converts to/from flat active
+state and optional saved snapshots. Parsing is intentionally tolerant: unsupported
+expressions can remain opaque strings. There is no shared arbitrary-expression AST.
 
-## Required test directions
+## Representation boundaries
 
-For a supported syntax change, cover:
+Scalar fields, tabular projections and trailing fields are distinct ordered select
+elements. Generator/semantic schemas use `orderedSelectElements`; scalar UNION
+mapping and parser/designer temp schemas do not yet share that full derivation.
+[A2](technical-debt.md#architecture) owns the remaining lifetime/schema work.
+Opaque HAVING, characteristics, grouping/report blocks and optional flags must
+survive unrelated edits; preservation and unsafe-input rules are specified in the
+[safety contract](contracts/safety-and-preservation.md).
 
-1. text to model;
-2. model to text;
-3. parse/generate round-trip;
-4. relevant comments and batches;
-5. WebView behavior when user-visible.
-
-Do not treat a successful parse as certification by the 1C platform. The
-tree-sitter oracle strengthens local validation when its WASM fixture is
-present, but `test/fixtures/tree-sitter-sdbl.wasm` is not committed and the
-normal CI workflow does not build it. In an ordinary checkout the helper emits
-an explicit skip warning and only the repository parser/structural checks and
-regression corpus run. Making the independent grammar oracle reproducible in
-CI is still verification work, not an already active gate.
+The parser records `unsafeExtraArgs` when supported positional data cannot be
+reconstructed. The semantic validator separately checks malformed expression
+slots. Markers are not platform-validity verdicts and must survive transformations.
+Strict opening uses `tryOpenBatch`; production designer loading adds the shared
+comment-loss check in `tryOpenDesignerBatch`. Apply uses the shared gate, including
+generated-output revalidation. Advisory snapshots have a distinct recovery mode.
 
 ## Section order
 
-The generator (`sdblGenerator.ts`) emits sections in a fixed order:
+The generator emits:
 `ВЫБРАТЬ` → (`ПОМЕСТИТЬ`/`ДОБАВИТЬ <ВТ>`) → `ИЗ` → `ГДЕ` → `СГРУППИРОВАТЬ ПО` →
 `ИМЕЮЩИЕ` → `ОБЪЕДИНИТЬ [ВСЕ]` → `УПОРЯДОЧИТЬ ПО`/`АВТОУПОРЯДОЧИВАНИЕ` → `ИТОГИ` →
-`ИНДЕКСИРОВАТЬ ПО` → `ДЛЯ ИЗМЕНЕНИЯ`. The parser's `SECTION_AFTER_FIELDS` keyword
-set (`sdblParser.ts`) mirrors this: any of these keywords found at paren/brace
-depth 0 terminates whatever section came before it, which is what lets the
-parser recover a section boundary without a full grammar for every possible
-expression inside it.
+`ИНДЕКСИРОВАТЬ ПО` → `ДЛЯ ИЗМЕНЕНИЯ`.
+The parser's SECTION_AFTER_FIELDS set terminates sections at depth zero without
+requiring a complete grammar for every opaque expression. UNION compound sections
+use the first member's column names and the last member's ORDER/TOTALS/INDEX slot.
 
-## Comment preservation
+## Required test directions
 
-Query text comments round-trip through a dedicated `QueryComments` shape on
-`QueryModel` (`beforeSelect`, `afterFrom`, and per-field
-leading/trailing comment arrays), populated by `commentBinder.ts` during parse
-and re-emitted by the generator at the same positions. This is opt-out at the
-UI level ("Сохранять комментарии", on by default), not opt-in — cover any
-change here with both parse and round-trip tests (`test/unit/comment*.test.ts`).
+For a supported syntax change cover text → model, model → text, round-trip,
+relevant comments/batches and user-visible WebView behavior. The
+[canonical-output ADR](decisions/0004-querymodel-round-trip-contract.md) and
+[corpus policy](corpus-testing.md) govern expected-output changes.
 
-## Safety markers
-
-Virtual-table parsing records `unsafeExtraArgs` in the generic fallback and
-modeled calculation-register overflow paths; Apply blocks marked models.
-Nonempty extra `Обороты`/`ОстаткиИОбороты` arguments (platform-invalid RP04/RP05)
-are marked too; trailing empty slots are accepted. See the [debt ledger](technical-debt.md).
-Preserve existing markers through transformations and tests.
-
-A structurally malformed custom/raw expression (unbalanced parens, a dangling
-operator, an unclosed `ВЫБОР…КОНЕЦ`, and similar) is a separate, narrower check
-— `findMalformedCustomExpressions` (`semanticValidator.ts`) — that also blocks
-Apply; see [known issues](known-issues.md) for its exact scope and deliberate
-non-goals.
-
-Current user-facing boundaries are in the [limitations guide](../en/limitations.md).
-
-## Apply and expression boundaries
-
-Classic and Canvas share `findStaticApplyBlocker`/`decideApply` in
-`src/webview/applyGate.ts`: original model unsafe/malformed checks, then generated
-text parsed and checked for selected table/field, alias and UNION constraints.
-`validateBatchText` and `tryOpenBatch` reuse `tryParseBatch` and semantic validation.
-This certifies acceptance by the supported local checks, not full platform syntax
-or input/output semantic equivalence. No original-query comparison is performed.
-The structural expression acceptor deliberately ignores operator precedence and
-leaves template markers unjudgeable; boolean preservation is currently verified
-by targeted regression truth tables and recorded canonical examples.
-
-Opaque text is intentional, but repeatedly reinterpreting its lexical structure
-is architecture debt (A1). The [expression lexical contract](expression-lexical-contract.md)
-uses existing lexer tokens and explicit unknown results; the first four migrated
-generator operations no longer fall back to independent raw scanners. Other
-consumers remain to be migrated; no runtime parser replacement is required.
+Parsing success is not 1C compiler certification or semantic equivalence.
+[Testing/release](testing-and-release.md) describes the independent grammar
+oracle's availability and the real gates. [Lexical facts](expression-lexical-contract.md)
+require explicit unknowns and verbatim incomplete expressions rather than guessed
+rewrites. [User limitations](../en/limitations.md) describe the supported surface.

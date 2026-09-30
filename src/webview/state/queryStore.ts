@@ -183,7 +183,7 @@ export type QueryAction =
   // 7.8.15: двойной клик по синониму подзапроса переоткрывает конструктор; ОК обновляет подзапрос.
   | { type: 'UPDATE_SUBQUERY_TABLE'; tableId: string; subquery: QueryDocument; columns: string[] }
   | { type: 'REMOVE_FIELD'; fieldIdx: number }
-  // New Builder Phase 7 (Fields Workspace): порядок SELECT-списку — це порядок
+  // Порядок SELECT-списку — це порядок
   // масиву selectedFields, тож reorder = переставити два сусідні елементи.
   | { type: 'MOVE_FIELD'; fieldIdx: number; direction: 'up' | 'down' }
   | { type: 'SET_FIELD_ALIAS'; fieldIdx: number; alias: string }
@@ -301,7 +301,7 @@ export const metadataCatalogRef: MetadataCatalogRef = { current: [] };
  * то, что раньше было единым `state.tables`. Читатели (ConstructorView и т. п.)
  * зовут это вместо прямого чтения поля состояния.
  *
- * Metadata-resolution audit (2026-09-20, Option B): package-derived записи
+ * Package-derived записи
  * йдуть ПЕРШИМИ — якщо `state.syntheticTables` містить застарілий ручний
  * запис з тим самим `fullName` (напр. лишився від СТАРОЇ поведінки
  * `ADD_TEMP_TABLE` до цього фіксу), `.find()`-споживачі (усі виклики нижче
@@ -834,7 +834,7 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
       if (!name) return state;
       const id = `t${++_tableCounter}`;
 
-      // Metadata-resolution audit (2026-09-20, Option B): `name` — точна
+      // `name` — точна
       // package-derived ВТ (доступна на поточній позиції)? Тоді це НЕ
       // manual/ad hoc визначення — identity зберігається як є (fullName
       // ЗАЛИШАЄТЬСЯ `name`, `uniqueSourceName`/`syntheticTables` тут НЕ

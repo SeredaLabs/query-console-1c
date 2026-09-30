@@ -54,7 +54,7 @@ shared bridge require Extension Host coverage as well as both WebView paths.
 
 ## Known internal coupling
 
-(Re-verified against the import graph on 2026-09-23.)
+(Re-verified against current imports on 2026-09-30.)
 
 One real circular-import group remains inside `src/core/query`:
 `sdblGenerator.ts` → `sdblParser.ts` (the generator re-parses inline subquery
@@ -96,26 +96,40 @@ boundary regression coverage.
 
 Related decisions: see [`decisions/`](decisions/README.md).
 
-## Current semantic and expression contracts
+## Query and semantic dependencies
 
-The [technical-debt ledger](technical-debt.md) owns current status. In particular,
-A1 tracks duplicated lexical/expression knowledge, and A2 tracks temporary-table
-lifetime/producer facts. Reusing or extending the hand-written lexer with
-canonical tokens is compatible with ADR 0001/0004 if spelling, source positions,
-opaque preservation and the platform-canonical output contract remain intact.
-A runtime grammar engine or independent recovery grammar would require revisiting
-those ADRs. A full expression AST needs a separate scope decision; a formatter's
-internal Boolean/arithmetic tree is not a shared expression AST in QueryModel.
+The existing lexer (`sdblLexer`, shared keyword sets) feeds parser, formatter and
+validator. Parser/generator edit `QueryModel`; arbitrary expressions remain
+strings, with formatter-local Boolean/arithmetic trees rather than a shared AST.
+`validateBatch` calls parser plus `semanticValidator`; the latter uses the
+structural expression acceptor, field-path resolver and semantic temp lifetimes.
+The semantic snapshot builder also uses this parser, with advisory recovery;
+source-map ranges/depth and `symbolsById` serve on-demand alias resolution.
+No scope/reference index or `partial` completeness state is produced.
 
-`buildSemanticSnapshotFromText` materializes source-alias `symbolsById` for complete
-and recovered parses; `resolveAliasAt` consumes it. It is the only index: the
-unused scope/reference maps and the never-produced `partial` state were removed
-(S3). Completeness is `complete`, `recovered` or `unavailable`. `complete` means the
-parse did not throw, not that every source/scope was captured: condition
-subqueries kept as custom text are not covered. Text with an unclosed `(` is
-recovered first even when it parses, because the parenthesis can swallow ИЗ.
-Source-map events carry `depth`; scope descent matches nested levels by depth and
-the parent node's range. Current source maps and
-on-demand scope traversal already serve consumers; add a new index only together
-with its first consumer. Some source comments still describe earlier phases
-(D1); the implementation and this contract take precedence.
+Temporary-table facts still have three owners: parser registry, designer store
+and semantic lifetime/schema derivation. Scalar-head versus all-projection schema
+alignment is unfinished. The shared lexer likewise does not mean all raw
+expression scanners have disappeared. [A1/A2/A3](technical-debt.md#architecture)
+own these debts and their dependencies; the existing cycle/hooks/resolver above
+constrain decomposition.
+
+## Stable contracts and scope
+
+[Query model](query-model.md) describes current representation/section order;
+[lexical facts](expression-lexical-contract.md) and
+[safety/preservation/recovery](contracts/safety-and-preservation.md) own enforced
+invariants. Classic and Canvas share state/session/generation/Apply infrastructure;
+the host sends source text and inserts only accepted text through the shared
+bridge. Canvas keeps presentation state and recursive drafts local.
+
+Metadata filesystem I/O stays in the Node adapter/importer path; browser bundles
+consume metadata values/resolvers, not filesystem loaders. The extension edits
+static BSL query literals and offers advisory IDE assistance. It has no query
+execution transport, database result grid or dynamic BSL data-flow engine.
+
+Runtime grammar replacement, SQLite caches and worker/process redesign are not
+implied by current debt. A new runtime dependency or architecture replacement
+requires a concrete scoped need; optimization requires measured workloads.
+[ADR records](decisions/README.md) remain accepted. Current release gates and
+Preview criteria belong to [testing/release](testing-and-release.md), not audits.

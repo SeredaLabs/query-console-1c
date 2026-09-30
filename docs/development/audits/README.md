@@ -40,3 +40,4 @@ This is an indexed historical archive, not a second status ledger.
 |---|---|---|
 | 2026-09-30 | [Documentation inventory and contradiction audit](documentation-consolidation-2026-09-30.md) | Complete original-path classification, cleanup plan, debt revalidation and final lost-information check |
 | 2026-09-30 | [Ledger checkpoint at e3b36a5](archive/technical-debt-e3b36a5.md) | CLOSED regression rationale, corpus/shadow changes and former status narratives → HISTORICAL; current ledger replaces it |
+| 2026-09-30 | [Lexical checkpoint at e3b36a5](archive/expression-lexical-e3b36a5.md) | Historical migration evidence → SUPERSEDED policy; current lexical contract owns invariants |
