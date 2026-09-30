@@ -389,11 +389,13 @@ export function PackageNav({
   state,
   dispatch,
   onOpenAdditional,
+  nested = false,
 }: {
   locale: SupportedLocale;
   state: QueryState;
   dispatch: React.Dispatch<QueryAction>;
   onOpenAdditional: () => void;
+  nested?: boolean;
 }): React.ReactElement {
   const batch = React.useMemo(() => assembleBatch(state), [state]);
   const activeName = batchMemberName(state, state.activeBatch);
@@ -502,6 +504,7 @@ export function PackageNav({
   return (
     <div style={{ minWidth: 0 }}>
       <div ref={barRef} style={BAR_STYLE}>
+        {!nested && <>
         <span style={GROUP_LABEL} title={t(locale, 'packageConceptTooltip')}>
           <span className="codicon codicon-package" style={{ fontSize: 13 }} />
           {!isNarrow && t(locale, 'sidebarPackage')}
@@ -589,6 +592,7 @@ export function PackageNav({
           />
         )}
         <span style={NAV_DIVIDER} />
+        </>}
         <span
           ref={unionGroupRef}
           data-testid="union-switcher"
@@ -601,12 +605,12 @@ export function PackageNav({
             dispatch={dispatch}
             onFirstUnionCreated={() => setShowUnionHint(true)}
             compact={compactUnion}
-            showAdd={!isNarrow}
+            showAdd={nested || !isNarrow}
             narrow={isNarrow}
           />
         </span>
 
-        {isNarrow && (
+        {isNarrow && !nested && (
           <>
             <span style={{ flex: 1 }} />
             <button
@@ -634,7 +638,7 @@ export function PackageNav({
           </>
         )}
       </div>
-      {!isMedium && !isNarrow && (
+      {!nested && !isMedium && !isNarrow && (
         <>
           <span ref={inlinePackageProbeRef} aria-hidden="true" style={{ ...NAV_MEASUREMENT_PROBE, gap: 6 }}>
             <PackageSwitcher

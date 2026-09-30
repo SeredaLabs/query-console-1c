@@ -36,7 +36,9 @@ export function Workspace({
   onSelectionChange,
   inspectorWidth,
   onInspectorResize,
+  nested = false,
 }: {
+  nested?: boolean;
   locale: SupportedLocale;
   active: WorkspaceTab;
   onChange: (tab: WorkspaceTab) => void;
@@ -85,7 +87,7 @@ export function Workspace({
         <SortingWorkspace locale={locale} state={state} dispatch={dispatch} onGoToFields={() => onChange('fields')} />
       </div>
       <div style={{ display: active === 'additional' ? 'flex' : 'none', flex: 1, minWidth: 0, minHeight: 0 }}>
-        <AdditionalWorkspace locale={locale} state={state} dispatch={dispatch} />
+        <AdditionalWorkspace locale={locale} state={state} dispatch={dispatch} nested={nested} />
       </div>
     </div>
   );

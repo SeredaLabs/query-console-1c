@@ -4,7 +4,8 @@ import { fieldsTypeCompatible } from '../../core/query/fieldTypeCompat';
 import { defaultTableAlias, type ConditionOperator, type Join, type SelectedTable } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
-import { allTables } from '../../webview/state/queryStore';
+import { isPackageTempTableName, allTables } from '../../webview/state/queryStore';
+import { supportsVirtualParamsForm } from '../../webview/components/VirtualTableParamsDialog';
 import { MetaKindIcon } from '../../webview/components/MetaKindIcon';
 import { JoinKindPicker } from '../structure/JoinKindPicker';
 import { joinKindLabel } from '../structure/joinKind';
@@ -175,14 +176,17 @@ function SourceInspector({
   state,
   dispatch,
   onRemoved,
+  onEditSource,
 }: {
   locale: SupportedLocale;
   table: SelectedTable;
   state: QueryState;
   dispatch: React.Dispatch<QueryAction>;
   onRemoved: () => void;
+  onEditSource: (tableId: string) => void;
 }): React.ReactElement {
   const meta = React.useMemo(() => allTables(state).find(m => m.fullName === table.fullName), [state, table.fullName]);
+  const editableVirtual = !!table.virtual && supportsVirtualParamsForm(meta?.kind ?? table.fullName.split('.')[0], meta?.virtual?.slice ?? table.fullName.split('.').slice(-1)[0]);
   return (
     <div>
       <div style={SECTION_GAP}>
@@ -203,6 +207,11 @@ function SourceInspector({
       </div>
       <div>
         <div style={{ ...SECTION_LABEL, marginBottom: 8 }}>{t(locale, 'inspectorActionsSection')}</div>
+        {(table.subquery || editableVirtual || (table.tempTable && !isPackageTempTableName(state, table.fullName))) && (
+          <button type="button" className="qcc-btn" data-testid="canvas-edit-source" onClick={() => onEditSource(table.id)} style={{ marginBottom: 8 }}>
+            {t(locale, table.subquery ? 'sourceEditQuery' : table.virtual ? 'sourceEditVirtual' : 'sourceEditTemp')}
+          </button>
+        )}
         <button
           type="button"
           style={REMOVE_BTN}
@@ -535,6 +544,7 @@ export function Inspector({
   dispatch,
   selection,
   onClearSelection,
+  onEditSource,
 }: {
   locale: SupportedLocale;
   width: number;
@@ -543,6 +553,7 @@ export function Inspector({
   dispatch: React.Dispatch<QueryAction>;
   selection: StructureSelection;
   onClearSelection: () => void;
+  onEditSource: (tableId: string) => void;
 }): React.ReactElement {
   const selectedTable =
     selection?.kind === 'table' ? state.selectedTables.find(tb => tb.id === selection.tableId) ?? null : null;
@@ -557,7 +568,7 @@ export function Inspector({
         </div>
         <div style={BODY_STYLE}>
           {selectedTable && (
-            <SourceInspector locale={locale} table={selectedTable} state={state} dispatch={dispatch} onRemoved={onClearSelection} />
+            <SourceInspector locale={locale} table={selectedTable} state={state} dispatch={dispatch} onRemoved={onClearSelection} onEditSource={onEditSource} />
           )}
           {selectedJoin && selection?.kind === 'join' && (
             <JoinInspector

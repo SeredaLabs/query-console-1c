@@ -3,6 +3,7 @@ import type { MetaTable } from '../../core/metadata/types';
 import type { SelectedTable } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import { MetadataTree } from '../components/MetadataTree';
+import { t } from '../i18n';
 import { TOKENS } from '../theme';
 
 export interface SourceBrowserAnchor {
@@ -29,6 +30,8 @@ export function SourceBrowserPopover({
   onAddTable,
   tempTables,
   onAddTempTable,
+  onCreateSubquery,
+  onDescribeTempTable,
   anchor,
   onClose,
 }: {
@@ -39,6 +42,8 @@ export function SourceBrowserPopover({
   onAddTable: (table: MetaTable) => void;
   tempTables?: MetaTable[];
   onAddTempTable?: (table: MetaTable) => void;
+  onCreateSubquery: () => void;
+  onDescribeTempTable: () => void;
   anchor: SourceBrowserAnchor | null;
   onClose: () => void;
 }): React.ReactElement {
@@ -63,6 +68,10 @@ export function SourceBrowserPopover({
         }}
         onClick={e => e.stopPropagation()}
       >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 8, borderBottom: `1px solid ${TOKENS.border}` }}>
+          <button type="button" className="qcc-btn" onClick={onCreateSubquery}>{t(locale, 'sourceAddQuery')}</button>
+          <button type="button" className="qcc-btn" onClick={onDescribeTempTable}>{t(locale, 'sourceAddTemp')}</button>
+        </div>
         <MetadataTree
           locale={locale}
           tables={tables}

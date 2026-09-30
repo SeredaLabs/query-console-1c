@@ -86,8 +86,9 @@ function AccountingForm({ slice, correspondence, initial, onOpenConditionBuilder
   const set = (k: VtParamKey, val: string) => setValues(prev => ({ ...prev, [k]: val }));
 
   function handleOk() {
-    const params: VirtualParams = {};
+    const params: VirtualParams = { ...initial };
     for (const f of fieldsDesc) {
+      delete params[f.key];
       const val = values[f.key];
       if (val) (params as any)[f.key] = val;
     }
@@ -127,6 +128,14 @@ function AccountingForm({ slice, correspondence, initial, onOpenConditionBuilder
   );
 }
 
+/** These are the layouts the existing form can edit; other core layouts stay
+ * preserve-only rather than being presented as a misleading generic form. */
+export function supportsVirtualParamsForm(kind: string, slice: string): boolean {
+  if (kind === 'РегистрБухгалтерии') return ACC_SLICES.has(slice);
+  if (kind === 'РегистрСведений') return ['СрезПервых', 'СрезПоследних'].includes(slice);
+  return kind === 'РегистрНакопления' && ['Остатки', 'Обороты', 'ОстаткиИОбороты'].includes(slice);
+}
+
 export function VirtualTableParamsDialog(props: Props): React.ReactElement {
   if (props.kind === 'РегистрБухгалтерии' && ACC_SLICES.has(props.slice)) {
     return <AccountingForm {...props} />;
@@ -146,7 +155,9 @@ function LegacyForm({ slice, initial, onOpenConditionBuilder, onOk, onCancel }: 
   const isRange = slice === 'Обороты' || isOIO;
 
   function handleOk() {
-    const params: VirtualParams = {};
+    const params: VirtualParams = { ...initial };
+    // Clear edited slots, retaining parser-owned safety/layout properties.
+    for (const key of ['period', 'startPeriod', 'endPeriod', 'periodicity', 'fillMethod', 'condition'] as const) delete params[key];
     if (!isRange && period) params.period = period;
     if (isRange) {
       if (startPeriod) params.startPeriod = startPeriod;

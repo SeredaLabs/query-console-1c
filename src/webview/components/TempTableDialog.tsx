@@ -9,7 +9,7 @@ export interface TempTableField {
 }
 
 interface Props {
-  onOk: (name: string, fields: TempTableField[]) => void;
+  onOk: (name: string, fields: TempTableField[]) => string | void;
   onCancel: () => void;
   /** 7.8.14: режим правки — предзаполнить имя и поля существующей ВТ. */
   initial?: { name: string; fields: TempTableField[] };
@@ -27,6 +27,7 @@ const PANEL: React.CSSProperties = {
 /** Окно «Временная таблица» (7.8.9): имя ВТ + список полей (без «Типа значения»). */
 export function TempTableDialog({ onOk, onCancel, initial }: Props): React.ReactElement {
   const [name, setName] = React.useState(initial?.name ?? 'ВТ');
+  const [error, setError] = React.useState<string>();
   const [fields, setFields] = React.useState<TempTableField[]>(
     initial && initial.fields.length > 0 ? initial.fields : [{ name: '' }]
   );
@@ -88,7 +89,7 @@ export function TempTableDialog({ onOk, onCancel, initial }: Props): React.React
             data-testid="tt-ok"
             style={{ ...BTN, opacity: canOk ? 1 : 0.5 }}
             disabled={!canOk}
-            onClick={() => onOk(name.trim(), validFields)}
+            onClick={() => setError(onOk(name.trim(), validFields) || undefined)}
           >
             {t('actions.ok')}
           </button>
@@ -100,6 +101,7 @@ export function TempTableDialog({ onOk, onCancel, initial }: Props): React.React
             {t('actions.cancel')}
           </button>
         </div>
+        {error && <div role="alert" style={{ color: 'var(--vscode-errorForeground)', fontSize: 12 }}>{error}</div>}
       </div>
     </div>
   );

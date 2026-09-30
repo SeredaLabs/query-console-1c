@@ -3,6 +3,7 @@ import type { ConditionOperator } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
 import { allTables, availableTempTables } from '../../webview/state/queryStore';
+import { SourceDialogs, type SourceEditor } from './SourceDialogs';
 import { Inspector } from '../components/Inspector';
 import { t } from '../i18n';
 import { TOKENS } from '../theme';
@@ -60,6 +61,12 @@ export function StructureWorkspace({
   onInspectorResize: (delta: number) => void;
 }): React.ReactElement {
   const setSelection = onSelectionChange;
+  const [sourceEditor, setSourceEditor] = React.useState<SourceEditor>();
+  const editSource = (tableId: string) => {
+    const table = state.selectedTables.find(t => t.id === tableId);
+    if (table) setSourceEditor({ kind: table.subquery ? 'query' : table.virtual ? 'virtual' : 'temp', tableId });
+  };
+
   // Phase 3E: floating Source Browser замінює persistent Sidebar → Метадані.
   // Позиція — виміряна відносно кнопки "+ Джерело" (sourceButtonRef), а не
   // фіксований куток, щоб popover завжди відкривався "з" тригера.
@@ -381,6 +388,8 @@ export function StructureWorkspace({
           onAddTable={table => dispatch({ type: 'ADD_TABLE', table })}
           tempTables={tempTablesAvailable}
           onAddTempTable={table => dispatch({ type: 'ADD_TEMP_TABLE', name: table.name, fields: table.fields.map(f => ({ name: f.name })) })}
+          onCreateSubquery={() => { setSourcePopoverOpen(false); setSourceEditor({ kind: 'query' }); }}
+          onDescribeTempTable={() => { setSourcePopoverOpen(false); setSourceEditor({ kind: 'temp' }); }}
           anchor={sourceAnchor}
           onClose={() => setSourcePopoverOpen(false)}
         />
@@ -517,10 +526,12 @@ export function StructureWorkspace({
           state={state}
           dispatch={dispatch}
           selection={selection}
+          onEditSource={editSource}
           onClearSelection={() => setSelection(null)}
         />
       )}
       </div>
+      {sourceEditor && <SourceDialogs locale={locale} editor={sourceEditor} state={state} dispatch={dispatch} onClose={() => setSourceEditor(undefined)} />}
     </div>
   );
 }

@@ -169,7 +169,7 @@ export const TableCard = React.memo(function TableCard({
   const virtualLabel = table.virtual ? (meta?.virtual?.slice ?? t(locale, 'structureVirtualTable')) : null;
 
   return (
-    <div
+    <div data-testid="canvas-source-card" data-source-alias={alias}
       className="qcc-card"
       style={{
         position: 'absolute',

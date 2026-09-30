@@ -128,7 +128,7 @@ export function App(): React.ReactElement {
 
   return (
     <>
-    <div style={ROOT_STYLE}>
+    <div data-canvas-editor-surface style={ROOT_STYLE}>
       <HoverStyles />
       <DocumentBar
         locale={locale}

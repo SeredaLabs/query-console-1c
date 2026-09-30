@@ -425,14 +425,12 @@ export function FieldsWorkspace({
         <button
           type="button"
           onClick={() => {
-            const tableId = state.selectedTables[0]?.id;
-            if (!tableId) return;
+            const tableId = state.selectedTables[0]?.id ?? '';
             const idx = fields.length;
             dispatch({ type: 'ADD_EXPRESSION_FIELD', tableId, expression: '' });
             setActiveIdx(idx);
           }}
-          disabled={state.selectedTables.length === 0}
-          style={{ ...BTN, flexShrink: 0, ...(state.selectedTables.length === 0 ? BTN_DISABLED : {}) }}
+          style={{ ...BTN, flexShrink: 0 }}
         >
           <span className="codicon codicon-symbol-misc" style={{ fontSize: 14 }} />
           {t(locale, 'fieldsWorkspaceAddExpression')}
