@@ -67,7 +67,14 @@ export function SdblDock({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
       {!collapsed && <ResizeHandle axis="y" onResize={onResize} />}
-      <div style={HEADER_STYLE} onClick={onToggleCollapsed}>
+      <div style={HEADER_STYLE} role="button" tabIndex={0}
+        aria-label={t(locale, 'sdblTitle')} aria-expanded={!collapsed}
+        onKeyDown={e => {
+          if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onToggleCollapsed();
+          }
+        }} onClick={onToggleCollapsed}>
         <span style={{ fontWeight: 600, fontSize: 12 }}>{t(locale, 'sdblTitle')}</span>
         <span style={{ width: 1, height: 12, background: TOKENS.border }} />
         <span style={{ fontSize: 11, color: error ? TOKENS.danger : TOKENS.textSecondary }}>

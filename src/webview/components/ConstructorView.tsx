@@ -26,7 +26,7 @@ import type { VirtualParams } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import type { MetaField, MetaTable } from '../../core/metadata/types';
 import type { RefId } from '../../shared/messages';
-import { accumPeriodFields } from '../../core/query/accumVirtualFields';
+import { expressionSources } from '../expressionSources';
 import type { QueryState, QueryAction } from '../state/queryStore';
 import { assembleMembers, batchMemberInfo, initialState, reducer, tempTableDialogInitial, availableTempTables, allTables, metadataCatalogRef, compoundQueryType, compoundTempTableName, isPackageTempTableName } from '../state/queryStore';
 import { SideTabsRail } from './SideTabsRail';
@@ -161,20 +161,12 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   // Джерело полів для «Произвольное выражение»: вибрана таблиця під своїм псевдонімом
   // (+ поля періоду оборотних віртуальних таблиць — як і раніше у плоскому списку).
   function expressionSourceForTable(tableId: string): ExpressionSource | undefined {
-    const sel = state.selectedTables.find(t => t.id === tableId);
-    if (!sel) return undefined;
-    const meta: MetaTable | undefined = tables.find(m => m.fullName === sel.fullName);
-    if (!meta) return undefined;
-    const periodFields: MetaField[] =
-      meta.virtual && ['Обороты', 'ОборотыДтКт', 'ОстаткиИОбороты'].includes(meta.virtual.slice)
-        ? accumPeriodFields(sel.virtual?.periodicity)
-        : [];
-    return { alias: defaultTableAlias(sel), meta: periodFields.length ? { ...meta, fields: [...periodFields, ...meta.fields] } : meta };
+    return expressionSources(state.selectedTables.filter(t => t.id === tableId), tables)[0];
   }
 
   // Усі вибрані таблиці (поля адресуються `Псевдоним.Поле`) — для полів/умов/зв'язків.
   function expressionSourcesAllTables(): ExpressionSource[] {
-    return state.selectedTables.map(t => expressionSourceForTable(t.id)).filter((s): s is ExpressionSource => !!s);
+    return expressionSources(state.selectedTables, tables);
   }
 
   // Выбранная таблица для окна «Параметры виртуальной таблицы» (null, если строка

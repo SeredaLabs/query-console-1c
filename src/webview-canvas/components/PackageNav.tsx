@@ -993,6 +993,7 @@ function UnionStrip({
   narrow: boolean;
 }): React.ReactElement {
   const queryList = state.queryList;
+  const [showMapping, setShowMapping] = React.useState(false);
 
   if (queryList.length <= 1) {
     return (
@@ -1012,7 +1013,6 @@ function UnionStrip({
     );
   }
 
-  const [showMapping, setShowMapping] = React.useState(false);
 
   // Visual QA (2026-09-21): на вузькому container width повний label
   // ("⑂ Об'єднання" + mapping-кнопка) разом з bordered-контролами (важче за

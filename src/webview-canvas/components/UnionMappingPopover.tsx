@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { assembleMembers } from '../../webview/state/queryStore/snapshots';
-import { deriveUnionColumns } from '../../core/query/unionModel';
+import { deriveUnionColumns, unionHasTabSection, unionHasTrailing } from '../../core/query/unionModel';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
 import type { SupportedLocale } from '../../shared/locale';
 import { t } from '../i18n';
@@ -53,8 +53,8 @@ const MOVE_BTN: React.CSSProperties = {
  * та сама модель (`assembleMembers`/`deriveUnionColumns` з
  * `core/query/unionModel.ts`), ті самі actions (`SET_COLUMN_ALIAS`/
  * `MOVE_UNION_COLUMN`), жодної нової domain-семантики. Позиційне
- * зіставлення (`UnionColumn.cells[i]` по індексу члена) — це те, що вже
- * рахує генератор; тут лише візуалізація, без explicit-mapping-об'єкта
+ * зіставлення scalar-полів (`UnionColumn.cells[i]` по індексу члена), без
+ * explicit-mapping-об'єкта
  * (роадмап explicitно забороняє його вигадувати понад те, що є в домені).
  *
  * На відміну від Classic (окрема вкладка "Об'єднання/Псевдоніми" з обома
@@ -85,6 +85,8 @@ export function UnionMappingPopover({
 }): React.ReactElement {
   const members = React.useMemo(() => assembleMembers(state), [state]);
   const columns = React.useMemo(() => deriveUnionColumns(members), [members]);
+  // The helper omits advanced select elements; editing its partial alignment would be misleading.
+  const preserveOnly = unionHasTabSection(members) || unionHasTrailing(members);
   const [aliasDrafts, setAliasDrafts] = React.useState<Record<number, string>>({});
   const [aliasError, setAliasError] = React.useState<string | null>(null);
 
@@ -108,6 +110,8 @@ export function UnionMappingPopover({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-label={t(locale, 'packageUnionMappingButton')}
         style={{
           width: 'min(900px, 90vw)',
           maxHeight: '80vh',
@@ -151,10 +155,10 @@ export function UnionMappingPopover({
             flexShrink: 0,
           }}
         >
-          {t(locale, 'unionMappingHint')}
+          {t(locale, preserveOnly ? 'unionMappingPreserveOnly' : 'unionMappingHint')}
         </div>
         <div style={{ overflow: 'auto', flex: 1, padding: '0 4px' }}>
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          {!preserveOnly && <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>
                 <th style={{ ...TH, width: 40 }} />
@@ -228,7 +232,7 @@ export function UnionMappingPopover({
                 })
               )}
             </tbody>
-          </table>
+          </table>}
         </div>
       </div>
       {aliasError !== null && (

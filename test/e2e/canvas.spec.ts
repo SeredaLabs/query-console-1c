@@ -533,3 +533,203 @@ test.describe('Canvas feature baseline: contextual editors and preservation', ()
     expect(await save(page, 'canvas')).toBe(output);
   });
 });
+
+test.describe('Canvas roadmap reconciliation', () => {
+  test('advanced UNION projections are preserve-only in mapping', async ({ page }) => {
+    await page.setViewportSize({ width: 1500, height: 1000 });
+    const tables: MetaTable[] = [{ kind: 'Справочник', name: 'Заказы', fullName: 'Справочник.Заказы',
+      fields: [{ name: 'Ссылка', kind: 'standard', types: [] }, { name: 'Код', kind: 'attribute', types: [] }],
+      tabularSections: [{ kind: 'ТабличнаяЧасть', name: 'Товары', fullName: 'Справочник.Заказы.Товары',
+        fields: [{ name: 'Количество', kind: 'attribute', types: [] }] }] }];
+    const input = 'ВЫБРАТЬ З.Ссылка КАК Ссылка, З.Товары.(Количество) КАК Товары, З.Код КАК Хвост ИЗ Справочник.Заказы КАК З ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ Б.Ссылка, Б.Товары.(Количество), Б.Код ИЗ Справочник.Заказы КАК Б';
+    await open(page, 'canvas', input, tables);
+    await page.getByTitle('Маппинг полей (псевдонимы и порядок)', { exact: true }).filter({ visible: true }).click();
+    const mapping = page.getByRole('dialog', { name: 'Маппинг полей (псевдонимы и порядок)' });
+    await expect(mapping.getByText(/Сложные проекции/)).toBeVisible();
+    await expect(mapping.locator('input')).toHaveCount(0);
+    await expect(mapping.getByTitle('Переместить столбец вниз')).toHaveCount(0);
+    await mapping.getByTitle('Закрыть', { exact: true }).click();
+    await page.getByRole('button', { name: /Дополнительно$/ }).click();
+    await page.getByLabel('Только разрешённые записи (РАЗРЕШЕННЫЕ)').check();
+    const expected = parseBatch(input);
+    expected.members[0].members[0].model.selection = { allowed: true };
+    const output = await save(page, 'canvas');
+    expect(output).toBe(generateBatch(expected));
+    await open(page, 'classic', output, tables);
+    expect(await save(page, 'classic')).toBe(output);
+  });
+
+  test('source JOIN overview and minimap support Enter and Space', async ({ page }) => {
+    await open(page, 'canvas', 'ВЫБРАТЬ А.Код КАК Код ИЗ Справочник.Валюты КАК А ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО А.Код = Б.Код');
+    const source = page.getByRole('button', { name: 'А (Справочник.Валюты)', exact: true });
+    await source.focus();
+    await source.press('Enter');
+    await expect(source).toHaveAttribute('aria-pressed', 'true');
+    const field = page.getByRole('button', { name: 'А.Код', exact: true });
+    await expect(field).toHaveAttribute('aria-pressed', 'true');
+    await field.press('Space');
+    await expect(field).toHaveAttribute('aria-pressed', 'false');
+    await field.press('Enter');
+    await expect(field).toHaveAttribute('aria-pressed', 'true');
+    const join = page.getByRole('button', { name: 'А ↔ Б (LEFT)', exact: true });
+    await join.focus();
+    await join.press('Space');
+    await expect(join).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: /Связи/ }).first().click();
+    const overview = page.getByRole('button', { name: 'А ↔ Б (LEFT)', exact: true }).first();
+    await overview.focus();
+    await overview.press('Enter');
+    await expect(page.getByRole('button', { name: 'А ↔ Б (LEFT)', exact: true })).toHaveCount(1);
+    await page.setViewportSize({ width: 650, height: 500 });
+    const minimap = page.getByRole('button', { name: 'Центрировать по миникарте', exact: true });
+    await minimap.focus();
+    await minimap.press('Space');
+    expect(parseBatch(await save(page, 'canvas')).members[0].members[0].model.joins).toHaveLength(1);
+  });
+});
+
+test.describe('Canvas roadmap reconciliation controls', () => {
+  test('scalar UNION alias order and ALL edits save in both members', async ({ page }) => {
+    await page.setViewportSize({ width: 1500, height: 1000 });
+    await open(page, 'canvas', 'ВЫБРАТЬ 1 КАК Первый, 2 КАК Второй ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ 3 КАК Первый, 4 КАК Второй');
+    await page.getByTitle('Маппинг полей (псевдонимы и порядок)', { exact: true }).filter({ visible: true }).click();
+    const mapping = page.getByRole('dialog', { name: 'Маппинг полей (псевдонимы и порядок)' });
+    await mapping.locator('input').first().fill('Общий');
+    await mapping.locator('input').first().press('Enter');
+    await mapping.getByTitle('Переместить столбец вниз').first().click();
+    await expect(mapping.locator('input').nth(1)).toHaveValue('Общий');
+    await mapping.getByTitle('Закрыть', { exact: true }).click();
+    await page.getByRole('button', { name: 'ОБЪЕДИНИТЬ ВСЕ ▾', exact: true }).filter({ visible: true }).click();
+    const output = await save(page, 'canvas');
+    const members = parseBatch(output).members[0].members;
+    expect(members.map(m => m.model.fields.map(f => f.expression))).toEqual([['2', '1'], ['4', '3']]);
+    expect(members[0].model.fields.map(f => f.alias)).toEqual(['Второй', 'Общий']);
+    expect(output).not.toContain('ОБЪЕДИНИТЬ ВСЕ');
+    await open(page, 'classic', output);
+    expect(await save(page, 'classic')).toBe(output);
+  });
+
+  test('creating and removing the first UNION keeps the shell working', async ({ page }) => {
+    await page.setViewportSize({ width: 1500, height: 1000 });
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await open(page, 'canvas', 'ВЫБРАТЬ 1 КАК Первый');
+    await page.getByTitle('Добавить SELECT в объединение', { exact: true }).filter({ visible: true }).click();
+    await page.getByTitle('Удалить SELECT 2', { exact: true }).filter({ visible: true }).click();
+    expect(await save(page, 'canvas')).toContain('1 КАК Первый');
+    expect(errors).toEqual([]);
+  });
+
+  test('SDBL dock is read-only highlighted copyable resizable and keyboard collapsible', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await open(page, 'canvas', 'ВЫБРАТЬ 1 КАК Число');
+    const toggle = page.getByRole('button', { name: '{ } SDBL', exact: true });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await toggle.press('Enter');
+    const editor = page.locator('.cm-content').filter({ visible: true });
+    await expect(editor).toHaveAttribute('aria-readonly', 'true');
+    const text = await editor.innerText();
+    expect(text).toContain('ВЫБРАТЬ');
+    const keyword = editor.locator('span').filter({ hasText: /^ВЫБРАТЬ$/ });
+    await expect(keyword).toBeVisible();
+    await expect(keyword).toHaveAttribute('class', /.+/);
+    await editor.click();
+    await page.keyboard.type('BREAK');
+    await expect(editor).toHaveText(text);
+    await page.getByRole('button', { name: 'Копировать', exact: true }).click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(text);
+    const separator = page.getByRole('separator').filter({ visible: true }).last();
+    const before = await editor.boundingBox();
+    const bounds = await separator.boundingBox();
+    await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y - 60);
+    await page.mouse.up();
+    expect((await editor.boundingBox())!.height).toBeGreaterThan(before!.height);
+    await page.getByRole('button', { name: /Поля$/ }).click();
+    await page.getByPlaceholder('Псевдоним', { exact: true }).first().fill('НовоеЧисло');
+    await expect(editor).toContainText('НовоеЧисло');
+    await toggle.press('Space');
+    await expect(editor).toBeHidden();
+    await toggle.press('Enter');
+    expect(await editor.innerText()).toBe(await save(page, 'canvas'));
+  });
+
+  test('expression helper applies field WHERE and JOIN text through existing actions', async ({ page }) => {
+    await open(page, 'canvas', 'ВЫБРАТЬ А.Код + 1 КАК Значение ИЗ Справочник.Валюты КАК А ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО А.Код + 1 = Б.Код ГДЕ А.Код + 1 = &Код');
+    const applyExpression = async (value: string) => {
+      await page.getByRole('button', { name: 'Редактор выражения', exact: true }).click();
+      await expect(page.getByTestId('expr-fields-pane')).toContainText('А');
+      await page.locator('[data-testid="expr-editor"] .cm-content').fill(value);
+      await page.getByTestId('expr-ok').click();
+      await expect(page.getByTestId('expr-dialog')).toBeHidden();
+    };
+    await page.getByRole('button', { name: /Поля$/ }).click();
+    await page.getByPlaceholder('Псевдоним', { exact: true }).first().click();
+    await applyExpression('А.Код + 2');
+    await page.getByRole('button', { name: /Условия$/ }).click();
+    await page.locator('textarea:visible').click();
+    await applyExpression('А.Код + 2 = &ДругойКод');
+    await page.getByRole('button', { name: /Структура$/ }).click();
+    await page.getByRole('button', { name: 'А ↔ Б (LEFT)', exact: true }).press('Enter');
+    await applyExpression('А.Код + 2 = Б.Код');
+    const output = await save(page, 'canvas');
+    expect(output).toContain('А.Код + 2 КАК Значение');
+    expect(output).toContain('&ДругойКод');
+    expect(output).toContain('А.Код + 2 = Б.Код');
+    await open(page, 'classic', output);
+    expect(await save(page, 'classic')).toBe(output);
+  });
+
+  test('expression Cancel retains parent and malformed confirmation is Apply blocked', async ({ page }) => {
+    await open(page, 'canvas', 'ВЫБРАТЬ 1 КАК Число');
+    await page.getByRole('button', { name: /Поля$/ }).click();
+    await page.getByPlaceholder('Псевдоним', { exact: true }).first().click();
+    const trigger = page.getByRole('button', { name: 'Редактор выражения', exact: true });
+    await trigger.click();
+    await page.locator('[data-testid="expr-editor"] .cm-content').fill('999');
+    await page.getByTestId('expr-cancel').click();
+    expect(await save(page, 'canvas')).toContain('1 КАК Число');
+    await trigger.click();
+    await page.locator('[data-testid="expr-editor"] .cm-content').fill('1 = = 2');
+    await page.getByTestId('expr-ok').click();
+    await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toBeDisabled();
+    await trigger.click();
+    await page.locator('[data-testid="expr-editor"] .cm-content').fill('2');
+    await page.getByTestId('expr-ok').click();
+    expect(await save(page, 'canvas')).toContain('2 КАК Число');
+  });
+});
+
+test.describe('Canvas roadmap reconciliation expression contexts', () => {
+  test('nested expression Escape and OK leave the parent draft recoverable', async ({ page }) => {
+    await open(page, 'canvas', 'ВЫБРАТЬ П.Число ИЗ (ВЫБРАТЬ 1 КАК Число) КАК П');
+    await page.locator('[data-testid="canvas-source-card"][data-source-alias="П"]').click({ position: { x: 80, y: 20 } });
+    await page.getByTestId('canvas-edit-source').filter({ visible: true }).click();
+    const nested = page.getByTestId('canvas-source-query-editor');
+    await nested.getByRole('button', { name: /Поля$/ }).click();
+    await nested.getByPlaceholder('Псевдоним', { exact: true }).first().click();
+    await nested.getByRole('button', { name: 'Редактор выражения', exact: true }).click();
+    await page.locator('[data-testid="expr-editor"] .cm-content').press('Escape');
+    await expect(page.getByTestId('expr-dialog')).toBeHidden();
+    await expect(nested).toBeVisible();
+    await nested.getByRole('button', { name: 'Редактор выражения', exact: true }).click();
+    await page.locator('[data-testid="expr-editor"] .cm-content').fill('3');
+    await page.getByTestId('expr-ok').click();
+    await nested.getByTestId('canvas-source-back').click();
+    expect(await save(page, 'canvas')).toContain('3 КАК Число');
+  });
+
+  test('JOIN creation reuses expression context and then edits the resulting conjunct', async ({ page }) => {
+    await open(page, 'canvas', 'ВЫБРАТЬ А.Код ИЗ Справочник.Валюты КАК А, Справочник.Валюты КАК Б');
+    await page.getByRole('button', { name: /Связи/ }).first().click();
+    await page.getByRole('button', { name: 'Произвольное выражение', exact: true }).click();
+    await page.getByRole('button', { name: 'Редактор выражения', exact: true }).click();
+    await page.locator('[data-testid="expr-editor"] .cm-content').fill('А.Код + 2 = Б.Код');
+    await page.getByTestId('expr-ok').click();
+    await page.getByRole('button', { name: 'Создать', exact: true }).click();
+    const output = await save(page, 'canvas');
+    expect(output).toContain('А.Код + 2 = Б.Код');
+    expect(parseBatch(output).members[0].members[0].model.joins).toHaveLength(1);
+  });
+});

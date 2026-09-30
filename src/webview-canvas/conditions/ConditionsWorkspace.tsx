@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { ExpressionEditorButton } from '../components/ExpressionEditorButton';
 import type { MetaField, MetaTable } from '../../core/metadata/types';
 import { describeFieldTypes } from '../../core/metadata/describeType';
 import { isStructurallyValidExpression } from '../../core/query/expressionSyntaxCheck';
@@ -438,6 +439,7 @@ export function ConditionsWorkspace({
 
           {active && (
             <ConditionExpressionBar
+              state={state}
               locale={locale}
               dispatch={dispatch}
               condition={active}
@@ -470,12 +472,14 @@ export function ConditionsWorkspace({
  * &Параметр" (той самий "показати, як воно збереться" патерн, що й Fields
  * FieldExpressionBar для plain-полів). */
 function ConditionExpressionBar({
+  state,
   locale,
   dispatch,
   condition,
   conditionIdx,
   tableLabel,
 }: {
+  state: QueryState;
   locale: SupportedLocale;
   dispatch: React.Dispatch<QueryAction>;
   condition: Condition;
@@ -491,6 +495,8 @@ function ConditionExpressionBar({
     <div style={{ ...CARD, flexShrink: 0, padding: '10px 12px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <span style={SECTION_LABEL}>{t(locale, 'conditionsWorkspaceExpressionSectionTitle')}</span>
+        {condition.custom && !condition.subquery && <ExpressionEditorButton locale={locale} selectedTables={state.selectedTables}
+          tables={allTables(state)} value={value} onApply={text => dispatch({ type: 'SET_CONDITION_EXPRESSION', index: conditionIdx, expression: text })} />}
         {condition.custom && (
           <button
             type="button"

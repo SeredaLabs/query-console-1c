@@ -1,5 +1,5 @@
 import * as React from 'react';
-import type { ConditionOperator } from '../../core/query/queryModel';
+import { defaultTableAlias, type ConditionOperator } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
 import { allTables, availableTempTables } from '../../webview/state/queryStore';
@@ -432,6 +432,7 @@ export function StructureWorkspace({
         fixedOverlay={
           showMinimap && contentBox && viewportWorld && minimapScaleTransform ? (
             <Minimap
+              label={t(locale, 'structureMinimapCenter')}
               tables={state.selectedTables}
               routes={joinGeometry}
               positions={positions}
@@ -458,9 +459,14 @@ export function StructureWorkspace({
         <svg width={20000} height={20000} style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible', pointerEvents: 'none' }}>
           {joinGeometry.map(g => {
             if (!g) return null;
+            const join = state.joins[g.index];
+            const left = state.selectedTables.find(tb => tb.id === join.leftTableId);
+            const right = state.selectedTables.find(tb => tb.id === join.rightTableId);
+            const label = `${left ? defaultTableAlias(left) : join.leftTableId} ↔ ${right ? defaultTableAlias(right) : join.rightTableId} (${g.kind})`;
             return (
               <JoinPath
                 key={g.index}
+                label={label}
                 index={g.index}
                 d={g.d}
                 kind={g.kind}

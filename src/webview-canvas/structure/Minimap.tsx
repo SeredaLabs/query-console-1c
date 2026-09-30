@@ -16,6 +16,7 @@ const MAP_HEIGHT = 100;
  * нейтральні, тонкі. Click/drag → `onPanTo(worldPoint)`.
  */
 export function Minimap({
+  label,
   tables,
   routes,
   positions,
@@ -24,6 +25,7 @@ export function Minimap({
   scaleTransform,
   onPanTo,
 }: {
+  label: string;
   tables: SelectedTable[];
   routes: ReadonlyArray<{ points: readonly Point[] } | null>;
   positions: Record<string, Pos>;
@@ -76,6 +78,16 @@ export function Minimap({
   return (
     <div
       ref={rootRef}
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          onPanTo(minimapToWorld({ x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2 }, scaleTransform));
+        }
+      }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

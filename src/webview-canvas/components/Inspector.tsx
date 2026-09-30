@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { ExpressionEditorButton } from './ExpressionEditorButton';
 import type { MetaField, MetaTable } from '../../core/metadata/types';
 import { fieldsTypeCompatible } from '../../core/query/fieldTypeCompat';
 import { defaultTableAlias, type ConditionOperator, type Join, type SelectedTable } from '../../core/query/queryModel';
@@ -400,6 +401,9 @@ function JoinInspector({
                   )}
                 </div>
                 {c.custom ? (
+                  <>
+                  <ExpressionEditorButton locale={locale} selectedTables={selectedTables} tables={tablesMeta}
+                    value={c.expression ?? ''} onApply={text => dispatch({ type: 'SET_JOIN_EXPRESSION', index: joinIndex, expression: text, condIndex: i })} />
                   <input
                     type="text"
                     value={c.expression ?? ''}
@@ -407,6 +411,7 @@ function JoinInspector({
                     placeholder={t(locale, 'structureJoinExpressionPlaceholder')}
                     style={{ ...DARK_SELECT, paddingRight: 24, fontFamily: 'var(--vscode-editor-font-family, monospace)' }}
                   />
+                  </>
                 ) : stacked ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingRight: 20 }}>
                     <select

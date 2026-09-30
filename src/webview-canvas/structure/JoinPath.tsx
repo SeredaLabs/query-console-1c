@@ -20,6 +20,7 @@ import { joinKindVisual, type JoinKindLabel } from './joinKind';
  */
 export const JoinPath = React.memo(function JoinPath({
   index,
+  label,
   d,
   kind,
   selected,
@@ -29,6 +30,7 @@ export const JoinPath = React.memo(function JoinPath({
   onHoverChange,
 }: {
   index: number;
+  label: string;
   /** Уже прокладений obstacle-aware SVG path; один і той самий route використовують line, hit-area і minimap. */
   d: string;
   kind: JoinKindLabel;
@@ -61,6 +63,17 @@ export const JoinPath = React.memo(function JoinPath({
       />
       <path
         d={d}
+        role="button"
+        tabIndex={0}
+        aria-label={label}
+        aria-pressed={selected}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            onClick(index);
+          }
+        }}
         stroke="transparent"
         strokeWidth={9}
         fill="none"

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { ExpressionEditorButton } from '../components/ExpressionEditorButton';
 import type { MetaField } from '../../core/metadata/types';
 import { describeFieldTypes } from '../../core/metadata/describeType';
 import { isStructurallyValidExpression } from '../../core/query/expressionSyntaxCheck';
@@ -677,6 +678,7 @@ export function FieldsWorkspace({
 
         {active && (
           <FieldExpressionBar
+            state={state}
             locale={locale}
             dispatch={dispatch}
             field={active}
@@ -709,12 +711,14 @@ export function FieldsWorkspace({
  * (path===''); для простого поля показує його дотовану адресу read-only з
  * підказкою ввімкнути "Використовувати як вираз" у панелі властивостей. */
 function FieldExpressionBar({
+  state,
   locale,
   dispatch,
   field,
   fieldIdx,
   tableLabel,
 }: {
+  state: QueryState;
   locale: SupportedLocale;
   dispatch: React.Dispatch<QueryAction>;
   field: SelectedField;
@@ -729,6 +733,8 @@ function FieldExpressionBar({
     <div style={{ ...CARD, flexShrink: 0, padding: '10px 12px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <span style={SECTION_LABEL}>{t(locale, 'fieldsWorkspaceExpressionSectionTitle')}</span>
+        {isExpr && <ExpressionEditorButton locale={locale} selectedTables={state.selectedTables}
+          tables={allTables(state)} value={value} onApply={text => dispatch({ type: 'SET_FIELD_EXPRESSION', fieldIdx, expression: text })} />}
         {isExpr && (
           <button
             type="button"

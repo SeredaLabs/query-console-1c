@@ -193,6 +193,17 @@ export const TableCard = React.memo(function TableCard({
       }}
     >
       <div
+        role="button"
+        tabIndex={0}
+        aria-label={`${alias} (${table.fullName})`}
+        aria-pressed={selected}
+        onKeyDown={e => {
+          if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            e.stopPropagation();
+            onSelect(table.id);
+          }
+        }}
         onPointerDown={onHeaderPointerDown}
         onPointerMove={onHeaderPointerMove}
         onPointerUp={onHeaderPointerUp}
@@ -372,9 +383,13 @@ export const TableCard = React.memo(function TableCard({
                   Клікабельна область і toggle-семантика (весь рядок) — та
                   сама, що була в попередньому checkbox-варіанті.
                 */}
-                <span
+                <button
+                  type="button"
+                  aria-label={`${alias}.${field.name}`}
+                  aria-pressed={checked}
+                  onClick={e => { e.stopPropagation(); onToggleField(table.id, field.name, !checked); }}
                   className={`codicon codicon-${checked ? 'check' : 'add'} ${checked ? '' : 'qcc-field-toggle'}`}
-                  style={{ fontSize: 12, color: checked ? TOKENS.success : TOKENS.textSecondary, ...(checked ? { opacity: 1 } : {}) }}
+                  style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 12, color: checked ? TOKENS.success : TOKENS.textSecondary, ...(checked ? { opacity: 1 } : {}) }}
                 />
               </span>
             </div>

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { ExpressionEditorButton } from '../components/ExpressionEditorButton';
 import type { MetaField, MetaTable } from '../../core/metadata/types';
 import { fieldsTypeCompatible } from '../../core/query/fieldTypeCompat';
 import { defaultTableAlias, type ConditionOperator, type Join, type SelectedTable } from '../../core/query/queryModel';
@@ -200,6 +201,16 @@ export function JoinManagerPopover({
                 return (
                   <div
                     key={index}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${tableLabel(join.leftTableId, tables)} ↔ ${tableLabel(join.rightTableId, tables)} (${joinKindLabel(join.leftAll, join.rightAll)})`}
+                    aria-pressed={selected}
+                    onKeyDown={e => {
+                      if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        onSelectJoin(index); onClose();
+                      }
+                    }}
                     onClick={() => {
                       onSelectJoin(index);
                       onClose();
@@ -379,6 +390,9 @@ export function JoinManagerPopover({
                   </label>
                 </div>
               ) : (
+                <>
+                <ExpressionEditorButton locale={locale} selectedTables={tables} tables={tablesMeta}
+                  value={expression} onApply={setExpression} />
                 <input
                   type="text"
                   value={expression}
@@ -386,6 +400,7 @@ export function JoinManagerPopover({
                   placeholder={t(locale, 'structureJoinExpressionPlaceholder')}
                   style={{ ...SELECT_STYLE, fontFamily: 'var(--vscode-editor-font-family, monospace)' }}
                 />
+                </>
               )}
             </div>
 
