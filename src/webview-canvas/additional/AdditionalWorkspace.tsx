@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { t as classicT } from '../../webview/i18n';
+import { IndexEditor } from '../components/IndexEditor';
 import type { QueryType } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
@@ -19,8 +21,8 @@ import { CARD, SECTION_LABEL, TOKENS } from '../theme';
  *   `SET_QUERY_TYPE`/`SET_TEMP_TABLE_NAME` actions, що й Classic
  *   `AdditionalTab.tsx`. Це ЛИШЕ здатність позначити активний
  *   package/union-член як creator/consumer/dropper тимчасової таблиці —
- *   subquery-as-source (важча половина Phase 13, з окремими gaps по
- *   condition-subquery/EXISTS) свідомо НЕ входить у цей зріз.
+ *   subquery-as-source редагується окремим contextual SourceQueryEditor;
+ *   condition-subquery GUI залишається preserve-only.
  *   `queryType`/`tempTableName` вже коректно зберігаються/відновлюються
  *   в snapshot-логіці (`snapshots.ts`) і вже читаються `PackageNav`'s
  *   `isTempTable` badge — ця секція просто дає користувачу спосіб їх
@@ -107,7 +109,9 @@ export function AdditionalWorkspace({
   locale,
   state,
   dispatch,
+  nested = false,
 }: {
+  nested?: boolean;
   locale: SupportedLocale;
   state: QueryState;
   dispatch: React.Dispatch<QueryAction>;
@@ -116,6 +120,12 @@ export function AdditionalWorkspace({
   const queryType = compoundQueryType(state);
   const tempTableName = compoundTempTableName(state);
   const unionActive = state.queryList.length > 1;
+
+  const [indexOpen, setIndexOpen] = React.useState(false);
+  if (indexOpen && queryType === 'createTemp' && !nested) return <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8 }}><button type="button" className="qcc-btn" onClick={() => setIndexOpen(false)}>← {t(locale, 'workspaceAdditional')}</button><span>{classicT('tabs.indexes')}</span></div>
+    <IndexEditor state={state} dispatch={dispatch} />
+  </div>;
 
   return (
     <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -161,8 +171,10 @@ export function AdditionalWorkspace({
         </label>
       </div>
 
+      {!nested && (
       <div style={{ ...CARD, padding: 14, display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
         <span style={SECTION_LABEL}>{t(locale, 'additionalWorkspaceQueryTypeTitle')}</span>
+        {queryType === 'createTemp' && <button type="button" className="qcc-btn" data-testid="canvas-open-indices" onClick={() => setIndexOpen(true)}>{classicT('tabs.indexes')}</button>}
 
         {QUERY_TYPES.map(qt => {
           const disabled = qt.value === 'dropTemp' && unionActive;
@@ -197,6 +209,7 @@ export function AdditionalWorkspace({
         </label>
       </div>
 
+      )}
       <div style={{ ...CARD, padding: 14, display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
         <span style={SECTION_LABEL}>{t(locale, 'additionalWorkspaceLockTitle')}</span>
 

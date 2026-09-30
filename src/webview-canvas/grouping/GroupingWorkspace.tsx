@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { t as classicT } from '../../webview/i18n';
+import { TotalsEditor } from '../components/TotalsEditor';
 import { defaultTableAlias, type FieldRef } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import { allTables, type QueryAction, type QueryState } from '../../webview/state/queryStore';
@@ -180,11 +182,19 @@ export function GroupingWorkspace({
     setChecked(new Set());
   }
 
+  const [totalsOpen, setTotalsOpen] = React.useState(false);
+
   const removableChecked = [...checked].some(idx => groupFields[idx] && groupFields[idx].expression === undefined);
+
+  if (totalsOpen) return <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}>
+    <div style={BAR_STYLE}><button type="button" className="qcc-btn" onClick={() => setTotalsOpen(false)}>← {t(locale, 'workspaceGrouping')}</button><span>{classicT('tabs.totals')}</span></div>
+    <TotalsEditor state={state} dispatch={dispatch} />
+  </div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0, minHeight: 0 }}>
       <div style={BAR_STYLE}>
+        <button type="button" className="qcc-btn" data-testid="canvas-open-totals" onClick={() => setTotalsOpen(true)}>{classicT('tabs.totals')}</button>
         <span style={{ position: 'relative', flexShrink: 0 }}>
           <button
             type="button"
