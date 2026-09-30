@@ -1,5 +1,5 @@
 <!--
-source_version: 5
+source_version: 6
 translation_status: current
 -->
 
@@ -16,7 +16,7 @@ translation_status: current
 | `queryConsole.openInNewWindow` | `true` | Відкрити конструктор в окремому вікні VS Code й увімкнути компактний режим, якщо він підтримується |
 | `queryConsole.queryTextEditorV2` | `false` | Увімкнути експериментальний редактор v2 |
 | `queryConsole.queryDiagnosticsEnabled` | `true` | Попереджати про літерал запиту, який конструктор не розбирає або не застосує |
-| `queryConsole.enableNewBuilderPreview` | `false` | Показати експериментальну команду Нового конструктора; новий візуальний інтерфейс ще розробляється |
+| `queryConsole.enableNewBuilderPreview` | `false` | Показати Canvas Preview; функціональний baseline завершено, UX/release review триває |
 
 ## 🗺️ Область і шляхи
 

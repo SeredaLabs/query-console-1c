@@ -1,5 +1,5 @@
 <!--
-source_version: 2
+source_version: 3
 translation_status: canonical
 -->
 
@@ -22,6 +22,12 @@ Opening converts SDBL text to `QueryModel`; applying converts the model back to
 SDBL and replaces the detected string. Line comments in supported locations are
 preserved, but formatting can be normalized. Review the diff before saving a
 complex handwritten query.
+
+If the current model cannot retain every user comment during opening, both
+designers refuse the load before replacing their model. Classic manual-text Apply
+uses the same check. The original editor text stays unchanged; refusal is not
+comment-preservation support. Unsupported raw-expression comments and a known
+negated condition-subquery alias case are described in [limitations](limitations.md).
 
 ## 🛡️ Safe workflow
 

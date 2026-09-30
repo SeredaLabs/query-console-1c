@@ -1,5 +1,5 @@
 <!--
-source_version: 6
+source_version: 7
 translation_status: canonical
 -->
 
@@ -59,10 +59,13 @@ and metadata names stay unchanged. No query is executed.
 
 ## 🧪 Experimental New Builder
 
-The new visual constructor is still under development and is off by default.
-To test it, enable `queryConsole.enableNewBuilderPreview` in VS Code Settings,
-then run **1C: New Builder (Preview)** from Command Palette. It does not replace
-the stable Classic Constructor.
+Canvas has a completed functional editing baseline and remains an opt-in Preview.
+Enable `queryConsole.enableNewBuilderPreview`, then run **1C: New Builder (Preview)**
+from Command Palette. It supports recursive source queries, temporary-table
+workflows, common virtual-table forms, totals/indexes, UNION and contextual
+expression editing. Advanced capabilities have explicit preserve-only boundaries
+in the [current matrix](docs/design/new-builder/feature-baseline.md).
+UX/accessibility and release hardening remain; Classic stays available.
 
 ## 🗂️ Metadata setup
 
@@ -81,6 +84,8 @@ or leave it empty to search the workspace for `Configuration.xml`. Run
 - Only supported static BSL query strings can be reopened.
 - Validation is not a full 1C compiler.
 - A small set of virtual-table parameter forms cannot be round-tripped safely.
+
+- Raw-expression comments may safely refuse opening rather than be lost.
 
 See the [complete limitations](docs/en/limitations.md) before working with
 complex or generated query text.

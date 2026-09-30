@@ -15,13 +15,16 @@ npm run dev
 ```
 
 See the [development guide](docs/development/index.md) for architecture, metadata,
-testing, localization, and release details.
+testing, localization, and release details. The [current ledger](docs/development/technical-debt.md)
+owns debt status; [audit index](docs/development/audits/README.md) holds historical evidence.
 
 ## Project structure
 
 - `src/core` contains VS Code- and browser-independent metadata and query logic.
 - `src/extension` integrates commands, files, settings, and the WebView panel.
-- `src/webview` contains the React interface; `src/shared` defines its host protocol.
+- `src/webview` contains Classic React UI and shared state/session/Apply helpers.
+- `src/webview-canvas` contains Canvas Preview UI and imports those shared helpers.
+- `src/shared` defines the typed host protocol.
 - `test/unit`, `test/e2e`, and `test/vscode-integration` cover the three layers.
 
 ## Before submitting a change

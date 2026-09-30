@@ -1,5 +1,5 @@
 <!--
-source_version: 5
+source_version: 6
 translation_status: canonical
 -->
 
@@ -16,7 +16,7 @@ translation_status: canonical
 | `queryConsole.openInNewWindow` | `true` | Open the designer in a separate VS Code window and enable compact mode when supported |
 | `queryConsole.queryTextEditorV2` | `false` | Enable the experimental Query Text v2 editor |
 | `queryConsole.queryDiagnosticsEnabled` | `true` | Warn on a query-text literal Query Designer cannot parse or would not apply |
-| `queryConsole.enableNewBuilderPreview` | `false` | Show the experimental New Builder command; the new visual interface is still under development |
+| `queryConsole.enableNewBuilderPreview` | `false` | Show Canvas Preview; functional baseline complete, UX/release review remains |
 
 ## 🗺️ Scope and paths
 

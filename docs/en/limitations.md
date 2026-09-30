@@ -1,5 +1,5 @@
 <!--
-source_version: 9
+source_version: 10
 translation_status: canonical
 -->
 
@@ -34,13 +34,20 @@ condition subquery written inside a custom expression (for example an `ИЛИ` c
 Apply validates supported structure and selected metadata semantics, but does
 not prove that the generated query means the same as the original.
 
-The New Builder (Canvas) is an experimental preview, available only when
-`queryConsole.enableNewBuilderPreview` is enabled. It reads, checks and writes
-queries through the same parser, generator and Apply checks as the Classic
-designer, so their fixes apply to both. Browser tests cover representative
-round-trips, field/condition/sort edits and Save guards; a real VS Code test
-covers load, alias edit, Save and source insertion. These checks are not
-exhaustive coverage of its editing actions.
+Canvas is an opt-in Preview with a completed functional baseline. It shares
+parser/model/state/generation/Apply checks with Classic. Dedicated editors are
+absent for some advanced loaded representations (HAVING, grouping/report blocks,
+tabular projections and advanced UNION mapping); these are preserve-only through
+unrelated edits. Its SDBL dock is read-only. Metadata refresh and lazy reference
+expansion remain Classic-only assisted workflows. The
+[current matrix](../design/new-builder/feature-baseline.md) defines the surface;
+browser/real-host gates are bounded and do not replace UX/accessibility/release review.
+
+Raw-expression `//` comments that the model would lose cause safe open/manual-text
+Apply refusal before replacement (C17). Original text is unchanged; this is not
+preservation support. A negated condition-subquery expression with keyword alias
+`В` can be misparsed and Apply-blocked (C18). Other supported comments/arguments
+remain preserved.
 
 ## ⛔ Round-trip exclusions
 

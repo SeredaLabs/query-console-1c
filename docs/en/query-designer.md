@@ -1,11 +1,13 @@
 <!--
-source_version: 5
+source_version: 6
 translation_status: canonical
 -->
 
 # 🧩 Using the query designer
 
 [English](../en/query-designer.md) · [Українська](../uk/query-designer.md) · [Русский](../ru/query-designer.md)
+
+The tab-based instructions below describe Classic; Canvas Preview has its own workflow.
 
 ## 🏗️ Build the query
 
@@ -34,6 +36,22 @@ the prior model.
 Select **OK** to send the generated source to the active editor. Select **Cancel**
 to discard designer changes. A metadata-cache refresh changes the available
 metadata but does not edit the current BSL file.
+
+## 🧪 Canvas Preview
+
+Enable `queryConsole.enableNewBuilderPreview` and run **1C: New Builder (Preview)**.
+Use the six workspaces for structure, fields, conditions, grouping, sorting and
+additional settings; package/UNION navigation shares the same model as Classic.
+Enter a source subquery for recursive editing: **Back** validates and commits the
+draft, **Cancel** leaves the parent unchanged. Common VT forms, external temp
+descriptions, totals/indexes and contextual expression editing are available.
+
+The generated SDBL dock supports highlighting/copy/resize/collapse and is read-only.
+**Save** inserts accepted generated text; it does not execute a query. Advanced
+loaded representations may be preserved without dedicated controls; see the
+[current matrix](../design/new-builder/feature-baseline.md) and [limitations](limitations.md).
+Functional baseline completion is separate from UX/accessibility and release
+readiness, so Preview remains enabled only by choice.
 
 ## 🎬 Demo walkthrough
 

@@ -1,5 +1,5 @@
 <!--
-source_version: 4
+source_version: 5
 translation_status: canonical
 -->
 
@@ -22,7 +22,7 @@ pipeline. YAML is a compatibility fallback, not the normal loading path.
 ## 🔄 Build or refresh the cache
 
 Run **1C: Rebuild metadata index** from the Command Palette, or select **Refresh cache**
-inside the designer — both rebuild the same way. The index is checked against
+inside the Classic designer — both rebuild the same way. The index is checked against
 the XML export's modification time and rebuilt automatically when it is stale;
 manual refresh is needed only to force a rebuild sooner, or when neither the
 Command Palette nor the designer noticed a change (for example, an export
