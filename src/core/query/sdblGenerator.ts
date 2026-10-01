@@ -114,14 +114,17 @@ function renderConditionSubquery(subquery: QueryDocument, baseTabs: number, lead
   // (объединение участников), прочие пустые строки удаляем (фаза 6.16).
   const isUKw = (s: string): boolean => /^\t*ОБЪЕДИНИТЬ(?:\s+ВСЕ)?\s*$/u.test(s.trim());
   const raw = text.split('\n');
-  const inner = raw.filter((l, k) => {
+  const literalLines = literalContinuationLines(text);
+  const inner = raw.map((text, index) => ({ text, index })).filter(({ text: l, index: k }) => {
+    if (literalLines.has(k)) return true;
     if (l.trim() !== '') return true;
     const prevKw = k > 0 && isUKw(raw[k - 1]);
     const nextKw = k + 1 < raw.length && isUKw(raw[k + 1]);
     return prevKw || nextKw;
   });
   return closeAfterLastLine(inner
-    .map((l, k) => {
+    .map(({ text: l, index }, k) => {
+      if (literalLines.has(index)) return l;
       if (l === '') return padBlank;
       return k === 0 ? `${pad}(${l}` : `${pad}${l}`;
     })
@@ -129,16 +132,15 @@ function renderConditionSubquery(subquery: QueryDocument, baseTabs: number, lead
 }
 
 /**
- * Appends a subquery's closing `)`. When the last line ends in a user-authored
- * line comment (e.g. a manually entered JOIN condition; the parser strips such
- * comments from text it reads), the `)` goes on a line of its own at `pad`,
+ * Appends a closing delimiter (also a JOIN brace or source comma). When the
+ * last line ends in a comment, the delimiter goes on its own line at `pad`,
  * otherwise the comment would swallow it together with everything after it.
  */
-function closeAfterLastLine(text: string, pad: string): string {
+function closeAfterLastLine(text: string, pad: string, closing = ')'): string {
   // Lexer-rejected *whole* prefix: `)` on the next line so a trailing `//`
   // cannot swallow it. Do not lex `lastLine` alone — a valid multiline string
   // ends with `b"`, which looks unclosed out of context.
-  if (!tryTokenize(text)) return `${text}\n${pad})`;
+  if (!tryTokenize(text)) return `${text}\n${pad}${closing}`;
   const lastLine = text.slice(text.lastIndexOf('\n') + 1);
   let endsInComment: boolean;
   try {
@@ -146,7 +148,7 @@ function closeAfterLastLine(text: string, pad: string): string {
   } catch {
     endsInComment = lastLine.includes('//');
   }
-  return endsInComment ? `${text}\n${pad})` : `${text})`;
+  return endsInComment ? `${text}\n${pad}${closing}` : `${text}${closing}`;
 }
 
 /**
@@ -182,9 +184,11 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
     // первая строка инлайн (`(ВЫБРАТЬ`), продолжения — на `bodyTabs` табов. Источник
     // в списке ИЗ стоит на 1 табе (bodyTabs=1, по умолчанию); ПРИСОЕДИНЯЕМЫЙ источник
     // соединения — на 2+depth табах, его тело глубже соответственно (фаза 6.15.19, MCP).
-    const inner = generateDocument(t.subquery).split('\n');
+    const text = generateDocument(t.subquery);
+    const inner = text.split('\n');
+    const literalLines = literalContinuationLines(text);
     const pad = '\t'.repeat(bodyTabs);
-    return closeAfterLastLine(inner.map((l, k) => (k === 0 ? '(' + l : pad + l)).join('\n'), pad);
+    return closeAfterLastLine(inner.map((l, k) => (k === 0 ? '(' + l : literalLines.has(k) ? l : pad + l)).join('\n'), pad);
   }
   if (!t.virtual) return t.fullName;
   const v = t.virtual;
@@ -1233,7 +1237,7 @@ function renderJoinConjuncts(conditions: NonNullable<Join['conditions']>, aliase
       sub = [c.expression ?? ''];
     } else if (hasLineComment(c.expression ?? '')) {
       // A user-authored line comment: verbatim, never split or reformatted.
-      sub = wrapJoinConjunctCommentSafe(c.expression ?? '').split('\n');
+      sub = indentCommentedCondition(wrapJoinConjunctCommentSafe(c.expression ?? ''), '\t'.repeat(cont)).split('\n');
     } else if (conjunctNeedsComplexFormat(c)) {
       sub = formatJoinConjunct((c.expression ?? '').trim(), k === 0, 2 + depth).split('\n');
     } else {
@@ -1251,6 +1255,11 @@ function renderJoinConjuncts(conditions: NonNullable<Join['conditions']>, aliase
       // (скобки во вводе → сохраняем обёртку, фаза ВидыКонтактнойИнформации).
       const standaloneUnwrap = expanded.length === 1 && !joinParenthesized;
       sub = [renderArbitraryConjunct(c.expression ?? '', depth, caseBase, !!(c as { __fromAndSplit?: boolean }).__fromAndSplit || standaloneUnwrap)];
+    }
+    if (c.commentLeading?.length) sub = [...c.commentLeading, ...sub];
+    if (c.commentTrailing?.length) sub.push(...c.commentTrailing.map(text => `${'\t'.repeat(cont)}${text}`));
+    if (c.commentLeading?.length) {
+      for (let i = 1; i <= c.commentLeading.length; i++) sub[i] = `${'\t'.repeat(cont)}${sub[i]}`;
     }
     if (k > 0) sub[0] = `${'\t'.repeat(cont)}И ${sub[0]}`;
     else if (poOwnLine) sub[0] = `${'\t'.repeat(3 + depth)}${sub[0]}`;
@@ -1322,7 +1331,11 @@ function expandAndChainConjuncts(conditions: NonNullable<Join['conditions']>): N
       if (parts.length > 1) {
         // Помечаем пьесы как полученные расщеплением И-цепочки (фаза 6.16.78):
         // простое сравнение полей среди них печатается без обёртки (renderArbitraryConjunct).
-        for (const p of parts) out.push({ custom: true, expression: stripOneEnclosingParen(p), __fromAndSplit: true } as NonNullable<Join['conditions']>[number]);
+        parts.forEach((p, index) => out.push({
+          custom: true, expression: stripOneEnclosingParen(p), __fromAndSplit: true,
+          ...(index === 0 && c.commentLeading ? { commentLeading: c.commentLeading } : {}),
+          ...(index === parts.length - 1 && c.commentTrailing ? { commentTrailing: c.commentTrailing } : {}),
+        } as NonNullable<Join['conditions']>[number]));
         continue;
       }
     }
@@ -1344,8 +1357,7 @@ function conjunctNeedsComplexFormat(c: NonNullable<Join['conditions']>[number]):
 
 /**
  * Whether a JOIN condition/conjunct contains a user-authored line comment
- * (`// …`). The parser strips comments from JOIN text it reads, so such a
- * comment only comes from a manual edit. Decided by the lexer (`"a//b"` is a
+ * (`// …`), retained by the parser or entered manually. Decided by the lexer (`"a//b"` is a
  * string, not a comment); text the lexer rejects counts as commented when it has
  * `//` at all, so it takes the conservative verbatim path.
  */
@@ -1481,12 +1493,12 @@ function renderFrom(model: QueryModel, aliases: Map<string, string>): string[] {
       // Опциональное соединение построителя (фаза 6.15.13) закрывается `}` после
       // условия `ПО`. В блоке из НЕСКОЛЬКИХ соединений (`{J1 ПО … J2 ПО …}`) `}`
       // ставится только после ПОСЛЕДНЕГО — он помечен в `optionalBlockEnd` (фаза 6.16).
-      const close = optionalBlockEnd.has(p.join) ? '}' : '';
+      const closed = optionalBlockEnd.has(p.join) ? closeAfterLastLine(cond, '\t'.repeat(2 + p.depth), '}') : cond;
       if (poOwnLine) {
         push(`\t\t${'\t'.repeat(p.depth)}ПО`);
-        push(`${cond}${close}`);
+        push(closed);
       } else {
-        push(`\t\t${'\t'.repeat(p.depth)}ПО ${cond}${close}`);
+        push(`\t\t${'\t'.repeat(p.depth)}ПО ${closed}`);
       }
     }
   };
@@ -1563,7 +1575,7 @@ function renderFrom(model: QueryModel, aliases: Map<string, string>): string[] {
   const out: string[] = [];
   entries.forEach((entry, i) => {
     if (entry.length === 0) return;
-    if (i < entries.length - 1) entry[entry.length - 1] += ',';
+    if (i < entries.length - 1) entry[entry.length - 1] = closeAfterLastLine(entry[entry.length - 1], '\t', ',');
     out.push(...entry);
   });
   return out;
@@ -3073,18 +3085,33 @@ function unwrapHavingMaxMin(expr: string): string {
   return flat.slice(innerStart, innerEnd).trim();
 }
 
+/** Nesting may indent code/comment lines, never the contents of a literal.
+ * This also applies after the explicit strip-comments view removes comments. */
+function literalContinuationLines(text: string): Set<number> {
+  const tokens = tryTokenize(text, { comments: true });
+  const lines = new Set<number>();
+  if (!tokens) return lines;
+  const literals = tokens.filter(t => t.type === 'string' || t.type === 'date');
+  let offset = 0;
+  for (const [index, line] of text.split('\n').entries()) {
+    if (literals.some(t => t.pos < offset && offset < t.pos + t.text.length)) lines.add(index);
+    offset += line.length + 1;
+  }
+  return lines;
+}
+
 /** Parsed raw continuations include their former subquery padding. Rebase them
  * to the slot before nesting adds its padding, keeping literal content verbatim. */
-function indentCommentedCondition(text: string): string {
+function indentCommentedCondition(text: string, pad = '\t'): string {
   const tokens = tryTokenize(text, { comments: true });
   if (!tokens?.some(t => t.type === 'comment')) return text;
-  const literals = tokens.filter(t => t.type === 'string' || t.type === 'date');
+  const literalLines = literalContinuationLines(text);
+  let line = 0;
   return text.replace(/\n[ \t]*/gu, (continuation: string, offset: number) => {
-    const start = offset + 1;
-    if (literals.some(t => t.pos < start && start < t.pos + t.text.length)) return continuation;
+    if (literalLines.has(++line)) return continuation;
     const end = offset + continuation.length;
     const blank = end === text.length || text[end] === '\n' || text.slice(end, end + 2) === '\r\n';
-    return blank ? '\n' : '\n\t';
+    return blank ? '\n' : `\n${pad}`;
   });
 }
 

@@ -17,8 +17,8 @@ Ukrainian/Russian. Historical platform observations are indexed in [audits](audi
 - Raw-expression comments unsupported by the renderer trigger a **warning and
   confirmation** before designer opening/manual-text Apply replaces the model
   (C17). Cancel preserves prior model/text; proceeding permits comment loss on
-  Save/OK. Original BSL text stays unchanged until Save. WHERE/HAVING and supported
-  argument comments are preserved; JOIN/field/group/TOTALS raw slices remain
+  Save/OK. Original BSL text stays unchanged until Save. WHERE/HAVING, JOIN and supported
+  argument comments are preserved; field/group/TOTALS/ORDER raw slices remain
   unsupported. Explicit consent to loss is not raw-slice support.
 - Negated condition-subquery input with the platform-invalid source alias `В`
   opens but is Apply-blocked under C5. C18 is CLOSED, absorbed into C5 / RP11

@@ -507,8 +507,8 @@ for (const surface of ['classic', 'canvas'] as const) {
   }
 }
 
-// WHERE/HAVING are preserved in C17's first slice; JOIN remains a consent case.
-const commentLossQuery = '// bound\nВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО В.Код = 1 // lost\nИЛИ В.Код = 2';
+// Field-expression comments remain unsupported; consent still protects them.
+const commentLossQuery = '// bound\nВЫБРАТЬ В.Код // lost\n+ 1 КАК Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = 1';
 
 for (const surface of ['classic', 'canvas'] as const) {
   for (const cancel of ['button', 'Escape'] as const) {
@@ -1021,3 +1021,30 @@ test.describe('Classic / Canvas designer toggle', () => {
     expect(await insertions(page)).toEqual([]);
   });
 });
+
+for (const surface of ['classic', 'canvas'] as const) {
+  for (const nested of [false, true]) {
+    test(`${surface}: C17 JOIN comments survive edit and three Save/reopens (nested=${nested})`, async ({ page }) => {
+      const inner = 'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО // leading\nТ.Код = Б.Код // internal\nИЛИ Т.Код = &Код // trailing\n';
+      await open(page, surface, nested ? `ВЫБРАТЬ П.А КАК А ИЗ (${inner}) КАК П` : inner);
+      await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
+      if (surface === 'canvas') {
+        await page.getByRole('button', { name: /Поля$/ }).click();
+        await page.getByPlaceholder('Псевдоним', { exact: true }).first().fill('НовыйКод');
+      } else {
+        await page.locator('[data-tab="Объединения/Псевдонимы"]').click();
+        const alias = page.getByRole('table').nth(1).getByRole('textbox').first();
+        await alias.fill('НовыйКод');
+        await alias.press('Tab');
+      }
+      const first = await save(page, surface);
+      expect(first).toContain('КАК НовыйКод');
+      for (const comment of ['// leading', '// internal', '// trailing']) expect(first.split(comment)).toHaveLength(2);
+      for (let pass = 0; pass < 3; pass++) {
+        await open(page, surface, first);
+        await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
+        expect(await save(page, surface)).toBe(first);
+      }
+    });
+  }
+}

@@ -113,7 +113,17 @@ the same text at the top level, in source/condition subqueries, UNION and packag
 The explicit strip-comments view removes these condition anchors
 and raw-text comments recursively without mutating the preserving model.
 
-JOIN, field, grouping and TOTALS raw slices can still lose comments in core
+JOIN conjuncts use the same optional edge-comment anchors. Edge comments retain
+standard field comparisons; internal comments use the existing custom-expression
+slot. Expanded AND chains carry leading anchors on the first conjunct and trailing
+anchors on the last. Dynamic JOIN `}` and comma-source separators are emitted on
+a safe line after a trailing comment. Subquery indentation preserves literal
+continuation lines, including blank lines inside strings and stripped output.
+The [JOIN regression matrix](../../../test/unit/joinComments.c17.test.ts) covers
+metadata modes, nested JOINs, source/condition subqueries, UNION, dynamic JOINs,
+comma sources, strip mode, malformed Apply and repeated reopening.
+
+Field, grouping, TOTALS and ORDER raw slices can still lose comments in core
 parsing/generation (C17); the designer warns before loading and asks for explicit consent. Saving
 a confirmed candidate can remove those comments. **Consent to comment loss is not
 PRESERVE-ONLY support.** Classic's preserve-comments toggle deliberately changes

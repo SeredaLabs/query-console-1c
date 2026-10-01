@@ -9,7 +9,7 @@ import { t } from '../../src/webview-canvas/i18n';
 import { FIXTURE_CF, REPO_ROOT, waitUntil } from './testUtil';
 
 describe('Extension Host: Canvas load → edit → Save → source document', () => {
-  for (const mode of ['alias', 'nested', 'comment-cancel', 'comment-save', 'condition-comments'] as const) it(`production Canvas ${mode} uses the real bridge and preserves surrounding BSL`, async function () {
+  for (const mode of ['alias', 'nested', 'comment-cancel', 'comment-save', 'condition-comments', 'join-comments'] as const) it(`production Canvas ${mode} uses the real bridge and preserves surrounding BSL`, async function () {
     const nested = mode === 'nested';
     const commentLoss = mode === 'comment-cancel' || mode === 'comment-save';
     this.timeout(25000);
@@ -21,7 +21,9 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
     let panel: vscode.WebviewPanel | undefined;
     try {
       const query = commentLoss
-        ? '// bound\nВЫБРАТЬ В.Ссылка КАК Код ИЗ Справочник.Тест КАК В ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Тест КАК Б ПО В.Ссылка = &Код // lost\nИЛИ В.Ссылка = &Другой'
+        ? '// bound\nВЫБРАТЬ В.Ссылка // lost\n+ 1 КАК Код ИЗ Справочник.Тест КАК В ГДЕ В.Ссылка = &Код'
+        : mode === 'join-comments'
+        ? 'ВЫБРАТЬ В.Ссылка КАК Код ИЗ Справочник.Тест КАК В ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Тест КАК Б ПО // leading\nВ.Ссылка = Б.Ссылка // internal\nИЛИ В.Ссылка = &Код // trailing\n'
         : mode === 'condition-comments'
         ? 'ВЫБРАТЬ В.Ссылка КАК Код, КОЛИЧЕСТВО(*) КАК Н ИЗ Справочник.Тест КАК В ГДЕ В.Ссылка = &Код // where\nИ В.Ссылка = &Другой // repeated\nСГРУППИРОВАТЬ ПО В.Ссылка ИМЕЮЩИЕ КОЛИЧЕСТВО(*) > 1 // having\nИ СУММА(1) > 0 // repeated'
         : nested
@@ -117,6 +119,9 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
         assert.ok(!result.includes('// lost'), result);
         assert.ok(result.includes('В.Ссылка = &Код'), result);
       } else assert.ok(result.includes('В.Ссылка КАК КодИзCanvas'), result);
+      if (mode === 'join-comments') {
+        for (const comment of ['// leading', '// internal', '// trailing']) assert.strictEqual(result.split(comment).length, 2, result);
+      }
       if (mode === 'condition-comments') {
         assert.strictEqual(result.split('// where').length, 2, result);
         assert.strictEqual(result.split('// having').length, 2, result);

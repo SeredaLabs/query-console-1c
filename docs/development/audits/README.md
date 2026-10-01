@@ -17,6 +17,7 @@ This is an indexed historical archive, not a second status ledger.
 
 | Date | Audit / scope | Result → debt/fix | Disposition |
 |---|---|---|---|
+| 2026-10-01 | [C17 JOIN comment preservation](c17-join-comments-2026-10-01.md) | Edge/internal JOIN comments, safe delimiters and stable nested reopening | Bounded implementation; C17 remains OPEN for other raw slots |
 | 2026-10-01 | [Query Core vs EDT Query Wizard](query-core-edt-2026-10-01.md) | Public API mapping, reproduced A2 schema divergence, A1/A2/A3 and DCS migration proposal | STILL RELEVANT reference; audit only, implementation awaits approval; current ledger remains authority |
 | 2026-09-27 | [Stage 0](stage-0.md), [frozen payload](stage-0/environment.json) | Differential/recovery audit and RP01–25 live results; English acceptance, invalid VT arity, hierarchy and template/sequence unknowns | STILL RELEVANT evidence; historical priorities/status superseded |
 | 2026-09-27 | [Baseline reconciliation](reconciliation-b6286c57.md) | Reproductions/dependency inventory and qualified RP dispositions → C/A/V/U ledger | STILL RELEVANT unknowns; many fix statuses superseded |

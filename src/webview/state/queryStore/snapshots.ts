@@ -532,6 +532,7 @@ function stripConditionComments(model: QueryModel): QueryModel {
     ...model,
     ...(model.conditions ? { conditions: model.conditions.map(condition) } : {}),
     ...(model.having ? { having: model.having.map(condition) } : {}),
+    ...(model.joins ? { joins: model.joins.map(j => ({ ...j, ...(j.conditions ? { conditions: j.conditions.map(condition) } : {}) })) } : {}),
     tables: model.tables.map(t => t.subquery ? { ...t, subquery: document(t.subquery) } : t),
   };
 }

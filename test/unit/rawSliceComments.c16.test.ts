@@ -4,7 +4,7 @@
  * `ПЕРИОДАМИ(…)` survive open → store → preview → Apply, exactly once, and a
  * comment never swallows a generated separator or `)`.
  *
- * JOIN/field/group/TOTALS raw slices keep their former behavior: the comment is still dropped
+ * field/group/TOTALS raw slices keep their former behavior: the comment is still dropped
  * (known loss, C17) and Apply is not newly blocked. Their renderers are not
  * comment-safe. WHERE/HAVING support is covered by conditionComments.c17.
  *
@@ -86,10 +86,6 @@ const KEPT: Array<[string, string, string]> = [
 
 /** Slots that still drop the comment (C17, step 8). Apply must not be newly blocked. */
 const KNOWN_LOSS: Array<[string, string]> = [
-  ['JOIN ПО before ИЛИ',
-    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б\nПО Т.Код = Б.Код // c1\n\tИЛИ Т.Код = 1\nГДЕ Т.Код = 1'],
-  ['JOIN ПО trailing, in a subquery',
-    'ВЫБРАТЬ П.А КАК А ИЗ (ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО Т.Код = Б.Код // c1\n) КАК П'],
   ['field expression, inner',
     'ВЫБРАТЬ\n\tТ.Код // c1\n\t+ 1 КАК А\nИЗ Справочник.Валюты КАК Т'],
   ['СГРУППИРОВАТЬ ПО',

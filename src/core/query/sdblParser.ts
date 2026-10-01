@@ -1844,6 +1844,7 @@ interface RawJoin {
   chainSeedAlias: string;
   /** Сырые токены условия после `ПО` (до следующего соединения/запятой/секции). */
   condTokens: Token[];
+  condComments?: Token[];
   condText: string;
   /** Глубина правовложенного дерева (0 — верхняя цепочка); см. Join.depth. */
   depth: number;
@@ -1943,9 +1944,10 @@ function parseFrom(cur: Cursor): FromResult {
       // отчёта). Дочитываем их, затравка — присоединённая таблица; вложены на
       // уровень глубже текущего соединения, чтобы их `ПО` печатались до нашего.
       if (cur.isBuilderJoinStart()) parseBuilderJoins(joinedHead, depth + 1);
-      cur.expectKeyword('ПО');
-      const { tokens, text } = readJoinCondition(cur);
+      const po = cur.expectKeyword('ПО');
+      const { tokens, text, comments } = readJoinCondition(cur, po.pos + po.text.length);
       raw.condTokens = tokens;
+      raw.condComments = comments;
       raw.condText = text;
       // Левоассоциативность плоской цепочки: следующее `СОЕД` к последней таблице.
       lastAlias = joinedHead;
@@ -1987,9 +1989,10 @@ function parseFrom(cur: Cursor): FromResult {
         // ПЛОСКУЮ цепочку обычных соединений (`{… СОЕД A СОЕД B ПО c_AB ПО c_root}`):
         // её `ПО` идут раньше нашего. Дочитываем рекурсивно до закрывающей `}`.
         if (isJoinKeyword(cur)) parseJoinChainFrom(joinedHead, depth + 1);
-        cur.expectKeyword('ПО');
-        const { tokens, text } = readJoinCondition(cur, /* stopOnBrace */ true);
+        const po = cur.expectKeyword('ПО');
+        const { tokens, text, comments } = readJoinCondition(cur, po.pos + po.text.length, /* stopOnBrace */ true);
         raw.condTokens = tokens;
+        raw.condComments = comments;
         raw.condText = text;
       } while (isJoinKeyword(cur));
       cur.expectPunct('}');
@@ -2210,7 +2213,7 @@ const JOIN_COND_STOP = new Set<string>([
  * уровня / конца секции ИЗ (ГДЕ/СГРУППИРОВАТЬ/секция/«;»/eof). Скобки учитываются,
  * чтобы запятые и ключевые слова внутри не обрывали условие.
  */
-function readJoinCondition(cur: Cursor, stopOnBrace = false): { tokens: Token[]; text: string } {
+function readJoinCondition(cur: Cursor, start: number, stopOnBrace = false): { tokens: Token[]; text: string; comments?: Token[] } {
   const tokens: Token[] = [];
   let depth = 0;
   for (;;) {
@@ -2236,7 +2239,11 @@ function readJoinCondition(cur: Cursor, stopOnBrace = false): { tokens: Token[];
     tokens.push(cur.next());
   }
   if (tokens.length === 0) throw cur.error('пустое условие соединения после ПО');
-  return { tokens, text: sliceSource(cur.source, tokens) };
+  const end = cur.peek().type === 'eof' ? cur.sourceEnd : cur.peek().pos;
+  const comments = keepArgComments ? tokenize(cur.source.slice(start, end), { comments: true })
+    .filter(t => t.type === 'comment').map(t => ({ ...t, pos: start + t.pos })) : undefined;
+  for (const comment of comments ?? []) cur.keptConditionComments.add(comment.pos);
+  return { tokens, text: sliceSource(cur.source, tokens), comments };
 }
 
 /**
@@ -3655,6 +3662,37 @@ function resolveJoin(raw: RawJoin, aliasToId: Map<string, string>, source: strin
   const conditions: JoinCondition[] = conjunctTokens.map(seg =>
     classifyJoinConjunct(seg, source, aliasToId, chainSeedId, joinedId)
   );
+
+  // Reuse the condition anchor contract: edge comments do not turn a field
+  // comparison into opaque text. Internal comments require its original slice.
+  // Strip only token-proven outer parentheses; comments in their gaps become
+  // edge anchors and are never discarded by raw string trimming.
+  const commentSegments = conjunctTokens.map(seg => {
+    while (hasBalancedOuterParens(seg)) seg = seg.slice(1, -1);
+    return seg;
+  });
+  for (const comment of raw.condComments ?? []) {
+    const containing = commentSegments.findIndex(seg => seg.length > 0 &&
+      comment.pos >= seg[0].pos && comment.pos < seg[seg.length - 1].pos + seg[seg.length - 1].text.length);
+    if (containing >= 0) {
+      const seg = commentSegments[containing];
+      const c = conditions[containing];
+      conditions[containing] = {
+        custom: true,
+        expression: source.slice(seg[0].pos, seg[seg.length - 1].pos + seg[seg.length - 1].text.length),
+        ...(c.commentLeading ? { commentLeading: c.commentLeading } : {}),
+        ...(c.commentTrailing ? { commentTrailing: c.commentTrailing } : {}),
+      };
+    } else {
+      let previous = -1;
+      for (let i = 0; i < commentSegments.length; i++) {
+        const seg = commentSegments[i];
+        if (seg.length && seg[seg.length - 1].pos < comment.pos) previous = i;
+      }
+      const c = conditions[previous < 0 ? 0 : previous];
+      if (c) (previous < 0 ? (c.commentLeading ??= []) : (c.commentTrailing ??= [])).push(comment.text);
+    }
+  }
 
   // Простое условие (`a = b`) резолвим как раньше — обе таблицы из ссылок полей,
   // что задаёт порядок таблиц в цепочке ИЗ. Обёрнутую форму (`(a = b)`) НЕ

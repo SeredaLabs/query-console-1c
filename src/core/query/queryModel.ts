@@ -506,6 +506,9 @@ export type JoinKind = 'inner' | 'left' | 'full';
  *    `ИЛИ`/`НЕ`/`ВЫБОР`, многострочное). Хранит `expression` — дословный текст.
  */
 export interface JoinCondition {
+  /** C17: edge comments share the Condition anchor contract. */
+  commentLeading?: string[];
+  commentTrailing?: string[];
   custom: boolean;
   leftTableId?: string;
   leftPath?: string;
