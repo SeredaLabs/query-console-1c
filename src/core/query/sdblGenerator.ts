@@ -3081,7 +3081,10 @@ function indentCommentedCondition(text: string): string {
   const literals = tokens.filter(t => t.type === 'string' || t.type === 'date');
   return text.replace(/\n[ \t]*/gu, (continuation: string, offset: number) => {
     const start = offset + 1;
-    return literals.some(t => t.pos < start && start < t.pos + t.text.length) ? continuation : '\n\t';
+    if (literals.some(t => t.pos < start && start < t.pos + t.text.length)) return continuation;
+    const end = offset + continuation.length;
+    const blank = end === text.length || text[end] === '\n' || text.slice(end, end + 2) === '\r\n';
+    return blank ? '\n' : '\n\t';
   });
 }
 

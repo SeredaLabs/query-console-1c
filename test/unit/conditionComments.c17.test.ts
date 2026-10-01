@@ -142,6 +142,10 @@ for (const metadata of [false, true]) for (const slot of ['ГДЕ', 'ИМЕЮЩ�
           expect(decideApply(preview.text, preview.error, findStaticApplyBlocker(state), active)).toEqual({ ok: true });
           // Generated slash-only package separators are not user comments.
           expect(commentsOf(preview.text).filter(t => !/^\/+$/u.test(t))).toEqual(commentsOf(input));
+          if (placement === 'blank continuation' && context === 'top level') {
+            expect(preview.text).toContain('\n\n');
+            expect(preview.text).not.toMatch(/\n[ \t]+\n/u);
+          }
           return preview.text;
         };
         const first = apply(input);
@@ -158,7 +162,7 @@ for (const metadata of [false, true]) for (const slot of ['ГДЕ', 'ИМЕЮЩ�
 for (const slot of ['conditions', 'having'] as const) {
   it(`${slot}: lexically rejected commented continuation stays verbatim and blocks Apply`, () => {
     const doc = parseBatch(head);
-    const expression = 'Т.Код // untouched\n \t = §';
+    const expression = 'Т.Код // untouched\n \t\n \t = §';
     doc.members[0].members[0].model[slot] = [{ custom: true, expression }];
     const state = reducer(initialState(), { type: 'LOAD_BATCH', doc });
     const before = JSON.stringify(state);
@@ -167,5 +171,16 @@ for (const slot of ['conditions', 'having'] as const) {
     expect(preview.text).toContain(expression);
     expect(decideApply(preview.text, preview.error, findStaticApplyBlocker(state))).toMatchObject({ ok: false });
     expect(JSON.stringify(state)).toBe(before);
+  });
+}
+
+for (const slot of ['ГДЕ', 'ИМЕЮЩИЕ'] as const) for (const newline of ['\n', '\r\n']) {
+  it(`${slot}: blank raw continuation (${JSON.stringify(newline)}) has no slot whitespace`, () => {
+    const input = `${head} ${slot} Т.Код // comment${newline} \t${newline} = &А`;
+    const output = generateBatch(parseBatch(input, undefined, { preserveComments: true }));
+    expect(output).toContain(`// comment${newline}${newline}\t= &А`);
+    expect(output).not.toMatch(/\n[ \t]+\r?\n/u);
+    expect(commentsOf(output)).toEqual(commentsOf(input));
+    expect(generateBatch(parseBatch(output, undefined, { preserveComments: true }))).toBe(output);
   });
 }

@@ -475,6 +475,18 @@ for (const v2 of [false, true]) {
 }
 
 for (const surface of ['classic', 'canvas'] as const) {
+  test(`${surface}: C17 blank raw-condition continuation has no slot whitespace after three Save/reopens`, async ({ page }) => {
+    const input = 'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ' +
+      'ГДЕ Т.Код = 2 // c2\n \t\nИЛИ Т.Код = 3';
+    await open(page, surface, input);
+    const first = await save(page, surface);
+    expect(first).toContain('// c2\n\n\tИЛИ Т.Код = 3)');
+    expect(first).not.toMatch(/\n[ \t]+\n/u);
+    for (let reopen = 0; reopen < 3; reopen++) {
+      await open(page, surface, first);
+      expect(await save(page, surface)).toBe(first);
+    }
+  });
   const inner = 'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ГДЕ\n' +
     '// leading\nТ.Код = 2 // c2\nИЛИ Т.Код = 3 // trailing\n';
   for (const context of ['source', 'condition'] as const) {

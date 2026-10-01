@@ -91,10 +91,12 @@ content does not manufacture comment slots. Reopening is stable.
 
 WHERE/HAVING edge comments are stored on their condition as optional
 `commentLeading` / `commentTrailing` arrays and emitted on separate lines at the
-condition slot indent. Continuations of lexically valid commented raw conditions
-are canonicalized to that slot indent, including blank lines, outside literal
-tokens. Existing continuation indentation is not retained: it can include the
-previous subquery's padding, which nesting would otherwise add again on reopen.
+condition slot indent. Nonempty continuations of lexically valid commented raw
+conditions are canonicalized to that slot indent outside literal tokens. Blank
+continuations receive no slot indentation; subquery renderers keep their existing
+context-padding policy. Existing continuation indentation is not retained: it can
+include the previous subquery's padding, which nesting would otherwise add again
+on reopen.
 Multiline literal contents remain verbatim; lexically rejected text stays verbatim.
 Comments inside an expression stay in its raw text; formatting is bypassed and
 Boolean conjunct boundaries are wrapped without rewriting code or comments.
