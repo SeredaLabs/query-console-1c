@@ -3,6 +3,28 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## 0.1.96 - 2026-10-01
+
+### Added
+
+- Switch between Classic and Canvas Preview in the same designer panel while
+  retaining the current query. Canvas remains opt-in through
+  `queryConsole.enableNewBuilderPreview`.
+
+### Fixed
+
+- ORDER BY now accepts arithmetic expressions, parenthesized expressions and
+  unary minus as sort keys. These keys survive saving, reopening and switching
+  between Classic and Canvas.
+- Line comments in WHERE and HAVING conditions now survive opening, editing,
+  saving and reopening. Generated conjunctions and closing delimiters cannot
+  be swallowed by a trailing comment. Reopening commented raw conditions in
+  source and condition subqueries no longer accumulates indentation.
+- Commented raw conditions use a consistent continuation indent without adding
+  slot whitespace to blank lines; multiline literal contents are retained.
+  Comment-loss confirmation remains for unsupported raw slots, including JOIN,
+  field, grouping, TOTALS and ORDER expressions.
+
 ## 0.1.95 - 2026-09-30
 
 ### Added
