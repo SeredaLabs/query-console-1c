@@ -90,7 +90,10 @@ on a safe line. Raw continuation indentation is retained; omitted argument
 content does not manufacture comment slots. Reopening is stable.
 
 WHERE/HAVING edge comments are stored on their condition as optional
-`commentLeading` / `commentTrailing` arrays and emitted on separate lines.
+`commentLeading` / `commentTrailing` arrays and emitted on separate lines at the
+condition slot indent. Unindented continuations of lexically valid commented raw
+conditions receive that indent too; existing continuation indentation and
+multiline string contents are retained. Lexically rejected text stays verbatim.
 Comments inside an expression stay in its raw text; formatting is bypassed and
 Boolean conjunct boundaries are wrapped without rewriting code or comments.
 HAVING's generated `И` follows a commented conjunct on its own line, so `//`

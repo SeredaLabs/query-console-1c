@@ -72,3 +72,40 @@ it('comments never authorize malformed Apply', () => {
   expect(commentsOf(preview.text!)).toEqual(['// invalid']);
   expect(decideApply(preview.text, preview.error, findStaticApplyBlocker(state))).toMatchObject({ ok: false });
 });
+
+for (const slot of ['ГДЕ', 'ИМЕЮЩИЕ'] as const) {
+  it(`${slot}: edge comment lines and code after leading comments keep the slot indent`, () => {
+    const input = `${head} ${slot}\n// leading  \nТ.Код = &А // first\nИ Т.Код = &Б // last  `;
+    const doc = parseBatch(input, undefined, { preserveComments: true });
+    const output = generateBatch(doc);
+    const separator = slot === 'ГДЕ' ? '\tИ Т.Код = &Б' : '\tИ\n\tТ.Код = &Б';
+    expect(output).toContain(`${slot}\n\t// leading  \n\tТ.Код = &А\n\t// first\n${separator}\n\t// last  `);
+    expect(commentsOf(output)).toEqual(commentsOf(input));
+    expect(generateBatch(parseBatch(output, undefined, { preserveComments: true }))).toBe(output);
+  });
+  it(`${slot}: raw commented code and standalone comments keep the slot indent`, () => {
+    const input = `${head} ${slot} Т.Код // first\n// second  \n= &А`;
+    const output = generateBatch(parseBatch(input, undefined, { preserveComments: true }));
+    expect(output).toContain(`${slot}\n\tТ.Код // first\n\t// second  \n\t= &А`);
+    expect(commentsOf(output)).toEqual(commentsOf(input));
+    expect(generateBatch(parseBatch(output, undefined, { preserveComments: true }))).toBe(output);
+  });
+  it(`${slot}: indentation does not change multiline string values`, () => {
+    const literal = '"first\n// literal text\nlast"';
+    const input = `${head} ${slot} Т.Код // actual\n= ${literal}`;
+    const output = generateBatch(parseBatch(input, undefined, { preserveComments: true }));
+    expect(output).toContain(`\tТ.Код // actual\n\t= ${literal}`);
+    expect(output).toContain(literal);
+    expect(commentsOf(output)).toEqual(['// actual']);
+    expect(generateBatch(parseBatch(output, undefined, { preserveComments: true }))).toBe(output);
+  });
+}
+
+it('source and IN subqueries add their own nesting indent to condition comment lines', () => {
+  const inner = `${head} ГДЕ\n// leading\nТ.Код = &А // trailing`;
+  const source = generateBatch(parseBatch(`ВЫБРАТЬ П.А ИЗ (${inner}\n) КАК П`, undefined, { preserveComments: true }));
+  expect(source).toContain('ГДЕ\n\t\t// leading\n\t\tТ.Код = &А\n\t\t// trailing');
+  const condition = generateBatch(parseBatch(`${head} ГДЕ Т.Код В (${inner}\n)`, undefined, { preserveComments: true }));
+  expect(condition).toContain('ГДЕ\n\t\t\t\t// leading\n\t\t\t\tТ.Код = &А\n\t\t\t\t// trailing');
+  for (const text of [source, condition]) expect(generateBatch(parseBatch(text, undefined, { preserveComments: true }))).toBe(text);
+});

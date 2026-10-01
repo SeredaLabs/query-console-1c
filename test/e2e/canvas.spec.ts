@@ -428,8 +428,8 @@ test.describe('Canvas feature baseline: source editing', () => {
 
 
 const conditionCommentQuery = 'ВЫБРАТЬ Т.Код КАК Код, КОЛИЧЕСТВО(*) КАК Н ИЗ Справочник.Валюты КАК Т ' +
-  'ГДЕ Т.Код = &А // where first\nИ Т.Код = &Б // repeated\n' +
-  'СГРУППИРОВАТЬ ПО Т.Код ИМЕЮЩИЕ КОЛИЧЕСТВО(*) > 1 // having first\nИ СУММА(1) > 0 // repeated\nУПОРЯДОЧИТЬ ПО Т.Код';
+  'ГДЕ\n// where leading\nТ.Код = &А // where first\nИ Т.Код = &Б // repeated\n' +
+  'СГРУППИРОВАТЬ ПО Т.Код ИМЕЮЩИЕ\n// having leading\nКОЛИЧЕСТВО(*) > 1 // having first\nИ СУММА(1) > 0 // repeated\nУПОРЯДОЧИТЬ ПО Т.Код';
 
 for (const surface of ['classic', 'canvas'] as const) {
   test(`${surface}: C17 WHERE/HAVING comments survive alias edit, Save and reopen without consent`, async ({ page }) => {
@@ -445,7 +445,12 @@ for (const surface of ['classic', 'canvas'] as const) {
       await alias.press('Tab');
     }
     const output = await save(page, surface);
-    for (const text of ['// where first', '// having first']) expect(output.split(text)).toHaveLength(2);
+    for (const text of ['// where leading', '// where first', '// having leading', '// having first']) {
+      expect(output.split(text)).toHaveLength(2);
+      expect(output).toContain(`\n\t${text}`);
+    }
+    expect(output).toContain('ГДЕ\n\t// where leading\n\tТ.Код = &А');
+    expect(output).toContain('ИМЕЮЩИЕ\n\t// having leading\n\tКОЛИЧЕСТВО(*) > 1');
     expect(output.split('// repeated')).toHaveLength(3);
     expect(parseBatch(output).members[0].members[0].model.fields[0].alias).toBe('НовыйКод');
     await open(page, surface, output);

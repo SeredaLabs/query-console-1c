@@ -3073,6 +3073,18 @@ function unwrapHavingMaxMin(expr: string): string {
   return flat.slice(innerStart, innerEnd).trim();
 }
 
+/** Slot indentation is layout, not literal content. Only lexically known,
+ * commented text may have unindented continuation lines moved into the slot. */
+function indentCommentedCondition(text: string): string {
+  const tokens = tryTokenize(text, { comments: true });
+  if (!tokens?.some(t => t.type === 'comment')) return text;
+  const literals = tokens.filter(t => t.type === 'string' || t.type === 'date');
+  return text.replace(/\n(?=\S)/gu, (newline: string, offset: number) => {
+    const start = offset + 1;
+    return literals.some(t => t.pos < start && start < t.pos + t.text.length) ? newline : '\n\t';
+  });
+}
+
 function buildConditionStrings(
   conditions: Condition[] | undefined,
   aliases: Map<string, string>,
@@ -3082,7 +3094,7 @@ function buildConditionStrings(
   const conds: string[] = [];
   for (const c of conditions) {
     const push = (text: string): void => {
-      conds.push([...(c.commentLeading ?? []), text, ...(c.commentTrailing ?? [])].join('\n'));
+      conds.push([...(c.commentLeading ?? []), text, ...(c.commentTrailing ?? [])].join('\n\t'));
     };
     // Произвольное условие с текстом выражения. Условие-подзапрос (`В (ВЫБРАТЬ …)`)
     // помечено custom (мышкой не задать, фаза 6.14.4), но БЕЗ expression — оно
@@ -3097,7 +3109,7 @@ function buildConditionStrings(
       if (tokens.some(t => t.type === 'comment')) {
         const expression = c.expression ?? '';
         // Keep the conjunct boundary without rewriting any comment or code.
-        push(hasTopLevelBooleanOp(expression) === true ? closeAfterLastLine(`(${expression}`, '') : expression);
+        push(indentCommentedCondition(hasTopLevelBooleanOp(expression) === true ? closeAfterLastLine(`(${expression}`, '') : expression));
         continue;
       }
       // `(a, b) НЕ В …` → `НЕ (a, b) В …` (фаза 6.16.59): конструктор 1С печатает
