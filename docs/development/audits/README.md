@@ -34,6 +34,7 @@ This is an indexed historical archive, not a second status ledger.
 | 2026-09-29 | [Characteristics EOF](c12-characteristics-eof-2026-09-29.md) | Reject unterminated raw block instead of dropping it → C12 | RESOLVED |
 | 2026-09-29 | [Raw-reader EOF](c13-c15-raw-expression-eof-2026-09-29.md) | Terminating all-depth EOF checks prevent host exhaustion → C13–15 | RESOLVED |
 | 2026-09-30 | [Argument comments](c16-raw-slice-comments-2026-09-30.md) | VT/ПЕРИОДАМИ comment assignment/rendering → C16; other slices → C17 | RESOLVED C16; STILL RELEVANT C17 boundary |
+| 2026-10-01 | [Condition comments](c17-condition-comments-2026-10-01.md) | WHERE/HAVING comment retention and safe conjunctions → bounded C17 slice | PARTIAL implementation; remaining C17 slots stay OPEN |
 
 ## Consolidation records
 

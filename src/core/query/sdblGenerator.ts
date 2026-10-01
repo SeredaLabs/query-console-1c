@@ -3081,13 +3081,23 @@ function buildConditionStrings(
   if (!conditions || conditions.length === 0) return [];
   const conds: string[] = [];
   for (const c of conditions) {
+    const push = (text: string): void => {
+      conds.push([...(c.commentLeading ?? []), text, ...(c.commentTrailing ?? [])].join('\n'));
+    };
     // Произвольное условие с текстом выражения. Условие-подзапрос (`В (ВЫБРАТЬ …)`)
     // помечено custom (мышкой не задать, фаза 6.14.4), но БЕЗ expression — оно
     // рендерится структурным путём ниже (многострочный перенос подзапроса);
     // заданное пользователем expression имеет приоритет.
     if (c.custom && ((c.expression ?? '').trim() || !c.subquery)) {
-      if (!tryTokenize(c.expression ?? '')) {
-        conds.push(c.expression ?? '');
+      const tokens = tryTokenize(c.expression ?? '', { comments: true });
+      if (!tokens) {
+        push(c.expression ?? '');
+        continue;
+      }
+      if (tokens.some(t => t.type === 'comment')) {
+        const expression = c.expression ?? '';
+        // Keep the conjunct boundary without rewriting any comment or code.
+        push(hasTopLevelBooleanOp(expression) === true ? closeAfterLastLine(`(${expression}`, '') : expression);
         continue;
       }
       // `(a, b) НЕ В …` → `НЕ (a, b) В …` (фаза 6.16.59): конструктор 1С печатает
@@ -3128,7 +3138,7 @@ function buildConditionStrings(
       // условие стало произвольным листом из-за переквалификации голого поля.
       const tightenIn = (s: string): string =>
         slot === 'where' && !inConditionSubquery ? tightenLeafInOperator(s) : s;
-      if (expr) conds.push(needsFormatting(expr) || isRootNotGroup(expr) ? formatExpression(expr, slot, inConditionSubquery ? 1 : undefined) : appendIsNotNullTrailingSpace(tightenIn(stripNotFieldParens(stripNegatedFieldParens(wrapBareCastOperand(stripRedundantLeafParens(normalizeLeafCase(reindentLeafCase(reindentLeafSubquery(canonicalizeComparisonOperands(flattenMultilineLeaf(expr)), subBase), caseBaseLeaf, true)))))))));
+      if (expr) push(needsFormatting(expr) || isRootNotGroup(expr) ? formatExpression(expr, slot, inConditionSubquery ? 1 : undefined) : appendIsNotNullTrailingSpace(tightenIn(stripNotFieldParens(stripNegatedFieldParens(wrapBareCastOperand(stripRedundantLeafParens(normalizeLeafCase(reindentLeafCase(reindentLeafSubquery(canonicalizeComparisonOperands(flattenMultilineLeaf(expr)), subBase), caseBaseLeaf, true)))))))));
       continue;
     }
     // Нессылочный левый операнд `В`-подзапроса (`1 В (ВЫБРАТЬ …)`, фаза 6.15.27):
@@ -3137,7 +3147,7 @@ function buildConditionStrings(
     if (c.leftExpr && c.subquery) {
       const subBase = (inConditionSubquery ? 2 : 3) + (c.negated ? 1 : 0);
       const negPrefix = c.negated ? 'НЕ ' : '';
-      conds.push(`${negPrefix}${normalizeLeafCase(c.leftExpr)} В\n${renderConditionSubquery(c.subquery, subBase, c.negated)}`);
+      push(`${negPrefix}${normalizeLeafCase(c.leftExpr)} В\n${renderConditionSubquery(c.subquery, subBase, c.negated)}`);
       continue;
     }
     if (!c.path) continue;
@@ -3155,11 +3165,11 @@ function buildConditionStrings(
       const opText = c.hierarchy ? `${op} ИЕРАРХИИ` : op;
       const negPrefix = c.negated ? 'НЕ ' : '';
       const subBase = (inConditionSubquery ? 2 : 3) + (c.negated ? 1 : 0);
-      conds.push(`${negPrefix}${alias}.${c.path} ${opText}\n${renderConditionSubquery(c.subquery, subBase, c.negated)}`);
+      push(`${negPrefix}${alias}.${c.path} ${opText}\n${renderConditionSubquery(c.subquery, subBase, c.negated)}`);
       continue;
     }
     const param = normalizeLeafCase(c.param ?? `&${c.path.split('.').pop()}`);
-    conds.push(`${alias}.${c.path} ${renderOperatorRhs(op, param, inConditionSubquery)}`);
+    push(`${alias}.${c.path} ${renderOperatorRhs(op, param, inConditionSubquery)}`);
   }
   return conds;
 }
@@ -3190,7 +3200,10 @@ function renderHaving(
   // Разделительная пустая строка перед ИМЕЮЩИЕ — только на верхнем уровне; внутри
   // подзапроса-операдна условия конструктор её не ставит (фаза 6.15.11c, MCP).
   const sep = inConditionSubquery ? [] : [''];
-  return [...sep, 'ИМЕЮЩИЕ', ...conds.map((c, i) => `\t${c}${i < conds.length - 1 ? ' И' : ''}`)];
+  return [...sep, 'ИМЕЮЩИЕ', ...conds.map((c, i) => {
+    const separator = i < conds.length - 1 ? (tryTokenize(c, { comments: true })?.some(t => t.type === 'comment') ? '\n\tИ' : ' И') : '';
+    return `\t${c}${separator}`;
+  })];
 }
 
 export function formatAsBslString(text: string): string {

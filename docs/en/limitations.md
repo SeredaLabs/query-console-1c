@@ -43,7 +43,8 @@ expansion remain Classic-only assisted workflows. The
 [current matrix](../design/new-builder/feature-baseline.md) defines the surface;
 browser/real-host gates are bounded and do not replace UX/accessibility/release review.
 
-Unsupported raw-expression `//` comments trigger a warning and confirmation
+`ГДЕ`/`ИМЕЮЩИЕ` comments are preserved, with safe line breaks around conjunctions.
+Unsupported JOIN/field/group/TOTALS raw-expression `//` comments trigger a warning and confirmation
 before loading/replacing the model (C17). Cancel keeps the prior model/text;
 continuing allows known comment loss on Save/OK. The original editor text stays
 unchanged until Save. Consent is not preservation support. A negated condition

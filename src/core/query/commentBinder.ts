@@ -19,7 +19,7 @@
 
 import { tokenize, type Token } from './sdblLexer';
 import type { QueryModel, SelectedField } from './queryModel';
-import { fieldAlias } from './unionModel';
+import { fieldAlias, type QueryDocument } from './unionModel';
 
 /** Авто-разделитель конструктора: `//` и далее ТОЛЬКО слеши (`////…`). */
 function isAutoSeparator(text: string): boolean {
@@ -60,6 +60,28 @@ function commentsInKeptArgs(toks: Token[]): Set<number> {
     if (code.length > 2) code = code.slice(-2);
   }
   return inside;
+}
+
+// Parser-owned condition comments are excluded by source position, not text:
+// identical comments in other slots must still be bound independently. Positions
+// are SELECT-relative so UNION member slicing does not change their identity.
+const conditionCommentPositions = new WeakMap<QueryModel, Set<number>>();
+export function rememberConditionComments(model: QueryModel, positions: Set<number>, selectPos: number): void {
+  if (positions.size) conditionCommentPositions.set(model, new Set([...positions].map(p => p - selectPos)));
+}
+
+/** Translate a source subquery's parser-owned positions into its parent cursor. */
+export function rememberNestedConditionComments(positions: Set<number>, text: string, offset: number, doc: QueryDocument): void {
+  let depth = 0;
+  let member = 0;
+  for (const t of tokenize(text)) {
+    if (t.type === 'punct' && (t.value === '(' || t.value === '{')) depth++;
+    else if (t.type === 'punct' && (t.value === ')' || t.value === '}')) depth--;
+    else if (depth === 0 && t.type === 'keyword' && t.value === 'ВЫБРАТЬ') {
+      const model = doc.members[member++]?.model;
+      if (model) for (const pos of conditionCommentPositions.get(model) ?? []) positions.add(offset + t.pos + pos);
+    }
+  }
 }
 
 export function extractComments(memberText: string, model: QueryModel): void {
@@ -187,6 +209,7 @@ export function extractComments(memberText: string, model: QueryModel): void {
     for (let ci = 0; ci < toks.length; ci++) {
       const c = toks[ci];
       if (c.type !== 'comment') continue;
+      if (conditionCommentPositions.get(model)?.has(c.pos - toks[selectIdx].pos)) continue;
       const text = c.value;
 
       // (3) beforeSelect — до ВЫБРАТЬ; авто-разделители отбрасываем.

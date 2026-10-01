@@ -10,8 +10,6 @@ const resolver = buildYamlResolver('test/fixtures/corpus/metadata/cf');
 for (const metadata of [false, true]) describe(`designer comment-loss boundary (metadata=${metadata})`, () => {
   const active = metadata ? resolver : undefined;
   it.each([
-    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 // keep\nИЛИ Т.Код = 2',
-    'ВЫБРАТЬ Т.Код КАК А, КОЛИЧЕСТВО(*) КАК Н ИЗ Справочник.Валюты КАК Т СГРУППИРОВАТЬ ПО Т.Код ИМЕЮЩИЕ КОЛИЧЕСТВО(*) > 1 // keep\nИ СУММА(1) > 0',
     'ВЫБРАТЬ П.А ИЗ (ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО Т.Код = Б.Код // keep\n) КАК П',
     'ВЫБРАТЬ Т.Код // keep\n+ 1 КАК А ИЗ Справочник.Валюты КАК Т',
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т СГРУППИРОВАТЬ ПО Т.Код // keep\n',
@@ -23,6 +21,8 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
     expect(opened.commentLossDoc.members.length).toBeGreaterThan(0);
   });
   it.each([
+    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 // keep\nИЛИ Т.Код = 2',
+    'ВЫБРАТЬ Т.Код КАК А, КОЛИЧЕСТВО(*) КАК Н ИЗ Справочник.Валюты КАК Т СГРУППИРОВАТЬ ПО Т.Код ИМЕЮЩИЕ КОЛИЧЕСТВО(*) > 1 // keep\nИ СУММА(1) > 0',
     '// keep\nВЫБРАТЬ 1 КАК А',
     'ВЫБРАТЬ 1 КАК А // keep\n',
     'ВЫБРАТЬ "// inside string" КАК А',
@@ -36,7 +36,7 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
     expect(tryOpenDesignerBatch(generateBatch(opened.doc), active).ok).toBe(true);
   });
   it('detects one dropped occurrence even when an identical comment survives', () => {
-    const input = '// keep\nВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 // keep\nИЛИ Т.Код = 2';
+    const input = '// keep\nВЫБРАТЬ Т.Код // keep\n+ 1 КАК А ИЗ Справочник.Валюты КАК Т';
     const opened = tryOpenDesignerBatch(input, active);
     expect(opened).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: expect.any(Object), lost: ['// keep'] });
     if (!('commentLossDoc' in opened)) throw new Error('missing confirmation candidate');

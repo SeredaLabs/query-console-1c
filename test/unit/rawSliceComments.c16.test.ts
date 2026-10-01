@@ -4,9 +4,9 @@
  * `ПЕРИОДАМИ(…)` survive open → store → preview → Apply, exactly once, and a
  * comment never swallows a generated separator or `)`.
  *
- * Every other raw slice keeps its former behavior: the comment is still dropped
+ * JOIN/field/group/TOTALS raw slices keep their former behavior: the comment is still dropped
  * (known loss, C17) and Apply is not newly blocked. Their renderers are not
- * comment-safe: a kept `// c` in ИМЕЮЩИЕ swallowed the generated `И`.
+ * comment-safe. WHERE/HAVING support is covered by conditionComments.c17.
  *
  * Assignment rule (stable on reopen): a comment on an argument's code line or on
  * the line of the comma after it trails that argument, and the comma is written
@@ -86,12 +86,6 @@ const KEPT: Array<[string, string, string]> = [
 
 /** Slots that still drop the comment (C17, step 8). Apply must not be newly blocked. */
 const KNOWN_LOSS: Array<[string, string]> = [
-  ['ИМЕЮЩИЕ before И (a kept comment would swallow the generated И)',
-    'ВЫБРАТЬ Т.Код КАК А, КОЛИЧЕСТВО(*) КАК Н ИЗ Справочник.Валюты КАК Т СГРУППИРОВАТЬ ПО Т.Код\nИМЕЮЩИЕ КОЛИЧЕСТВО(*) > 1 // c1\nИ СУММА(1) > 0\nУПОРЯДОЧИТЬ ПО А'],
-  ['ИМЕЮЩИЕ trailing',
-    'ВЫБРАТЬ Т.Код КАК А, КОЛИЧЕСТВО(*) КАК Н ИЗ Справочник.Валюты КАК Т СГРУППИРОВАТЬ ПО Т.Код\nИМЕЮЩИЕ КОЛИЧЕСТВО(*) > 1 // c1\nУПОРЯДОЧИТЬ ПО А'],
-  ['ГДЕ before ИЛИ',
-    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т\nГДЕ\n\tТ.Код = 1 // c1\n\tИЛИ Т.Код = 2\nУПОРЯДОЧИТЬ ПО А'],
   ['JOIN ПО before ИЛИ',
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б\nПО Т.Код = Б.Код // c1\n\tИЛИ Т.Код = 1\nГДЕ Т.Код = 1'],
   ['JOIN ПО trailing, in a subquery',

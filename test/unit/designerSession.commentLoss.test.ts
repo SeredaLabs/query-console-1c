@@ -16,7 +16,7 @@ vi.mock('../../src/webview/bridge', () => ({
   postToHost: vi.fn(),
 }));
 afterEach(() => vi.clearAllMocks());
-const lossy = (value = 1) => `ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = ${value} // lost\nИЛИ Т.Код = 2`;
+const lossy = (value = 1) => `ВЫБРАТЬ Т.Код // lost\n+ ${value} КАК А ИЗ Справочник.Валюты КАК Т`;
 
 it('awaits consent, loads the candidate once, and never writes editor text', () => {
   const dispatch = vi.fn();
@@ -50,5 +50,5 @@ it('confirmation after a newer warning loads only that newer candidate', () => {
   session.receive!({ type: 'loadModel', text: lossy(7) });
   controller.confirmCommentLoss();
   expect(dispatch).toHaveBeenCalledOnce();
-  expect(generateBatch(dispatch.mock.calls[0][0].doc)).toContain('= 7');
+  expect(generateBatch(dispatch.mock.calls[0][0].doc)).toContain('+ 7');
 });

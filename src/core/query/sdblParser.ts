@@ -54,7 +54,7 @@ import { tokenize, tryTokenize } from './sdblLexer';
 import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
 import { fieldAlias } from './unionModel';
-import { extractComments } from './commentBinder';
+import { extractComments, rememberConditionComments, rememberNestedConditionComments } from './commentBinder';
 import type { QueryDocument, UnionMember } from './unionModel';
 import type { BatchDocument } from './batchModel';
 import type { MetadataResolver } from './metadataResolver';
@@ -86,9 +86,9 @@ setSubqueryParser((text, r) => parseDocument(text, r));
 let sourceResolver: MetadataResolver | undefined;
 /**
  * C16: while true (parse with `preserveComments`), the virtual-table argument and
- * `ПЕРИОДАМИ(…)` readers keep user `//` comments. Every other raw slice still
- * strips them: those renderers are not comment-safe (a kept comment could
- * swallow a generated `И`; C17). Saved/restored like `sourceResolver`; nested
+ * `ПЕРИОДАМИ(…)` readers and C17 WHERE/HAVING conditions keep user `//`
+ * comments. Other raw slices still strip them; their renderers are not yet
+ * comment-safe. Saved/restored like `sourceResolver`; nested
  * parses without an explicit `preserveComments` inherit it.
  */
 let keepArgComments = false;
@@ -184,6 +184,7 @@ const METADATA_KINDS: ReadonlySet<string> = new Set([
 /** Курсор по токенам с доступом к исходному тексту (для сырых срезов). */
 class Cursor {
   private idx = 0;
+  readonly keptConditionComments = new Set<number>();
   constructor(
     private readonly tokens: Token[],
     readonly source: string,
@@ -197,7 +198,8 @@ class Cursor {
      * text would silently point outside the real document, so those paths just
      * fail open (no source-map events at all) rather than record wrong ones.
      */
-    readonly sourceMap?: SourceMapSink
+    readonly sourceMap?: SourceMapSink,
+    readonly sourceEnd = source.length
   ) {}
 
   peek(offset = 0): Token {
@@ -712,6 +714,7 @@ function parseSingleQueryBody(
   // исходный курсор до подмены (иначе его позиция навсегда останется в
   // начале и проверка ложно сработает на первом же токене).
   if (ctxOut) ctxOut.cur = cur;
+  const selectPos = cur.peek().pos;
 
   // УНИЧТОЖИТЬ <name> — самостоятельный запрос (без ВЫБРАТЬ).
   if (cur.isKeyword('УНИЧТОЖИТЬ')) {
@@ -1109,6 +1112,7 @@ function parseSingleQueryBody(
     model.builder = builder;
   }
 
+  rememberConditionComments(model, cur.keptConditionComments, selectPos);
   return model;
 }
 
@@ -2073,6 +2077,7 @@ function parseTableSource(cur: Cursor, index: number): SelectedTable {
       subquery = withSubqueryRecursionGuard(() =>
         parseDocument(innerText, sourceResolver, innerSink ? { sourceMap: innerSink } : undefined)
       );
+      rememberNestedConditionComments(cur.keptConditionComments, innerText, open.pos + 1, subquery);
     } catch (e) {
       if (e instanceof SubqueryRecursionLimitError) throw cur.error(e.message, open);
       throw e;
@@ -2904,10 +2909,8 @@ function parseWhere(
   soleSource?: SoleSource,
   aliasSpelling?: Map<string, string>
 ): Condition[] {
-  cur.expectKeyword('ГДЕ');
-  const source = cur.source;
-  const segments = splitConditionSegments(cur, WHERE_STOP);
-  return segments.map(seg => interpretCondition(seg, source, aliasToId, soleSource, aliasSpelling));
+  const start = cur.expectKeyword('ГДЕ');
+  return parseConditionList(cur, WHERE_STOP, start.pos + start.text.length, aliasToId, soleSource, aliasSpelling);
 }
 
 /**
@@ -2956,10 +2959,67 @@ const HAVING_STOP = new Set<string>([
  * произвольные выражения.
  */
 function parseHaving(cur: Cursor, aliasToId: Map<string, string>): Condition[] {
-  cur.expectKeyword('ИМЕЮЩИЕ');
-  const source = cur.source;
-  const segments = splitConditionSegments(cur, HAVING_STOP);
-  return segments.map(seg => interpretCondition(seg, source, aliasToId));
+  const start = cur.expectKeyword('ИМЕЮЩИЕ');
+  return parseConditionList(cur, HAVING_STOP, start.pos + start.text.length, aliasToId);
+}
+
+/** C17: keep edge comments as anchors and internal custom text verbatim.
+ * Uncommented conditions retain their former interpretation and formatting.
+ * A structured IN subquery keeps its model; its body owns nested comments. */
+function parseConditionList(
+  cur: Cursor, stop: Set<string>, start: number, aliasToId: Map<string, string>,
+  soleSource?: SoleSource, aliasSpelling?: Map<string, string>
+): Condition[] {
+  const segments = splitConditionSegments(cur, stop);
+  const conditions = segments.map(seg => interpretCondition(seg, cur.source, aliasToId, soleSource, aliasSpelling));
+  if (!keepArgComments) {
+    for (const c of conditions) if (c.expression !== undefined) c.expression = stripLineComments(c.expression);
+    return conditions;
+  }
+  if (!segments.length) return conditions;
+  const end = cur.peek().type === 'eof' ? cur.sourceEnd : cur.peek().pos;
+  const comments = tokenize(cur.source.slice(start, end), { comments: true }).filter(t => t.type === 'comment');
+  const internal = new Set<number>();
+  for (let i = 0; i < conditions.length; i++) {
+    const subquery = conditions[i].subquery;
+    const select = segments[i].findIndex(t => t.type === 'keyword' && t.value === 'ВЫБРАТЬ');
+    if (subquery && select > 0) {
+      const open = segments[i][select - 1];
+      const close = segments[i][segments[i].length - 1];
+      rememberNestedConditionComments(cur.keptConditionComments, cur.source.slice(open.pos + 1, close.pos), open.pos + 1, subquery);
+    }
+  }
+  for (const comment of comments) {
+    const pos = start + comment.pos;
+    const containing = segments.findIndex(seg => pos >= seg[0].pos && pos < seg[seg.length - 1].pos + seg[seg.length - 1].text.length);
+    if (containing >= 0) {
+      const c = conditions[containing];
+      if (c.subquery) {
+        const select = segments[containing].find(t => t.type === 'keyword' && t.value === 'ВЫБРАТЬ');
+        if (select && pos > select.pos) continue;
+        (c.commentLeading ??= []).push(comment.text);
+      } else internal.add(containing);
+      cur.keptConditionComments.add(pos);
+      continue;
+    }
+    cur.keptConditionComments.add(pos);
+    let previous = -1;
+    for (let i = 0; i < segments.length; i++) {
+      if (segments[i][segments[i].length - 1].pos < pos) previous = i;
+    }
+    const c = conditions[previous < 0 ? 0 : previous];
+    if (previous < 0) (c.commentLeading ??= []).push(comment.text);
+    else (c.commentTrailing ??= []).push(comment.text);
+  }
+  for (const i of internal) {
+    const seg = segments[i];
+    // Qualification edits only code tokens; source gaps retain comment spelling.
+    const expression = soleSource && aliasSpelling
+      ? qualifyBareFieldsInExpression(seg, cur.source, aliasSpelling, soleSource.alias, soleSource.outerOwner)
+      : cur.source.slice(seg[0].pos, seg[seg.length - 1].pos + seg[seg.length - 1].text.length);
+    conditions[i] = { custom: true, expression, commentLeading: conditions[i].commentLeading, commentTrailing: conditions[i].commentTrailing };
+  }
+  return conditions;
 }
 
 /**
@@ -4983,7 +5043,10 @@ function parseDocumentInner(
   let firstCtx: SectionResolveContext | undefined;
   const models = raw.map((r, i) => {
     const ctxOut: { ctx?: SectionResolveContext; cur?: Cursor } = {};
-    const memberCur = new Cursor(r.tokens, text, sourceMap);
+    // The synthetic EOF ends at the last code token, before trailing comments.
+    const last = r.tokens[r.tokens.length - 1];
+    const sourceEnd = tokens.find(t => t.pos >= last.pos)?.pos ?? text.length;
+    const memberCur = new Cursor(r.tokens, text, sourceMap, sourceEnd);
     const model = parseSingleQuery(memberCur, i > 0 ? firstCtx : undefined, ctxOut);
     // ЭКСПЕРИМЕНТ (риск-оценка по запросу пользователя, не подтверждённый фикс):
     // `ИЗ` необязателен (строка 636), поэтому `parseFieldList`/`parseSingleQuery`

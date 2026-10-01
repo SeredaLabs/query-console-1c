@@ -1,5 +1,6 @@
+import { tryTokenize } from '../../../core/query/sdblLexer';
 import type { MetaField, MetaTable } from '../../../core/metadata/types';
-import type { Grouping, Indexing, Order, QueryModel, QueryType, ReportBuilder, SelectedField, Totals } from '../../../core/query/queryModel';
+import type { Condition, Grouping, Indexing, Order, QueryModel, QueryType, ReportBuilder, SelectedField, Totals } from '../../../core/query/queryModel';
 import { compoundCarrierOf, selectColumnAliases, type QueryDocument, type UnionMember } from '../../../core/query/unionModel';
 import type { BatchDocument } from '../../../core/query/batchModel';
 import type { BatchSnapshot, QueryState, SavedQuery } from '../queryStore';
@@ -496,7 +497,7 @@ export function stripBatchComments(batch: BatchDocument): BatchDocument {
       members: doc.members.map(m => {
         const { comments: _drop, ...modelRest } = m.model;
         void _drop;
-        return { ...m, model: { ...modelRest, fields: stripFieldComments(modelRest.fields) } };
+        return { ...m, model: stripConditionComments({ ...modelRest, fields: stripFieldComments(modelRest.fields) }) };
       }),
     })),
   };
@@ -508,4 +509,29 @@ export function stripFieldComments(fields: SelectedField[]): SelectedField[] {
     const { commentLeading, commentTrailing, ...rest } = f;
     return rest;
   });
+}
+
+/** C17: the explicit strip-comments view also strips condition text/anchors,
+ * recursively, without mutating the editable models used by the preserving view. */
+function stripConditionComments(model: QueryModel): QueryModel {
+  const document = (doc: QueryDocument): QueryDocument => ({
+    ...doc, members: doc.members.map(m => ({ ...m, model: stripConditionComments(m.model) })),
+  });
+  const condition = (c: Condition): Condition => {
+    const { commentLeading: _leading, commentTrailing: _trailing, ...rest } = c;
+    if (rest.expression !== undefined) {
+      const comments = tryTokenize(rest.expression, { comments: true })?.filter(t => t.type === 'comment');
+      for (const t of (comments ?? []).reverse()) {
+        rest.expression = rest.expression.slice(0, t.pos) + rest.expression.slice(t.pos + t.text.length);
+      }
+    }
+    if (rest.subquery) rest.subquery = document(rest.subquery);
+    return rest;
+  };
+  return {
+    ...model,
+    ...(model.conditions ? { conditions: model.conditions.map(condition) } : {}),
+    ...(model.having ? { having: model.having.map(condition) } : {}),
+    tables: model.tables.map(t => t.subquery ? { ...t, subquery: document(t.subquery) } : t),
+  };
 }

@@ -427,7 +427,50 @@ test.describe('Canvas feature baseline: source editing', () => {
 });
 
 
-const commentLossQuery = '// bound\nВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = 1 // lost\nИЛИ В.Код = 2';
+const conditionCommentQuery = 'ВЫБРАТЬ Т.Код КАК Код, КОЛИЧЕСТВО(*) КАК Н ИЗ Справочник.Валюты КАК Т ' +
+  'ГДЕ Т.Код = &А // where first\nИ Т.Код = &Б // repeated\n' +
+  'СГРУППИРОВАТЬ ПО Т.Код ИМЕЮЩИЕ КОЛИЧЕСТВО(*) > 1 // having first\nИ СУММА(1) > 0 // repeated\nУПОРЯДОЧИТЬ ПО Т.Код';
+
+for (const surface of ['classic', 'canvas'] as const) {
+  test(`${surface}: C17 WHERE/HAVING comments survive alias edit, Save and reopen without consent`, async ({ page }) => {
+    await open(page, surface, conditionCommentQuery);
+    await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
+    if (surface === 'canvas') {
+      await page.getByRole('button', { name: /Поля$/ }).click();
+      await page.getByPlaceholder('Псевдоним', { exact: true }).first().fill('НовыйКод');
+    } else {
+      await page.locator('[data-tab="Объединения/Псевдонимы"]').click();
+      const alias = page.getByRole('table').nth(1).getByRole('textbox').first();
+      await alias.fill('НовыйКод');
+      await alias.press('Tab');
+    }
+    const output = await save(page, surface);
+    for (const text of ['// where first', '// having first']) expect(output.split(text)).toHaveLength(2);
+    expect(output.split('// repeated')).toHaveLength(3);
+    expect(parseBatch(output).members[0].members[0].model.fields[0].alias).toBe('НовыйКод');
+    await open(page, surface, output);
+    await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
+    expect(await save(page, surface)).toBe(output);
+  });
+}
+
+for (const v2 of [false, true]) {
+  test(`Classic text v2=${v2}: C17 WHERE/HAVING Apply preserves comments without consent`, async ({ page }) => {
+    await open(page, 'classic', query);
+    if (v2) await page.evaluate(() => window.dispatchEvent(new MessageEvent('message', { data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true, locale: 'ru' } })));
+    await page.getByRole('button', { name: 'Запрос', exact: true }).click();
+    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+    await editor.fill(conditionCommentQuery);
+    await page.getByRole('button', { name: 'Применить', exact: true }).click();
+    await expect(editor).toBeHidden();
+    await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
+    expect(await insertions(page)).toEqual([]);
+    expect(await save(page, 'classic')).toBe(generateBatch(parseBatch(conditionCommentQuery, undefined, { preserveComments: true })));
+  });
+}
+
+// WHERE/HAVING are preserved in C17's first slice; JOIN remains a consent case.
+const commentLossQuery = '// bound\nВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО В.Код = 1 // lost\nИЛИ В.Код = 2';
 
 for (const surface of ['classic', 'canvas'] as const) {
   for (const cancel of ['button', 'Escape'] as const) {
@@ -916,7 +959,7 @@ test.describe('Classic / Canvas designer toggle', () => {
   });
 
   test('a pending comment-loss confirmation disables switching', async ({ page }) => {
-    await openWithToggle(page, 'classic', 'ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = &Код // lost\nИЛИ В.Код = &Другой');
+    await openWithToggle(page, 'classic', commentLossQuery);
     await expect(page.getByTestId('comment-loss-confirm')).toBeVisible();
     await expect(page.getByTestId('designer-mode-canvas')).toBeDisabled();
   });

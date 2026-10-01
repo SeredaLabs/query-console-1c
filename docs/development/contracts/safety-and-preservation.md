@@ -19,10 +19,10 @@ occurrence counts** in the input and initial generated model. Repeated identical
 comments count separately; slash-only package separators are excluded. It does
 not compare source positions, section anchors or relative placement. A comment
 relocated by the binder counts as preserved if its text occurrence survives.
-For example, a standalone `// WHERE note` between `ГДЕ` and its condition is
-bound to `comments.afterFrom` and generated after `ИЗ`, before the source; this
-opens without a comment-loss warning. That result proves text retention only,
-not preservation of the comment's original location or contextual meaning.
+Before the bounded C17 condition change, a standalone `// WHERE note` between
+`ГДЕ` and its condition was bound to `comments.afterFrom` and generated after
+`ИЗ`. It now belongs to the condition. The warning check itself remains text/count
+only; retention does not prove the original location or contextual meaning.
 
 Missing occurrences produce a warning and a validated candidate requiring
 explicit confirmation. `lost` lists all missing occurrences in input order;
@@ -89,8 +89,22 @@ The comma is emitted before a trailing comment and closing delimiters follow
 on a safe line. Raw continuation indentation is retained; omitted argument
 content does not manufacture comment slots. Reopening is stable.
 
-Other raw expression slices can still lose comments in core parsing/generation
-(C17); the designer warns before loading and asks for explicit consent. Saving
+WHERE/HAVING edge comments are stored on their condition as optional
+`commentLeading` / `commentTrailing` arrays and emitted on separate lines.
+Comments inside an expression stay in its raw text; formatting is bypassed and
+Boolean conjunct boundaries are wrapped without rewriting code or comments.
+HAVING's generated `И` follows a commented conjunct on its own line, so `//`
+cannot swallow it. Parameter conditions with edge comments and structured IN
+subqueries retain their existing model; internal comments in an ordinary
+non-subquery condition use the custom-expression representation. Source and
+condition subqueries inherit the parsing mode, and parser-owned source positions
+keep the binder from duplicating these comments. Comment text/counts are retained;
+original placement and layout are not promised. Save/reopen is stable in the
+covered cases. The explicit strip-comments view removes these condition anchors
+and raw-text comments recursively without mutating the preserving model.
+
+JOIN, field, grouping and TOTALS raw slices can still lose comments in core
+parsing/generation (C17); the designer warns before loading and asks for explicit consent. Saving
 a confirmed candidate can remove those comments. **Consent to comment loss is not
 PRESERVE-ONLY support.** Classic's preserve-comments toggle deliberately changes
 the user's output policy; Canvas keeps preservation enabled. Parsing without
@@ -98,6 +112,7 @@ the user's output policy; Canvas keeps preservation enabled. Parsing without
 are safe to discard in production loading. Comments inside strings are strings.
 
 Regressions: [comment round-trip](../../../test/unit/commentsRoundTrip.test.ts),
+[condition comments](../../../test/unit/conditionComments.c17.test.ts),
 [raw argument comments and known-loss cells](../../../test/unit/rawSliceComments.c16.test.ts),
 [store comment toggle](../../../test/unit/queryStore.stripComments.test.ts).
 

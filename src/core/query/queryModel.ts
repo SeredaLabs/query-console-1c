@@ -301,6 +301,9 @@ export interface Grouping {
 export type ConditionOperator = '=' | '<>' | '>' | '>=' | '<' | '<=' | 'В' | 'МЕЖДУ' | 'ПОДОБНО';
 
 export interface Condition {
+  /** C17: verbatim comments outside the condition code; never part of an operator. */
+  commentLeading?: string[];
+  commentTrailing?: string[];
   /** «П.» — произвольное выражение (а не простое условие поле/оператор/параметр). */
   custom: boolean;
   /** Простое условие: таблица поля. */
