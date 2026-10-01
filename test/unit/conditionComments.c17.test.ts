@@ -91,7 +91,7 @@ for (const slot of ['ГДЕ', 'ИМЕЮЩИЕ'] as const) {
     expect(generateBatch(parseBatch(output, undefined, { preserveComments: true }))).toBe(output);
   });
   it(`${slot}: indentation does not change multiline string values`, () => {
-    const literal = '"first\n// literal text\nlast"';
+    const literal = '"first\n \t// literal text\n\t\n  last"';
     const input = `${head} ${slot} Т.Код // actual\n= ${literal}`;
     const output = generateBatch(parseBatch(input, undefined, { preserveComments: true }));
     expect(output).toContain(`\tТ.Код // actual\n\t= ${literal}`);
@@ -109,3 +109,63 @@ it('source and IN subqueries add their own nesting indent to condition comment l
   expect(condition).toContain('ГДЕ\n\t\t\t\t// leading\n\t\t\t\tТ.Код = &А\n\t\t\t\t// trailing');
   for (const text of [source, condition]) expect(generateBatch(parseBatch(text, undefined, { preserveComments: true }))).toBe(text);
 });
+
+const reopenContexts: Array<[string, (inner: string) => string]> = [
+  ['top level', inner => inner],
+  ['source subquery', inner => `ВЫБРАТЬ П.А КАК А ИЗ (${inner}\n) КАК П`],
+  ['condition subquery', inner => `${head} ГДЕ Т.Код В (${inner}\n)`],
+  ['UNION', inner => `${inner}\nОБЪЕДИНИТЬ ВСЕ\nВЫБРАТЬ П.А КАК А ИЗ (${inner}\n) КАК П`],
+  ['package', inner => `ВЫБРАТЬ П.А КАК А ИЗ (${inner}\n) КАК П;\n${head} ГДЕ Т.Код В (${inner}\n)`],
+];
+
+for (const metadata of [false, true]) for (const slot of ['ГДЕ', 'ИМЕЮЩИЕ'] as const) {
+  for (const op of ['И', 'ИЛИ']) {
+    const fragments: Array<[string, string]> = [
+      ['between operands', `Т.Код // internal\n  = 2 ${op} Т.Код = 3`],
+      ['before Boolean operator', `Т.Код = 2 // c2\n${op} Т.Код = 3`],
+      ['leading and internal', `// leading\nТ.Код = 2 // c2\n  ${op} Т.Код = 3`],
+      ['internal and trailing', `Т.Код = 2 // c2\n\t\t${op} Т.Код = 3 // trailing\n`],
+      ['leading, internal and trailing', `// leading\nТ.Код // internal\n \t= 2 // c2\n \t\t${op} Т.Код = 3 // trailing\n`],
+      ['blank continuation', `Т.Код // internal\n \t\n\t = 2 ${op} Т.Код = 3`],
+    ];
+    const active = metadata ? resolver : undefined;
+    for (const [context, wrap] of reopenContexts) for (const [placement, fragment] of fragments) {
+      it(`${context} ${slot} ${op} ${placement} (metadata=${metadata}): three Apply reopens are a fixed point`, () => {
+        const input = wrap(`${head} ${slot === 'ИМЕЮЩИЕ' ? 'СГРУППИРОВАТЬ ПО Т.Код ' : ''}${slot}\n${fragment}`);
+        const apply = (text: string): string => {
+          const opened = tryOpenDesignerBatch(text, active);
+          expect(opened.ok).toBe(true);
+          if (!opened.ok) throw new Error(opened.error);
+          const state = reducer(initialState(), { type: 'LOAD_BATCH', doc: opened.doc });
+          const preview = computeBatchTextSafe(state, true);
+          expect(preview.error).toBeNull();
+          expect(decideApply(preview.text, preview.error, findStaticApplyBlocker(state), active)).toEqual({ ok: true });
+          // Generated slash-only package separators are not user comments.
+          expect(commentsOf(preview.text).filter(t => !/^\/+$/u.test(t))).toEqual(commentsOf(input));
+          return preview.text;
+        };
+        const first = apply(input);
+        let current = first;
+        for (let reopen = 0; reopen < 3; reopen++) {
+          current = apply(current);
+          expect(current).toBe(first);
+        }
+      });
+    }
+  }
+}
+
+for (const slot of ['conditions', 'having'] as const) {
+  it(`${slot}: lexically rejected commented continuation stays verbatim and blocks Apply`, () => {
+    const doc = parseBatch(head);
+    const expression = 'Т.Код // untouched\n \t = §';
+    doc.members[0].members[0].model[slot] = [{ custom: true, expression }];
+    const state = reducer(initialState(), { type: 'LOAD_BATCH', doc });
+    const before = JSON.stringify(state);
+    const preview = computeBatchTextSafe(state, true);
+    expect(preview.error).toBeNull();
+    expect(preview.text).toContain(expression);
+    expect(decideApply(preview.text, preview.error, findStaticApplyBlocker(state))).toMatchObject({ ok: false });
+    expect(JSON.stringify(state)).toBe(before);
+  });
+}

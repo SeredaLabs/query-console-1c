@@ -91,9 +91,11 @@ content does not manufacture comment slots. Reopening is stable.
 
 WHERE/HAVING edge comments are stored on their condition as optional
 `commentLeading` / `commentTrailing` arrays and emitted on separate lines at the
-condition slot indent. Unindented continuations of lexically valid commented raw
-conditions receive that indent too; existing continuation indentation and
-multiline string contents are retained. Lexically rejected text stays verbatim.
+condition slot indent. Continuations of lexically valid commented raw conditions
+are canonicalized to that slot indent, including blank lines, outside literal
+tokens. Existing continuation indentation is not retained: it can include the
+previous subquery's padding, which nesting would otherwise add again on reopen.
+Multiline literal contents remain verbatim; lexically rejected text stays verbatim.
 Comments inside an expression stay in its raw text; formatting is bypassed and
 Boolean conjunct boundaries are wrapped without rewriting code or comments.
 HAVING's generated `И` follows a commented conjunct on its own line, so `//`
@@ -102,8 +104,11 @@ subqueries retain their existing model; internal comments in an ordinary
 non-subquery condition use the custom-expression representation. Source and
 condition subqueries inherit the parsing mode, and parser-owned source positions
 keep the binder from duplicating these comments. Comment text/counts are retained;
-original placement and layout are not promised. Save/reopen is stable in the
-covered cases. The explicit strip-comments view removes these condition anchors
+original placement and layout are not promised. Generation is a fixed point
+through designer open → LOAD_BATCH → Apply: three successive reopens produce
+the same text at the top level, in source/condition subqueries, UNION and packages
+([regression matrix](../../../test/unit/conditionComments.c17.test.ts)).
+The explicit strip-comments view removes these condition anchors
 and raw-text comments recursively without mutating the preserving model.
 
 JOIN, field, grouping and TOTALS raw slices can still lose comments in core

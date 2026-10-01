@@ -3073,15 +3073,15 @@ function unwrapHavingMaxMin(expr: string): string {
   return flat.slice(innerStart, innerEnd).trim();
 }
 
-/** Slot indentation is layout, not literal content. Only lexically known,
- * commented text may have unindented continuation lines moved into the slot. */
+/** Parsed raw continuations include their former subquery padding. Rebase them
+ * to the slot before nesting adds its padding, keeping literal content verbatim. */
 function indentCommentedCondition(text: string): string {
   const tokens = tryTokenize(text, { comments: true });
   if (!tokens?.some(t => t.type === 'comment')) return text;
   const literals = tokens.filter(t => t.type === 'string' || t.type === 'date');
-  return text.replace(/\n(?=\S)/gu, (newline: string, offset: number) => {
+  return text.replace(/\n[ \t]*/gu, (continuation: string, offset: number) => {
     const start = offset + 1;
-    return literals.some(t => t.pos < start && start < t.pos + t.text.length) ? newline : '\n\t';
+    return literals.some(t => t.pos < start && start < t.pos + t.text.length) ? continuation : '\n\t';
   });
 }
 

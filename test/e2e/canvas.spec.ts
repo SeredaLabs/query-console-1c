@@ -474,6 +474,27 @@ for (const v2 of [false, true]) {
   });
 }
 
+for (const surface of ['classic', 'canvas'] as const) {
+  const inner = 'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ГДЕ\n' +
+    '// leading\nТ.Код = 2 // c2\nИЛИ Т.Код = 3 // trailing\n';
+  for (const context of ['source', 'condition'] as const) {
+    test(`${surface}: C17 ${context} subquery raw comments stay stable through three Save/reopens`, async ({ page }) => {
+      const input = context === 'source'
+        ? `ВЫБРАТЬ П.А КАК А ИЗ (${inner}) КАК П`
+        : `ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код В (${inner})`;
+      await open(page, surface, input);
+      await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
+      const first = await save(page, surface);
+      for (const comment of ['// leading', '// c2', '// trailing']) expect(first.split(comment)).toHaveLength(2);
+      for (let reopen = 0; reopen < 3; reopen++) {
+        await open(page, surface, first);
+        await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
+        expect(await save(page, surface)).toBe(first);
+      }
+    });
+  }
+}
+
 // WHERE/HAVING are preserved in C17's first slice; JOIN remains a consent case.
 const commentLossQuery = '// bound\nВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО В.Код = 1 // lost\nИЛИ В.Код = 2';
 
