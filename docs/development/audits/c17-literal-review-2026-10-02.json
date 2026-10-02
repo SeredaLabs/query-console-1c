@@ -1,0 +1,18 @@
+{
+  "baseline": "25ac0e3",
+  "method": "Local parser/generator probes, no metadata resolver; before uses frozen HEAD bundle; after uses reviewed worktree. Not live platform attestation.",
+  "cases": [
+    {
+      "input": "ВЫБРАТЬ ЕСТЬNULL(ВЫБОР КОГДА ИСТИНА ТОГДА \"a\nb\" КОНЕЦ, \"x\") КАК А",
+      "before": "ВЫБРАТЬ\n\tЕСТЬNULL(ВЫБОР\n\t\t\tКОГДА ИСТИНА\n\t\t\t\tТОГДА \"a b\"\n\t\tКОНЕЦ, \"x\") КАК А",
+      "after": "ВЫБРАТЬ\n\tЕСТЬNULL(ВЫБОР\n\t\t\tКОГДА ИСТИНА\n\t\t\t\tТОГДА \"a b\"\n\t\tКОНЕЦ, \"x\") КАК А",
+      "reopened": "ВЫБРАТЬ\n\tЕСТЬNULL(ВЫБОР\n\t\t\tКОГДА ИСТИНА\n\t\t\t\tТОГДА \"a b\"\n\t\tКОНЕЦ, \"x\") КАК А"
+    },
+    {
+      "input": "ВЫБРАТЬ Т.Товары.(\"a\nb\" КАК А) ИЗ Документ.ЗаказКлиента КАК Т",
+      "before": "ВЫБРАТЬ\n\tТ.Товары.(\n\t\t\"a\n\t\tb\" КАК А\n\t) КАК Товары\nИЗ\n\tДокумент.ЗаказКлиента КАК Т",
+      "after": "ВЫБРАТЬ\n\tТ.Товары.(\n\t\t\"a\n\tb\" КАК А\n\t) КАК Товары\nИЗ\n\tДокумент.ЗаказКлиента КАК Т",
+      "reopened": "ВЫБРАТЬ\n\tТ.Товары.(\n\t\t\"a\n\t\tb\" КАК А\n\t) КАК Товары\nИЗ\n\tДокумент.ЗаказКлиента КАК Т"
+    }
+  ]
+}

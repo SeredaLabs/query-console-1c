@@ -1,0 +1,72 @@
+[
+  {
+    "name": "select",
+    "beforeRef": "cd3250c7b55e88a35b84595385acdc84e1742c82",
+    "input": "ВЫБРАТЬ \"a\nb\" КАК А",
+    "beforeOutput": "ВЫБРАТЬ\n\t\"a\n\tb\" КАК А",
+    "output": "ВЫБРАТЬ\n\t\"a\n\tb\" КАК А",
+    "inputLiterals": [
+      "\"a\nb\""
+    ],
+    "outputLiterals": [
+      "\"a\n\tb\""
+    ],
+    "live": {
+      "available": false,
+      "reason": "No configured endpoint"
+    }
+  },
+  {
+    "name": "source-select",
+    "beforeRef": "cd3250c7b55e88a35b84595385acdc84e1742c82",
+    "input": "ВЫБРАТЬ П.А ИЗ (ВЫБРАТЬ \"a\nb\" КАК А) КАК П",
+    "beforeOutput": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t\"a\n\t\tb\" КАК А) КАК П",
+    "output": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t\"a\n\tb\" КАК А) КАК П",
+    "inputLiterals": [
+      "\"a\nb\""
+    ],
+    "outputLiterals": [
+      "\"a\n\tb\""
+    ],
+    "live": {
+      "available": false,
+      "reason": "No configured endpoint"
+    }
+  },
+  {
+    "name": "source-where",
+    "beforeRef": "cd3250c7b55e88a35b84595385acdc84e1742c82",
+    "input": "ВЫБРАТЬ П.А ИЗ (ВЫБРАТЬ 1 КАК А ГДЕ \"a\nb\" = \"a\nb\") КАК П",
+    "beforeOutput": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t1 КАК А\n\tГДЕ\n\t\t\"a\n\tb\" = \"a\n\tb\") КАК П",
+    "output": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t1 КАК А\n\tГДЕ\n\t\t\"a\nb\" = \"a\nb\") КАК П",
+    "inputLiterals": [
+      "\"a\nb\"",
+      "\"a\nb\""
+    ],
+    "outputLiterals": [
+      "\"a\nb\"",
+      "\"a\nb\""
+    ],
+    "live": {
+      "available": false,
+      "reason": "No configured endpoint"
+    }
+  },
+  {
+    "name": "condition-where",
+    "beforeRef": "cd3250c7b55e88a35b84595385acdc84e1742c82",
+    "input": "ВЫБРАТЬ П.А КАК А ИЗ Справочник.Валюты КАК П ГДЕ П.Код В (ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = \"a\nb\")",
+    "beforeOutput": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\tСправочник.Валюты КАК П\nГДЕ\n\tП.Код В\n\t\t\t(ВЫБРАТЬ\n\t\t\t\tТ.Код КАК Код\n\t\t\tИЗ\n\t\t\t\tСправочник.Валюты КАК Т\n\t\t\tГДЕ\n\t\t\t\tТ.Код = \"a\n\t\t\tb\")",
+    "output": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\tСправочник.Валюты КАК П\nГДЕ\n\tП.Код В\n\t\t\t(ВЫБРАТЬ\n\t\t\t\tТ.Код КАК Код\n\t\t\tИЗ\n\t\t\t\tСправочник.Валюты КАК Т\n\t\t\tГДЕ\n\t\t\t\tТ.Код = \"a\nb\")",
+    "inputLiterals": [
+      "\"a\nb\""
+    ],
+    "outputLiterals": [
+      "\"a\nb\""
+    ],
+    "live": {
+      "available": false,
+      "reason": "No configured endpoint"
+    }
+  }
+]

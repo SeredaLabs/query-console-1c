@@ -1,0 +1,70 @@
+{
+  "recordedOn": "2026-10-02",
+  "method": "Native web Query wizard: paste synthetic input into Query editor, Apply changes, reopen Query editor, read textarea.value preserving tabs/newlines. No query execution. First three observations retained from the preceding browser session.",
+  "platformVersion": "1C:Enterprise 8.3 (8.3.15.1489)",
+  "platformVersionStatus": "Observed in the About dialog during the resumed fourth-case check. Version was not captured in the preceding first-three-case session.",
+  "cases": [
+    {
+      "name": "select",
+      "input": "ВЫБРАТЬ \"a\nb\" КАК А",
+      "beforeRef": "cd3250c7b55e88a35b84595385acdc84e1742c82",
+      "beforeOutput": "ВЫБРАТЬ\n\t\"a\n\tb\" КАК А",
+      "output": "ВЫБРАТЬ\n\t\"a\n\tb\" КАК А",
+      "currentRef": "25ac0e3",
+      "live": {
+        "status": "observed",
+        "output": "ВЫБРАТЬ\n\t\"a\n\tb\" КАК А"
+      }
+    },
+    {
+      "name": "source-select",
+      "input": "ВЫБРАТЬ П.А ИЗ (ВЫБРАТЬ \"a\nb\" КАК А) КАК П",
+      "beforeRef": "cd3250c7b55e88a35b84595385acdc84e1742c82",
+      "beforeOutput": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t\"a\n\t\tb\" КАК А) КАК П",
+      "output": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t\"a\n\tb\" КАК А) КАК П",
+      "currentRef": "25ac0e3",
+      "live": {
+        "status": "observed",
+        "output": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t\"a\n\t\tb\" КАК А) КАК П"
+      }
+    },
+    {
+      "name": "source-where",
+      "input": "ВЫБРАТЬ П.А ИЗ (ВЫБРАТЬ 1 КАК А ГДЕ \"a\nb\" = \"a\nb\") КАК П",
+      "beforeRef": "cd3250c7b55e88a35b84595385acdc84e1742c82",
+      "beforeOutput": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t1 КАК А\n\tГДЕ\n\t\t\"a\n\tb\" = \"a\n\tb\") КАК П",
+      "output": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t1 КАК А\n\tГДЕ\n\t\t\"a\nb\" = \"a\nb\") КАК П",
+      "currentRef": "25ac0e3",
+      "live": {
+        "status": "observed",
+        "output": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t1 КАК А\n\tГДЕ\n\t\t\"a\n\t\t\tb\" = \"a\n\t\t\tb\") КАК П"
+      }
+    },
+    {
+      "name": "condition-where",
+      "input": "ВЫБРАТЬ П.А КАК А ИЗ Справочник.Валюты КАК П ГДЕ П.Код В (ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = \"a\nb\")",
+      "beforeRef": "cd3250c7b55e88a35b84595385acdc84e1742c82",
+      "beforeOutput": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\tСправочник.Валюты КАК П\nГДЕ\n\tП.Код В\n\t\t\t(ВЫБРАТЬ\n\t\t\t\tТ.Код КАК Код\n\t\t\tИЗ\n\t\t\t\tСправочник.Валюты КАК Т\n\t\t\tГДЕ\n\t\t\t\tТ.Код = \"a\n\t\t\tb\")",
+      "output": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\tСправочник.Валюты КАК П\nГДЕ\n\tП.Код В\n\t\t\t(ВЫБРАТЬ\n\t\t\t\tТ.Код КАК Код\n\t\t\tИЗ\n\t\t\t\tСправочник.Валюты КАК Т\n\t\t\tГДЕ\n\t\t\t\tТ.Код = \"a\nb\")",
+      "currentRef": "25ac0e3",
+      "live": {
+        "status": "rejected",
+        "error": "{(1, 11)}: Field not found \"П.А\"",
+        "output": null
+      }
+    },
+    {
+      "name": "condition-where-existing-field",
+      "input": "ВЫБРАТЬ П.Код КАК А ИЗ Справочник.Валюты КАК П ГДЕ П.Код В (ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = \"a\nb\")",
+      "adaptation": "Only the outer projection changed from П.А to П.Код; original rejection is retained separately.",
+      "beforeRef": "cd3250c7b55e88a35b84595385acdc84e1742c82",
+      "currentRef": "25ac0e3",
+      "beforeOutput": "ВЫБРАТЬ\n\tП.Код КАК А\nИЗ\n\tСправочник.Валюты КАК П\nГДЕ\n\tП.Код В\n\t\t\t(ВЫБРАТЬ\n\t\t\t\tТ.Код КАК Код\n\t\t\tИЗ\n\t\t\t\tСправочник.Валюты КАК Т\n\t\t\tГДЕ\n\t\t\t\tТ.Код = \"a\n\t\t\tb\")",
+      "output": "ВЫБРАТЬ\n\tП.Код КАК А\nИЗ\n\tСправочник.Валюты КАК П\nГДЕ\n\tП.Код В\n\t\t\t(ВЫБРАТЬ\n\t\t\t\tТ.Код КАК Код\n\t\t\tИЗ\n\t\t\t\tСправочник.Валюты КАК Т\n\t\t\tГДЕ\n\t\t\t\tТ.Код = \"a\nb\")",
+      "live": {
+        "status": "observed",
+        "output": "ВЫБРАТЬ\n\tП.Код КАК А\nИЗ\n\tСправочник.Валюты КАК П\nГДЕ\n\tП.Код В\n\t\t\t(ВЫБРАТЬ\n\t\t\t\tТ.Код КАК Код\n\t\t\tИЗ\n\t\t\t\tСправочник.Валюты КАК Т\n\t\t\tГДЕ\n\t\t\t\tТ.Код = \"a\n\t\tb\")"
+      }
+    }
+  ]
+}

@@ -1399,6 +1399,27 @@ function stripRedundantThenArithmeticWrap(lines: string[]): void {
 }
 
 export function reindentLeafCase(text: string, base: number, funcParenDepth = false): string {
+  // Physical-line CASE layout must never join or indent literal contents.
+  // Use collision-free quoted tokens so the existing layout sees the same
+  // expression structure, then restore the original lexemes byte-for-byte.
+  const multiline = tryTokenize(text)?.filter(t => t.type === 'string' && /[\r\n]/u.test(t.text));
+  if (multiline?.length) {
+    let prefix = '__case_literal_';
+    while (text.includes(prefix)) prefix += '_';
+    const originals = new Map<string, string>();
+    let protectedText = '';
+    let offset = 0;
+    for (const [index, token] of multiline.entries()) {
+      const marker = `"${prefix}${index}"`;
+      originals.set(marker, token.text);
+      protectedText += text.slice(offset, token.pos) + marker;
+      offset = token.pos + token.text.length;
+    }
+    protectedText += text.slice(offset);
+    let formatted = reindentLeafCase(protectedText, base, funcParenDepth);
+    for (const [marker, original] of originals) formatted = formatted.split(marker).join(original);
+    return formatted;
+  }
   // Снимаем избыточную группировку вокруг одиночного вызова (`ЕСТЬNULL((СУММА(…))`),
   // прежде чем считать геометрию CASE — иначе лишняя `(` сдвинула бы отступ (6.16.76).
   text = stripRedundantCallWrapParens(text);

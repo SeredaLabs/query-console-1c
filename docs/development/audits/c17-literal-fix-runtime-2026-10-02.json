@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-02",
+  "method": "Execute synthetic derived-table comparison through native web query console; read rendered result table. No business data or writes.",
+  "original": "ВЫБРАТЬ П.А ИЗ (ВЫБРАТЬ \"a\nb\" КАК А) КАК П",
+  "corrected": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t\"a\nb\" КАК А) КАК П",
+  "input": "ВЫБРАТЬ Ориг.А = Ориг.А КАК Контроль, Ориг.А = Наш.А КАК ИсправленныйРавенИсходному ИЗ (ВЫБРАТЬ П.А ИЗ (ВЫБРАТЬ \"a\nb\" КАК А) КАК П) КАК Ориг, (ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t\"a\nb\" КАК А) КАК П) КАК Наш",
+  "rowCount": 1,
+  "columns": [
+    "Контроль",
+    "ИсправленныйРавенИсходному"
+  ],
+  "displayValues": [
+    "Yes",
+    "Yes"
+  ]
+}

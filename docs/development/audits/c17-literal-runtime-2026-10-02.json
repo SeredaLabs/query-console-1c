@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-02",
+  "method": "Executed synthetic SELECT queries through the existing web query console. No business tables, writes, parameters or stored-query save. Results observed in rendered result table.",
+  "platformVersionContext": "8.3.15.1489 observed earlier in the same web-client session",
+  "cases": [
+    {
+      "name": "literal-equality-controls",
+      "input": "ВЫБРАТЬ\n \"a\nb\" = \"a\nb\" КАК Однакові,\n \"a\n\tb\" = \"a\n\tb\" КАК ОднаковіЗТабом,\n \"a\nb\" = \"a\n\tb\" КАК ОдинТаб,\n \"a\nb\" = \"a\n\t\tb\" КАК ДваТаба,\n \"a\nb\" = \"a\n\t\t\tb\" КАК ТриТаба,\n \"a\nb\" = \"ab\" КАК БезПереноса,\n \"a\nb\" = \"a b\" КАК Пробел",
+      "rowCount": 1,
+      "columns": [
+        "Однакові",
+        "ОднаковіЗТабом",
+        "ОдинТаб",
+        "ДваТаба",
+        "ТриТаба",
+        "БезПереноса",
+        "Пробел"
+      ],
+      "displayValues": [
+        "Yes",
+        "Yes",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No"
+      ]
+    },
+    {
+      "name": "source-select-output-comparison",
+      "input": "ВЫБРАТЬ Ориг.А = Ориг.А КАК Контроль, Ориг.А = Наш.А КАК НашРавенИсходному, Ориг.А = Констр.А КАК КонструкторРавенИсходному, Наш.А = Констр.А КАК НашРавенКонструктору ИЗ (ВЫБРАТЬ П.А ИЗ (ВЫБРАТЬ \"a\nb\" КАК А) КАК П) КАК Ориг, (ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t\"a\n\tb\" КАК А) КАК П) КАК Наш, (ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t\"a\n\t\tb\" КАК А) КАК П) КАК Констр",
+      "embedded": {
+        "original": "ВЫБРАТЬ П.А ИЗ (ВЫБРАТЬ \"a\nb\" КАК А) КАК П",
+        "current": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t\"a\n\tb\" КАК А) КАК П",
+        "nativeConstructor": "ВЫБРАТЬ\n\tП.А КАК А\nИЗ\n\t(ВЫБРАТЬ\n\t\t\"a\n\t\tb\" КАК А) КАК П"
+      },
+      "currentRef": "25ac0e3",
+      "rowCount": 1,
+      "columns": [
+        "Контроль",
+        "НашРавенИсходному",
+        "КонструкторРавенИсходному",
+        "НашРавенКонструктору"
+      ],
+      "displayValues": [
+        "Yes",
+        "No",
+        "No",
+        "No"
+      ]
+    }
+  ]
+}

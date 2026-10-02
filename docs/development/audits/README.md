@@ -17,6 +17,11 @@ This is an indexed historical archive, not a second status ledger.
 
 | Date | Audit / scope | Result → debt/fix | Disposition |
 |---|---|---|---|
+| 2026-10-02 | [C17 literal follow-up fix](c17-literal-followup-fix-2026-10-02.md) | Preserve function CASE and tabular SELECT literals through reopening | RESOLVED two review findings; remaining C17 comment slots OPEN |
+| 2026-10-02 | [C17 literal fix review](c17-literal-review-2026-10-02.md) | Two pre-existing gaps omitted by new tests: function CASE and tabular SELECT | RESOLVED by bounded follow-up; review evidence retained |
+| 2026-10-02 | [C17 SELECT literal preservation fix](c17-literal-preservation-fix-2026-10-02.md) | Removed value-changing SELECT padding; explicit ADR exception and live execution control | Leaf padding fixed; reviewed function CASE/tabular gaps resolved separately |
+| 2026-10-02 | [C17 literal runtime evidence](c17-literal-runtime-2026-10-02.md) | Executed constant/derived-table comparisons prove padding changes values, including current generator output | PARTIAL after review; canonical-padding restoration remains unsafe |
+| 2026-10-01 | [C17 SELECT-field pre-implementation audit](c17-field-audit-2026-10-01.md) | Three synthetic uncommented outputs changed by JOIN literal nesting; conflicts with historical canonical policy | STOP before field implementation; native evidence for all four shapes (fourth via explicit control); runtime follow-up supersedes padding-restoration direction |
 | 2026-10-01 | [C17 JOIN comment preservation](c17-join-comments-2026-10-01.md) | Edge/internal JOIN comments, safe delimiters and stable nested reopening | Bounded implementation; C17 remains OPEN for other raw slots |
 | 2026-10-01 | [Query Core vs EDT Query Wizard](query-core-edt-2026-10-01.md) | Public API mapping, reproduced A2 schema divergence, A1/A2/A3 and DCS migration proposal | STILL RELEVANT reference; audit only, implementation awaits approval; current ledger remains authority |
 | 2026-09-27 | [Stage 0](stage-0.md), [frozen payload](stage-0/environment.json) | Differential/recovery audit and RP01–25 live results; English acceptance, invalid VT arity, hierarchy and template/sequence unknowns | STILL RELEVANT evidence; historical priorities/status superseded |

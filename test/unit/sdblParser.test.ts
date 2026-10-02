@@ -1653,9 +1653,9 @@ describe('parseBatch — round-trip identity (generateBatch∘parseBatch∘gener
     const text = 'ВЫБРАТЬ "абв\n;\nгде" КАК Поле ИЗ Справочник.Валюты КАК Валюты';
     const batch = parseBatch(text);
     expect(batch.members.length).toBe(1);
-    // Конструктор 1С добавляет базовый отступ поля (+1 таб) каждой строке-продолжению
-    // многострочного строкового литерала (сверено живым оракулом validate_query).
-    expect(generateBatch(batch)).toContain('"абв\n\t;\n\tгде"');
+    // Literal bytes take precedence over constructor padding: see ADR 0004 and
+    // c17-literal-runtime-2026-10-02.json (added tabs change executed values).
+    expect(generateBatch(batch)).toContain('"абв\n;\nгде"');
   });
 
   it('6. `;` + слэши внутри литерала НЕ делят пакет, а настоящий разделитель ПОСЛЕ литерала делит', () => {
@@ -1665,8 +1665,8 @@ describe('parseBatch — round-trip identity (generateBatch∘parseBatch∘gener
       'ВЫБРАТЬ\n\tВалюты.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Валюты';
     const batch = parseBatch(text);
     expect(batch.members.length).toBe(2);
-    // +1 таб строкам-продолжениям литерала (как конструктор 1С; см. тест 5 выше).
-    expect(generateBatch(batch)).toContain('"абв\n\t;\n\t////////\n\tгде"');
+    // Preserve the separators and comment-looking text inside the literal.
+    expect(generateBatch(batch)).toContain('"абв\n;\n////////\nгде"');
   });
 });
 

@@ -109,3 +109,23 @@ input/output semantic-equivalence claim. No release or push in this task.
 Continue C17 with the remaining raw slots in separate bounded tasks. This slice
 does not change field/group/TOTALS/ORDER preservation, introduce a new lexer or
 expression grammar, migrate A2/A3, or remove existing compatibility paths.
+
+## Subsequent qualification: multiline canonical contract
+
+The [field pre-implementation audit](c17-field-audit-2026-10-01.md) found an
+existing SELECT-literal padding policy documented as live-oracle behavior and
+reproduced three uncommented outputs changed by this JOIN commit. The two updated
+closing-parenthesis expectations were not checked against that policy. The gates
+above remain valid, but literal token preservation is not evidence of platform
+canonical compatibility. This boundary must be resolved before the field slice;
+no rollback or new production changes are implied by the audit.
+
+Native-constructor observations recorded on 2026-10-02 are now linked in the
+field audit. They confirm a source-SELECT canonical divergence introduced here,
+and source/condition-WHERE mismatches that also existed before this commit. A simple
+rollback is therefore not evidence of full canonical compatibility.
+
+[Runtime follow-up](c17-literal-runtime-2026-10-02.md) proves that inserting
+literal tabs changes values. Restoring pre-JOIN literal padding is unsafe;
+the SELECT padding policy needs a separate preservation correction. Canonical
+compatibility alone cannot determine correct behavior for these literals.

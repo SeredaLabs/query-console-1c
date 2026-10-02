@@ -33,6 +33,20 @@ snapshot, but may use its explicit recovery path so that useful assistance can
 survive temporarily incomplete text. They must not introduce a separate grammar
 or change the generated query contract.
 
+### Literal-value preservation exception (2026-10-02)
+
+Literal contents take precedence over canonical whitespace. Generation must not
+insert layout padding inside string literals, including their continuation lines
+in SELECT and nested queries. Preserve existing literal whitespace; do not strip
+tabs already authored by the user or present in recorded input.
+
+[Executed platform evidence](../audits/c17-literal-runtime-2026-10-02.md) shows
+that native constructor padding changes string values on 8.3.15.1489. Canonical
+output equality therefore has this explicit exception; constructor acceptance
+and canonical text are not proof of semantic equivalence. Structural formatting
+outside literals retains the existing contract. Corpus differences must still
+be enumerated and reviewed, never hidden by rewriting oracle records.
+
 ## Consequences
 
 - A syntax or generation change is not "done" until it passes a full corpus
