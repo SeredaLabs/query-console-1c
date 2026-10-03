@@ -3,6 +3,25 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## 0.1.97 - 2026-10-03
+
+### Fixed
+
+- Line comments are now kept everywhere in a query: JOIN conditions, selected
+  fields, GROUP BY, ORDER BY and TOTALS, next to source names and aliases, on the
+  ПОМЕСТИТЬ line, around UNION separators, after the final `;` and in
+  УНИЧТОЖИТЬ. A comment inside an expression moves to its section header (or
+  after ИЗ / before ВЫБРАТЬ); its text is never dropped. The comment-loss
+  confirmation now only guards against future defects.
+- A query ending with `; // comment` opens instead of failing to parse.
+- Multiline string literal values are no longer changed by formatting (no tabs
+  are inserted inside them).
+- Reopening a nested query no longer adds indentation to its multiline
+  expressions, such as TOTALS aggregates or conditions comparing CASE
+  expressions with subqueries.
+- Two JOIN condition shapes that combine И with a nested ИЛИ group no longer
+  gain extra parentheses when reopened.
+
 ## 0.1.96 - 2026-10-01
 
 ### Added
