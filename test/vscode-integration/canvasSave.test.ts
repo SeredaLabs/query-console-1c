@@ -9,7 +9,7 @@ import { t } from '../../src/webview-canvas/i18n';
 import { FIXTURE_CF, REPO_ROOT, waitUntil } from './testUtil';
 
 describe('Extension Host: Canvas load → edit → Save → source document', () => {
-  for (const mode of ['alias', 'nested', 'comment-cancel', 'comment-save', 'condition-comments', 'join-comments'] as const) it(`production Canvas ${mode} uses the real bridge and preserves surrounding BSL`, async function () {
+  for (const mode of ['alias', 'nested', 'comment-cancel', 'comment-save', 'condition-comments', 'join-comments', 'field-comments', 'group-comments'] as const) it(`production Canvas ${mode} uses the real bridge and preserves surrounding BSL`, async function () {
     const nested = mode === 'nested';
     const commentLoss = mode === 'comment-cancel' || mode === 'comment-save';
     this.timeout(25000);
@@ -21,7 +21,11 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
     let panel: vscode.WebviewPanel | undefined;
     try {
       const query = commentLoss
-        ? '// bound\nВЫБРАТЬ В.Ссылка // lost\n+ 1 КАК Код ИЗ Справочник.Тест КАК В ГДЕ В.Ссылка = &Код'
+        ? '// bound\nВЫБРАТЬ В.Ссылка КАК Код ИЗ Справочник.Тест КАК В ГДЕ В.Ссылка = &Код УПОРЯДОЧИТЬ ПО В.Ссылка // lost\n'
+        : mode === 'group-comments'
+        ? 'ВЫБРАТЬ В.Ссылка КАК Код ИЗ Справочник.Тест КАК В СГРУППИРОВАТЬ ПО В.Ссылка // group'
+        : mode === 'field-comments'
+        ? 'ВЫБРАТЬ В.Ссылка КАК Код, 1 // field\n+ 2 КАК Число ИЗ Справочник.Тест КАК В'
         : mode === 'join-comments'
         ? 'ВЫБРАТЬ В.Ссылка КАК Код ИЗ Справочник.Тест КАК В ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Тест КАК Б ПО // leading\nВ.Ссылка = Б.Ссылка // internal\nИЛИ В.Ссылка = &Код // trailing\n'
         : mode === 'condition-comments'
@@ -119,6 +123,8 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
         assert.ok(!result.includes('// lost'), result);
         assert.ok(result.includes('В.Ссылка = &Код'), result);
       } else assert.ok(result.includes('В.Ссылка КАК КодИзCanvas'), result);
+      if (mode === 'group-comments') assert.strictEqual(result.split('// group').length, 2, result);
+      if (mode === 'field-comments') assert.strictEqual(result.split('// field').length, 2, result);
       if (mode === 'join-comments') {
         for (const comment of ['// leading', '// internal', '// trailing']) assert.strictEqual(result.split(comment).length, 2, result);
       }

@@ -14,12 +14,12 @@
  * неожиданной форме входа просто привязывается то, что удалось разобрать (или
  * ничего). Сопоставление сегментов выборки с полями модели — сперва по точному
  * совпадению синонима (`fieldAlias`), затем без учёта регистра (1С регистро-
- * независим), затем — позиционный фолбэк (k-й сегмент → model.fields[k]).
+ * независим), затем — позиционный фолбэк по orderedSelectElements (включая ТЧ и хвостовые поля).
  */
 
 import { tokenize, type Token } from './sdblLexer';
-import type { QueryModel, SelectedField } from './queryModel';
-import { fieldAlias, type QueryDocument } from './unionModel';
+import type { QueryModel, SelectedField, SelectedTabSectionField } from './queryModel';
+import { orderedSelectElements, elementAlias, type QueryDocument } from './unionModel';
 
 /** Авто-разделитель конструктора: `//` и далее ТОЛЬКО слеши (`////…`). */
 function isAutoSeparator(text: string): boolean {
@@ -62,7 +62,7 @@ function commentsInKeptArgs(toks: Token[]): Set<number> {
   return inside;
 }
 
-// Parser-owned condition comments are excluded by source position, not text:
+// Parser-owned comments and bound nested projection comments are excluded by source position, not text:
 // identical comments in other slots must still be bound independently. Positions
 // are SELECT-relative so UNION member slicing does not change their identity.
 const conditionCommentPositions = new WeakMap<QueryModel, Set<number>>();
@@ -93,14 +93,24 @@ export function extractComments(memberText: string, model: QueryModel): void {
     let selectIdx = -1;
     let fromIdx = -1;
     let placeIdx = -1;
+    let clauseIdx = -1;
+    let previousCode: Token | undefined;
     for (let i = 0; i < toks.length; i++) {
       const t = toks[i];
+      const prev = previousCode;
+      if (t.type !== 'comment') previousCode = t;
       if (t.type === 'punct') {
         if (t.value === '(' || t.value === '[') depth++;
         else if (t.value === ')' || t.value === ']') depth = Math.max(0, depth - 1);
         continue;
       }
       if (t.type !== 'keyword' || depth !== 0) continue;
+      // Keyword-shaped paths and explicit aliases are not clause boundaries.
+      if (toks.slice(i + 1).find(t => t.type !== 'comment')?.value === '.' ||
+          prev?.value === '.' || prev?.value === 'КАК') continue;
+      // Source-less queries still end their SELECT list at the next clause.
+      if (selectIdx >= 0 && clauseIdx < 0 &&
+          ['ГДЕ', 'СГРУППИРОВАТЬ', 'ИМЕЮЩИЕ', 'УПОРЯДОЧИТЬ', 'ИТОГИ', 'ИНДЕКСИРОВАТЬ', 'ОБЪЕДИНИТЬ', 'ДЛЯ'].includes(t.value)) clauseIdx = i;
       if (selectIdx < 0 && t.value === 'ВЫБРАТЬ') selectIdx = i;
       else if (selectIdx >= 0 && fromIdx < 0 && t.value === 'ИЗ') fromIdx = i;
       else if (
@@ -113,8 +123,8 @@ export function extractComments(memberText: string, model: QueryModel): void {
     }
     if (selectIdx < 0) return; // без ВЫБРАТЬ привязывать не к чему
 
-    // Конец региона списка выборки — первый из {ПОМЕСТИТЬ/ДОБАВИТЬ, ИЗ, конец}.
-    const candidates = [placeIdx, fromIdx].filter(x => x >= 0);
+    // SELECT ends at the first placement/source/following-clause boundary.
+    const candidates = [placeIdx, fromIdx, clauseIdx].filter(x => x >= 0);
     const regionEnd = candidates.length ? Math.min(...candidates) : toks.length;
 
     // --- 2. Разбиение региона выборки на сегменты по запятым глубины 0 -------
@@ -174,37 +184,31 @@ export function extractComments(memberText: string, model: QueryModel): void {
     }
 
     // --- 3. Сопоставление сегментов с полями модели ------------------------
-    const usedFields = new Set<SelectedField>();
-    const fieldForSegment = (segIdx: number): SelectedField | undefined => {
-      const seg = segments[segIdx];
-      const syn = seg?.synonym;
-      if (syn) {
-        // Точное совпадение синонима.
-        let f = model.fields.find(fl => !usedFields.has(fl) && fieldAlias(fl, model) === syn);
-        // Без учёта регистра (1С регистро-независим).
-        if (!f) {
-          const synLow = syn.toLowerCase();
-          f = model.fields.find(
-            fl => !usedFields.has(fl) && fieldAlias(fl, model).toLowerCase() === synLow
-          );
-        }
-        if (f) {
-          usedFields.add(f);
-          return f;
-        }
-      }
-      // Позиционный фолбэк.
-      const f = model.fields[segIdx];
-      if (f) usedFields.add(f);
-      return f;
+    type CommentField = SelectedField | SelectedTabSectionField;
+    const elements = orderedSelectElements(model);
+    const projection = elements.map(el => el.kind === 'field' ? el.field : el.tsf);
+    const usedFields = new Set<CommentField>();
+    const fieldForSegment = (segIdx: number): CommentField | undefined => {
+      const syn = segments[segIdx]?.synonym;
+      let index = syn === undefined ? -1 : elements.findIndex((el, i) =>
+        !usedFields.has(projection[i]) && elementAlias(el, model) === syn);
+      if (index < 0 && syn !== undefined) index = elements.findIndex((el, i) =>
+        !usedFields.has(projection[i]) && elementAlias(el, model).toLowerCase() === syn.toLowerCase());
+      const field = projection[index >= 0 ? index : segIdx];
+      if (field) usedFields.add(field);
+      return field;
     };
-    // Сопоставляем все сегменты заранее (стабильный позиционный фолбэк).
-    const segField: (SelectedField | undefined)[] = segments.map((_, k) => fieldForSegment(k));
+    const segField = segments.map((_, k) => fieldForSegment(k));
 
     // --- 4. Классификация и привязка комментариев --------------------------
     const beforeSelect: string[] = [];
     const afterFrom: string[] = [];
     const inKeptArgs = commentsInKeptArgs(toks);
+    const rememberBoundComment = (pos: number): void => {
+      let positions = conditionCommentPositions.get(model);
+      if (!positions) conditionCommentPositions.set(model, positions = new Set());
+      positions.add(pos - toks[selectIdx].pos);
+    };
 
     for (let ci = 0; ci < toks.length; ci++) {
       const c = toks[ci];
@@ -214,18 +218,27 @@ export function extractComments(memberText: string, model: QueryModel): void {
 
       // (3) beforeSelect — до ВЫБРАТЬ; авто-разделители отбрасываем.
       if (ci < selectIdx) {
-        if (!isAutoSeparator(text)) beforeSelect.push(text);
+        if (!isAutoSeparator(text)) { beforeSelect.push(text); rememberBoundComment(c.pos); }
         continue;
       }
 
       // Регион списка выборки (между ВЫБРАТЬ и regionEnd).
       if (ci > selectIdx && ci < regionEnd) {
-        const trailing = hasCodeBeforeOnLine(toks, c.line, c.pos);
+        // Interior comments belong to the projection, not a raw expression.
+        // Relocate them to leading anchors so structured fields remain editable.
+        const interior = segments.findIndex(s => ci > s.startTok && ci < s.endTok);
+        if (interior >= 0) {
+          const field = segField[interior];
+          if (field) { (field.commentLeading ??= []).push(text); rememberBoundComment(c.pos); }
+          continue;
+        }
+        const trailing = ci > (segments[0]?.startTok ?? ci) && hasCodeBeforeOnLine(toks, c.line, c.pos);
         if (trailing) {
           // (1) Хвостовой — поле сегмента, на чьей последней строке стоит комментарий.
-          const segIdx = segments.findIndex(s => toks[s.endTok].line === c.line);
+          const segIdx = segments.reduce((found, s, index) => toks[s.endTok].pos < c.pos && toks[s.endTok].line === c.line ? index : found, -1);
           const fld = segIdx >= 0 ? segField[segIdx] : undefined;
           if (fld) {
+            rememberBoundComment(c.pos);
             fld.commentTrailing = fld.commentTrailing
               ? `${fld.commentTrailing} ${text}`
               : text;
@@ -233,11 +246,13 @@ export function extractComments(memberText: string, model: QueryModel): void {
         } else {
           // (2) Полностью-строчный — commentLeading СЛЕДУЮЩЕГО сегмента
           // (первый сегмент, начинающийся ПОСЛЕ позиции комментария).
-          const segIdx = segments.findIndex(s => toks[s.startTok].pos > c.pos);
+          const next = segments.findIndex(s => toks[s.startTok].pos > c.pos);
+          const segIdx = next >= 0 ? next : segments.length - 1;
           const fld = segIdx >= 0 ? segField[segIdx] : undefined;
-          // Нет следующего поля → комментарий «висит» в конце списка → отбрасываем.
+          // A comment after the final projection stays anchored to that projection.
           if (fld) {
             (fld.commentLeading ??= []).push(text);
+            rememberBoundComment(c.pos);
           }
         }
         continue;
@@ -245,7 +260,7 @@ export function extractComments(memberText: string, model: QueryModel): void {
 
       // (4) afterFrom — после ИЗ, отдельной строкой.
       if (fromIdx >= 0 && ci > fromIdx) {
-        if (!hasCodeBeforeOnLine(toks, c.line, c.pos) && !inKeptArgs.has(ci)) afterFrom.push(text);
+        if (!hasCodeBeforeOnLine(toks, c.line, c.pos) && !inKeptArgs.has(ci)) { afterFrom.push(text); rememberBoundComment(c.pos); }
         continue;
       }
 

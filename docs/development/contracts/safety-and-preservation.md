@@ -82,6 +82,17 @@ preservation/cancel/nested Save and real-host insertion cases.
 ## Comment boundaries
 
 Bound SELECT/FROM/field comments use QueryComments and the comment binder.
+SELECT interior comments are relocated to existing leading anchors on their
+scalar field or whole tabular projection, preserving text/counts rather than
+original placement inside expressions or individual tabular columns. Simple
+fields/aggregates retain structured representation. Binding and rendering use
+`orderedSelectElements`, including trailing fields and tabular UNION projections.
+Nested source/condition SELECTs inherit preservation, with source-position
+ownership preventing duplicate binding in parents. The strip-comments view
+removes these anchors recursively without mutating the preserving model.
+Existing field-alias/expression edit rules still clear field-bound comments;
+these changes do not redefine that lifecycle. Unrelated edits and reopen retain
+them ([regressions](../../../test/unit/fieldComments.c17.test.ts)).
 Comment-aware argument rendering covers VT, accounting-register, selection-
 criterion and ПЕРИОДАМИ slots: on the argument/comma line comments trail that
 argument; standalone comments lead the next argument, or trail the final one.
@@ -123,7 +134,18 @@ The [JOIN regression matrix](../../../test/unit/joinComments.c17.test.ts) covers
 metadata modes, nested JOINs, source/condition subqueries, UNION, dynamic JOINs,
 comma sources, strip mode, malformed Apply and repeated reopening.
 
-Field, grouping, TOTALS and ORDER raw slices can still lose comments in core
+GROUP BY comments belong to the whole grouping section (`Grouping.commentLeading`),
+not individual keys: key normalization, deduplication and grouping-set rendering
+must not discard them. They are emitted after the section header in source order.
+If existing normalization removes the entire section, they become query headers
+before SELECT. Original intra-expression placement is not preserved. The
+strip-comments view removes the section anchors without mutating the model.
+The new structural path for commented literal-LHS IN subqueries requires every
+comment occurrence to have a recorded owner; mixed unsupported slots retain the
+existing raw path. Legacy compact/HAVING structural rules remain unchanged.
+Regressions: [GROUP comments](../../../test/unit/groupComments.c17.test.ts).
+
+TOTALS and ORDER raw slices can still lose comments in core
 parsing/generation (C17); the designer warns before loading and asks for explicit consent. Saving
 a confirmed candidate can remove those comments. **Consent to comment loss is not
 PRESERVE-ONLY support.** Classic's preserve-comments toggle deliberately changes

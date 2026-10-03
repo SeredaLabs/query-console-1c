@@ -10,8 +10,6 @@ const resolver = buildYamlResolver('test/fixtures/corpus/metadata/cf');
 for (const metadata of [false, true]) describe(`designer comment-loss boundary (metadata=${metadata})`, () => {
   const active = metadata ? resolver : undefined;
   it.each([
-    'ВЫБРАТЬ Т.Код // keep\n+ 1 КАК А ИЗ Справочник.Валюты КАК Т',
-    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т СГРУППИРОВАТЬ ПО Т.Код // keep\n',
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ИТОГИ КОЛИЧЕСТВО(А) // keep\nКАК Н ПО ОБЩИЕ',
   ])('requires confirmation with a validated candidate: %s', input => {
     const opened = tryOpenDesignerBatch(input, active);
@@ -20,6 +18,7 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
     expect(opened.commentLossDoc.members.length).toBeGreaterThan(0);
   });
   it.each([
+    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т СГРУППИРОВАТЬ ПО Т.Код // keep\n',
     'ВЫБРАТЬ П.А ИЗ (ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО Т.Код = Б.Код // keep\n) КАК П',
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 // keep\nИЛИ Т.Код = 2',
     'ВЫБРАТЬ Т.Код КАК А, КОЛИЧЕСТВО(*) КАК Н ИЗ Справочник.Валюты КАК Т СГРУППИРОВАТЬ ПО Т.Код ИМЕЮЩИЕ КОЛИЧЕСТВО(*) > 1 // keep\nИ СУММА(1) > 0',
@@ -29,6 +28,7 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
     'ВЫБРАТЬ Т.Период ИЗ РегистрСведений.ЦеныНоменклатуры.СрезПоследних(&Д // keep\n, ИСТИНА) КАК Т',
     'ВЫБРАТЬ 1 КАК Число ИТОГИ ПО Число ПЕРИОДАМИ(Месяц, 1 // keep\n, 2)',
     'ВЫБРАТЬ 1 КАК А;\n/////////////////\nВЫБРАТЬ 2 КАК Б',
+    'ВЫБРАТЬ Т.Код // keep\n+ 1 КАК А ИЗ Справочник.Валюты КАК Т',
   ])('opens preserved comments / strings / separators and reopens: %s', input => {
     const opened = tryOpenDesignerBatch(input, active);
     expect(opened.ok).toBe(true);
@@ -36,7 +36,7 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
     expect(tryOpenDesignerBatch(generateBatch(opened.doc), active).ok).toBe(true);
   });
   it('detects one dropped occurrence even when an identical comment survives', () => {
-    const input = '// keep\nВЫБРАТЬ Т.Код // keep\n+ 1 КАК А ИЗ Справочник.Валюты КАК Т';
+    const input = '// keep\nВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т УПОРЯДОЧИТЬ ПО Т.Код // keep\n';
     const opened = tryOpenDesignerBatch(input, active);
     expect(opened).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: expect.any(Object), lost: ['// keep'] });
     if (!('commentLossDoc' in opened)) throw new Error('missing confirmation candidate');
@@ -61,7 +61,7 @@ it('generation failure remains an error without a confirmation candidate', () =>
 
 for (const metadata of [false, true]) it(`returns all lost occurrences in source order, including repeats and more than five (metadata=${metadata})`, () => {
   const lost = ['//  first  ', '// repeat', '// <b>literal</b>', '// repeat', '// fifth', '// sixth', '// seventh'];
-  const input = '// repeat\nВЫБРАТЬ Т.Код ' + lost.map((comment, i) => `${comment}\n+ ${i + 1}`).join(' ') + ' КАК А ИЗ Справочник.Валюты КАК Т';
+  const input = '// repeat\nВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т УПОРЯДОЧИТЬ ПО Т.Код ' + lost.map((comment, i) => `${comment}\n+ ${i + 1}`).join(' ');
   const opened = tryOpenDesignerBatch(input, metadata ? resolver : undefined);
   expect(opened).toMatchObject({ ok: false, lost });
   if (!('commentLossDoc' in opened)) throw new Error('missing confirmation candidate');

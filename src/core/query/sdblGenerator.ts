@@ -1717,15 +1717,16 @@ function buildQueryBlock(
   // Фаза 8.1 (шаг 5) — восстановление комментариев запроса. Без данных о
   // комментариях все вставки пусты → вывод байт-в-байт прежний.
   // Вид 1 (commentTrailing) — после запятой на строке поля (с пробелом).
+  const projectionComments = orderedSelectElements(model).map(el => el.kind === 'field' ? el.field : el.tsf);
   const linesBase = fieldLines.map((l, i) => {
     const withComma = i < fieldLines.length - 1 ? l + ',' : l;
-    const trailing = i < model.fields.length ? model.fields[i]?.commentTrailing : undefined;
+    const trailing = projectionComments[i]?.commentTrailing;
     return trailing ? withComma + ' ' + trailing : withComma;
   });
   // Вид 2 (commentLeading) — отдельные строки с нулевым отступом ПЕРЕД полем.
   const lines: string[] = [];
   for (let i = 0; i < linesBase.length; i++) {
-    const leading = i < model.fields.length ? model.fields[i]?.commentLeading : undefined;
+    const leading = projectionComments[i]?.commentLeading;
     if (leading?.length) lines.push(...leading);
     lines.push(linesBase[i]);
   }
@@ -1745,7 +1746,9 @@ function buildQueryBlock(
   // MCP-пробы): секции идут вплотную.
   const sectionSep = inConditionSubquery ? [] : [''];
   const groupingInner = renderGrouping(model.grouping, aliases, model);
-  const groupingLines = groupingInner.length ? [...sectionSep, ...groupingInner] : [];
+  const groupComments = model.grouping?.commentLeading ?? [];
+  const groupingLines = groupingInner.length
+    ? [...sectionSep, groupingInner[0], ...groupComments.map(c => '\t' + c), ...groupingInner.slice(1)] : [];
   // ИМЕЮЩИЕ — сразу за группировкой, тоже с предшествующей пустой строкой.
   const havingLines = renderHaving(model.having, aliases);
 
@@ -1773,6 +1776,8 @@ function buildQueryBlock(
   return [
     // Вид 3 (beforeSelect) — строки перед `ВЫБРАТЬ`, нулевой отступ.
     ...(model.comments?.beforeSelect ?? []),
+    // Existing normalization may remove every grouping key; keep its comments as query headers.
+    ...(groupingInner.length ? [] : groupComments),
     'ВЫБРАТЬ' + selectionModifiers(model.selection),
     ...lines,
     // {ВЫБРАТЬ …} конструктор печатает ПОСЛЕ ПОМЕСТИТЬ/ДОБАВИТЬ (если те есть),

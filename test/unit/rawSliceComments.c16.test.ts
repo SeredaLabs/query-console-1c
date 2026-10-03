@@ -86,10 +86,6 @@ const KEPT: Array<[string, string, string]> = [
 
 /** Slots that still drop the comment (C17, step 8). Apply must not be newly blocked. */
 const KNOWN_LOSS: Array<[string, string]> = [
-  ['field expression, inner',
-    'ВЫБРАТЬ\n\tТ.Код // c1\n\t+ 1 КАК А\nИЗ Справочник.Валюты КАК Т'],
-  ['СГРУППИРОВАТЬ ПО',
-    'ВЫБРАТЬ Т.Код КАК А, КОЛИЧЕСТВО(*) КАК Н ИЗ Справочник.Валюты КАК Т\nСГРУППИРОВАТЬ ПО\n\tТ.Код // c1\nУПОРЯДОЧИТЬ ПО А'],
   ['ИТОГИ aggregate',
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т\nИТОГИ\n\tКОЛИЧЕСТВО(А) // c1\n\tКАК Н\nПО\n\tОБЩИЕ'],
 ];

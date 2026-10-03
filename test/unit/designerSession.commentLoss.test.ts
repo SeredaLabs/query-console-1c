@@ -16,7 +16,7 @@ vi.mock('../../src/webview/bridge', () => ({
   postToHost: vi.fn(),
 }));
 afterEach(() => vi.clearAllMocks());
-const lossy = (value = 1) => `ВЫБРАТЬ Т.Код // lost\n+ ${value} КАК А ИЗ Справочник.Валюты КАК Т`;
+const lossy = (value = 1) => `ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т УПОРЯДОЧИТЬ ПО Т.Код // lost\n+ ${value}`;
 
 it('awaits consent, loads the candidate once, and never writes editor text', () => {
   const dispatch = vi.fn();

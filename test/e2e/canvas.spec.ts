@@ -507,8 +507,8 @@ for (const surface of ['classic', 'canvas'] as const) {
   }
 }
 
-// Field-expression comments remain unsupported; consent still protects them.
-const commentLossQuery = '// bound\nВЫБРАТЬ В.Код // lost\n+ 1 КАК Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = 1';
+// ORDER comments remain unsupported; consent still protects them.
+const commentLossQuery = '// bound\nВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = 1 УПОРЯДОЧИТЬ ПО В.Код // lost';
 
 for (const surface of ['classic', 'canvas'] as const) {
   for (const cancel of ['button', 'Escape'] as const) {
@@ -590,7 +590,7 @@ for (const v2 of [false, true]) {
 for (const surface of ['classic', 'canvas'] as const) {
   test(`${surface}: C17 displays the first five lost comments literally and the remaining count`, async ({ page }) => {
     const lost = ['//  first  ', '// repeat', '// <b>literal</b>', '// repeat', '// fifth', '// sixth', '// seventh'];
-    const input = '// repeat\nВЫБРАТЬ В.Код ' + lost.map((comment, i) => `${comment}\n+ ${i + 1}`).join(' ') + ' КАК А ИЗ Справочник.Валюты КАК В';
+    const input = '// repeat\nВЫБРАТЬ В.Код КАК А ИЗ Справочник.Валюты КАК В УПОРЯДОЧИТЬ ПО В.Код ' + lost.map((comment, i) => `${comment}\n+ ${i + 1}`).join(' ');
     await open(page, surface, input);
     const list = page.getByTestId('comment-loss-list');
     await expect(list.locator('pre')).toHaveCount(5);
@@ -1047,4 +1047,31 @@ for (const surface of ['classic', 'canvas'] as const) {
       }
     });
   }
+}
+
+for (const slot of ['SELECT', 'GROUP'] as const) for (const surface of ['classic', 'canvas'] as const) {
+  test(`${surface}: C17 ${slot} comments survive unrelated edit and three Save/reopens`, async ({ page }) => {
+    const input = slot === 'SELECT'
+      ? 'ВЫБРАТЬ Т.Код КАК А, Т.Код // field\n+ 1 КАК Б ИЗ Справочник.Валюты КАК Т'
+      : 'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т СГРУППИРОВАТЬ ПО Т.Код // field';
+    await open(page, surface, input);
+    await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
+    if (surface === 'canvas') {
+      await page.getByRole('button', { name: /Поля$/ }).click();
+      await page.getByPlaceholder('Псевдоним', { exact: true }).first().fill('НовыйКод');
+    } else {
+      await page.locator('[data-tab="Объединения/Псевдонимы"]').click();
+      const alias = page.getByRole('table').nth(1).getByRole('textbox').first();
+      await alias.fill('НовыйКод');
+      await alias.press('Tab');
+    }
+    const output = await save(page, surface);
+    expect(output).toContain('КАК НовыйКод');
+    expect(output.split('// field')).toHaveLength(2);
+    for (let pass = 0; pass < 3; pass++) {
+      await open(page, surface, output);
+      await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
+      expect(await save(page, surface)).toBe(output);
+    }
+  });
 }

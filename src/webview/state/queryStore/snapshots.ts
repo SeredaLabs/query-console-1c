@@ -1,6 +1,6 @@
 import { tryTokenize } from '../../../core/query/sdblLexer';
 import type { MetaField, MetaTable } from '../../../core/metadata/types';
-import type { Condition, Grouping, Indexing, Order, QueryModel, QueryType, ReportBuilder, SelectedField, Totals } from '../../../core/query/queryModel';
+import type { Condition, Grouping, Indexing, Order, QueryModel, QueryType, ReportBuilder, Totals } from '../../../core/query/queryModel';
 import { compoundCarrierOf, selectColumnAliases, type QueryDocument, type UnionMember } from '../../../core/query/unionModel';
 import type { BatchDocument } from '../../../core/query/batchModel';
 import type { BatchSnapshot, QueryState, SavedQuery } from '../queryStore';
@@ -503,17 +503,20 @@ export function stripBatchComments(batch: BatchDocument): BatchDocument {
   };
 }
 
-export function stripFieldComments(fields: SelectedField[]): SelectedField[] {
+export function stripFieldComments<T extends { commentLeading?: string[]; commentTrailing?: string }>(fields: T[]): T[] {
   return fields.map(f => {
     if (f.commentLeading === undefined && f.commentTrailing === undefined) return f;
-    const { commentLeading, commentTrailing, ...rest } = f;
-    return rest;
+    const copy = { ...f };
+    delete copy.commentLeading;
+    delete copy.commentTrailing;
+    return copy;
   });
 }
 
 /** C17: the explicit strip-comments view also strips condition text/anchors,
  * recursively, without mutating the editable models used by the preserving view. */
 function stripConditionComments(model: QueryModel): QueryModel {
+  const { comments: _containerComments, ...modelWithoutComments } = model;
   const document = (doc: QueryDocument): QueryDocument => ({
     ...doc, members: doc.members.map(m => ({ ...m, model: stripConditionComments(m.model) })),
   });
@@ -529,7 +532,11 @@ function stripConditionComments(model: QueryModel): QueryModel {
     return rest;
   };
   return {
-    ...model,
+    ...modelWithoutComments,
+    fields: stripFieldComments(model.fields),
+    ...(model.trailingFields ? { trailingFields: stripFieldComments(model.trailingFields) } : {}),
+    ...(model.tabSectionFields ? { tabSectionFields: stripFieldComments(model.tabSectionFields) } : {}),
+    ...(model.grouping ? { grouping: stripFieldComments([model.grouping])[0] } : {}),
     ...(model.conditions ? { conditions: model.conditions.map(condition) } : {}),
     ...(model.having ? { having: model.having.map(condition) } : {}),
     ...(model.joins ? { joins: model.joins.map(j => ({ ...j, ...(j.conditions ? { conditions: j.conditions.map(condition) } : {}) })) } : {}),

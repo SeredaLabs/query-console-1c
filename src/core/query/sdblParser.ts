@@ -942,9 +942,17 @@ function parseSingleQueryBody(
     readBuilderWhere();
   }
 
-  let groupingFromClause: { multiple: boolean; groupFields: FieldRef[]; groupSets: FieldRef[][] } | undefined;
+  let groupingFromClause: { multiple: boolean; groupFields: FieldRef[]; groupSets: FieldRef[][]; commentLeading?: string[] } | undefined;
   if (cur.isKeyword('СГРУППИРОВАТЬ')) {
+    const start = cur.peek().pos;
     groupingFromClause = parseGroupBy(cur, aliasToId, resolveOwner, tableFullNames);
+    if (keepArgComments) {
+      const end = cur.peek().type === 'eof' ? cur.sourceEnd : cur.peek().pos;
+      const comments = tokenize(cur.source.slice(start, end), { comments: true })
+        .filter(t => t.type === 'comment' && !/^\/+$/u.test(t.text));
+      if (comments.length) groupingFromClause.commentLeading = comments.map(t => t.text);
+      for (const comment of comments) cur.keptConditionComments.add(start + comment.pos);
+    }
   }
 
   // ИМЕЮЩИЕ — фильтр по агрегатам, сразу за СГРУППИРОВАТЬ ПО.
@@ -999,6 +1007,7 @@ function parseSingleQueryBody(
       multiple: groupingFromClause?.multiple ?? false,
       groupFields: groupingFromClause?.groupFields ?? [],
       groupSets: groupingFromClause?.groupSets ?? [],
+      ...(groupingFromClause?.commentLeading ? { commentLeading: groupingFromClause.commentLeading } : {}),
       aggregates,
       // Граница ЯВНОЙ части группировки — до автодописанных ниже расширений выборки.
       explicitGroupCount: groupingFromClause?.groupFields.length ?? 0,
@@ -2078,7 +2087,7 @@ function parseTableSource(cur: Cursor, index: number): SelectedTable {
     const innerSink = cur.sourceMap ? new RecordingSourceMapSink() : undefined;
     try {
       subquery = withSubqueryRecursionGuard(() =>
-        parseDocument(innerText, sourceResolver, innerSink ? { sourceMap: innerSink } : undefined)
+        parseDocument(innerText, sourceResolver, { preserveComments: keepArgComments, ...(innerSink ? { sourceMap: innerSink } : {}) })
       );
       rememberNestedConditionComments(cur.keptConditionComments, innerText, open.pos + 1, subquery);
     } catch (e) {
@@ -2998,6 +3007,8 @@ function parseConditionList(
   }
   for (const comment of comments) {
     const pos = start + comment.pos;
+    // Nested SELECT headers already belong to the subquery, even before its SELECT token.
+    if (cur.keptConditionComments.has(pos)) continue;
     const containing = segments.findIndex(seg => pos >= seg[0].pos && pos < seg[seg.length - 1].pos + seg[seg.length - 1].text.length);
     if (containing >= 0) {
       const c = conditions[containing];
@@ -3262,7 +3273,11 @@ function trySimpleCondition(
       // путь скобки СОХРАНЯЕТ, а конструктор 1С их снимает (внутри подзапроса-операнда,
       // в отличие от ИМЕЮЩИЕ верхнего уровня) — расхождение. Разворачиваем структурно
       // (renderConditionSubquery), где formatExpression снимает обёртку байт-в-байт.
-      if (inner !== undefined && (isCompactSubquerySource(inner) || hasRedundantHavingOrParens(inner))) {
+      const comments = inner !== undefined && keepArgComments
+        ? tokenize(inner, { comments: true }).filter(t => t.type === 'comment') : [];
+      const legacyStructured = inner !== undefined &&
+        (isCompactSubquerySource(inner) || hasRedundantHavingOrParens(inner));
+      if (inner !== undefined && (legacyStructured || comments.length > 0)) {
         const sub = trySubqueryParam(subTokens, source);
         // Компактный подзапрос (`ВЫБРАТЬ … ИЗ` на одной строке) с нессылочным LHS
         // конструктор разворачивает структурно по строкам. Одноветочный подзапрос
@@ -3270,7 +3285,13 @@ function trySimpleCondition(
         // текстовом пути (плоский `1 В (ВЫБРАТЬ …)`). Канонические `ИСТИНА В`/`ЛОЖЬ В`
         // записаны НЕ компактно и сюда по-прежнему не попадают.
         if (sub) {
-          return { custom: true, leftExpr: sliceSource(source, lhs), subquery: sub };
+          // The new commented path is safe only when every source occurrence has
+          // an owner. Unsupported/mixed slots must retain the existing raw path.
+          const owned = new Set<number>();
+          if (!legacyStructured) rememberNestedConditionComments(owned, inner, 0, sub);
+          if (legacyStructured || comments.every(t => owned.has(t.pos))) {
+            return { custom: true, leftExpr: sliceSource(source, lhs), subquery: sub };
+          }
         }
       }
     }
@@ -3495,10 +3516,10 @@ function trySubqueryParam(paramTokens: Token[], source: string): QueryDocument |
     // `ИЗ <ВТ>` для скорочення `(ВЫБРАТЬ ВТ.Поле)` без явного `ИЗ` — поле
     // залишається сирим виразом з автопсевдонімом, джерело губиться (P0).
     if (!recordConditionSubqueries) {
-      return withSubqueryRecursionGuard(() => parseDocument(innerText, sourceResolver));
+      return withSubqueryRecursionGuard(() => parseDocument(innerText, sourceResolver, { preserveComments: keepArgComments }));
     }
     const sink = new RecordingSourceMapSink();
-    const doc = withSubqueryRecursionGuard(() => parseDocument(innerText, sourceResolver, { sourceMap: sink }));
+    const doc = withSubqueryRecursionGuard(() => parseDocument(innerText, sourceResolver, { sourceMap: sink, preserveComments: keepArgComments }));
     conditionSubqueryEvents.set(doc, { range: { start: open.pos, end: close.pos + 1 }, offset: open.pos + 1, events: sink.events });
     return doc;
   } catch (e) {

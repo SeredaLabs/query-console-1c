@@ -169,6 +169,7 @@ export interface SelectedField {
    * исчезают при удалении поля (поле выпадает из массива) и при его переименовании
    * (reducer чистит при SET_COLUMN_ALIAS/SET_FIELD_EXPRESSION).
    */
+  // Also holds interior SELECT comments relocated to the field boundary (C17).
   commentLeading?: string[];
   /**
    * Фаза 8.1 — сохранённый комментарий запроса (вид 1): хвостовой `//…` (с префиксом
@@ -201,6 +202,9 @@ export type TabSectionColumn =
   | { kind: 'expr'; expression: string; alias?: string };
 
 export interface SelectedTabSectionField {
+  /** Comments anchored to the whole SELECT projection, including its interior. */
+  commentLeading?: string[];
+  commentTrailing?: string;
   tableId: string;
   tsName: string;
   tsFullName: string;
@@ -281,6 +285,8 @@ export interface SummableField extends FieldRef {
 }
 
 export interface Grouping {
+  /** Section-owned comments survive grouping-field normalization and deduplication. */
+  commentLeading?: string[];
   /** «Использовать несколько группировок». */
   multiple: boolean;
   /** Поля группировки (режим single), в порядке добавления. */

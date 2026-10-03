@@ -17,6 +17,12 @@ This is an indexed historical archive, not a second status ledger.
 
 | Date | Audit / scope | Result → debt/fix | Disposition |
 |---|---|---|---|
+| 2026-10-03 | [C17 GROUP review fix](c17-group-review-fix-2026-10-03.md) | Require every comment to have an owner before the new structural transition | RESOLVED review regression; mixed-slot coverage added |
+| 2026-10-03 | [C17 GROUP review](c17-group-review-2026-10-03.md) | GROUP probes pass; any-comment structural trigger loses other raw comments | RESOLVED by ownership guard; original evidence retained |
+| 2026-10-03 | [C17 GROUP BY comments](c17-group-comments-2026-10-03.md) | Section ownership survives key normalization and nested reopening | Broad condition-subquery trigger fixed separately; C17 remains OPEN |
+| 2026-10-03 | [C17 SELECT review fixes](c17-select-review-fix-2026-10-03.md) | Single nested-comment ownership and keyword-alias clause boundaries | RESOLVED two SELECT findings; remaining C17 slots OPEN |
+| 2026-10-03 | [C17 SELECT review](c17-select-review-2026-10-03.md) | Token-boundary probes compared with HEAD; nested ownership and keyword aliases | Two SELECT findings resolved by follow-up; other slots OPEN |
+| 2026-10-03 | [C17 SELECT projection comments](c17-select-comments-2026-10-03.md) | Interior field, tabular and trailing comments anchored in projection order | Review findings resolved by bounded follow-up; C17 remains OPEN |
 | 2026-10-02 | [C17 literal follow-up fix](c17-literal-followup-fix-2026-10-02.md) | Preserve function CASE and tabular SELECT literals through reopening | RESOLVED two review findings; remaining C17 comment slots OPEN |
 | 2026-10-02 | [C17 literal fix review](c17-literal-review-2026-10-02.md) | Two pre-existing gaps omitted by new tests: function CASE and tabular SELECT | RESOLVED by bounded follow-up; review evidence retained |
 | 2026-10-02 | [C17 SELECT literal preservation fix](c17-literal-preservation-fix-2026-10-02.md) | Removed value-changing SELECT padding; explicit ADR exception and live execution control | Leaf padding fixed; reviewed function CASE/tabular gaps resolved separately |

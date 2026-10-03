@@ -1,0 +1,36 @@
+{
+  "compared": 15808,
+  "changes": 0,
+  "withoutComments": 0,
+  "preserving": 0,
+  "errorsBefore": 0,
+  "errorsAfter": 0,
+  "baseline": "6bab85f1f6e18c96eb76355f4567c909c7b098fd",
+  "modes": [
+    {
+      "preserveComments": false,
+      "metadata": false,
+      "compared": 3952,
+      "changes": 0
+    },
+    {
+      "preserveComments": false,
+      "metadata": true,
+      "compared": 3952,
+      "changes": 0
+    },
+    {
+      "preserveComments": true,
+      "metadata": false,
+      "compared": 3952,
+      "changes": 0
+    },
+    {
+      "preserveComments": true,
+      "metadata": true,
+      "compared": 3952,
+      "changes": 0
+    }
+  ],
+  "files": []
+}
