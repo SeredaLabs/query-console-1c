@@ -1,5 +1,5 @@
 <!--
-source_version: 11
+source_version: 12
 translation_status: canonical
 -->
 
@@ -43,8 +43,10 @@ expansion remain Classic-only assisted workflows. The
 [current matrix](../design/new-builder/feature-baseline.md) defines the surface;
 browser/real-host gates are bounded and do not replace UX/accessibility/release review.
 
-`ГДЕ`/`ИМЕЮЩИЕ` comments are preserved, with safe line breaks around conjunctions.
-Unsupported JOIN/field/group/TOTALS raw-expression `//` comments trigger a warning and confirmation
+`//` comments are preserved in `ГДЕ`/`ИМЕЮЩИЕ` (with safe line breaks around
+conjunctions), JOIN conditions, selected fields, `СГРУППИРОВАТЬ ПО`, `ИТОГИ`
+(moved after the `ИТОГИ` header) and virtual-table/`ПЕРИОДАМИ` arguments.
+Other comments, such as in `УПОРЯДОЧИТЬ ПО` or next to a source name or alias, trigger a warning and confirmation
 before loading/replacing the model (C17). Cancel keeps the prior model/text;
 continuing allows known comment loss on Save/OK. The original editor text stays
 unchanged until Save. Consent is not preservation support. A negated condition

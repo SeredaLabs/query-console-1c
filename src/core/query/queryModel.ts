@@ -414,6 +414,8 @@ export interface TotalField {
 }
 
 export interface Totals {
+  /** Section-owned comments, excluding comments retained in ПЕРИОДАМИ arguments. */
+  commentLeading?: string[];
   groupFields: TotalGroupField[];
   totalFields: TotalField[];
   /** «Общие итоги» → ОБЩИЕ первым элементом списка ПО. */

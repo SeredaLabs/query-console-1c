@@ -145,7 +145,13 @@ comment occurrence to have a recorded owner; mixed unsupported slots retain the
 existing raw path. Legacy compact/HAVING structural rules remain unchanged.
 Regressions: [GROUP comments](../../../test/unit/groupComments.c17.test.ts).
 
-TOTALS and ORDER raw slices can still lose comments in core
+TOTALS comments outside `ПЕРИОДАМИ(…)` arguments (which keep theirs in place, C16)
+belong to the whole section (`Totals.commentLeading`) and are emitted after the
+`ИТОГИ` header in source order; original intra-expression placement is not
+preserved. The strip-comments view removes them without mutating the model.
+Regressions: [TOTALS comments](../../../test/unit/totalsComments.c17.test.ts).
+
+ORDER raw slices, source header/path/alias and UNION separator comments can still lose comments in core
 parsing/generation (C17); the designer warns before loading and asks for explicit consent. Saving
 a confirmed candidate can remove those comments. **Consent to comment loss is not
 PRESERVE-ONLY support.** Classic's preserve-comments toggle deliberately changes

@@ -1075,6 +1075,13 @@ function parseSingleQueryBody(
   if (cur.isKeyword('ИТОГИ')) {
     const start = cur.peek().pos;
     model.totals = parseTotals(cur, sectionCtx);
+    if (keepArgComments) {
+      const end = cur.peek().type === 'eof' ? cur.sourceEnd : cur.peek().pos;
+      const comments = tokenize(cur.source.slice(start, end), { comments: true })
+        .filter(t => t.type === 'comment' && !/^\/+$/u.test(t.text) && !cur.keptConditionComments.has(start + t.pos));
+      if (comments.length) model.totals.commentLeading = comments.map(t => t.text);
+      for (const comment of comments) cur.keptConditionComments.add(start + comment.pos);
+    }
     cur.sourceMap?.record({ kind: 'outputAliasSection', index: 1, range: { start, end: cur.peek().pos } });
   }
   // АВТОУПОРЯДОЧИВАНИЕ может стоять В САМОМ КОНЦЕ запроса — ПОСЛЕ ИТОГИ (1С печатает
@@ -4533,7 +4540,13 @@ function matchPeriodBy(cur: Cursor): string | undefined {
   }
   if (curArg.length) { args.push(sliceSource(cur.source, curArg)); groups.push(curArg); }
   const kept = keepArgComments ? argTextsKeepingComments(cur.source, groups, openEnd, closePos) : undefined;
-  if (kept) return periodByKeepingComments(kept);
+  if (kept) {
+    // The argument renderer owns these occurrences; TOTALS must not bind them again.
+    for (const t of tokenize(cur.source.slice(openEnd, closePos), { comments: true })) {
+      if (t.type === 'comment') cur.keptConditionComments.add(openEnd + t.pos);
+    }
+    return periodByKeepingComments(kept);
+  }
   // Первый аргумент — период (ГОД/КВАРТАЛ/МЕСЯЦ/…): нормализуем в верхний регистр.
   if (args.length) args[0] = args[0].toUpperCase();
   return `ПЕРИОДАМИ(${args.join(', ')})`;

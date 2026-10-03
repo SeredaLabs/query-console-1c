@@ -2337,10 +2337,11 @@ export function renderTotals(totals: Totals | undefined, model: QueryModel): str
   const withCommas = (items: string[]): string[] =>
     items.map((s, i) => `\t${s}${i < items.length - 1 ? ',' : ''}`);
 
+  const comments = (totals.commentLeading ?? []).map(c => '\t' + c);
   if (aggList.length > 0) {
-    return ['ИТОГИ', ...withCommas(aggList), 'ПО', ...withCommas(byList)];
+    return ['ИТОГИ', ...comments, ...withCommas(aggList), 'ПО', ...withCommas(byList)];
   }
-  return ['ИТОГИ ПО', ...withCommas(byList)];
+  return ['ИТОГИ ПО', ...comments, ...withCommas(byList)];
 }
 
 /**

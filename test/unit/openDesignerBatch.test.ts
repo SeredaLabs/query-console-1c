@@ -10,7 +10,7 @@ const resolver = buildYamlResolver('test/fixtures/corpus/metadata/cf');
 for (const metadata of [false, true]) describe(`designer comment-loss boundary (metadata=${metadata})`, () => {
   const active = metadata ? resolver : undefined;
   it.each([
-    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ИТОГИ КОЛИЧЕСТВО(А) // keep\nКАК Н ПО ОБЩИЕ',
+    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т УПОРЯДОЧИТЬ ПО А // keep\n',
   ])('requires confirmation with a validated candidate: %s', input => {
     const opened = tryOpenDesignerBatch(input, active);
     expect(opened).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: expect.any(Object), lost: ['// keep'] });
@@ -29,6 +29,7 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
     'ВЫБРАТЬ 1 КАК Число ИТОГИ ПО Число ПЕРИОДАМИ(Месяц, 1 // keep\n, 2)',
     'ВЫБРАТЬ 1 КАК А;\n/////////////////\nВЫБРАТЬ 2 КАК Б',
     'ВЫБРАТЬ Т.Код // keep\n+ 1 КАК А ИЗ Справочник.Валюты КАК Т',
+    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ИТОГИ КОЛИЧЕСТВО(А) // keep\nКАК Н ПО ОБЩИЕ',
   ])('opens preserved comments / strings / separators and reopens: %s', input => {
     const opened = tryOpenDesignerBatch(input, active);
     expect(opened.ok).toBe(true);
