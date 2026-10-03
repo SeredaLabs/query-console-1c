@@ -17,7 +17,6 @@ hardening or maintenance. Historic severity labels do not set current priority.
 | ID | Status / priority | Remaining work and evidence | Next boundary |
 |---|---|---|---|
 | C2 | OPEN · P1 | English SDBL is platform-valid in recorded RP06/07 but rejected by the Russian parser/detection; contextual keywords and metadata names also need language handling. [Platform results](audits/stage-0/platform-reprobe-results.jsonl). | Token identity spike under A1, then attested RU/EN acceptance/canonicalization pairs. |
-| C6 | OPEN · P3 | Two JOIN shapes add parentheses on a second pass; [truth-table tests](../../test/unit/booleanGroupingSemantics.test.ts) verify both outputs but exempt text equality. | Bounded canonical-layout work over A1; no semantic defect inferred. |
 
 The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
 comment handling and recovery limits. No outstanding correctness item is P0.
@@ -174,6 +173,7 @@ input. The existing C18 regression remains unchanged and pins the Apply blocker.
 | C3 | CLOSED | ORDER hierarchy retained without metadata; [case-specific live evidence](audits/c3-hierarchy-2026-09-28.md). |
 | C4 | CLOSED | Nearest-ancestor condition correlation with known metadata; [live evidence](audits/c4-correlated-2026-09-28.md), correlatedConditions.test.ts. No-metadata fallback retained. |
 | C5 | CLOSED | Invalid input rejected on open or blocked on Apply; invalidInputPreservation.test.ts. |
+| C6 | CLOSED | Two JOIN shapes (`((a ИЛИ b) И c) И d`, `a И ((b ИЛИ c) И d)`) wrapped one more conjunct in parentheses on the second pass. A JOIN conjunct whose ИЛИ sits only in nested parentheses is now split at its top-level И on the first pass, as reopening did; И is associative. [booleanGroupingSemantics](../../test/unit/booleanGroupingSemantics.test.ts) no longer exempts any shape from text equality and still checks truth tables for both passes. |
 | C7 | CLOSED | Lexer-backed parameter extraction; resultProcessingTemplate/queryAnalysisService tests. |
 | C8 | CLOSED | Malformed reparsed generated output blocked; applyGeneratedOutput.test.ts. |
 | C9 | CLOSED | HAVING retained by store/snapshots; [report](audits/c9-having-2026-09-29.md). |

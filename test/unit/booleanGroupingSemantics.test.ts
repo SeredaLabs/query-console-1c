@@ -119,14 +119,8 @@ const VARIANTS: Array<[string, (at: string[]) => string[]]> = [
 ];
 const fill = (shape: string, at: string[]): string => shape.replace(/\b[abcd]\b/g, m => at['abcd'.indexOf(m)]);
 
-// Pre-existing (clean HEAD), semantics-preserving layout instability: on the second
-// pass JOIN ON wraps one more conjunct in parentheses (`И К.Курс > 1000` →
-// `И (К.Курс > 1000)`). Cosmetic JOIN parentheses are out of scope of Stage 1B.3;
-// the semantics of BOTH passes are still verified for these shapes.
-const KNOWN_JOIN_LAYOUT_UNSTABLE = new Set(['((a ИЛИ b) И c) И d', 'a И ((b ИЛИ c) И d)']);
-
 describe.each(MODES)('boolean grouping survives parse → generate (%s)', (_mode, r) => {
-  describe.each(CONTEXTS)('%s', (name, build, extract, baseAtoms) => {
+  describe.each(CONTEXTS)('%s', (_name, build, extract, baseAtoms) => {
     it.each(SHAPES)('%s', (shape) => {
       for (const [, variant] of VARIANTS) {
         const cond = fill(shape, variant(baseAtoms));
@@ -134,7 +128,8 @@ describe.each(MODES)('boolean grouping survives parse → generate (%s)', (_mode
         expectSameSemantics(cond, extract(once));
         const twice = gen(once, r);
         expectSameSemantics(cond, extract(twice));
-        if (!(name === 'JOIN ON' && KNOWN_JOIN_LAYOUT_UNSTABLE.has(shape))) expect(twice).toBe(once);
+        // C6: every shape, including JOIN AND groups with nested ИЛИ, is a fixed point.
+        expect(twice).toBe(once);
       }
     });
   });

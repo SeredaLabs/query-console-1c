@@ -1322,11 +1322,31 @@ function stripOneEnclosingParen(expr: string): string {
  * освобождается от одного охватывающего слоя скобок (скобки восстановит
  * пер-конъюнктная логика). Конъюнкты с ИЛИ/ВЫБОР и не-custom оставляем как есть.
  */
+/** `ИЛИ` outside any parentheses; `undefined` when the lexer rejects the text. */
+function hasTopLevelOr(expr: string): boolean | undefined {
+  const tokens = tryTokenize(expr);
+  if (!tokens) return undefined;
+  let depth = 0;
+  for (const t of tokens) {
+    if (t.type === 'punct') {
+      if (t.value === '(') depth++;
+      else if (t.value === ')') depth--;
+    } else if (depth === 0 && (t.type === 'ident' || t.type === 'keyword') && t.value.toUpperCase() === 'ИЛИ') {
+      return true;
+    }
+  }
+  return false;
+}
+
 function expandAndChainConjuncts(conditions: NonNullable<Join['conditions']>): NonNullable<Join['conditions']> {
   const out: NonNullable<Join['conditions']> = [];
   for (const c of conditions) {
     const e = (c.expression ?? '').trim();
-    if (c.custom && e && !hasLineComment(e) && hasTopLevelBooleanOp(e) === true && !/(^|[^\p{L}\p{N}_&])(ИЛИ|ВЫБОР)([^\p{L}\p{N}_]|$)/iu.test(e)) {
+    // C6: ИЛИ only inside nested parentheses does not block the split — such a
+    // conjunct (`(a ИЛИ b) И c`, from a parenthesized group) is the same AND chain,
+    // and reopening split it and wrapped its parts anyway. И is associative.
+    if (c.custom && e && !hasLineComment(e) && hasTopLevelBooleanOp(e) === true && hasTopLevelOr(e) === false &&
+        !/(^|[^\p{L}\p{N}_&])ВЫБОР([^\p{L}\p{N}_]|$)/iu.test(e)) {
       const parts = splitTopLevelAnd(e);
       if (parts.length > 1) {
         // Помечаем пьесы как полученные расщеплением И-цепочки (фаза 6.16.78):
