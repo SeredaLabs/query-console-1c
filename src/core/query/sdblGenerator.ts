@@ -2400,7 +2400,8 @@ export function renderIndex(indexing: Indexing | undefined, model: QueryModel): 
 export function generate(model: QueryModel): string {
   // УНИЧТОЖИТЬ — самостоятельный запрос, до всех остальных проверок.
   if (model.queryType === 'dropTemp') {
-    return model.tempTableName ? `УНИЧТОЖИТЬ ${model.tempTableName}` : '';
+    // C17: comments of the statement are printed before it.
+    return model.tempTableName ? [...(model.comments?.beforeSelect ?? []), `УНИЧТОЖИТЬ ${model.tempTableName}`].join('\n') : '';
   }
 
   // Запрос без источника (`ВЫБРАТЬ <конст/параметр> КАК Поле [ПОМЕСТИТЬ ВТ]`) —
@@ -3205,7 +3206,16 @@ function renderConditions(
 ): string[] {
   const conds = buildConditionStrings(conditions, aliases);
   if (conds.length === 0) return [];
-  return ['ГДЕ', ...conds.map((c, i) => (i === 0 ? `\t${c}` : `\tИ ${c}`))];
+  return ['ГДЕ', ...conds.map((c, i) => {
+    if (i === 0) return `\t${c}`;
+    // C17: a condition's leading comment lines go before the `И` that joins it, where
+    // reopening finds them again; `И // note` would move on the next round trip.
+    const lines = c.split('\n');
+    let k = 0;
+    while (k < lines.length - 1 && /^\s*\/\//.test(lines[k])) k++;
+    if (k === 0) return `\tИ ${c}`;
+    return [`\t${lines[0]}`, ...lines.slice(1, k), `\tИ ${lines[k].replace(/^\t/, '')}`, ...lines.slice(k + 1)].join('\n');
+  })];
 }
 
 /**

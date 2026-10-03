@@ -1,5 +1,5 @@
 <!--
-source_version: 14
+source_version: 15
 translation_status: canonical
 -->
 
@@ -46,11 +46,10 @@ browser/real-host gates are bounded and do not replace UX/accessibility/release 
 `//` comments are preserved in `ГДЕ`/`ИМЕЮЩИЕ` (with safe line breaks around
 conjunctions), JOIN conditions, selected fields, `СГРУППИРОВАТЬ ПО`, `УПОРЯДОЧИТЬ ПО`,
 `ИТОГИ` (moved after the section header) and virtual-table/`ПЕРИОДАМИ` arguments.
-Other comments after `ИЗ`, such as next to a source name or alias, move after `ИЗ`.
-Comments on the `ПОМЕСТИТЬ` line or in `УНИЧТОЖИТЬ` trigger a warning and confirmation
-before loading/replacing the model (C17). Cancel keeps the prior model/text;
-continuing allows known comment loss on Save/OK. The original editor text stays
-unchanged until Save. Consent is not preservation support. A negated condition
+Other comments, such as next to a source name or alias or on the `ПОМЕСТИТЬ` line,
+move after `ИЗ` (or before `ВЫБРАТЬ`). No comment is dropped. Should a future bug
+lose one, a warning asks for confirmation before loading; Cancel keeps the prior
+model/text, and the editor text stays unchanged until Save. A negated condition
 subquery using the platform-invalid source alias `В` opens but cannot be applied
 (C5/RP11, formerly C18). The same subquery with a valid alias such as `Вал` works.
 Confirmation does not bypass Apply checks. Supported comments remain preserved.

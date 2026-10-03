@@ -5047,14 +5047,12 @@ function splitUnionMemberTexts(text: string): string[] {
     }
     if (t.type === 'keyword' && t.value === 'ОБЪЕДИНИТЬ' && parenDepth === 0 && braceDepth === 0) {
       slices.push(text.slice(segStart, t.pos));
-      let sepEnd = t.pos + t.text.length;
       let j = i + 1;
       const nxt = tokens[j];
-      if (nxt && nxt.type === 'keyword' && nxt.value === 'ВСЕ') {
-        sepEnd = nxt.pos + nxt.text.length;
-        j++;
-      }
-      segStart = sepEnd;
+      if (nxt && nxt.type === 'keyword' && nxt.value === 'ВСЕ') j++;
+      // C17: the next member starts right after ОБЪЕДИНИТЬ, so a comment between
+      // ОБЪЕДИНИТЬ and ВСЕ lands before that member's ВЫБРАТЬ instead of nowhere.
+      segStart = t.pos + t.text.length;
       i = j;
       continue;
     }
@@ -5508,7 +5506,29 @@ export function getBatchStatementSpans(text: string): Array<{ start: number; end
     last = m.index + m[0].length;
   }
   spans.push({ start: last, end: normalized.length });
-  return spans.filter(({ start, end }) => normalized.slice(start, end).trim() !== '');
+  const merged: Array<{ start: number; end: number }> = [];
+  for (const span of spans.filter(({ start, end }) => normalized.slice(start, end).trim() !== '')) {
+    // Same rule as parseBatch: a code-less fragment belongs to the previous statement.
+    if (merged.length && isCodelessFragment(normalized.slice(span.start, span.end))) merged[merged.length - 1].end = span.end;
+    else merged.push({ ...span });
+  }
+  return merged;
+}
+
+/** C17: a batch fragment holding only comments (e.g. `; // note` at the end). */
+function isCodelessFragment(fragment: string): boolean {
+  return tryTokenize(fragment)?.every(t => t.type === 'eof') === true;
+}
+
+/** Appends code-less fragments to the previous statement, so their comments stay
+ * with it instead of forming an empty statement that cannot be parsed. */
+function mergeCodelessFragments(chunks: string[]): string[] {
+  const out: string[] = [];
+  for (const chunk of chunks) {
+    if (out.length && isCodelessFragment(chunk)) out[out.length - 1] += `\n${chunk}`;
+    else out.push(chunk);
+  }
+  return out;
 }
 
 /**
@@ -5556,7 +5576,7 @@ function parseBatchInner(
   // Пустые фрагменты после деления (хвостовой разделитель `;\n////…` без
   // следующего запроса) конструктор отбрасывает — канон заканчивается последним
   // запросом без хвостового разделителя.
-  const chunks = splitBatchText(normalized).filter((c) => c.trim() !== '');
+  const chunks = mergeCodelessFragments(splitBatchText(normalized).filter((c) => c.trim() !== ''));
   // Absolute `[start, end)` span of each chunk
   // within `text` — `getBatchStatementSpans` uses the exact same splitting logic
   // (same regex, same string-literal-range guard) and already filters empty

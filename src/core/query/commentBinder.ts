@@ -121,7 +121,13 @@ export function extractComments(memberText: string, model: QueryModel): void {
         placeIdx = i;
       }
     }
-    if (selectIdx < 0) return; // без ВЫБРАТЬ привязывать не к чему
+    if (selectIdx < 0) {
+      // C17: a statement without ВЫБРАТЬ (УНИЧТОЖИТЬ) keeps its comments in front
+      // of the statement; generated package separators are not user comments.
+      const own = toks.filter(t => t.type === 'comment' && !isAutoSeparator(t.value)).map(t => t.value);
+      if (own.length) (model.comments ??= {}).beforeSelect = own;
+      return;
+    }
 
     // SELECT ends at the first placement/source/following-clause boundary.
     const candidates = [placeIdx, fromIdx, clauseIdx].filter(x => x >= 0);
@@ -233,28 +239,27 @@ export function extractComments(memberText: string, model: QueryModel): void {
           continue;
         }
         const trailing = ci > (segments[0]?.startTok ?? ci) && hasCodeBeforeOnLine(toks, c.line, c.pos);
-        if (trailing) {
-          // (1) Хвостовой — поле сегмента, на чьей последней строке стоит комментарий.
-          const segIdx = segments.reduce((found, s, index) => toks[s.endTok].pos < c.pos && toks[s.endTok].line === c.line ? index : found, -1);
-          const fld = segIdx >= 0 ? segField[segIdx] : undefined;
-          if (fld) {
-            rememberBoundComment(c.pos);
-            fld.commentTrailing = fld.commentTrailing
-              ? `${fld.commentTrailing} ${text}`
-              : text;
-          }
-        } else {
-          // (2) Полностью-строчный — commentLeading СЛЕДУЮЩЕГО сегмента
-          // (первый сегмент, начинающийся ПОСЛЕ позиции комментария).
-          const next = segments.findIndex(s => toks[s.startTok].pos > c.pos);
-          const segIdx = next >= 0 ? next : segments.length - 1;
-          const fld = segIdx >= 0 ? segField[segIdx] : undefined;
-          // A comment after the final projection stays anchored to that projection.
-          if (fld) {
-            (fld.commentLeading ??= []).push(text);
-            rememberBoundComment(c.pos);
-          }
+        // (1) Хвостовой — поле сегмента, на чьей последней строке стоит комментарий.
+        // C17: a line holding only a separator (`\t, // c`) ends no projection; that
+        // comment leads the next one like a standalone comment instead of being dropped.
+        const trailingSeg = trailing
+          ? segments.reduce((found, s, index) => toks[s.endTok].pos < c.pos && toks[s.endTok].line === c.line ? index : found, -1)
+          : -1;
+        if (trailingSeg >= 0 && segField[trailingSeg]) {
+          const fld = segField[trailingSeg]!;
+          fld.commentTrailing = fld.commentTrailing ? `${fld.commentTrailing} ${text}` : text;
+          rememberBoundComment(c.pos);
+          continue;
         }
+        // (2) Полностью-строчный — commentLeading СЛЕДУЮЩЕГО сегмента
+        // (первый сегмент, начинающийся ПОСЛЕ позиции комментария).
+        const next = segments.findIndex(s => toks[s.startTok].pos > c.pos);
+        const segIdx = next >= 0 ? next : segments.length - 1;
+        // A comment after the final projection stays anchored to that projection;
+        // with no projection to anchor to it goes before ВЫБРАТЬ, never dropped.
+        const fld = segIdx >= 0 ? segField[segIdx] : undefined;
+        (fld ? (fld.commentLeading ??= []) : beforeSelect).push(text);
+        rememberBoundComment(c.pos);
         continue;
       }
 
@@ -266,7 +271,12 @@ export function extractComments(memberText: string, model: QueryModel): void {
         continue;
       }
 
-      // Прочее — отбрасываем.
+      // C17: anything else no section owns (the ПОМЕСТИТЬ line, a source-less
+      // tail) is relocated, never dropped: after ИЗ when there is one, otherwise
+      // before ВЫБРАТЬ, where reopening finds it again.
+      if (inKeptArgs.has(ci)) continue;
+      if (fromIdx >= 0) afterFrom.push(text); else beforeSelect.push(text);
+      rememberBoundComment(c.pos);
     }
 
     // --- 5. Запись контейнерных комментариев (только при наличии) ----------

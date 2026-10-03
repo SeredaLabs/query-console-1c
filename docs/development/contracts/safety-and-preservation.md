@@ -165,10 +165,19 @@ existing own-line comments. Comments in a raw `{ХАРАКТЕРИСТИКИ}` b
 by the block and stay there. Original line association is not preserved.
 Regressions: [FROM-region comments](../../../test/unit/sourceComments.c17.test.ts).
 
-ПОМЕСТИТЬ-line and УНИЧТОЖИТЬ comments can still lose comments in core
-parsing/generation (C17); the designer warns before loading and asks for explicit consent. Saving
-a confirmed candidate can remove those comments. **Consent to comment loss is not
-PRESERVE-ONLY support.** Classic's preserve-comments toggle deliberately changes
+Any other unowned comment is relocated, never dropped: after ИЗ when the
+statement has one (the ПОМЕСТИТЬ line), otherwise before ВЫБРАТЬ; a comma-only
+line leads the next projection; a comment between ОБЪЕДИНИТЬ and ВСЕ precedes the
+next member; a code-less package fragment (`; // note` at the end) joins the
+previous statement; УНИЧТОЖИТЬ keeps its comments in front of the statement. A
+WHERE condition's leading comments are printed before its `И`, so reopening does
+not move them.
+
+With these, no known input loses a comment (C17 CLOSED; a comment after every
+corpus token reopens without loss). The designer still compares comments before
+loading: should a renderer regression drop one, it warns and asks for explicit
+consent, and saving a confirmed candidate can remove it. **Consent to comment
+loss is not PRESERVE-ONLY support.** Classic's preserve-comments toggle deliberately changes
 the user's output policy; Canvas keeps preservation enabled. Parsing without
 `preserveComments` is a separate core API mode, not evidence that user comments
 are safe to discard in production loading. Comments inside strings are strings.

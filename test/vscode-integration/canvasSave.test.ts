@@ -9,9 +9,8 @@ import { t } from '../../src/webview-canvas/i18n';
 import { FIXTURE_CF, REPO_ROOT, waitUntil } from './testUtil';
 
 describe('Extension Host: Canvas load → edit → Save → source document', () => {
-  for (const mode of ['alias', 'nested', 'comment-cancel', 'comment-save', 'condition-comments', 'join-comments', 'field-comments', 'group-comments', 'order-comments'] as const) it(`production Canvas ${mode} uses the real bridge and preserves surrounding BSL`, async function () {
+  for (const mode of ['alias', 'nested', 'source-comments', 'condition-comments', 'join-comments', 'field-comments', 'group-comments', 'order-comments'] as const) it(`production Canvas ${mode} uses the real bridge and preserves surrounding BSL`, async function () {
     const nested = mode === 'nested';
-    const commentLoss = mode === 'comment-cancel' || mode === 'comment-save';
     this.timeout(25000);
     const config = vscode.workspace.getConfiguration('queryConsole');
     const previous = config.inspect<boolean>('openInNewWindow')?.globalValue;
@@ -20,8 +19,9 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
     const channel = vscode.window.createOutputChannel('Canvas save integration');
     let panel: vscode.WebviewPanel | undefined;
     try {
-      const query = commentLoss
-        ? '// bound\nВЫБРАТЬ В.Ссылка КАК Код ПОМЕСТИТЬ ВТ // lost\nИЗ Справочник.Тест КАК В ГДЕ В.Ссылка = &Код'
+      // source-comments: inputs that needed consent to comment loss before C17 closed.
+      const query = mode === 'source-comments'
+        ? '// bound\nВЫБРАТЬ В.Ссылка КАК Код ПОМЕСТИТЬ ВТ // into\nИЗ Справочник.Тест // source\nКАК В ГДЕ В.Ссылка = &Код'
         : mode === 'order-comments'
         ? 'ВЫБРАТЬ В.Ссылка КАК Код ИЗ Справочник.Тест КАК В УПОРЯДОЧИТЬ ПО // order\nВ.Ссылка'
         : mode === 'group-comments'
@@ -61,7 +61,6 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
       const labels = JSON.stringify({
         fields: t(locale, 'workspaceFields'), alias: t(locale, 'fieldsWorkspaceAliasPlaceholder'),
         save: t(locale, 'save'), nested,
-        commentDecision: commentLoss ? (mode === 'comment-cancel' ? 'cancel' : 'continue') : null,
       });
       panel.webview.html = html.replace('</body>', `<script nonce="${nonce}">
         const labels = ${labels};
@@ -71,19 +70,6 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
           const nestedEditor = document.querySelector('[data-testid="canvas-source-query-editor"]');
           const scope = nestedEditor || document;
           const buttons = [...scope.querySelectorAll('button')];
-          if (labels.commentDecision && step === 0) {
-            const warning = document.querySelector('[data-testid="comment-loss-confirm"]');
-            const save = buttons.find(b => b.textContent.trim() === labels.save);
-            if (!warning || !save || !save.disabled) return;
-            if (labels.commentDecision === 'cancel') {
-              clearInterval(timer);
-              warning.querySelector('[data-testid="comment-loss-cancel"]').click();
-            } else {
-              warning.querySelector('[data-testid="comment-loss-continue"]').click();
-              step = 2;
-            }
-            return;
-          }
           if (labels.nested && step === 0 && !nestedEditor) {
             const card = document.querySelector('[data-source-alias="П"]');
             const enter = document.querySelector('[data-testid="canvas-edit-source"]');
@@ -113,18 +99,14 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
 
       assert.ok(await waitUntil(() => disposed, 15000), 'Canvas did not complete Save through the host bridge');
       const result = doc.getText();
-      if (mode === 'comment-cancel') {
-        assert.strictEqual(result, original, 'Cancel changed the source document');
-        return;
-      }
       assert.notStrictEqual(result, original);
       assert.ok(result.startsWith(`${prefix}"`), result);
       assert.ok(result.endsWith(`"${suffix}`), result);
-      if (mode === 'comment-save') {
-        assert.ok(result.includes('// bound'), result);
-        assert.ok(!result.includes('// lost'), result);
+      assert.ok(result.includes('В.Ссылка КАК КодИзCanvas'), result);
+      if (mode === 'source-comments') {
+        for (const comment of ['// bound', '// into', '// source']) assert.strictEqual(result.split(comment).length, 2, result);
         assert.ok(result.includes('В.Ссылка = &Код'), result);
-      } else assert.ok(result.includes('В.Ссылка КАК КодИзCanvas'), result);
+      }
       if (mode === 'group-comments') assert.strictEqual(result.split('// group').length, 2, result);
       if (mode === 'order-comments') assert.strictEqual(result.split('// order').length, 2, result);
       if (mode === 'field-comments') assert.strictEqual(result.split('// field').length, 2, result);

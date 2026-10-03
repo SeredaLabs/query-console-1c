@@ -6,12 +6,26 @@ import { generateBatch } from '../../src/core/query/sdblGenerator';
 
 afterEach(() => vi.restoreAllMocks());
 
+const realGenerateBatch = generator.generateBatch;
+/** C17 is closed for every known slot, so the consent path is exercised through a
+ * simulated renderer regression that drops the comments printed after ИЗ. */
+function simulateFromRegionCommentLoss(): void {
+  vi.spyOn(generator, 'generateBatch').mockImplementation(doc => {
+    let afterFrom = false;
+    return realGenerateBatch(doc).split('\n').filter(line => {
+      if (line === 'ИЗ') afterFrom = true;
+      return !(afterFrom && /^\s*\/\//.test(line));
+    }).join('\n');
+  });
+}
+
 const resolver = buildYamlResolver('test/fixtures/corpus/metadata/cf');
 for (const metadata of [false, true]) describe(`designer comment-loss boundary (metadata=${metadata})`, () => {
   const active = metadata ? resolver : undefined;
   it.each([
     'ВЫБРАТЬ Т.Код КАК А ПОМЕСТИТЬ ВТ // keep\nИЗ Справочник.Валюты КАК Т',
   ])('requires confirmation with a validated candidate: %s', input => {
+    simulateFromRegionCommentLoss();
     const opened = tryOpenDesignerBatch(input, active);
     expect(opened).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: expect.any(Object), lost: ['// keep'] });
     if (!('commentLossDoc' in opened)) throw new Error('missing confirmation candidate');
@@ -32,6 +46,11 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ИТОГИ КОЛИЧЕСТВО(А) // keep\nКАК Н ПО ОБЩИЕ',
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т УПОРЯДОЧИТЬ ПО А // keep\n',
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты // keep\nКАК Т',
+    'ВЫБРАТЬ Т.Код КАК А ПОМЕСТИТЬ ВТ // keep\nИЗ Справочник.Валюты КАК Т',
+    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т; // keep',
+    'ВЫБРАТЬ 1 КАК А ПОМЕСТИТЬ ВТ;\nУНИЧТОЖИТЬ ВТ // keep',
+    'ВЫБРАТЬ Т.Код КАК А,\n\tТ.Наименование\n\t, // keep\nТ.Код КАК Б ИЗ Справочник.Валюты КАК Т',
+    'ВЫБРАТЬ 1 КАК А ОБЪЕДИНИТЬ // keep\nВСЕ ВЫБРАТЬ 2',
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты // keep\nКАК Б ПО Т.Код = Б.Код',
   ])('opens preserved comments / strings / separators and reopens: %s', input => {
     const opened = tryOpenDesignerBatch(input, active);
@@ -41,6 +60,7 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
   });
   it('detects one dropped occurrence even when an identical comment survives', () => {
     const input = '// keep\nВЫБРАТЬ Т.Код КАК А ПОМЕСТИТЬ ВТ // keep\nИЗ Справочник.Валюты КАК Т';
+    simulateFromRegionCommentLoss();
     const opened = tryOpenDesignerBatch(input, active);
     expect(opened).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: expect.any(Object), lost: ['// keep'] });
     if (!('commentLossDoc' in opened)) throw new Error('missing confirmation candidate');
@@ -66,6 +86,7 @@ it('generation failure remains an error without a confirmation candidate', () =>
 for (const metadata of [false, true]) it(`returns all lost occurrences in source order, including repeats and more than five (metadata=${metadata})`, () => {
   const lost = ['//  first  ', '// repeat', '// <b>literal</b>', '// repeat', '// fifth', '// sixth', '// seventh'];
   const input = '// repeat\nВЫБРАТЬ Т.Код КАК А ПОМЕСТИТЬ ВТ ' + lost.join('\n') + '\nИЗ Справочник.Валюты КАК Т';
+  simulateFromRegionCommentLoss();
   const opened = tryOpenDesignerBatch(input, metadata ? resolver : undefined);
   expect(opened).toMatchObject({ ok: false, lost });
   if (!('commentLossDoc' in opened)) throw new Error('missing confirmation candidate');

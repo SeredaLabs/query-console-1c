@@ -4,9 +4,9 @@
  * `ПЕРИОДАМИ(…)` survive open → store → preview → Apply, exactly once, and a
  * comment never swallows a generated separator or `)`.
  *
- * field/group/TOTALS raw slices keep their former behavior: the comment is still dropped
- * (known loss, C17) and Apply is not newly blocked. Their renderers are not
- * comment-safe. WHERE/HAVING support is covered by conditionComments.c17.
+ * Other slots are covered by the C17 suites (conditions, JOIN, fields, GROUP,
+ * ORDER, TOTALS, FROM region); FORMERLY_LOST pins inputs that used to drop
+ * their comment and now keep it.
  *
  * Assignment rule (stable on reopen): a comment on an argument's code line or on
  * the line of the comma after it trails that argument, and the comma is written
@@ -84,8 +84,8 @@ const KEPT: Array<[string, string, string]> = [
     'Число ПЕРИОДАМИ(МЕСЯЦ, // месяц c1\n1, 2)'],
 ];
 
-/** Slots that still drop the comment (C17, step 8). Apply must not be newly blocked. */
-const KNOWN_LOSS: Array<[string, string]> = [
+/** Slots that dropped the comment before C17 closed; now kept, once, with Apply allowed. */
+const FORMERLY_LOST: Array<[string, string]> = [
   ['ПОМЕСТИТЬ line',
     'ВЫБРАТЬ Т.Код КАК А ПОМЕСТИТЬ ВТ // c1\nИЗ Справочник.Валюты КАК Т'],
 ];
@@ -105,11 +105,11 @@ for (const metadata of [false, true]) {
     }
   });
 
-  describe(`C17 known comment loss is unchanged and does not block Apply (metadata=${metadata})`, () => {
-    for (const [name, input] of KNOWN_LOSS) {
+  describe(`C17 formerly lost comments are kept (metadata=${metadata})`, () => {
+    for (const [name, input] of FORMERLY_LOST) {
       it(name, () => {
         const r = open(input, metadata);
-        expect(r.preview).not.toContain('c1');
+        expect(commentsOf(r.preview!)).toEqual(commentsOf(input));
         expect(r.decision).toEqual({ ok: true });
       });
     }

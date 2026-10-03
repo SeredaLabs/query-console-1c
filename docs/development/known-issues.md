@@ -14,15 +14,11 @@ Ukrainian/Russian. Historical platform observations are indexed in [audits](audi
   full grammar, arbitrary-expression validity or input/output equivalence. Unknown
   schema/reference types stay fail-open. Editor diagnostics check syntax/structural
   expressions, not metadata fields; concatenated fragments may receive warnings.
-- Raw-expression comments unsupported by the renderer trigger a **warning and
-  confirmation** before designer opening/manual-text Apply replaces the model
-  (C17). Cancel preserves prior model/text; proceeding permits comment loss on
-  Save/OK. Original BSL text stays unchanged until Save. WHERE/HAVING, JOIN,
-  bounded SELECT fields, GROUP BY, ORDER BY and TOTALS (relocated after the
-  section header) and supported argument comments are preserved; other comments after ИЗ
-  (source names/aliases, UNION separators, …) are relocated after the ИЗ header;
-  ПОМЕСТИТЬ-line and УНИЧТОЖИТЬ comments remain unsupported. Explicit consent to loss is not
-  raw-slice support.
+- User `//` comments are preserved in every known slot (C17): sections keep them
+  after their header, other comments move after ИЗ or before ВЫБРАТЬ; exact
+  placement inside an expression is not kept. If a renderer regression ever
+  dropped one, the designer warns and asks for confirmation before loading;
+  Cancel keeps the original text, and the editor text changes only on Save/OK.
 - Negated condition-subquery input with the platform-invalid source alias `В`
   opens but is Apply-blocked under C5. C18 is CLOSED, absorbed into C5 / RP11
   ([platform evidence](audits/stage-0/platform-reprobe-results.jsonl)); the same

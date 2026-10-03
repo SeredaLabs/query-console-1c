@@ -1,7 +1,10 @@
 /**
- * C17 FROM region: a comment after ИЗ that no section owns — on a source name or
- * alias line, a JOIN/comma source, a subquery alias, ИНДЕКСИРОВАТЬ, ДЛЯ ИЗМЕНЕНИЯ
- * or a UNION separator — is kept once, relocated after the ИЗ header, with Apply
+ * C17 remaining slots: a comment that no section owns — on a source name or alias
+ * line, a JOIN/comma source, a subquery alias, ИНДЕКСИРОВАТЬ, ДЛЯ ИЗМЕНЕНИЯ, the
+ * ПОМЕСТИТЬ line, a UNION separator (also between ОБЪЕДИНИТЬ and ВСЕ), a comma-only
+ * line, after the final `;` or in УНИЧТОЖИТЬ — is kept once (after ИЗ, before
+ * ВЫБРАТЬ or before the statement), and a comment before a later WHERE condition is
+ * printed before its И, with Apply
  * allowed, a stable three-pass reopen and a comment-free strip view with
  * identical code. Comments inside a {ХАРАКТЕРИСТИКИ} block stay in the block.
  */
@@ -14,7 +17,8 @@ import { computeBatchTextSafe } from '../../src/webview/computeBatchText';
 import { decideApply, findStaticApplyBlocker } from '../../src/webview/applyGate';
 
 const resolver = buildYamlResolver('test/fixtures/corpus/metadata/cf');
-const comments = (text: string) => tokenize(text, { comments: true }).filter(t => t.type === 'comment').map(t => t.text).sort();
+// Generated package separators (`////…`) are not user comments.
+const comments = (text: string) => tokenize(text, { comments: true }).filter(t => t.type === 'comment' && !/^\/+$/.test(t.text)).map(t => t.text).sort();
 const V = 'Справочник.Валюты';
 const shapes = [
   `ВЫБРАТЬ Т.Код КАК А ИЗ ${V} // name\nКАК Т`,
@@ -29,6 +33,13 @@ const shapes = [
   `ВЫБРАТЬ Т.Код КАК А ИЗ ${V} КАК Т // first\nОБЪЕДИНИТЬ ВСЕ // separator\nВЫБРАТЬ Т.Код ИЗ ${V} КАК Т`,
   `ВЫБРАТЬ Т.Код КАК А ИЗ ${V} КАК Т {ХАРАКТЕРИСТИКИ ТИП(${V}) // block\nВИДЫХАРАКТЕРИСТИК ПланВидовХарактеристик.Виды}`,
   `ВЫБРАТЬ Т.Код КАК А ИЗ ${V} // same\nКАК Т ГДЕ Т.Код = "1" // same`,
+  `ВЫБРАТЬ Т.Код КАК А ПОМЕСТИТЬ ВТ // into\nИЗ ${V} КАК Т`,
+  `ВЫБРАТЬ 1 КАК А ПОМЕСТИТЬ ВТ // into without ИЗ`,
+  `ВЫБРАТЬ Т.Код КАК А,\n\tТ.Наименование\n\t, // comma line\nТ.Код КАК Б ИЗ ${V} КАК Т`,
+  `ВЫБРАТЬ Т.Код КАК А ИЗ ${V} КАК Т ОБЪЕДИНИТЬ // between\nВСЕ ВЫБРАТЬ Т.Код ИЗ ${V} КАК Т`,
+  `ВЫБРАТЬ Т.Код КАК А ИЗ ${V} КАК Т; // after the final semicolon`,
+  `ВЫБРАТЬ Т.Код КАК А ПОМЕСТИТЬ ВТ ИЗ ${V} КАК Т;\n// before drop\nУНИЧТОЖИТЬ ВТ // drop`,
+  `ВЫБРАТЬ Т.Код КАК А ИЗ ${V} КАК Т ГДЕ (НЕ Т.Код = "1")\n\tИ Т // before the left side\n.Код В (ВЫБРАТЬ Б.Код ИЗ ${V} КАК Б)`,
 ];
 
 for (const metadata of [false, true]) describe(`C17 FROM-region comments metadata=${metadata}`, () => {
