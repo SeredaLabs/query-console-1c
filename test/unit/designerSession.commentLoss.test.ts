@@ -16,8 +16,8 @@ vi.mock('../../src/webview/bridge', () => ({
   postToHost: vi.fn(),
 }));
 afterEach(() => vi.clearAllMocks());
-// A comment on the source-name line is still an unsupported C17 slot.
-const lossy = (value = 1) => `ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты // lost\nКАК Т ГДЕ Т.Код = ${value}`;
+// A comment on the ПОМЕСТИТЬ line is still an unsupported C17 slot.
+const lossy = (value = 1) => `ВЫБРАТЬ Т.Код КАК А ПОМЕСТИТЬ ВТ // lost\nИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = ${value}`;
 
 it('awaits consent, loads the candidate once, and never writes editor text', () => {
   const dispatch = vi.fn();

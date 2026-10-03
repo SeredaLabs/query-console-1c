@@ -10,7 +10,7 @@ const resolver = buildYamlResolver('test/fixtures/corpus/metadata/cf');
 for (const metadata of [false, true]) describe(`designer comment-loss boundary (metadata=${metadata})`, () => {
   const active = metadata ? resolver : undefined;
   it.each([
-    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты // keep\nКАК Т',
+    'ВЫБРАТЬ Т.Код КАК А ПОМЕСТИТЬ ВТ // keep\nИЗ Справочник.Валюты КАК Т',
   ])('requires confirmation with a validated candidate: %s', input => {
     const opened = tryOpenDesignerBatch(input, active);
     expect(opened).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: expect.any(Object), lost: ['// keep'] });
@@ -31,6 +31,8 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
     'ВЫБРАТЬ Т.Код // keep\n+ 1 КАК А ИЗ Справочник.Валюты КАК Т',
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ИТОГИ КОЛИЧЕСТВО(А) // keep\nКАК Н ПО ОБЩИЕ',
     'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т УПОРЯДОЧИТЬ ПО А // keep\n',
+    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты // keep\nКАК Т',
+    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты // keep\nКАК Б ПО Т.Код = Б.Код',
   ])('opens preserved comments / strings / separators and reopens: %s', input => {
     const opened = tryOpenDesignerBatch(input, active);
     expect(opened.ok).toBe(true);
@@ -38,7 +40,7 @@ for (const metadata of [false, true]) describe(`designer comment-loss boundary (
     expect(tryOpenDesignerBatch(generateBatch(opened.doc), active).ok).toBe(true);
   });
   it('detects one dropped occurrence even when an identical comment survives', () => {
-    const input = '// keep\nВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты // keep\nКАК Т';
+    const input = '// keep\nВЫБРАТЬ Т.Код КАК А ПОМЕСТИТЬ ВТ // keep\nИЗ Справочник.Валюты КАК Т';
     const opened = tryOpenDesignerBatch(input, active);
     expect(opened).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, commentLossDoc: expect.any(Object), lost: ['// keep'] });
     if (!('commentLossDoc' in opened)) throw new Error('missing confirmation candidate');
@@ -63,7 +65,7 @@ it('generation failure remains an error without a confirmation candidate', () =>
 
 for (const metadata of [false, true]) it(`returns all lost occurrences in source order, including repeats and more than five (metadata=${metadata})`, () => {
   const lost = ['//  first  ', '// repeat', '// <b>literal</b>', '// repeat', '// fifth', '// sixth', '// seventh'];
-  const input = '// repeat\nВЫБРАТЬ Т0.Код КАК А ИЗ ' + lost.map((comment, i) => `Справочник.Валюты ${comment}\nКАК Т${i}`).join(', ');
+  const input = '// repeat\nВЫБРАТЬ Т.Код КАК А ПОМЕСТИТЬ ВТ ' + lost.join('\n') + '\nИЗ Справочник.Валюты КАК Т';
   const opened = tryOpenDesignerBatch(input, metadata ? resolver : undefined);
   expect(opened).toMatchObject({ ok: false, lost });
   if (!('commentLossDoc' in opened)) throw new Error('missing confirmation candidate');

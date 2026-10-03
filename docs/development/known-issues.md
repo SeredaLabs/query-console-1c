@@ -19,8 +19,9 @@ Ukrainian/Russian. Historical platform observations are indexed in [audits](audi
   (C17). Cancel preserves prior model/text; proceeding permits comment loss on
   Save/OK. Original BSL text stays unchanged until Save. WHERE/HAVING, JOIN,
   bounded SELECT fields, GROUP BY, ORDER BY and TOTALS (relocated after the
-  section header) and supported argument comments are preserved; source
-  header/path/alias and UNION separator comments remain unsupported. Explicit consent to loss is not
+  section header) and supported argument comments are preserved; other comments after ИЗ
+  (source names/aliases, UNION separators, …) are relocated after the ИЗ header;
+  ПОМЕСТИТЬ-line and УНИЧТОЖИТЬ comments remain unsupported. Explicit consent to loss is not
   raw-slice support.
 - Negated condition-subquery input with the platform-invalid source alias `В`
   opens but is Apply-blocked under C5. C18 is CLOSED, absorbed into C5 / RP11

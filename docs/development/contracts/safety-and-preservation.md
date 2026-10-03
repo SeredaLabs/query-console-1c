@@ -158,7 +158,14 @@ the section. Comments of a following ИТОГИ stay owned by TOTALS. The
 strip-comments view removes the anchor without mutating the model.
 Regressions: [ORDER comments](../../../test/unit/orderComments.c17.test.ts).
 
-Source header/path/alias and UNION separator comments can still lose comments in core
+After ИЗ, a comment that no section owns — on a source name or alias line, a
+JOIN or comma source, a subquery alias, ИНДЕКСИРОВАТЬ, ДЛЯ ИЗМЕНЕНИЯ or a UNION
+separator — is relocated after the ИЗ header (`comments.afterFrom`) with the
+existing own-line comments. Comments in a raw `{ХАРАКТЕРИСТИКИ}` block are owned
+by the block and stay there. Original line association is not preserved.
+Regressions: [FROM-region comments](../../../test/unit/sourceComments.c17.test.ts).
+
+ПОМЕСТИТЬ-line and УНИЧТОЖИТЬ comments can still lose comments in core
 parsing/generation (C17); the designer warns before loading and asks for explicit consent. Saving
 a confirmed candidate can remove those comments. **Consent to comment loss is not
 PRESERVE-ONLY support.** Classic's preserve-comments toggle deliberately changes

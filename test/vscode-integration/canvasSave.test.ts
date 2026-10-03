@@ -21,7 +21,7 @@ describe('Extension Host: Canvas load → edit → Save → source document', ()
     let panel: vscode.WebviewPanel | undefined;
     try {
       const query = commentLoss
-        ? '// bound\nВЫБРАТЬ В.Ссылка КАК Код ИЗ Справочник.Тест // lost\nКАК В ГДЕ В.Ссылка = &Код'
+        ? '// bound\nВЫБРАТЬ В.Ссылка КАК Код ПОМЕСТИТЬ ВТ // lost\nИЗ Справочник.Тест КАК В ГДЕ В.Ссылка = &Код'
         : mode === 'order-comments'
         ? 'ВЫБРАТЬ В.Ссылка КАК Код ИЗ Справочник.Тест КАК В УПОРЯДОЧИТЬ ПО // order\nВ.Ссылка'
         : mode === 'group-comments'

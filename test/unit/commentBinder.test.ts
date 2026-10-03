@@ -54,7 +54,7 @@ describe('extractComments', () => {
     expect(model.comments!.afterFrom).toEqual(['// комментарий 4-го вида']);
   });
 
-  it('Case C — посторонний комментарий (после ГДЕ) никуда не привязывается', () => {
+  it('Case C — без владельца-секции хвостовой комментарий после ИЗ переносится в afterFrom', () => {
     const text =
       'ВЫБРАТЬ\n' +
       '\tБригады.Ссылка КАК Ссылка\n' +
@@ -69,9 +69,10 @@ describe('extractComments', () => {
     expect(ssylka).toBeDefined();
     expect(ssylka!.commentTrailing).toBeUndefined();
     expect(ssylka!.commentLeading).toBeUndefined();
-    // ГДЕ-комментарий не на своей строке без кода? он хвостовой к коду ГДЕ →
-    // не beforeSelect/afterFrom (он трейлинговый), значит контейнерных нет
-    expect(model.comments).toBeUndefined();
+    // C17: the binder alone has no parser ownership facts (this parse is without
+    // preserveComments), so an unowned comment after ИЗ is relocated, not dropped.
+    // On the real open path the WHERE parser owns it (conditionComments.c17).
+    expect(model.comments).toEqual({ afterFrom: ['// посторонний комментарий'] });
   });
 
   it('Case D — запрос без комментариев: модель не меняется', () => {

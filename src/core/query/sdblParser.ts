@@ -1129,6 +1129,12 @@ function parseSingleQueryBody(
       cur.next();
     }
     model.characteristics = cur.source.slice(open.pos, end);
+    // C17: the raw block keeps its comments verbatim; the binder must not relocate them too.
+    if (keepArgComments) {
+      for (const t of tokenize(model.characteristics, { comments: true })) {
+        if (t.type === 'comment') cur.keptConditionComments.add(open.pos + t.pos);
+      }
+    }
   }
 
   if (builder.fields.length || builder.conditions.length || builder.order.length || builder.totals.length) {

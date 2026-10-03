@@ -258,9 +258,11 @@ export function extractComments(memberText: string, model: QueryModel): void {
         continue;
       }
 
-      // (4) afterFrom — после ИЗ, отдельной строкой.
+      // (4) afterFrom — после ИЗ: отдельной строкой, а также (C17) хвостовой
+      // комментарий, не принадлежащий ни одной секции (имя/псевдоним источника,
+      // ИНДЕКСИРОВАТЬ, ДЛЯ ИЗМЕНЕНИЯ, …). Переносится за `ИЗ` дословно.
       if (fromIdx >= 0 && ci > fromIdx) {
-        if (!hasCodeBeforeOnLine(toks, c.line, c.pos) && !inKeptArgs.has(ci)) { afterFrom.push(text); rememberBoundComment(c.pos); }
+        if (!inKeptArgs.has(ci)) { afterFrom.push(text); rememberBoundComment(c.pos); }
         continue;
       }
 

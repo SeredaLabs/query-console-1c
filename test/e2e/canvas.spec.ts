@@ -507,8 +507,8 @@ for (const surface of ['classic', 'canvas'] as const) {
   }
 }
 
-// A comment on a source-name line remains unsupported; consent still protects it.
-const commentLossQuery = '// bound\nВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты // lost\nКАК В ГДЕ В.Код = 1';
+// A comment on the ПОМЕСТИТЬ line remains unsupported; consent still protects it.
+const commentLossQuery = '// bound\nВЫБРАТЬ В.Код КАК Код ПОМЕСТИТЬ ВТ // lost\nИЗ Справочник.Валюты КАК В ГДЕ В.Код = 1';
 
 for (const surface of ['classic', 'canvas'] as const) {
   for (const cancel of ['button', 'Escape'] as const) {
@@ -590,7 +590,7 @@ for (const v2 of [false, true]) {
 for (const surface of ['classic', 'canvas'] as const) {
   test(`${surface}: C17 displays the first five lost comments literally and the remaining count`, async ({ page }) => {
     const lost = ['//  first  ', '// repeat', '// <b>literal</b>', '// repeat', '// fifth', '// sixth', '// seventh'];
-    const input = '// repeat\nВЫБРАТЬ В0.Код КАК А ИЗ ' + lost.map((comment, i) => `Справочник.Валюты ${comment}\nКАК В${i}`).join(', ');
+    const input = '// repeat\nВЫБРАТЬ В.Код КАК А ПОМЕСТИТЬ ВТ ' + lost.join('\n') + '\nИЗ Справочник.Валюты КАК В';
     await open(page, surface, input);
     const list = page.getByTestId('comment-loss-list');
     await expect(list.locator('pre')).toHaveCount(5);

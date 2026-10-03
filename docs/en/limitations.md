@@ -1,5 +1,5 @@
 <!--
-source_version: 13
+source_version: 14
 translation_status: canonical
 -->
 
@@ -46,7 +46,8 @@ browser/real-host gates are bounded and do not replace UX/accessibility/release 
 `//` comments are preserved in `ГДЕ`/`ИМЕЮЩИЕ` (with safe line breaks around
 conjunctions), JOIN conditions, selected fields, `СГРУППИРОВАТЬ ПО`, `УПОРЯДОЧИТЬ ПО`,
 `ИТОГИ` (moved after the section header) and virtual-table/`ПЕРИОДАМИ` arguments.
-Other comments, such as next to a source name or alias, trigger a warning and confirmation
+Other comments after `ИЗ`, such as next to a source name or alias, move after `ИЗ`.
+Comments on the `ПОМЕСТИТЬ` line or in `УНИЧТОЖИТЬ` trigger a warning and confirmation
 before loading/replacing the model (C17). Cancel keeps the prior model/text;
 continuing allows known comment loss on Save/OK. The original editor text stays
 unchanged until Save. Consent is not preservation support. A negated condition
