@@ -537,6 +537,7 @@ function stripConditionComments(model: QueryModel): QueryModel {
     ...(model.trailingFields ? { trailingFields: stripFieldComments(model.trailingFields) } : {}),
     ...(model.tabSectionFields ? { tabSectionFields: stripFieldComments(model.tabSectionFields) } : {}),
     ...(model.grouping ? { grouping: stripFieldComments([model.grouping])[0] } : {}),
+    ...(model.order ? { order: stripFieldComments([model.order])[0] } : {}),
     ...(model.totals ? { totals: {
       ...stripFieldComments([model.totals])[0],
       groupFields: model.totals.groupFields.map(g => g.periodBy === undefined ? g : {

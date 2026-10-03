@@ -2177,6 +2177,8 @@ function renderOrder(order: Order | undefined, model: QueryModel, includeAuto = 
     // таблицы, как у конструктора 1С); прочие — по псевдониму выборки.
     const tableAliases = resolveAliases(model.tables);
     lines.push('УПОРЯДОЧИТЬ ПО');
+    // C17: section comments, relocated after the header on their own lines.
+    for (const c of order.commentLeading ?? []) lines.push(`\t${c}`);
     order.fields.forEach((f, i) => {
       const ref = f.expression
         // Параметр `&Имя` — дословно; вызов функции/арифметика — через нормализацию
@@ -2446,7 +2448,10 @@ function renderAutoOrder(order: Order | undefined, hadSection: boolean): string 
   // (и от предшествующей секции порядок/ИТОГИ/индекс). Конструктор 1С не вставляет
   // пустую строку перед бесхозным АВТОУПОРЯДОЧИВАНИЕ (фаза 6.16.46).
   void hadSection;
-  return '\n' + 'АВТОУПОРЯДОЧИВАНИЕ';
+  // C17: an АВТОУПОРЯДОЧИВАНИЕ-only section has no header; its comments follow it,
+  // where they stay inside the ORDER section on reopening.
+  const comments = order.fields.length === 0 ? order.commentLeading ?? [] : [];
+  return ['', 'АВТОУПОРЯДОЧИВАНИЕ', ...comments].join('\n');
 }
 
 /**

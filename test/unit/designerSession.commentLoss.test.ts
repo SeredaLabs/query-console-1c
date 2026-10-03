@@ -16,7 +16,8 @@ vi.mock('../../src/webview/bridge', () => ({
   postToHost: vi.fn(),
 }));
 afterEach(() => vi.clearAllMocks());
-const lossy = (value = 1) => `ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т УПОРЯДОЧИТЬ ПО Т.Код // lost\n+ ${value}`;
+// A comment on the source-name line is still an unsupported C17 slot.
+const lossy = (value = 1) => `ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты // lost\nКАК Т ГДЕ Т.Код = ${value}`;
 
 it('awaits consent, loads the candidate once, and never writes editor text', () => {
   const dispatch = vi.fn();
@@ -50,5 +51,5 @@ it('confirmation after a newer warning loads only that newer candidate', () => {
   session.receive!({ type: 'loadModel', text: lossy(7) });
   controller.confirmCommentLoss();
   expect(dispatch).toHaveBeenCalledOnce();
-  expect(generateBatch(dispatch.mock.calls[0][0].doc)).toContain('+ 7');
+  expect(generateBatch(dispatch.mock.calls[0][0].doc)).toContain('= 7');
 });

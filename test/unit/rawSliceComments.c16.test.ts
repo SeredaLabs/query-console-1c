@@ -86,8 +86,8 @@ const KEPT: Array<[string, string, string]> = [
 
 /** Slots that still drop the comment (C17, step 8). Apply must not be newly blocked. */
 const KNOWN_LOSS: Array<[string, string]> = [
-  ['УПОРЯДОЧИТЬ ПО key',
-    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты КАК Т\nУПОРЯДОЧИТЬ ПО\n\tА // c1\n'],
+  ['source name line',
+    'ВЫБРАТЬ Т.Код КАК А ИЗ Справочник.Валюты // c1\nКАК Т'],
 ];
 
 for (const metadata of [false, true]) {

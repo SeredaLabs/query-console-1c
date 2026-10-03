@@ -151,7 +151,14 @@ belong to the whole section (`Totals.commentLeading`) and are emitted after the
 preserved. The strip-comments view removes them without mutating the model.
 Regressions: [TOTALS comments](../../../test/unit/totalsComments.c17.test.ts).
 
-ORDER raw slices, source header/path/alias and UNION separator comments can still lose comments in core
+ORDER BY comments belong to the whole section (`Order.commentLeading`) and are
+emitted after the `УПОРЯДОЧИТЬ ПО` header in source order; for an
+`АВТОУПОРЯДОЧИВАНИЕ`-only section, after that keyword, so reopening keeps them in
+the section. Comments of a following ИТОГИ stay owned by TOTALS. The
+strip-comments view removes the anchor without mutating the model.
+Regressions: [ORDER comments](../../../test/unit/orderComments.c17.test.ts).
+
+Source header/path/alias and UNION separator comments can still lose comments in core
 parsing/generation (C17); the designer warns before loading and asks for explicit consent. Saving
 a confirmed candidate can remove those comments. **Consent to comment loss is not
 PRESERVE-ONLY support.** Classic's preserve-comments toggle deliberately changes

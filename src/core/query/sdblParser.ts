@@ -1070,6 +1070,13 @@ function parseSingleQueryBody(
   if (cur.isKeyword('УПОРЯДОЧИТЬ') || cur.isKeyword('АВТОУПОРЯДОЧИВАНИЕ')) {
     const start = cur.peek().pos;
     model.order = parseOrder(cur, sectionCtx);
+    if (keepArgComments) {
+      const end = cur.peek().type === 'eof' ? cur.sourceEnd : cur.peek().pos;
+      const comments = tokenize(cur.source.slice(start, end), { comments: true })
+        .filter(t => t.type === 'comment' && !/^\/+$/u.test(t.text) && !cur.keptConditionComments.has(start + t.pos));
+      if (comments.length) model.order.commentLeading = comments.map(t => t.text);
+      for (const comment of comments) cur.keptConditionComments.add(start + comment.pos);
+    }
     cur.sourceMap?.record({ kind: 'outputAliasSection', index: 0, range: { start, end: cur.peek().pos } });
   }
   if (cur.isKeyword('ИТОГИ')) {

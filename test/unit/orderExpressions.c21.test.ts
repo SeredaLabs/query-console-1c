@@ -4,7 +4,7 @@ import { buildYamlResolver } from '../../src/core/metadata/buildYamlResolver';
 import type { MetadataResolver } from '../../src/core/query/metadataResolver';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { generateBatch } from '../../src/core/query/sdblGenerator';
-import { tryOpenDesignerBatch, COMMENT_LOSS_ON_OPEN } from '../../src/webview/openDesignerBatch';
+import { tryOpenDesignerBatch } from '../../src/webview/openDesignerBatch';
 import { decideApply, findStaticApplyBlocker } from '../../src/webview/applyGate';
 import { assembleBatch, initialState, reducer } from '../../src/webview/state/queryStore';
 
@@ -126,8 +126,9 @@ describe('C21 ORDER boundaries and preservation', () => {
     expect(decideApply(generateBatch(doc), null, findStaticApplyBlocker(state), undefined)).toEqual({ ok: false, kind: 'blocked' });
   });
 
-  it('still requires consent when an expression loses an inline comment (C17)', () => {
+  it('keeps an inline comment of an arithmetic key as an ORDER section comment (C17)', () => {
     const attempt = tryOpenDesignerBatch(ordered('Т.Количество + // arithmetic note\n1'));
-    expect(attempt).toMatchObject({ ok: false, error: COMMENT_LOSS_ON_OPEN, lost: ['// arithmetic note'] });
+    expect(attempt.ok).toBe(true);
+    if (attempt.ok) expect(generateBatch(attempt.doc)).toContain('// arithmetic note');
   });
 });

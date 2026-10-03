@@ -493,6 +493,8 @@ export interface OrderField {
 }
 
 export interface Order {
+  /** C17: section-owned comments, printed after the УПОРЯДОЧИТЬ ПО header. */
+  commentLeading?: string[];
   fields: OrderField[];
   /** «Автоупорядочивание» → ключевое слово АВТОУПОРЯДОЧИВАНИЕ. */
   auto: boolean;
