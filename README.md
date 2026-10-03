@@ -85,7 +85,7 @@ or leave it empty to search the workspace for `Configuration.xml`. Run
 - Validation is not a full 1C compiler.
 - A small set of virtual-table parameter forms cannot be round-tripped safely.
 
-- Unsupported raw-expression comments require confirmation; saving after consent can lose them.
+- Line comments are kept, but one inside an expression may move to its section header.
 
 See the [complete limitations](docs/en/limitations.md) before working with
 complex or generated query text.

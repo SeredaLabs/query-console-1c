@@ -26,7 +26,7 @@ Surfaces that decide whether a model can
 be applied, or present strict model-derived analysis, MUST reuse the production
 parse and validation path rather than implement a parallel parser. The read-only
 Query Text analysis service uses `tryOpenBatch`; the shared Apply gate revalidates
-generated text, while designer loading adds comment-loss refusal through
+generated text, while designer loading adds a comment-loss confirmation (a regression safety net) through
 `tryOpenDesignerBatch` ([safety contract](../contracts/safety-and-preservation.md)). Advisory editor
 features such as hover and completion share the `parseBatch`-backed semantic
 snapshot, but may use its explicit recovery path so that useful assistance can

@@ -11,7 +11,7 @@ The [ledger](../../development/technical-debt.md) alone owns current debt status
 EDIT = accessible editing workflow. PRESERVE = a successfully loaded supported
 representation survives unrelated edit/Save/reopen; dedicated controls may be
 absent. MISSING = an absent workflow with its stated scope. N/A = outside this
-constructor surface. Confirmation of comment loss is not preservation; other unsafe input remains refused.
+constructor surface. User comments are preserved (C17 closed); the comment-loss confirmation is only a regression safety net, and other unsafe input remains refused.
 
 | Capability | Classic | Canvas |
 |---|---|---|
@@ -73,7 +73,7 @@ and trailing fields are intentional preserve-only families. They are verified
 through unrelated edits, not advertised as complete contextual editors.
 Advanced UNION projections suppress scalar-only mapping edits with an explicit
 notice. The shared [safety/preservation contract](../../development/contracts/safety-and-preservation.md)
-defines refusal and state invariants; the ledger lists UX-C1–10, C17 and A2
+defines refusal and state invariants; the ledger lists UX-C1–10 and A2
 where further support or evidence is needed.
 
 Canvas reuses the Classic ExpressionBuilder for field/WHERE/JOIN/VT contexts.

@@ -56,10 +56,11 @@ in `test/e2e/canvas.spec.ts` cover:
   includes only the selected endpoints.
 - Contextual shared ExpressionBuilder for fields/WHERE/JOIN create/edit,
   Cancel/malformed recovery and nested-source Escape/OK/Back safety.
-- C17 warning/confirmation on both surfaces and both Classic text editors:
-  Cancel/Escape/focus isolation, loading only after consent, writing only on
-  Save, superseding host loads and unchanged malformed Save guards. Consent
-  permits known comment loss; it is not preservation support.
+- C17: formerly lossy comment placements (ПОМЕСТИТЬ line, comma-only line,
+  source name, ОБЪЕДИНИТЬ//ВСЕ, after the final `;`, УНИЧТОЖИТЬ) open without
+  consent on both surfaces and in Classic text Apply, and Save writes every
+  comment. The consent dialog's logic (await consent, superseding loads, no write
+  before Save) is covered by unit tests with a simulated comment-dropping renderer.
 - Duplicate-alias rejection and recovery, unsafe VT and malformed-expression
   Save blocking, C11 VT/`ПЕРИОДАМИ` Apply refusal with an explanation on both
   surfaces, and a failed load that emits cancel without replacement text.
