@@ -100,6 +100,12 @@ The comma is emitted before a trailing comment and closing delimiters follow
 on a safe line. Raw continuation indentation is retained; omitted argument
 content does not manufacture comment slots. Reopening is stable.
 
+Raw multiline text inside a nested query is stored relative to that query's own
+level: parsing removes the nesting padding (the indentation of the query's section
+lines) from continuation lines, outside literal contents and lexically rejected
+text, because generation adds that padding again (C22/C23). A top-level query has
+no padding and keeps its text as written.
+
 WHERE/HAVING edge comments are stored on their condition as optional
 `commentLeading` / `commentTrailing` arrays and emitted on separate lines at the
 condition slot indent. Nonempty continuations of lexically valid commented raw

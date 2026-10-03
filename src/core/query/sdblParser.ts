@@ -5089,6 +5089,57 @@ function extractDocComments(text: string, doc: QueryDocument): void {
   });
 }
 
+/** C22/C23: a section keyword starting a line of the query at its own level. */
+const SECTION_LINE = /^(\t*)(?:ИЗ|ГДЕ|СГРУППИРОВАТЬ|ИМЕЮЩИЕ|УПОРЯДОЧИТЬ|ИТОГИ|ОБЪЕДИНИТЬ|ПОМЕСТИТЬ|ИНДЕКСИРОВАТЬ|ДЛЯ|АВТОУПОРЯДОЧИВАНИЕ)(?![\p{L}\p{N}_])/iu;
+
+/** Tabs the query's own section lines are indented by: 0 at top level, the
+ * nesting padding for the text of a nested query. */
+function nestingPad(text: string): number {
+  let pad = Infinity;
+  for (const line of text.split('\n').slice(1)) {
+    const m = SECTION_LINE.exec(line);
+    if (m) pad = Math.min(pad, m[1].length);
+  }
+  return pad === Infinity ? 0 : pad;
+}
+
+/** Removes `pad` leading tabs from each continuation line outside literal tokens.
+ * Lexically rejected text stays verbatim. */
+function dedentContinuations(text: string, pad: number): string {
+  const tokens = tryTokenize(text, { comments: true });
+  if (!tokens) return text;
+  const literals = tokens.filter(t => t.type === 'string' || t.type === 'date');
+  return text.replace(/\n\t+/gu, (run: string, offset: number) => {
+    const start = offset + 1;
+    if (literals.some(t => t.pos < start && start < t.pos + t.text.length)) return run;
+    return '\n' + '\t'.repeat(Math.max(0, run.length - 1 - pad));
+  });
+}
+
+/**
+ * C22/C23: raw multiline slices of a nested query keep the absolute indentation of
+ * its text, which already includes the nesting padding the generator adds again;
+ * every open → Save → reopen grew them by that padding. Rebase them to the query's
+ * own level. Nested subqueries are skipped: their own parse already did this.
+ */
+function dedentNestedRawText(value: unknown, pad: number): void {
+  if (Array.isArray(value)) {
+    value.forEach((item, i) => {
+      if (typeof item === 'string') { if (item.includes('\n')) value[i] = dedentContinuations(item, pad); }
+      else dedentNestedRawText(item, pad);
+    });
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  const record = value as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    if (key === 'subquery') continue;
+    const item = record[key];
+    if (typeof item === 'string') { if (item.includes('\n')) record[key] = dedentContinuations(item, pad); }
+    else dedentNestedRawText(item, pad);
+  }
+}
+
 export function parseDocument(
   text: string,
   resolver?: MetadataResolver,
@@ -5100,6 +5151,8 @@ export function parseDocument(
   if (opts?.preserveComments !== undefined) keepArgComments = opts.preserveComments;
   try {
     const doc = parseDocumentInner(text, resolver, opts?.sourceMap);
+    const pad = nestingPad(text);
+    if (pad > 0) for (const member of doc.members) dedentNestedRawText(member.model, pad);
     // 8.1: связывание комментариев для одиночного запроса И для ОБЪЕДИНЕНИЯ
     // (по участникам); никогда не роняем разбор из-за извлечения комментариев.
     if (opts?.preserveComments) {

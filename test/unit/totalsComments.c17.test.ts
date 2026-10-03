@@ -25,9 +25,7 @@ const tails = [
 for (const metadata of [false, true]) describe(`C17 TOTALS metadata=${metadata}`, () => {
  for (const tail of tails) {
   const source = `${head} ${tail}`;
-  // A multiline aggregate expression inside a nested query drifts by one tab per
-  // reopen with or without comments (C22); that layout defect is not C17's.
-  const nested = tail.includes('// expression') ? [] : [`ВЫБРАТЬ П.А ИЗ (${source}\n) КАК П`, `ВЫБРАТЬ 1 КАК А ГДЕ 1 В (${source}\n)`];
+  const nested = [`ВЫБРАТЬ П.А ИЗ (${source}\n) КАК П`, `ВЫБРАТЬ 1 КАК А ГДЕ 1 В (${source}\n)`];
   for (const input of [source, `${head} ОБЪЕДИНИТЬ ВСЕ ${head} ${tail}`, ...nested]) it(input, () => {
    const active = metadata ? resolver : undefined;
    let text = input;

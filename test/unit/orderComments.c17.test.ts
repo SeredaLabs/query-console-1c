@@ -29,8 +29,7 @@ const tails = [
 for (const metadata of [false, true]) describe(`C17 ORDER metadata=${metadata}`, () => {
   for (const tail of tails) {
     const source = `${head} ${tail}`;
-    // ИТОГИ is not nested (see C22); keep the nested wrappers to ORDER-only shapes.
-    const nested = tail.includes('ИТОГИ') ? [] : [`ВЫБРАТЬ П.А ИЗ (${source}\n) КАК П`, `ВЫБРАТЬ 1 КАК А ГДЕ 1 В (${source}\n)`];
+    const nested = [`ВЫБРАТЬ П.А ИЗ (${source}\n) КАК П`, `ВЫБРАТЬ 1 КАК А ГДЕ 1 В (${source}\n)`];
     for (const input of [source, `${head} ОБЪЕДИНИТЬ ВСЕ ${head} ${tail}`, ...nested]) it(input, () => {
       const active = metadata ? resolver : undefined;
       let text = input;
