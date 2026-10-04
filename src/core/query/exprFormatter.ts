@@ -3032,12 +3032,26 @@ export function stripRedundantLeafParens(raw: string): string {
     const glued = (raw[p] === '(' && raw[p + 1] === '(') || (raw[p] === ')' && raw[p - 1] === ')');
     out = out.slice(0, p) + (glued ? '' : ' ') + out.slice(p + 1);
   }
-  return out
-    .replace(/\s{2,}/g, ' ')
-    .replace(/\(\s+/g, '(')
-    .replace(/\s+\)/g, ')')
-    .replace(/\s+,/g, ',')
-    .trim();
+  // C25: the normalization touches only code — string/date literals and comments
+  // stay byte-for-byte; without lexical facts the original text is kept.
+  if (!codeRanges(out)) return raw;
+  out = replaceInCodeRanges(out, /\s{2,}/g, () => ' ');
+  out = replaceInCodeRanges(out, /\(\s+/g, () => '(');
+  out = replaceInCodeRanges(out, /\s+\)/g, () => ')');
+  out = replaceInCodeRanges(out, /\s+,/g, () => ',');
+  return trimCodeEdges(out);
+}
+
+/**
+ * `.trim()` limited to code: leading whitespace is always code (a literal or
+ * comment cannot start with it); trailing whitespace is trimmed only when the
+ * text ends in code, so a trailing comment keeps its own spaces.
+ */
+function trimCodeEdges(text: string): string {
+  const lead = text.replace(/^\s+/u, '');
+  const ranges = codeRanges(lead);
+  const endsInCode = !!ranges && ranges.length > 0 && ranges[ranges.length - 1][1] === lead.length;
+  return endsInCode ? lead.replace(/\s+$/u, '') : lead;
 }
 
 /**
