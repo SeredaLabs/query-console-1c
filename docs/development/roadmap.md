@@ -6,9 +6,10 @@ Canvas phase numbers. The ledger owns status/priority and exit boundaries;
 
 ## Recommended engineering sequence
 
-1. **Release and verification baseline:** ship the closed preservation work
-   (C17, C22, C23, C6) and make V2's grammar oracle a real CI gate, so green
-   runs again include the independent grammar check.
+1. **Release baseline:** the closed preservation work (C17, C22, C23, C6)
+   shipped in 0.1.97. The external grammar oracle (V2) is optional dev tooling,
+   not a CI gate and not a prerequisite for Query Core v1: 1C Platform / Query
+   Designer is authoritative for platform acceptance and canonicalization.
 2. **Incremental architecture:** migrate A1 lexical consumers one at a time;
    obtain A2 producer/projection evidence, then unify lifetime/column facts.
    Retain accepted cycle/hooks/synchronous resolver discipline. A3 inference uses
