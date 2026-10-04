@@ -18,12 +18,17 @@ the [grammar parity](grammar-parity.md) catalog gates (G2/G3/G5).
 Playwright covers the WebView harness. `@vscode/test-electron` covers command
 registration, editor insertion, and metadata flow inside a real Extension Host.
 
-The independent tree-sitter SDBL grammar is currently an opt-in local check,
-not part of the standard gate: `test/fixtures/tree-sitter-sdbl.wasm` is not
-committed and CI does not build it. `assertValidSdbl` prints a warning and
-returns without an independent grammar assertion when the fixture is
-absent; other corpus/structural tests still run. `tooling/scripts/build-wasm.sh` documents the current local build path;
-do not report the grammar oracle as executed unless the fixture was present.
+External SDBL grammars (tree-sitter-bsl, ANTLR, Lezer) are an optional
+development-only differential signal (V2), not part of the standard gate. 1C
+Platform / Query Designer is authoritative for platform acceptance and
+canonicalization; an external grammar's acceptance or rejection is never a
+verdict. Install, build, the gates above, packaging and release must not depend
+on them. `test/fixtures/tree-sitter-sdbl.wasm` is not committed and CI does not
+build it; without it `assertValidSdbl` warns once and performs no check, other
+assertions still run, and tests whose only assertion is the oracle are reported
+as *skipped* (`it.skipIf(!sdblGrammarAvailable)`). `tooling/scripts/build-wasm.sh`
+is an unpinned local path; do not report the grammar oracle as executed unless
+the fixture was present.
 
 Snapshot, corpus, or generated-output changes require an explanation of affected
 case counts and representative transitions. Never update them blindly.
