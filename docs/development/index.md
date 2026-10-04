@@ -14,6 +14,7 @@ use the following owners; historical audits do not override them.
 | What limitations affect users? | [Known issues](known-issues.md) |
 | What comes next? | [Roadmap](roadmap.md) |
 | What gates prove a change? | [Testing/release](testing-and-release.md), [corpus policy](corpus-testing.md) |
+| What must Query Core v1 prove about grammar? | [SDBL grammar parity](grammar-parity.md) |
 | Where is historical evidence? | [Audit index](audits/README.md) |
 
 Other references: [localization](localization.md), [performance](performance.md)
