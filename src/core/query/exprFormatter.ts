@@ -481,6 +481,14 @@ function flattenInlineValueLists(text: string): string {
 
 export function reindentLeafSubquery(text: string, base: number): string {
   if (!text.includes('\n')) return text;
+  // C25 R3: перенос строки внутри литерала — построчная перебазировка переписала бы
+  // его содержимое; такой текст сохраняется как есть, как и при неизвестных
+  // лексических фактах.
+  const ranges = codeRanges(text);
+  if (!ranges) return text;
+  for (let p = text.indexOf('\n'); p >= 0; p = text.indexOf('\n', p + 1)) {
+    if (!ranges.some(([start, end]) => p >= start && p < end)) return text;
+  }
   // Многострочный СПИСОК ЗНАЧЕНИЙ оператора `В (\n a,\n b)` внутри тела подзапроса
   // конструктор печатает инлайн на одной строке (фаза 6.15.20, MCP). Списки
   // подзапроса (`В (ВЫБРАТЬ …)`) НЕ трогаем (после `(` идёт ВЫБРАТЬ).
