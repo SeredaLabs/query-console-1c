@@ -59,6 +59,11 @@ function replaceInCodeRanges(text: string, re: RegExp, replacement: string): str
   return out + text.slice(last);
 }
 
+/** Whether offset `pos` lies in one of the lexer's code ranges (`codeRanges`). */
+function isCodeAt(ranges: Array<[number, number]>, pos: number): boolean {
+  return ranges.some(([start, end]) => pos >= start && pos < end);
+}
+
 /** Оборачивает выражение в SDBL-функцию агрегирования. */
 function wrapAggregate(func: AggregateFunction, expr: string): string {
   switch (func) {
@@ -311,7 +316,11 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
  */
 function wrapDcsBraceParam(text: string): string {
   if (!text.includes('{')) return text;
-  return text.replace(/\{([^{}]*)\}/gu, (whole, inner: string) => {
+  // C25: only braces that are code; brace-like text in a literal stays as is.
+  const ranges = codeRanges(text);
+  if (!ranges) return text;
+  return text.replace(/\{([^{}]*)\}/gu, (whole, inner: string, offset: number) => {
+    if (!isCodeAt(ranges, offset) || !isCodeAt(ranges, offset + whole.length - 1)) return whole;
     const c = inner.trim();
     if (!c.startsWith('&')) return whole;
     if (c.startsWith('(')) return whole;
@@ -331,7 +340,12 @@ function wrapDcsBraceParam(text: string): string {
  */
 function aliasDcsBraceExprs(text: string, state: { k: number }): string {
   if (!text.includes('{')) return text;
-  return text.replace(/\{([^{}]*)\}/gu, (whole, inner: string) => {
+  // C25: only braces that are code — a brace in a literal is neither rewritten
+  // nor counted in the `Поле<2k>` numbering.
+  const ranges = codeRanges(text);
+  if (!ranges) return text;
+  return text.replace(/\{([^{}]*)\}/gu, (whole, inner: string, offset: number) => {
+    if (!isCodeAt(ranges, offset) || !isCodeAt(ranges, offset + whole.length - 1)) return whole;
     const c = inner.trim();
     // Уже с псевдонимом — не трогаем (но всё равно считаем выражением-слотом).
     if (/(^|[^\p{L}\p{N}_&])КАК([^\p{L}\p{N}_]|$)/iu.test(c)) { state.k += 1; return whole; }
@@ -359,6 +373,9 @@ function aliasDcsBraceExprs(text: string, state: { k: number }): string {
  */
 function mergeDcsBraces(text: string): string {
   if (!text.includes('{')) return text;
+  // C25: the brace scan is unchanged; whitespace inside a brace is collapsed
+  // only in code, never inside a literal. Unknown lexical facts keep the text.
+  if (!codeRanges(text)) return text;
   const inners: string[] = [];
   let i = 0, count = 0;
   const n = text.length;
@@ -372,7 +389,7 @@ function mergeDcsBraces(text: string): string {
         else if (text[j] === '}') { depth--; if (depth === 0) break; }
       }
       if (j >= n) return text; // несбалансированная — не трогаем
-      inners.push(text.slice(i + 1, j).replace(/\s+/gu, ' ').trim());
+      inners.push(replaceInCodeRanges(text.slice(i + 1, j), /\s+/gu, ' ').trim());
       count++;
       i = j + 1;
       continue;
@@ -766,12 +783,15 @@ function reflowInlineMembershipSubquery(
       // НЕСКОЛЬКИХ строках: конструктор 1С печатает его на ОДНОЙ строке. Сплющиваем
       // внутренние переносы/отступы lhs в одиночные пробелы (как делает reindentLeaf-
       // Subquery со своей головой-кортежем), нормализуя стыки `( `/` )`/` ,`.
-      const lhsFlat = lhs
-        .replace(/[ \t\r\n]+/gu, ' ')
-        .replace(/\(\s+/gu, '(')
-        .replace(/\s+\)/gu, ')')
-        .replace(/\s+,/gu, ',')
-        .trim();
+      // C25: only code is normalized; literals stay byte-for-byte. A comment or
+      // unknown lexical facts keep the lhs as written.
+      let lhsFlat = lhs;
+      if (codeRanges(lhs) && !hasLineComment(lhs)) {
+        lhsFlat = replaceInCodeRanges(lhsFlat, /[ \t\r\n]+/gu, ' ');
+        lhsFlat = replaceInCodeRanges(lhsFlat, /\(\s+/gu, '(');
+        lhsFlat = replaceInCodeRanges(lhsFlat, /\s+\)/gu, ')');
+        lhsFlat = replaceInCodeRanges(lhsFlat, /\s+,/gu, ',').trim();
+      }
       const head = '\t'.repeat(ind) + prefix + lhsFlat + ' В' + hier;
       return [head, ...block];
     }
