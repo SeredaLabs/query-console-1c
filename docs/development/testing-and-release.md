@@ -13,7 +13,8 @@ npm run test:e2e
 npm run test:integration
 ```
 
-Vitest covers core, extension helpers, locale selection, and regression corpus.
+Vitest covers core, extension helpers, locale selection, regression corpus and
+the [grammar parity](grammar-parity.md) catalog gates (G2/G3/G5).
 Playwright covers the WebView harness. `@vscode/test-electron` covers command
 registration, editor insertion, and metadata flow inside a real Extension Host.
 
