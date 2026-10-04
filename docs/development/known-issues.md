@@ -76,6 +76,7 @@ Fallback to the saved nonempty model occurs only after normal loading fails.
 [Testing/release](testing-and-release.md) and [corpus policy](corpus-testing.md)
 distinguish repository regression checks, recorded platform canonical output and
 optional live/independent grammar workflows. Missing grammar WASM means the
-independent oracle skipped even when tests are green. U1–U3 remain evidence gaps,
+optional external grammar oracle did not run; oracle-only tests then report
+*skipped*. External grammars are differential signals, not platform verdicts. U1–U3 remain evidence gaps,
 not platform-invalid verdicts. Historical scope/provenance claims and complete
 former narratives are retained in the [checkpoint](audits/archive/known-issues-e3b36a5.md).
