@@ -17,13 +17,16 @@ const SDBL_WASM = path.join(FIXTURES, 'tree-sitter-sdbl.wasm');
  */
 export const sdblGrammarAvailable = fs.existsSync(SDBL_WASM);
 
-// A missing grammar skips the independent oracle; green test counts alone do
-// not establish that it ran. Warn once per module load. CI does not build the
-// grammar artifact; reproducibility and a required-gate policy remain V2.
+// Optional external grammar oracle (V2, dev tooling): a development-only
+// differential signal, never a verdict and never required by normal CI. When
+// it is absent, assertValidSdbl is a no-op, so tests whose only assertion is
+// this oracle must use `it.skipIf(!sdblGrammarAvailable)` to report *skipped*.
+// Warn once per module load.
 if (!sdblGrammarAvailable) {
   console.warn(
     '[assertValidSdbl] tree-sitter-sdbl.wasm not vendored (see tooling/scripts/build-wasm.sh) — ' +
-    'independent SDBL grammar oracle is SKIPPED for this entire test run; only the golden corpus is checked.'
+    'external SDBL grammar oracle is unavailable; differential grammar checks are skipped. ' +
+    "Query Console's own test, corpus, fuzz and validation gates are unaffected."
   );
 }
 

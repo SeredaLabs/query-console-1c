@@ -6,7 +6,7 @@ import { tryOpenBatch } from '../../src/core/query/validateBatch';
 import type { BatchDocument } from '../../src/core/query/batchModel';
 import type { QueryModel } from '../../src/core/query/queryModel';
 import { findQueryAt } from '../../src/extension/queryAtCursor';
-import { assertValidSdbl } from '../helpers/assertValidSdbl';
+import { assertValidSdbl, sdblGrammarAvailable } from '../helpers/assertValidSdbl';
 
 describe('generate', () => {
   it('returns empty string when no tables', () => {
@@ -390,7 +390,7 @@ describe('generate — группировка', () => {
       );
     });
 
-    it('валидный SDBL', async () => {
+    it.skipIf(!sdblGrammarAvailable)('валидный SDBL', async () => {
       await assertValidSdbl(generate(model()));
     });
   });
@@ -453,7 +453,7 @@ describe('generate — группировка', () => {
       expect(text).not.toContain('()');
     });
 
-    it('валидный SDBL', async () => {
+    it.skipIf(!sdblGrammarAvailable)('валидный SDBL', async () => {
       await assertValidSdbl(generate(model()));
     });
   });
@@ -629,7 +629,7 @@ describe('generate — условия (ГДЕ)', () => {
     });
   });
 
-  it('валидный SDBL', async () => {
+  it.skipIf(!sdblGrammarAvailable)('валидный SDBL', async () => {
     const model = base();
     model.conditions = [
       { custom: false, tableId: 't1', path: 'Код' },
@@ -714,7 +714,7 @@ describe('generate — дополнительно (фаза 5.3)', () => {
       );
     });
 
-    it('валидный SDBL с ПОМЕСТИТЬ', async () => {
+    it.skipIf(!sdblGrammarAvailable)('валидный SDBL с ПОМЕСТИТЬ', async () => {
       await assertValidSdbl(
         generate({ ...base(), queryType: 'createTemp', tempTableName: 'ВремТаб' })
       );
@@ -760,7 +760,7 @@ describe('generate — дополнительно (фаза 5.3)', () => {
       expect(generate({ ...base(), lockForUpdate: [] })).toBe(expectedPlain);
     });
 
-    it('валидный SDBL с ДЛЯ ИЗМЕНЕНИЯ', async () => {
+    it.skipIf(!sdblGrammarAvailable)('валидный SDBL с ДЛЯ ИЗМЕНЕНИЯ', async () => {
       await assertValidSdbl(generate({ ...base(), lockForUpdate: ['Справочник.Валюты'] }));
     });
   });
