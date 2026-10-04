@@ -163,18 +163,37 @@ const EST_NE_NULL_KAK_RE = /((?:^|[^\p{L}\p{N}_])ЕСТЬ\s+НЕ\s+NULL) (КАК
 // `… ЕСТЬ НЕ NULL )` перед ЗАКРЫВАЮЩЕЙ скобкой группы — тот же квирк: один лишний
 // пробел после NULL сохраняется (`(Поле ЕСТЬ НЕ NULL )`). Фаза 6.16.76, корпус.
 const EST_NE_NULL_PAREN_RE = /((?:^|[^\p{L}\p{N}_])ЕСТЬ\s+НЕ\s+NULL)\)/gu;
-function appendIsNotNullToLine(line: string): string {
+// C25: the regexes match whole lines (line semantics unchanged), but a space is
+// inserted only where both neighbours of the insertion point are code in the
+// whole text (`inCode`, offsets within the line) — never inside a string/date
+// literal or a comment. The three insertions cannot overlap or affect each
+// other's match, so they are found on the original line.
+function appendIsNotNullToLine(line: string, inCode: (pos: number) => boolean): string {
+  const inserts: number[] = [];
   // `… ЕСТЬ НЕ NULL КАК Алиас` → один лишний пробел перед `КАК` (двойной пробел).
-  let out = line.replace(EST_NE_NULL_KAK_RE, '$1  $2');
+  for (const m of line.matchAll(EST_NE_NULL_KAK_RE)) {
+    const at = m.index! + m[1].length;
+    if (inCode(at - 1) && inCode(at + 1)) inserts.push(at);
+  }
   // `… ЕСТЬ НЕ NULL)` → один пробел перед закрывающей скобкой (`ЕСТЬ НЕ NULL )`).
-  out = out.replace(EST_NE_NULL_PAREN_RE, '$1 )');
+  for (const m of line.matchAll(EST_NE_NULL_PAREN_RE)) {
+    const at = m.index! + m[1].length;
+    if (inCode(at - 1) && inCode(at)) inserts.push(at);
+  }
+  let out = line;
+  for (const at of inserts.sort((a, b) => b - a)) out = out.slice(0, at) + ' ' + out.slice(at);
   // `… ЕСТЬ НЕ NULL` на конце строки → один хвостовой пробел.
-  return EST_NE_NULL_EOL_RE.test(out) ? out + ' ' : out;
+  return EST_NE_NULL_EOL_RE.test(line) && inCode(line.length - 1) ? out + ' ' : out;
 }
 export function appendIsNotNullTrailingSpace(text: string): string {
-  return text.includes('\n')
-    ? text.split('\n').map(appendIsNotNullToLine).join('\n')
-    : appendIsNotNullToLine(text);
+  const ranges = codeRanges(text);
+  if (!ranges) return text;
+  let lineStart = 0;
+  return text.split('\n').map(line => {
+    const base = lineStart;
+    lineStart += line.length + 1;
+    return appendIsNotNullToLine(line, pos => ranges.some(([start, end]) => base + pos >= start && base + pos < end));
+  }).join('\n');
 }
 
 /**
