@@ -333,6 +333,27 @@ export function tryTokenize(text: string, opts?: { comments?: boolean }): Token[
   }
 }
 
+/**
+ * Half-open `[start, end)` ranges of `text` that are code: everything outside
+ * string literals, date literals and `//` comments, as delimited by this lexer.
+ * Text-level rewrites (for example qualifier substitution in generated text)
+ * apply only inside these ranges. Undefined means the boundaries are unknown
+ * (the text cannot be lexed); callers must then leave the text unchanged.
+ */
+export function codeRanges(text: string): Array<[number, number]> | undefined {
+  const tokens = tryTokenize(text, { comments: true });
+  if (!tokens) return undefined;
+  const ranges: Array<[number, number]> = [];
+  let start = 0;
+  for (const t of tokens) {
+    if (t.type !== 'string' && t.type !== 'date' && t.type !== 'comment') continue;
+    if (t.pos > start) ranges.push([start, t.pos]);
+    start = t.pos + t.text.length;
+  }
+  if (text.length > start) ranges.push([start, text.length]);
+  return ranges;
+}
+
 function lexError(message: string, line: number, col: number, pos: number, extent: SdblLexError['extent']): Error {
   return new SdblLexError(`Лексическая ошибка ${line}:${col} — ${message}`, pos, extent);
 }

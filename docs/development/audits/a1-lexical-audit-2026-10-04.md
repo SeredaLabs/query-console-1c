@@ -71,7 +71,9 @@ imports anything, and `src/core` imports nothing from webview or extension.
    | VT multi-line `"a⏎  b"` | `"a⏎\t\t\t\t\tb"` | `sdblGenerator.reindentVtCondition` |
 
    Cause: raw regex/character scanners that do not skip string tokens.
-   Proposed new debt item **C25**.
+   Registered as **C25** (ledger). The C25a slice fixed the
+   `renderConditionSubquery` rewrite, which also changed comment text in the
+   same path; the other 8 cases remain.
 2. **Dead guards.** JavaScript `\b` is ASCII-only even with the `u` flag, so
    `/\bВЫБОР\b/u` and `/\bВЫБРАТЬ\b/u` never match Cyrillic. There are 4
    sites: 3 in `exprFormatter`, 1 in `sdblGenerator`. Migrating them changes
@@ -106,6 +108,18 @@ slices, and slices are merged or split only when the code confirms it.
 | PR-10 | `dropRedundantGroupDerefs` | 10 |
 | PR-11 | shared query-keyword detection for `extractQueryStrings` / `queryAtCursor` | 3 |
 | PR-12 | highlighter and completion vocabulary | 3 |
+
+Candidate next slice (not started): **C25b-1 = `exprFormatter.stripNotFieldParens`**.
+Before implementing it, check:
+- whether `codeRanges` is sufficient for this scanner;
+- whether it needs per-segment replacement, literal masking or another minimal
+  token-aware primitive;
+- where a shared helper belongs without a dependency cycle (the formatter
+  cannot import the generator);
+- that no generic rewrite framework is introduced.
+
+The lexer holds lexical facts and primitives, not generator- or
+formatter-specific rewrite policy.
 
 The four dead `\b` guards stay behavior-preserving `investigate` items: fixing
 them can activate dead branches and change canonical output.
