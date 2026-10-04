@@ -66,6 +66,7 @@ repository; only ids and hashes do.
 | `constructId` | Stable dotted id, `<category>.<construct>` |
 | `category` | Grammar area: `select`, `source`, `join`, `condition`, `expression`, `literal`, `parameter`, `group`, `order`, `totals`, `batch`, `virtual-table`, `language`, … |
 | `title` | One-line description of the construct or question |
+| `text` | The query text whose behavior is recorded; for platform entries, exactly the probed text |
 | `scope` | `in`, `out` (with the deciding rule) or `pending` |
 | `source` | How the entry entered the catalog (e.g. `stage-0-platform-reprobe`, `1c-reference`, `edt-model`, `corpus`, `external-grammar`, `audit-probe`) |
 | `origin` | Case ids behind the entry (probe, fixture, external corpus id) |
@@ -75,7 +76,7 @@ repository; only ids and hashes do.
 | `platformMethod`, `platformDate` | How and when the platform result was obtained |
 | `oursStatus` | `accepts` (opens without refusal) or `rejects` |
 | `roundTripStatus` | `stable` (second pass reproduces the first), `unstable`, `not-applicable` (rejected) |
-| `canonicalStatus` | `matches` / `differs` from the recorded platform canonical **query text**, `not-recorded` (no text recorded; a prose description is not evidence of text equality), `not-applicable` |
+| `canonicalStatus` | `matches` / `differs` from the recorded platform canonical **query text** (`platformCanonical` in the evidence row), `not-recorded` (no text recorded; a prose description is not evidence of text equality), `not-applicable` |
 | `applyStatus` | `allowed`, `blocked`, `not-applicable`. Separates parser over-acceptance (platform-invalid, opens, Apply blocked) from a safety-contract violation (platform-invalid, opens, Apply allowed) |
 | `debtId` | Ledger item that owns a gap, unknown or related fix, else `null` |
 | `note` | Qualifications of the evidence |
@@ -89,6 +90,32 @@ repository; only ids and hashes do.
   blocked` is parser over-acceptance: tracked under C5, not a grammar gap.
 - `platformStatus: invalid` with `oursStatus: accepts` and `applyStatus:
   allowed` violates the safety contract and is a correctness defect.
+
+## Executable gates
+
+[`grammarParity.catalog.test.ts`](../../test/unit/grammarParity.catalog.test.ts)
+runs in the normal unit suite. Our side is measured on every run with the same
+steps as the product, without and with the corpus metadata resolver:
+- the Designer open gate;
+- generation;
+- a second pass;
+- the Apply gate.
+
+Recorded and measured status must match exactly, so a regression and an
+improvement both fail until the entry is updated with evidence. The failure
+message names which: `catalog evidence is stale` (support improved for a valid
+construct, for example after a C2 fix; update the entry and its debt item) or
+`Query Core regression` (a valid construct lost support, or a non-valid one
+became more permissive).
+
+| Gate | Entries | Rule |
+|---|---|---|
+| G2 | `platformStatus: valid` | Recorded status holds; an in-scope entry without an open debt item opens, has a stable second pass and Apply allowed; `canonicalStatus: matches` reproduces the recorded canonical text |
+| G3 | `platformStatus: invalid` | Recorded status holds; rejected on open or Apply blocked. Parser over-acceptance alone is not a failure |
+| — | `unknown`, `unattested` | No verdict; recorded status holds. `unknown` needs an open U item |
+| G5 | all | Unique, category-prefixed ids; enums; non-empty text and source/origin; traceable evidence with build (`unknown` allowed), method and date; status consistency; debt ids exist in the ledger; a valid-construct gap needs an open debt item; platform-invalid text that opens must be Apply-blocked |
+
+No live 1C, external grammar or network access is involved.
 
 ## Current seed
 
