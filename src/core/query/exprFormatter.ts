@@ -2115,7 +2115,15 @@ function reflowLeafSelectorCase(text: string, valueBaseInd: number): string | nu
 export function reindentLeafBool(text: string, base: number): string {
   if (!text.includes('\n')) return text;
   if (/\bВЫБРАТЬ\b|\bВЫБОР\b/u.test(text)) return text; // подзапрос/CASE — не наша зона
+  // Строка-продолжение многострочного литерала (перенос перед ней — не код) — не
+  // продолжение цепочки, даже если текст литерала начинается с `И`/`ИЛИ` (C25d).
+  // Лексические факты неизвестны — текст сохраняется как есть.
+  const ranges = codeRanges(text);
+  if (!ranges) return text;
+  const inCode = (pos: number): boolean => ranges.some(([start, end]) => pos >= start && pos < end);
   const lines = text.split('\n');
+  const lineStarts: number[] = [];
+  for (let i = 0, pos = 0; i < lines.length; pos += lines[i].length + 1, i++) lineStarts.push(pos);
   const parenDelta = (s: string): number => {
     let d = 0;
     let inS = false;
@@ -2141,6 +2149,7 @@ export function reindentLeafBool(text: string, base: number): string {
   let depth = parenDelta(lines[0]);
   for (let i = 1; i < lines.length; i++) {
     const raw = lines[i];
+    if (!inCode(lineStarts[i] - 1)) return text; // литерал — не наша цепочка
     if (raw.trim() === '') { depth += parenDelta(raw); continue; }
     const w = firstWord(raw);
     if (w !== 'И' && w !== 'ИЛИ') return text; // продолжение не И/ИЛИ — не наша цепочка
