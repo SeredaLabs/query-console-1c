@@ -17,6 +17,7 @@ This is an indexed historical archive, not a second status ledger.
 
 | Date | Audit / scope | Result → debt/fix | Disposition |
 |---|---|---|---|
+| 2026-10-04 | [A1 lexical ownership audit](a1-lexical-audit-2026-10-04.md) | 321 lexical sites classified; 9 confirmed literal-content rewrites (proposed C25); migration plan | AUDIT; no code changed |
 | 2026-10-04 | [SDBL grammar parity proposal](sdbl-grammar-parity-proposal-2026-10-04.md) | Query Core v1 gate: 0 known platform-valid gaps across a reviewed construct catalog with provenance and coverage confidence; scope decisions accepted | PROPOSED; not started, decisions not yet in ledger |
 | 2026-10-03 | [C17 GROUP review fix](c17-group-review-fix-2026-10-03.md) | Require every comment to have an owner before the new structural transition | RESOLVED review regression; mixed-slot coverage added |
 | 2026-10-03 | [C17 GROUP review](c17-group-review-2026-10-03.md) | GROUP probes pass; any-comment structural trigger loses other raw comments | RESOLVED by ownership guard; original evidence retained |

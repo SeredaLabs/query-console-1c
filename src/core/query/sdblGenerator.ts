@@ -7,7 +7,7 @@ import { parseDocument } from './sdblParser';
 import { resolveAliases, isTabularSectionSource, qualifiedAutoAlias, synthesizedFieldAlias, joinKeyword } from './queryModelUtils';
 import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpression, formatJoinConjunct, normalizeLeafCase, stripNegatedFieldParens, stripNotFieldParens, stripRedundantLeafParens, appendIsNotNullTrailingSpace, renderOperatorRhs, flattenMultilineLeaf, reindentLeafSubquery, reindentLeafCase, reindentLeafBool, wrapBareCastOperand, reprintLeafArithmetic, canonicalizeComparisonOperands, setInlineSubqueryReflow, tightenLeafInOperator } from './exprFormatter';
 import { splitArgComments } from './argComments';
-import { tokenize, tryTokenize } from './sdblLexer';
+import { tokenize, tryTokenize, codeRanges } from './sdblLexer';
 import { parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { BARE_PARAM, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
@@ -40,6 +40,23 @@ let inConditionSubquery = false;
 /** Экранирует спецсимволы регулярного выражения в литеральной строке. */
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * `text.replace(re, replacement)` applied only inside the lexer's code ranges
+ * (`codeRanges`): string/date literals and comments are copied unchanged. When
+ * the boundaries are unknown, the text is returned unchanged.
+ */
+function replaceInCodeRanges(text: string, re: RegExp, replacement: string): string {
+  const ranges = codeRanges(text);
+  if (!ranges) return text;
+  let out = '';
+  let last = 0;
+  for (const [start, end] of ranges) {
+    out += text.slice(last, start) + text.slice(start, end).replace(re, replacement);
+    last = end;
+  }
+  return out + text.slice(last);
 }
 
 /** Оборачивает выражение в SDBL-функцию агрегирования. */
@@ -91,13 +108,15 @@ function renderConditionSubquery(subquery: QueryDocument, baseTabs: number, lead
   // переписываем `<авто>.` → `<имяИсточника>.` для каждого такого источника.
   // (У одно-сегментных временных таблиц авто-псевдоним совпадает с именем —
   // замена холостая.) Коррелированные/именованные источники не трогаем.
+  // C25: замена только в коде — строковые литералы и комментарии пользователя
+  // не переписываются; без лексических фактов текст остаётся как есть.
   for (const member of subquery.members) {
     for (const t of member.model.tables) {
       if (!t.aliasSynthesized || t.subquery) continue;
       const auto = defaultTableAlias(t);
       if (auto === t.fullName) continue;
       const re = new RegExp(`(^|[^\\p{L}\\p{N}_.])${escapeRegExp(auto)}\\.`, 'gu');
-      text = text.replace(re, `$1${t.fullName}.`);
+      text = replaceInCodeRanges(text, re, `$1${t.fullName}.`);
     }
   }
   // Пустые строки-разделители вокруг `ОБЪЕДИНИТЬ ВСЕ` внутри подзапроса-операнда
