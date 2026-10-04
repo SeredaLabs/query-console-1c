@@ -373,9 +373,11 @@ function aliasDcsBraceExprs(text: string, state: { k: number }): string {
  */
 function mergeDcsBraces(text: string): string {
   if (!text.includes('{')) return text;
-  // C25: the brace scan is unchanged; whitespace inside a brace is collapsed
-  // only in code, never inside a literal. Unknown lexical facts keep the text.
-  if (!codeRanges(text)) return text;
+  // C25: only braces in code are structure (R1); a brace inside a literal is
+  // data. Whitespace inside a brace is collapsed only in code. Unknown lexical
+  // facts keep the text.
+  const ranges = codeRanges(text);
+  if (!ranges) return text;
   const inners: string[] = [];
   let i = 0, count = 0;
   const n = text.length;
@@ -385,6 +387,7 @@ function mergeDcsBraces(text: string): string {
     if (c === '{') {
       let depth = 0, j = i;
       for (; j < n; j++) {
+        if (!isCodeAt(ranges, j)) continue;
         if (text[j] === '{') depth++;
         else if (text[j] === '}') { depth--; if (depth === 0) break; }
       }
