@@ -48,6 +48,7 @@ Core v1 is ordinary SDBL as opened by the 1C Query Designer.
 | Platform version | Not tied to one 8.3.x build. Every new probe records the exact build. A construct confirmed on a supported modern 8.3, with no evidence that it is version-specific, is SDBL. Version differences are separate compatibility facts, never a reason to narrow the grammar. |
 | DCS braces `{…}` | Out of scope for Core v1 grammar parity: a data-composition extension over the query model. A future DCS layer gets its own coverage contract. |
 | Template markers `#Имя` (U1) | Syntax in scope: ours must not fail only because of `#Имя`. Syntax/preservation confirmed locally (open → stable round trip → Apply); substitution semantics UNKNOWN; nothing is interpreted or transformed; current Apply behavior retained pending platform evidence. U1 must answer whether Query Core editing/generation can change the value or scope of `#Имя`: if yes, a safety gate is required; if it stays opaque preserved syntax, no Apply block is needed. |
+| Reference gaps | Absence from the 8.3.20 reference is not evidence of invalidity or exclusion. A construct is in scope if the ordinary 1C Query Designer accepts and preserves it as part of the query, whatever its origin; it is out of scope only if it exists solely in the DCS query layer, like `{…}`. Until probed, such areas stay pending with a concrete question. |
 | English SDBL (C2) | In scope, P1. Core v1 does not ship with this known gap. It is implemented after or together with A1, not as more contextual-keyword special cases. |
 
 Also out of scope:
@@ -65,6 +66,7 @@ repository; only ids and hashes do.
 |---|---|
 | `constructId` | Stable dotted id, `<category>.<construct>` |
 | `category` | Grammar area: `select`, `source`, `join`, `condition`, `expression`, `literal`, `parameter`, `group`, `order`, `totals`, `batch`, `virtual-table`, `language`, … |
+| `area` | Coverage area id from the [inventory](#coverage-inventory) |
 | `title` | One-line description of the construct or question |
 | `text` | The query text whose behavior is recorded; for platform entries, exactly the probed text |
 | `scope` | `in`, `out` (with the deciding rule) or `pending` |
@@ -91,6 +93,125 @@ repository; only ids and hashes do.
 - `platformStatus: invalid` with `oursStatus: accepts` and `applyStatus:
   allowed` violates the safety contract and is a correctness defect.
 
+## Coverage inventory
+
+[`coverage-areas.jsonl`](../../test/fixtures/grammar-parity/coverage-areas.jsonl)
+lists the SDBL surface areas the catalog must cover. Area names come from
+independent sources, not from our parser. Each area is one record:
+- `areaId`, `axis`, `title`;
+- `sources`: where each independent source names the area;
+- `corpusPattern` and `corpusPackages`: a recorded discovery snapshot over the
+  golden `input` texts (Python `re`, IGNORECASE, 2026-10-04). It is not
+  recomputed in tests and is not a support claim;
+- `coverageState`;
+- `decisionRef`, `referenceGap` (why the 1C reference has no section for the
+  area) and `note`.
+
+Axes keep the catalog from collapsing into a flat query list:
+- `package-union`;
+- `modifier-ordering`;
+- `syntax-construct`;
+- `expression-form`;
+- `contextual-keyword`;
+- `virtual-table-shape`.
+
+| Coverage state | Meaning |
+|---|---|
+| `unreviewed` | Area not yet enumerated against the sources |
+| `pending-platform-evidence` | Enumerated; at least one entry still needs a platform result |
+| `covered` | Enumerated; every entry carries a platform verdict |
+| `out-of-scope` | Excluded by a recorded decision (`decisionRef`) |
+
+**Phase 3 exit:**
+- every in-scope area is `covered` or `pending-platform-evidence`;
+- no area is `unreviewed`;
+- every source below is reviewed or its gap is recorded.
+
+New platform-valid gaps found during the review become C items. They are not
+fixed in the same change.
+
+### Sources
+
+| Source | Pin / access (2026-10-04) | Role |
+|---|---|---|
+| 1C syntax assistant: query language (`shquery_ru.hbk`) and query tables in the context help (`shcntx_ru.hbk`) | Local platform install 8.3.20.1838 (`/opt/1cv8/8.3.20.1838`). Read from the help containers; only section titles, paths and parameter names are recorded | **Primary checklist** |
+| 1C web documentation (its.1c.ru, v8.1c.ru, 1c-dn.com Developer Guide 8.3.27) | Not reachable or sign-in required from the dev environment | Not used; the local help is the same reference for 8.3.20 |
+| 1c-dn.com query language overview | Public page, fetched | Weak, official: dereferencing, nested tables, auto-order, totals, virtual tables |
+| EDT 2024.2 `ql.model` API | edt.1c.ru NXDOMAIN; secondary record in the [EDT audit](audits/query-core-edt-2026-10-01.md) | Model-level cross-check; class names only |
+| bsl-parser ANTLR (`SDBLParser.g4`, `SDBLLexer.g4`) | 1c-syntax/bsl-parser `a89b827b` | Discovery: rule and token names only, never rules |
+| tree-sitter-bsl `grammars/sdbl/grammar.js` | alkoleft/tree-sitter-bsl `5752667f` | Discovery: rule names only |
+| Golden corpus | 1976 packages, one BSP configuration | Real-world presence; blind spots below |
+| Platform evidence | Stage 0 RP01–RP25, C3/C4 observations | Verdicts (build unknown) |
+
+### Reference section map
+
+[`reference-sections.jsonl`](../../test/fixtures/grammar-parity/reference-sections.jsonl)
+maps every section of the 8.3.20.1838 syntax assistant to coverage areas:
+- all 195 nodes of the query-language tree;
+- the 68 nodes of "Таблицы запросов" in the context help, one per table or
+  virtual table.
+
+Each section is recorded as `construct` (it names at least one area),
+`container` (an overview node) or `out-of-scope` (with a note). Virtual tables
+also carry their documented `parameters`.
+
+G5 enforces both directions:
+- every section maps to known areas;
+- every area is named by a section or records a `referenceGap`.
+
+Help text is not copied into the repository.
+
+### Inventory baseline
+
+70 areas. All are `unreviewed`, except `dcs.braces`, which is `out-of-scope`.
+The seed touches 19 areas. The reference map has 263 sections: 238 construct,
+24 container, 1 out of scope (executing queries from the built-in language).
+
+| Axis | Areas | With seed entries | Zero golden packages |
+|---|---|---|---|
+| package-union | 7 | 1 | `package.for-update` |
+| modifier-ordering | 5 | 2 | `order.autoorder` |
+| syntax-construct | 24 | 5 | `select.empty-table`, `source.external-data-source`, `source.filter-criterion`, `group.grouping-sets`, `characteristics.block` |
+| expression-form | 22 | 6 | `expression.math-functions`, `expression.grouped-by` |
+| contextual-keyword | 3 | 2 | — (not pattern-countable) |
+| virtual-table-shape | 9 | 3 | 7 of 8 named tables (only slices occur) |
+
+**Findings:**
+- **The 1C reference adds areas** that the first draft missed:
+  - string, date and math function families (including `Лев`, `Прав`,
+    `СтрНайти` and math functions);
+  - ordering inside nested tables;
+  - data source aliases;
+  - change-registration tables (`.Изменения`);
+  - filter criterion tables;
+  - recalculation and base-data tables of calculation registers;
+  - the cube dimension table of an external data source.
+- **Virtual-table arity is documented.** For example, `Обороты` has 4
+  parameters, `ОстаткиИОбороты` has 5 and `ОборотыДтКт` has 8. This agrees with
+  RP04/RP05 (5th and 6th arguments platform-invalid). `Границы` lists no
+  parameters, so U2 stays open from the reference side too.
+- **Seven areas have no reference section** (`referenceGap`):
+  - `package.drop`: only the bilingual keyword row;
+  - `characteristics.block`;
+  - `source.parameter-table`;
+  - `source.template-marker`;
+  - `keyword.as-identifier`;
+  - `expression.scalar-subquery`;
+  - `dcs.braces`.
+- **`ХАРАКТЕРИСТИКИ` is absent from the query-language reference.** Its scope
+  stays pending under the reference-gap rule (see Scope); the open question is
+  whether the ordinary Query Designer accepts and preserves it.
+- **Two other constructs are not in the 8.3.20 reference:**
+  `ИНДЕКСИРОВАТЬ ПО НАБОРАМ` and `УНИКАЛЬНЫЙИДЕНТИФИКАТОР`. They are candidates
+  for a version/platform probe. A version difference is a compatibility fact
+  (decision 1), not a reason to narrow the grammar.
+- **The golden corpus is blind to most virtual tables.** It has 0 packages with
+  `Остатки`, `Обороты`, `ОстаткиИОбороты`, the accounting and calculation
+  tables, `Границы` or `ЗадачиПоИсполнителю`. Its 100% acceptance says nothing
+  about these areas.
+- 8 golden packages contain DCS braces. They are out of scope for Core v1 and
+  keep their current behavior.
+
 ## Executable gates
 
 [`grammarParity.catalog.test.ts`](../../test/unit/grammarParity.catalog.test.ts)
@@ -113,7 +234,7 @@ became more permissive).
 | G2 | `platformStatus: valid` | Recorded status holds; an in-scope entry without an open debt item opens, has a stable second pass and Apply allowed; `canonicalStatus: matches` reproduces the recorded canonical text |
 | G3 | `platformStatus: invalid` | Recorded status holds; rejected on open or Apply blocked. Parser over-acceptance alone is not a failure |
 | — | `unknown`, `unattested` | No verdict; recorded status holds. `unknown` needs an open U item |
-| G5 | all | Unique, category-prefixed ids; enums; non-empty text and source/origin; traceable evidence with build (`unknown` allowed), method and date; status consistency; debt ids exist in the ledger; a valid-construct gap needs an open debt item; platform-invalid text that opens must be Apply-blocked |
+| G5 | all | Reference map: every section maps to known areas, every area is named by a section or records `referenceGap`. Coverage areas: unique ids, axis/state enums, `out-of-scope` needs `decisionRef`, `covered` needs platform verdicts for all its entries, every catalog entry names a known area. Catalog: unique, category-prefixed ids; enums; non-empty text and source/origin; traceable evidence with build (`unknown` allowed), method and date; status consistency; debt ids exist in the ledger; a valid-construct gap needs an open debt item; platform-invalid text that opens must be Apply-blocked |
 
 No live 1C, external grammar or network access is involved.
 

@@ -10,7 +10,8 @@
  *                       blocked. Parser over-acceptance alone is not a failure.
  *  Unknown/unattested:  no verdict; the recorded status must still hold
  *                       (unknown also needs an open U item).
- *  G5 integrity:        ids, enums, provenance, status consistency, debt links.
+ *  G5 integrity:        ids, enums, provenance, status consistency, debt links,
+ *                       and the coverage-area inventory each entry belongs to.
  *
  * A failing status comparison means either a regression or an improvement:
  * fix the code, or update the catalog entry with evidence. Never both blindly.
@@ -30,9 +31,11 @@ const ROOT = path.resolve(__dirname, '../..');
 const CATALOG = path.join(ROOT, 'test/fixtures/grammar-parity/catalog.jsonl');
 const LEDGER = path.join(ROOT, 'docs/development/technical-debt.md');
 const STAGE0_QUEUE = 'docs/development/audits/stage-0/platform-reprobe.jsonl';
+const AREAS = path.join(ROOT, 'test/fixtures/grammar-parity/coverage-areas.jsonl');
+const SECTIONS = path.join(ROOT, 'test/fixtures/grammar-parity/reference-sections.jsonl');
 
 type Entry = {
-  constructId: string; category: string; title: string; text: string;
+  constructId: string; category: string; area: string; title: string; text: string;
   scope: 'in' | 'out' | 'pending'; source: string; origin: string[];
   evidenceRef: string | null;
   platformStatus: 'valid' | 'invalid' | 'unknown' | 'unattested';
@@ -57,6 +60,23 @@ const readJsonl = (file: string): any[] =>
   fs.readFileSync(file, 'utf8').split('\n').filter(l => l.trim()).map(l => JSON.parse(l));
 
 const entries: Entry[] = readJsonl(CATALOG);
+
+type Area = {
+  areaId: string; axis: string; title: string; sources: Record<string, string>;
+  corpusPattern: string | null; corpusPackages: number | null;
+  coverageState: 'unreviewed' | 'pending-platform-evidence' | 'covered' | 'out-of-scope';
+  decisionRef?: string; referenceGap?: string; note?: string;
+};
+const AXES = ['package-union', 'modifier-ordering', 'syntax-construct', 'expression-form', 'contextual-keyword', 'virtual-table-shape'];
+const COVERAGE_STATES = ['unreviewed', 'pending-platform-evidence', 'covered', 'out-of-scope'];
+const areas: Area[] = readJsonl(AREAS);
+
+/** 1C syntax-assistant sections (platform help, see grammar-parity.md) mapped to coverage areas. */
+type Section = {
+  sectionId: string; source: string; title: string; path: string | null; parent: string | null;
+  role: 'construct' | 'container' | 'out-of-scope'; areas: string[]; parameters?: string[]; note?: string;
+};
+const sections: Section[] = readJsonl(SECTIONS);
 
 /** Ledger rows `| ID | STATUS · … |` → status word (OPEN, PARTIAL, UNKNOWN, CLOSED). */
 const ledger = new Map<string, string>();
@@ -112,6 +132,52 @@ function expectRecordedStatus(e: Entry, m: Measured, mode: string): void {
     : `Query Core regression against a recorded platform verdict: ${e.constructId} (${e.platformStatus}) ${e.platformStatus === 'valid' ? 'lost support' : 'became more permissive'}.`;
   expect.fail(`${verdict}\n  mode: ${mode}\n  recorded: ${JSON.stringify(was)}\n  measured: ${JSON.stringify(now)}`);
 }
+
+describe('grammar parity coverage areas: G5 integrity', () => {
+  it('area ids are unique and every catalog entry belongs to a known area', () => {
+    const ids = areas.map(a => a.areaId);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const e of entries) expect(ids, `${e.constructId} → ${e.area}`).toContain(e.area);
+  });
+
+  it('every 1C reference section is mapped, and every area is either named by the reference or explains why not', () => {
+    const areaIds = new Set(areas.map(a => a.areaId));
+    const ids = sections.map(s => s.sectionId);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const s of sections) {
+      expect(['construct', 'container', 'out-of-scope'], s.sectionId).toContain(s.role);
+      expect(s.title.trim(), s.sectionId).not.toBe('');
+      if (s.parent !== null) expect(ids, `${s.sectionId} parent`).toContain(s.parent);
+      for (const a of s.areas) expect(areaIds.has(a), `${s.sectionId} → ${a}`).toBe(true);
+      if (s.role === 'construct') expect(s.areas.length, `${s.sectionId} ${s.title}`).toBeGreaterThan(0);
+      if (s.role === 'out-of-scope') expect(s.note?.trim()).toBeTruthy();
+    }
+    const named = new Set(sections.flatMap(s => s.areas));
+    for (const a of areas) {
+      if (!named.has(a.areaId)) expect(a.referenceGap?.trim(), `${a.areaId} has no reference section`).toBeTruthy();
+    }
+  });
+
+  it.each(areas.map(a => [a.areaId, a] as const))('%s: axis, state and evidence rules', (_id, a) => {
+    expect(a.areaId).toMatch(/^[a-z][a-z-]*\.[a-z0-9][a-z0-9-]*$/);
+    expect(AXES).toContain(a.axis);
+    expect(COVERAGE_STATES).toContain(a.coverageState);
+    expect(a.title.trim()).not.toBe('');
+    // corpusPattern/corpusPackages are a recorded discovery snapshot (Python re, IGNORECASE, golden `input`), not recomputed here.
+    expect(a.corpusPattern === null ? a.corpusPackages === null : Number.isInteger(a.corpusPackages)).toBe(true);
+    const inArea = entries.filter(e => e.area === a.areaId);
+    if (a.coverageState === 'out-of-scope') {
+      expect(a.decisionRef?.trim(), 'out-of-scope needs a recorded decision').toBeTruthy();
+      for (const e of inArea) expect(e.scope).toBe('out');
+    }
+    if (a.coverageState === 'covered') {
+      // Covered = enumerated in the catalog and every entry carries platform evidence.
+      expect(inArea.length).toBeGreaterThan(0);
+      for (const e of inArea) expect(['valid', 'invalid'], e.constructId).toContain(e.platformStatus);
+    }
+    if (a.coverageState === 'pending-platform-evidence') expect(inArea.length).toBeGreaterThan(0);
+  });
+});
 
 describe('grammar parity catalog: G5 integrity', () => {
   it('is non-empty and constructIds are unique, well-formed and match their category', () => {
