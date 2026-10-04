@@ -964,6 +964,11 @@ function reindentVtCondition(condition: string, base: number): string {
       // в reindentLeafCase/orLevelsForCondition). Чистая `И`/`ИЛИ`-цепочка без
       // вложенного `ИЛИ`-уровня даёт прежний плоский ind+1.
       const lines = c.text.split('\n');
+      // Строки-продолжения многострочного литерала выводятся байт-в-байт, а строка,
+      // открывающая литерал, сохраняет хвостовые пробелы (C25c-2). Не удалось
+      // лексировать — лексические факты неизвестны, все строки сохраняются как есть.
+      const literalLines = tryTokenize(c.text, { comments: true }) ? literalContinuationLines(c.text) : new Set(lines.keys());
+      const trimLine = (j: number): string => (literalLines.has(j + 1) ? lines[j].trimStart() : lines[j].trim());
       const parenDelta = (s: string): number => {
         let d = 0;
         let inS = false;
@@ -984,6 +989,7 @@ function reindentVtCondition(condition: string, base: number): string {
       const orLevels = new Set<number>();
       let scanLvl = parenDelta(lines[0]);
       for (let j = 1; j < lines.length; j++) {
+        if (literalLines.has(j)) break;
         if (lines[j].trim() === '') continue;
         const fw = firstWord(lines[j]);
         if (fw === 'И' || fw === 'ИЛИ') {
@@ -991,17 +997,22 @@ function reindentVtCondition(condition: string, base: number): string {
           scanLvl += parenDelta(lines[j]);
         } else break;
       }
-      out.push('\t'.repeat(ind) + prefix + lines[0].trim());
+      out.push('\t'.repeat(ind) + prefix + trimLine(0));
       // Конъюнкт-группа открывает скобку (`И (…`): отбиваем продолжения по глубине
       // скобок + приоритету И>ИЛИ. Иначе (просто перенесённый по строкам лист, без
       // верхнеуровневой скобки) — прежний плоский ind+1.
       const headDelta = parenDelta(lines[0]);
       let condParen = headDelta;
       for (let j = 1; j < lines.length; j++) {
-        if (headDelta <= 0) { out.push('\t'.repeat(ind + 1) + lines[j].trim()); continue; }
+        if (literalLines.has(j)) {
+          out.push(lines[j]);
+          if (headDelta > 0) condParen += parenDelta(lines[j]);
+          continue;
+        }
+        if (headDelta <= 0) { out.push('\t'.repeat(ind + 1) + trimLine(j)); continue; }
         const fw = firstWord(lines[j]);
         const orShift = fw === 'И' && orLevels.has(condParen) ? 1 : 0;
-        out.push('\t'.repeat(ind + condParen + orShift) + lines[j].trim());
+        out.push('\t'.repeat(ind + condParen + orShift) + trimLine(j));
         condParen += parenDelta(lines[j]);
       }
     } else {
