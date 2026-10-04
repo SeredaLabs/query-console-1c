@@ -38,12 +38,15 @@ metadata are prerequisites. `--patch-golden` intentionally changes expected
 output and must follow the review policy below, never serve as automatic repair.
 Do not put private queries or credentials in this repository.
 
-The optional tree-sitter oracle needs `test/fixtures/tree-sitter-sdbl.wasm`.
-Its helper warns and returns when absent; passed Vitest counts include calls
-that performed no independent grammar check. CI does not build it. The historical
-ABI concern was source-inferred, not a rebuilt compatibility test. Reproducible
-artifact/provenance and a missing-oracle policy remain V2. Grammar acceptance is
-not 1C validity or semantic-equivalence evidence.
+The optional tree-sitter oracle (V2, dev tooling) needs
+`test/fixtures/tree-sitter-sdbl.wasm`. When it is absent the helper warns and
+performs no check; tests whose only assertion is the oracle report *skipped*,
+while other tests still run their own assertions. CI does not build it. The
+historical ABI concern was source-inferred, not a rebuilt compatibility test.
+External grammar acceptance is not 1C validity or semantic-equivalence
+evidence: 1C Platform / Query Designer is authoritative for platform acceptance
+and canonicalization, and an external-grammar disagreement is a candidate for
+platform reprobe, never a reason to change canonical output by itself.
 
 ## Classification and resolver shadow baseline
 

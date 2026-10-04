@@ -4,12 +4,15 @@
 # Что делает (по шагам):
 #   1. Проверяет Node.js (>= 20; рекомендуется 22) и npm.
 #   2. При наличии apt доустанавливает системные пакеты для node-gyp
-#      (build-essential, python3, git) — нужны нативному биндингу tree-sitter.
+#      (build-essential, python3, git) — общий toolchain на случай нативных
+#      сборок; нативного биндинга tree-sitter в зависимостях нет
+#      (web-tree-sitter — чистый WASM, devDependency).
 #   3. npm install — зависимости расширения и тестов.
 #   4. npm run build — сборка extension + webview в out/.
 #   5. (--e2e)  ставит браузеры Playwright для e2e-тестов.
 #   6. (--wasm) пересобирает tree-sitter-sdbl.wasm из tmp/tree-sitter-bsl
-#               (нужно только при изменении грамматики; требует emscripten).
+#               (опциональный внешний oracle для разработки, V2; не нужен
+#               для сборки, тестов и релиза; требует emscripten).
 #   7. (--docker) ставит Docker Engine (+ buildx/compose) и devcontainers CLI —
 #               хост-окружение для разработки в контейнере (DevContainer).
 #
@@ -67,7 +70,7 @@ if [ "$NODE_MAJOR" -lt 20 ]; then
   exit 1
 fi
 
-# --- 2. Системные пакеты (для node-gyp / нативного tree-sitter) -------------
+# --- 2. Системные пакеты (общий toolchain для node-gyp) ---------------------
 if [ "$WITH_SYSTEM" -eq 1 ] && command -v apt-get >/dev/null 2>&1; then
   PKGS=(build-essential python3 git)
   MISSING=()

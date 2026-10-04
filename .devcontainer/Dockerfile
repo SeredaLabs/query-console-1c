@@ -1,8 +1,9 @@
 FROM node:22-bookworm
 
 # Tools Claude Code and the build rely on.
-# build-essential + python3 are needed for node-gyp (tree-sitter native binding);
-# tree-sitter-cli is used to (re)generate/build the sdbl grammar.
+# build-essential + python3: generic node-gyp toolchain (no native tree-sitter
+# binding is a dependency; web-tree-sitter is pure WASM). tree-sitter-cli only
+# serves the optional external grammar oracle (V2), never build/test/release.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         ripgrep \
