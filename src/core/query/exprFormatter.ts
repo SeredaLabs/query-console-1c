@@ -12,7 +12,7 @@
  * лексера). Распознаёт не-ключевые слова ИЛИ/НЕ/ВЫБОР/КОГДА/ТОГДА/ИНАЧЕ/КОНЕЦ/ЕСТЬ
  * по `.value.toUpperCase()`.
  */
-import { tokenize, tryTokenize, type Token } from './sdblLexer';
+import { tokenize, tryTokenize, codeRanges, type Token } from './sdblLexer';
 import { FUNCTION_CATALOG, type FunctionGroup, type FunctionLeaf } from './functionCatalog';
 import { LITERAL_WORDS, AGGREGATE_WORDS, COMPARISON_OPERATORS, PERIOD_WORDS as SHARED_PERIOD_WORDS } from './sdblKeywordSets';
 
@@ -4089,7 +4089,24 @@ export function stripNegatedFieldParens(text: string): string {
 const NOT_FIELD_PARENS_RE =
   /(^|[^\p{L}\p{N}_])НЕ\(\s*([\p{L}_][\p{L}\p{N}_]*(?:\.[\p{L}_][\p{L}\p{N}_]*)*)\s*\)/gu;
 export function stripNotFieldParens(text: string): string {
-  return text.replace(NOT_FIELD_PARENS_RE, (_m, pre: string, path: string) => `${pre}НЕ ${path}`);
+  return replaceInCodeRanges(text, NOT_FIELD_PARENS_RE, (_m, pre: string, path: string) => `${pre}НЕ ${path}`);
+}
+
+/**
+ * C25: `text.replace(re, replacer)` applied only inside the lexer's code ranges
+ * (`codeRanges`); string/date literals and comments are copied unchanged. When
+ * the boundaries are unknown, the text is returned unchanged.
+ */
+function replaceInCodeRanges(text: string, re: RegExp, replacer: (match: string, ...groups: string[]) => string): string {
+  const ranges = codeRanges(text);
+  if (!ranges) return text;
+  let out = '';
+  let last = 0;
+  for (const [start, end] of ranges) {
+    out += text.slice(last, start) + text.slice(start, end).replace(re, replacer);
+    last = end;
+  }
+  return out + text.slice(last);
 }
 
 function renderBool(
