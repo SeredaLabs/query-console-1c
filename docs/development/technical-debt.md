@@ -16,7 +16,7 @@ hardening or maintenance. Historic severity labels do not set current priority.
 
 | ID | Status / priority | Remaining work and evidence | Next boundary |
 |---|---|---|---|
-| C2 | OPEN · P1 | English SDBL is platform-valid in recorded RP06/07 but rejected by the Russian parser/detection; contextual keywords and metadata names also need language handling. [Platform results](audits/stage-0/platform-reprobe-results.jsonl). | Token identity spike under A1, then attested RU/EN acceptance/canonicalization pairs. |
+| C2 | OPEN · P1 | English SDBL is platform-valid in recorded RP06/07 but rejected by the Russian parser/detection; contextual keywords and metadata names also need language handling. [Platform results](audits/stage-0/platform-reprobe-results.jsonl). In scope for the Query Core v1 [grammar parity](grammar-parity.md) gate (V5); Core v1 does not ship with this known gap. | Token identity spike under A1, then attested RU/EN acceptance/canonicalization pairs; implemented after or together with A1, not as more contextual-keyword special cases. |
 
 The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
 comment handling and recovery limits. No outstanding correctness item is P0.
@@ -111,6 +111,7 @@ urgent refactor tickets. A1/A2 remain required engineering work.
 | V1 | PARTIAL · P2 | Positive recorded golden cases have no per-entry platform-build/metadata attestation; negative/English attested corpus is absent. Template-marker substitution remains unproven. Generator-derived fixtures are not an independent oracle. [Corpus policy](corpus-testing.md). | Attested negative/English/metadata-mode cases and provenance; retain ADR 0004 canonical contract. Private corpus availability is a qualification here. |
 | V2 | OPEN · P2 | Grammar WASM absent in ordinary checkout/CI: [helper](../../test/helpers/assertValidSdbl.ts) warns then returns, so green tests do not mean the independent oracle ran. Artifact/toolchain unpinned; historical ABI mismatch was source-inferred. | Compatible reproducible dev-only artifact, manifest/checksum and explicit missing-oracle CI policy; no runtime dependency. |
 | V3 | PARTIAL · P2 | Shared Apply gate validates structure/selected semantics and malformed generated output, but never compares input/output semantics. Structural acceptor ignores precedence; Boolean truth tables cover a subset. [Apply regressions](../../test/unit/applyGeneratedOutput.test.ts). | Bounded transformation-preservation checks and reviewed canonical evidence over A1; no mandatory live execution or theorem prover. |
+| V5 | OPEN · P1 | Query Core v1 blocker, not a defect of the current product. [Grammar parity](grammar-parity.md) gate: 0 known platform-valid grammar gaps across the reviewed SDBL construct catalog, every entry with source/provenance and platform evidence where required, reported with coverage confidence. Core v1 = ordinary SDBL / Query Designer; DCS `{…}` is out of scope. The [catalog](../../test/fixtures/grammar-parity/catalog.jsonl) holds only the RP01–RP25 seed (platform-verified, build unknown); known gap: C2. [Proposal](audits/sdbl-grammar-parity-proposal-2026-10-04.md). | Phase 2 attested suites and catalog consistency gate; Phase 3 catalog from the 1C reference, EDT model, corpora and external grammar rule names. |
 
 V4 is CLOSED for the bounded [Canvas browser/real-host gate](testing-and-release.md#canvas-verification).
 It does not certify every UI action, live-platform equivalence or release readiness.
@@ -143,7 +144,7 @@ expressions are editable; new grammar needs a separately scoped shared task.
 
 | ID | Status / priority | Evidence boundary | Needed evidence |
 |---|---|---|---|
-| U1 | UNKNOWN · P2 | RP22: `#Имя` lexically accepted but live metadata-unresolved; template golden validity/substitution semantics unestablished. | Validator provenance plus reproducible metadata/substitution context. |
+| U1 | UNKNOWN · P2 | RP22: `#Имя` lexically accepted but live metadata-unresolved; template golden validity/substitution semantics unestablished. [Grammar parity](grammar-parity.md): syntax in scope; syntax/preservation confirmed locally; substitution semantics UNKNOWN; current Apply behavior retained pending platform evidence. | Validator provenance plus reproducible metadata/substitution context; answer whether Query Core editing/generation can change the value or scope of `#Имя` (if yes, add a safety gate). |
 | U2 | UNKNOWN · P2 | RP24: live base had no sequences; `Границы` real argument layout unconfirmed. Marked models are Apply-blocked. | Sequence-enabled base and canonical output. |
 | U3 | UNKNOWN · P2 | Disconnected FROM roots deliberately see each other in computeJoinVisibility; [fallback regression](../../test/unit/joinVisibility.test.ts) is not platform attestation. | Minimal live comma-source/JOIN scope probes before narrowing visibility. |
 

@@ -13,11 +13,15 @@ Canvas phase numbers. The ledger owns status/priority and exit boundaries;
    obtain A2 producer/projection evidence, then unify lifetime/column facts.
    Retain accepted cycle/hooks/synchronous resolver discipline. A3 inference uses
    shared representation and attested types; no independent walker.
-3. **Compatibility and verification:** start C2 from a bounded token-identity
-   spike and attested RU/EN pairs. Improve V1 provenance/negative coverage and
-   add bounded V3 transformation
-   checks. Acquire U1–U3 platform evidence rather than treating local tests as
-   platform verdicts. These evidence tasks can accompany architecture slices.
+3. **Grammar parity and verification (Query Core v1 gate, V5):** run the
+   [grammar parity](grammar-parity.md) phases: attested suites and catalog
+   consistency gate, then the catalog from independent sources, fuzz, a
+   deduplicated live 1C batch and bounded per-construct fixes. Start C2 (P1)
+   from a bounded token-identity spike and attested RU/EN pairs, after or with
+   A1. Improve V1 provenance/negative coverage and add bounded V3
+   transformation checks. Acquire U1–U3 platform evidence rather than treating
+   local tests as platform verdicts. The first phases need no live 1C and can
+   accompany architecture slices.
 4. **Product UX:** prioritize concrete UX-C1–3/7–9 workflows from the current
    Canvas matrix. Advanced UNION needs safe shared alignment, not full A2 first.
    Cross-highlight requires output ranges; persistent global IDs require a
