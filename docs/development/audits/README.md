@@ -17,6 +17,7 @@ This is an indexed historical archive, not a second status ledger.
 
 | Date | Audit / scope | Result → debt/fix | Disposition |
 |---|---|---|---|
+| 2026-10-04 | [A1 reconciliation and re-plan](a1-reconciliation-2026-10-04.md) | 321 sites re-mapped after C25: 30 still needed in 4 slices, exit criteria; 7 separate findings R1–R7 (R1–R3 literal rewrites of the C25 class) | PLAN; no code changed; R1–R3 reopened C25, R4–R7 not yet in ledger |
 | 2026-10-04 | [A1 lexical ownership audit](a1-lexical-audit-2026-10-04.md) | 321 lexical sites classified; 9 confirmed literal-content rewrites (proposed C25); migration plan | AUDIT; no code changed |
 | 2026-10-04 | [SDBL grammar parity proposal](sdbl-grammar-parity-proposal-2026-10-04.md) | Query Core v1 gate: 0 known platform-valid gaps across a reviewed construct catalog with provenance and coverage confidence; scope decisions accepted | PROPOSED; not started, decisions not yet in ledger |
 | 2026-10-03 | [C17 GROUP review fix](c17-group-review-fix-2026-10-03.md) | Require every comment to have an owner before the new structural transition | RESOLVED review regression; mixed-slot coverage added |
