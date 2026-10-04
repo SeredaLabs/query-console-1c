@@ -81,8 +81,8 @@ C3/C4 live observations). They stay valid evidence; Phase 1 records them as
 - RP06/RP07 are still rejected (C2).
 - RP08, RP13 and RP14 were re-run and produce the recorded canonical text.
   RP01–03 are covered by `fullNameQualification.test.ts`, which passes.
-- RP11, RP17 and RP23 are now rejected on open. RP15 is accepted on open, but
-  the generated text fails reparse, so Apply is blocked.
+- RP17 and RP23 are now rejected on open. RP11, RP12 and RP15 are still
+  accepted on open, but Apply is blocked (C5 contract).
 
 **Repository corpora:**
 - 1976 golden packages, platform-recorded and 100% accepted by ours: 601
