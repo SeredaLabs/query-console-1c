@@ -103,7 +103,8 @@ independent sources, not from our parser. Each area is one record:
 - `corpusPattern` and `corpusPackages`: a recorded discovery snapshot over the
   golden `input` texts (Python `re`, IGNORECASE, 2026-10-04). It is not
   recomputed in tests and is not a support claim;
-- `coverageState`;
+- `coverageState`, `forms` (the area's contract: one entry per form, linked
+  to the catalog `constructId` that attests it, or `null`) and `probeId`;
 - `decisionRef`, `referenceGap` (why the 1C reference has no section for the
   area) and `note`.
 
@@ -117,9 +118,9 @@ Axes keep the catalog from collapsing into a flat query list:
 
 | Coverage state | Meaning |
 |---|---|
-| `unreviewed` | Area not yet enumerated against the sources |
-| `pending-platform-evidence` | Enumerated; at least one entry still needs a platform result |
-| `covered` | Enumerated; every entry carries a platform verdict |
+| `unreviewed` | Area not yet enumerated against the sources (none left) |
+| `pending-platform-evidence` | Forms enumerated; at least one has no platform verdict, and one executable probe in the queue covers exactly those forms |
+| `covered` | Forms enumerated; every form is linked to a catalog entry with a platform verdict (known gaps keep their open debt item) |
 | `out-of-scope` | Excluded by a recorded decision (`decisionRef`) |
 
 **Phase 3 exit:**
@@ -212,6 +213,93 @@ The seed touches 19 areas. The reference map has 263 sections: 238 construct,
 - 8 golden packages contain DCS braces. They are out of scope for Core v1 and
   keep their current behavior.
 
+## Coverage review
+
+All 70 areas are reviewed. Each area's forms come from the 1C reference
+sections, plus forms found through discovery sources: `УНИКАЛЬНО` in
+`ИНДЕКСИРОВАТЬ ПО` (ANTLR) and `СГРУППИРОВАТЬ ВСЕ ПО ГРУППИРУЮЩИМ НАБОРАМ`
+(reference text). That gives 246 forms.
+
+A form is attested by one of two kinds of evidence:
+- a Stage 0 platform verdict;
+- a golden corpus package recorded as platform-valid by `validate_query`.
+
+For golden evidence, the shortest example is used. It must have a recorded
+`query_text` and contain no comments, template markers or DCS braces. The `*`
+forms are the exception: their examples keep the `*`.
+
+| Axis | Areas | Covered | Pending | Out of scope |
+|---|---|---|---|---|
+| package-union | 7 | 5 | 2 | — |
+| modifier-ordering | 5 | 3 | 2 | — |
+| syntax-construct | 24 | 9 | 14 | 1 |
+| expression-form | 22 | 16 | 6 | — |
+| contextual-keyword | 3 | 1 | 2 | — |
+| virtual-table-shape | 9 | 1 | 8 | — |
+| **Total** | **70** | **35** | **34** | **1** |
+
+### Findings
+
+- **`УНИЧТОЖИТЬ`** is covered by 14 platform-recorded golden packages. The
+  1C reference lists it only in the bilingual keyword table.
+- **C24.** The Designer round trip rewrites a wildcard projection
+  (`ВЫБРАТЬ *` → `* КАК Поле1`, `Т.*` → `Т.* КАК Поле1`), and Apply allows the
+  changed text. The platform canonical text expands the star. Whether the
+  platform accepts the rewritten form is not yet attested (`PQ-C24`). The area
+  stays covered, with an open debt item.
+- **Example selection matters.** Golden `ИЗ`-source and `Источник.Таблица.*`
+  hits inside DCS braces do not attest the ordinary form. The tabular `.*`
+  form is therefore pending.
+- **Virtual tables have the weakest evidence.** 8 of 9 areas are pending; only
+  the task-by-performer table has a platform verdict.
+
+### Probe queue
+
+[`probe-queue.jsonl`](../../test/fixtures/grammar-parity/probe-queue.jsonl)
+holds one executable probe per pending area (34 probes over 96 forms), plus
+debt probes for open items found by the review (`PQ-C24`). Each
+probe has a question, a query text and its metadata needs, and records the
+platform build, acceptance and the Designer canonical text. Texts use the
+corpus fixture object names; as in Stage 0, substitutions for the live base
+are recorded per result.
+
+| Area | Forms | Question |
+|---|---|---|
+| `package.index-by` | 2 | Are ИНДЕКСИРОВАТЬ ПО НАБОРАМ and ИНДЕКСИРОВАТЬ ПО <field> УНИКАЛЬНО accepted after ПОМЕСТИТЬ, and since which platform version? |
+| `package.for-update` | 2 | Does the Query Designer accept and preserve ДЛЯ ИЗМЕНЕНИЯ both without and with a table list? |
+| `order.autoorder` | 1 | Does the Query Designer preserve АВТОУПОРЯДОЧИВАНИЕ alone and after УПОРЯДОЧИТЬ ПО? |
+| `order.nested-tables` | 1 | Is an ORDER key on a nested-table field accepted together with a top-level key, and how does the Designer canonicalize it? |
+| `select.fields-aliases` | 1 | Is a field alias without КАК accepted, and does the Designer canonicalize it to КАК? |
+| `select.tabular-section` | 1 | Is <source>.<tabular section>.* accepted in an ordinary select list (outside DCS braces), and how is it canonicalized? |
+| `select.empty-table` | 1 | Is ПУСТАЯТАБЛИЦА.() with an empty column list accepted, and is it canonicalized as ПУСТАЯТАБЛИЦА.( КАК Поле1)? |
+| `source.metadata-table` | 10 | Do the ten unattested object-table kinds open as sources with the expected canonical alias? |
+| `source.external-data-source` | 3 | Which external data source names are accepted as sources (table, cube, cube dimension table), and how are they canonicalized? |
+| `source.aliases` | 1 | Is a source alias without КАК accepted, and does the Designer canonicalize it to КАК? |
+| `source.change-tables` | 12 | Do change-registration tables of the twelve unattested object kinds open as sources? |
+| `source.filter-criterion` | 1 | Is a filter criterion accepted as a source with its value parameter, and how is it canonicalized? |
+| `join.kinds` | 4 | Does the Designer canonicalize bare СОЕДИНЕНИЕ and the ВНЕШНЕЕ spellings to the short join kinds? |
+| `join.structure` | 1 | Is the nested ON-placement join form accepted, and how does the Designer canonicalize it? |
+| `group.by` | 1 | Is an expression key in СГРУППИРОВАТЬ ПО accepted and preserved by the Designer? |
+| `group.grouping-sets` | 2 | Are СГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ and its ВСЕ variant accepted on 8.3.20, and how are they canonicalized? |
+| `totals.clause` | 1 | Is ПЕРИОДАМИ accepted for each period unit with and without bounds, and how is it canonicalized? |
+| `characteristics.block` | 1 | Does the ordinary Query Designer accept and preserve a ХАРАКТЕРИСТИКИ block (with and without DCS braces), or is it DCS-only? |
+| `expression.string-functions` | 10 | Are the ten unattested string functions accepted on 8.3.20 and canonicalized unchanged? |
+| `expression.date-functions` | 6 | Are the six unattested date functions accepted and canonicalized unchanged? |
+| `expression.math-functions` | 12 | Are the twelve math functions accepted on 8.3.20 and canonicalized unchanged? |
+| `expression.value-functions` | 2 | Are АВТОНОМЕРЗАПИСИ() and УНИКАЛЬНЫЙИДЕНТИФИКАТОР(<ref>) valid SDBL, in which contexts, and since which platform version? |
+| `expression.grouped-by` | 1 | Is СГРУППИРОВАНОПО(<field>) accepted with grouping sets, and how is it canonicalized? |
+| `expression.scalar-subquery` | 1 | Is a scalar subquery accepted as a comparison operand in ГДЕ? |
+| `keyword.spelling` | 1 | Does the Query Designer accept lower- and mixed-case keywords and canonicalize them to upper case? |
+| `language.english` | 1 | Does the platform accept every English keyword of the bilingual table, and does the Designer emit the Russian canonical text? |
+| `virtual-table.balance` | 2 | Is Остатки accepted for accumulation and accounting registers with their documented parameters (2 and 4), and how is it canonicalized? |
+| `virtual-table.turnovers` | 2 | Is Обороты accepted for accumulation (4 parameters) and accounting (8 parameters) registers, and how is it canonicalized? |
+| `virtual-table.balance-and-turnovers` | 2 | Is ОстаткиИОбороты accepted for accumulation (5 parameters) and accounting (7 parameters) registers, and how is it canonicalized? |
+| `virtual-table.slices` | 1 | Is СрезПервых accepted with (Период, Условие) and canonicalized unchanged? |
+| `virtual-table.accounting` | 3 | Are Субконто, ДвиженияССубконто and ОборотыДтКт accepted with their documented parameters, and how are they canonicalized? |
+| `virtual-table.calculation` | 4 | Are the calculation-register tables (recalculation, ФактическийПериодДействия, ДанныеГрафика, БазовыеДанные) accepted with their documented parameters? |
+| `virtual-table.sequence-boundaries` | 1 | Which argument layout does Последовательность.<name>.Границы accept, and how is it canonicalized (U2)? |
+| `virtual-table.argument-shape` | 1 | Which periodicity values does the Периодичность argument accept, and are they canonicalized unchanged? |
+
 ## Executable gates
 
 [`grammarParity.catalog.test.ts`](../../test/unit/grammarParity.catalog.test.ts)
@@ -234,19 +322,28 @@ became more permissive).
 | G2 | `platformStatus: valid` | Recorded status holds; an in-scope entry without an open debt item opens, has a stable second pass and Apply allowed; `canonicalStatus: matches` reproduces the recorded canonical text |
 | G3 | `platformStatus: invalid` | Recorded status holds; rejected on open or Apply blocked. Parser over-acceptance alone is not a failure |
 | — | `unknown`, `unattested` | No verdict; recorded status holds. `unknown` needs an open U item |
-| G5 | all | Reference map: every section maps to known areas, every area is named by a section or records `referenceGap`. Coverage areas: unique ids, axis/state enums, `out-of-scope` needs `decisionRef`, `covered` needs platform verdicts for all its entries, every catalog entry names a known area. Catalog: unique, category-prefixed ids; enums; non-empty text and source/origin; traceable evidence with build (`unknown` allowed), method and date; status consistency; debt ids exist in the ledger; a valid-construct gap needs an open debt item; platform-invalid text that opens must be Apply-blocked |
+| G5 | all | Review: no `unreviewed` area; every reviewed area lists unique forms linked to catalog entries of the same area; `covered` has a verdict for every form; each pending area has exactly one probe covering exactly its unattested forms. Reference map: every section maps to known areas, every area is named by a section or records `referenceGap`. Coverage areas: unique ids, axis/state enums, `out-of-scope` needs `decisionRef`, `covered` needs platform verdicts for all its entries, every catalog entry names a known area. Catalog: unique, category-prefixed ids; enums; non-empty text and source/origin; traceable evidence with build (`unknown` allowed), method and date; status consistency; debt ids exist in the ledger; a valid-construct gap needs an open debt item; platform-invalid text that opens must be Apply-blocked |
 
 No live 1C, external grammar or network access is involved.
 
-## Current seed
+## Catalog contents
 
-RP01–RP25 from the Stage 0 live reprobe (2026-09-27): execution in the
-configuration's query console plus wizard canonical text on a modern 8.3 web
-client, build not recorded. They keep the status *platform-verified, build
-unknown* and are not re-probed in bulk. Statuses for our side were measured on
-the current code with and without the corpus metadata resolver, which agree.
+153 entries:
+- 25 from the Stage 0 live reprobe;
+- 128 from the golden corpus, one per golden-attested form.
 
-| Result | Entries |
+Statuses for our side are measured on the current code with and without the
+corpus metadata resolver, and the two modes agree.
+
+**Stage 0 entries** (RP01–RP25, 2026-09-27): execution in the configuration's
+query console, plus the wizard canonical text, on a modern 8.3 web client.
+- They keep the status *platform-verified, build unknown* and are not
+  re-probed in bulk.
+- Canonical text matches for RP01 and RP20.
+- RP02, RP19 and RP21 record the canonical only as prose, and RP03 not at all.
+  These stay `not-recorded` for a later text re-probe.
+
+| Stage 0 result | Entries |
 |---|---|
 | Platform-valid, ours accepts, stable, Apply allowed | 12 |
 | Platform-valid, ours rejects (syntax gap) | 2: English SDBL → C2 |
@@ -254,14 +351,13 @@ the current code with and without the corpus metadata resolver, which agree.
 | Platform-invalid, ours accepts, Apply blocked (C5) | 5 (3 of them unstable on the second pass) |
 | Platform unknown (U2), Apply blocked | 1 |
 
-Canonical text is recorded and matches for 2 entries (RP01, RP20). RP02, RP19
-and RP21 record the platform canonical only as prose and RP03 not at all; they
-stay `not-recorded` (manual review found no known semantic discrepancy) and are
-candidates for a text re-probe.
+**Golden entries** are platform-valid (`validate_query` at harvest; build and
+date not recorded).
+- All 128 open with a stable second pass and Apply allowed.
+- The canonical `query_text` matches for 122.
+- It differs for 2: the `*` forms, C24.
+- It is not compared for 4, whose only examples carry comments, templates or
+  no recorded text.
 
 `source.template-marker` (U1) opens with a stable round trip and Apply allowed;
 that behavior is retained pending platform evidence (see Scope).
-
-The seed contains platform evidence only. It is not yet a catalog of the
-grammar: walking the 1C reference and EDT model is Phase 3. Until then coverage
-confidence is low by construction.

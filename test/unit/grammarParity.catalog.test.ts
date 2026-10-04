@@ -19,7 +19,6 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { parseBatch } from '../../src/core/query/sdblParser';
 import { generateBatch } from '../../src/core/query/sdblGenerator';
 import { findUnsafeVirtualTables, findMalformedCustomExpressions } from '../../src/core/query/semanticValidator';
 import { decideApply } from '../../src/webview/applyGate';
@@ -33,6 +32,7 @@ const LEDGER = path.join(ROOT, 'docs/development/technical-debt.md');
 const STAGE0_QUEUE = 'docs/development/audits/stage-0/platform-reprobe.jsonl';
 const AREAS = path.join(ROOT, 'test/fixtures/grammar-parity/coverage-areas.jsonl');
 const SECTIONS = path.join(ROOT, 'test/fixtures/grammar-parity/reference-sections.jsonl');
+const PROBES = path.join(ROOT, 'test/fixtures/grammar-parity/probe-queue.jsonl');
 
 type Entry = {
   constructId: string; category: string; area: string; title: string; text: string;
@@ -56,8 +56,11 @@ const ENUMS = {
   applyStatus: ['allowed', 'blocked', 'not-applicable'],
 } as const;
 
-const readJsonl = (file: string): any[] =>
-  fs.readFileSync(file, 'utf8').split('\n').filter(l => l.trim()).map(l => JSON.parse(l));
+const jsonlCache = new Map<string, any[]>();
+const readJsonl = (file: string): any[] => {
+  if (!jsonlCache.has(file)) jsonlCache.set(file, fs.readFileSync(file, 'utf8').split('\n').filter(l => l.trim()).map(l => JSON.parse(l)));
+  return jsonlCache.get(file)!;
+};
 
 const entries: Entry[] = readJsonl(CATALOG);
 
@@ -65,6 +68,7 @@ type Area = {
   areaId: string; axis: string; title: string; sources: Record<string, string>;
   corpusPattern: string | null; corpusPackages: number | null;
   coverageState: 'unreviewed' | 'pending-platform-evidence' | 'covered' | 'out-of-scope';
+  probeId?: string; forms?: Array<{ formId: string; label: string; constructId: string | null }>;
   decisionRef?: string; referenceGap?: string; note?: string;
 };
 const AXES = ['package-union', 'modifier-ordering', 'syntax-construct', 'expression-form', 'contextual-keyword', 'virtual-table-shape'];
@@ -78,29 +82,41 @@ type Section = {
 };
 const sections: Section[] = readJsonl(SECTIONS);
 
+/** Phase 5 queue: one executable platform question per pending area (`area`),
+ * plus questions for open debt items found by the review (`debt`). */
+type Probe = {
+  probeId: string; kind: 'area' | 'debt'; debtId?: string; areaId: string;
+  question: string; forms: string[]; text: string; metadataNeeds: string; record: string;
+};
+const probes: Probe[] = readJsonl(PROBES);
+const areaProbes = probes.filter(p => p.kind === 'area');
+
 /** Ledger rows `| ID | STATUS · … |` → status word (OPEN, PARTIAL, UNKNOWN, CLOSED). */
 const ledger = new Map<string, string>();
 for (const m of fs.readFileSync(LEDGER, 'utf8').matchAll(/^\| ([A-Z]+(?:-[A-Z]+)?\d+) \| ([A-Z]+)/gm)) ledger.set(m[1], m[2]);
 const isOpenDebt = (id: string | null) => !!id && ['OPEN', 'PARTIAL', 'UNKNOWN'].includes(ledger.get(id) ?? '');
 
-/** `path#id` → the JSONL row with that id. */
+/** `path#id` → the JSONL row with that `id` (platform reprobe) or `file` (golden corpus). */
 function evidenceRow(ref: string): any {
   const [file, id] = ref.split('#');
-  return readJsonl(path.join(ROOT, file)).find(r => r.id === id);
+  return readJsonl(path.join(ROOT, file)).find(r => (r.id ?? r.file) === id);
 }
+/** Recorded platform canonical text: reprobe `platformCanonical` or golden `query_text`. */
+const recordedCanonical = (row: any): unknown => row?.platformCanonical ?? row?.query_text;
 
 const resolver = buildYamlResolver(path.join(ROOT, 'test/fixtures/corpus/metadata/cf'));
 const MODES: Array<[string, MetadataResolver | undefined]> = [['without resolver', undefined], ['with resolver', resolver]];
 
 type Measured = Pick<Entry, 'oursStatus' | 'roundTripStatus' | 'applyStatus'> & { generated?: string };
 
-/** Same steps as the product: Designer open gate, generation, second pass, Apply gate. */
+/** Same steps as the product: Designer open gate, generation, reopening the
+ * generated text through the same gate (second pass), Apply gate. */
 function measure(text: string, r: MetadataResolver | undefined): Measured {
   const open = tryOpenDesignerBatch(text, r);
   if (!open.ok) return { oursStatus: 'rejects', roundTripStatus: 'not-applicable', applyStatus: 'not-applicable' };
   const generated = generateBatch(open.doc);
-  let second: string | null = null;
-  try { second = generateBatch(parseBatch(generated, r)); } catch { second = null; }
+  const reopened = tryOpenDesignerBatch(generated, r);
+  const second = reopened.ok ? generateBatch(reopened.doc) : null;
   const blocked = findUnsafeVirtualTables(open.doc).length > 0 || findMalformedCustomExpressions(open.doc).length > 0;
   const apply = decideApply(generated, null, blocked ? { kind: 'malformedCustom' } : null, r);
   return {
@@ -158,6 +174,24 @@ describe('grammar parity coverage areas: G5 integrity', () => {
     }
   });
 
+  it('review is complete: 0 unreviewed, and every probe belongs to a pending area', () => {
+    expect(areas.filter(a => a.coverageState === 'unreviewed').map(a => a.areaId)).toEqual([]);
+    const pids = probes.map(p => p.probeId);
+    expect(new Set(pids).size).toBe(pids.length);
+    for (const p of probes) {
+      expect(['area', 'debt'], p.probeId).toContain(p.kind);
+      const a = areas.find(x => x.areaId === p.areaId);
+      expect(a, p.probeId).toBeDefined();
+      if (p.kind === 'area') {
+        expect(a!.coverageState, p.probeId).toBe('pending-platform-evidence');
+        expect(a!.probeId).toBe(p.probeId);
+      } else {
+        expect(isOpenDebt(p.debtId ?? null), `${p.probeId} needs an open debt item`).toBe(true);
+      }
+      for (const field of ['question', 'text', 'metadataNeeds', 'record'] as const) expect(p[field].trim(), `${p.probeId}.${field}`).not.toBe('');
+    }
+  });
+
   it.each(areas.map(a => [a.areaId, a] as const))('%s: axis, state and evidence rules', (_id, a) => {
     expect(a.areaId).toMatch(/^[a-z][a-z-]*\.[a-z0-9][a-z0-9-]*$/);
     expect(AXES).toContain(a.axis);
@@ -175,7 +209,25 @@ describe('grammar parity coverage areas: G5 integrity', () => {
       expect(inArea.length).toBeGreaterThan(0);
       for (const e of inArea) expect(['valid', 'invalid'], e.constructId).toContain(e.platformStatus);
     }
-    if (a.coverageState === 'pending-platform-evidence') expect(inArea.length).toBeGreaterThan(0);
+    // Forms are the area's contract (from the 1C reference and discovery sources).
+    const forms = a.forms ?? [];
+    if (a.coverageState !== 'out-of-scope') expect(forms.length, 'reviewed area lists its forms').toBeGreaterThan(0);
+    expect(new Set(forms.map(f => f.formId)).size).toBe(forms.length);
+    const attested = (f: { constructId: string | null }) => {
+      if (f.constructId === null) return false;
+      const e = entries.find(x => x.constructId === f.constructId);
+      expect(e, `${a.areaId}/${f.constructId}`).toBeDefined();
+      expect(e!.area).toBe(a.areaId);
+      return e!.platformStatus === 'valid' || e!.platformStatus === 'invalid';
+    };
+    const open = forms.filter(f => !attested(f)).map(f => f.formId);
+    if (a.coverageState === 'covered') expect(open, 'covered needs a platform verdict for every form').toEqual([]);
+    if (a.coverageState === 'pending-platform-evidence') {
+      const probe = areaProbes.find(p => p.areaId === a.areaId);
+      expect(probe, 'pending needs exactly one executable probe').toBeDefined();
+      expect(areaProbes.filter(p => p.areaId === a.areaId)).toHaveLength(1);
+      expect([...probe!.forms].sort()).toEqual([...open].sort());
+    }
   });
 });
 
@@ -205,7 +257,8 @@ describe('grammar parity catalog: G5 integrity', () => {
       expect(evidenceRow(e.evidenceRef!), e.evidenceRef!).toBeDefined();
       expect(e.platformBuild?.trim()).toBeTruthy();
       expect(e.platformMethod?.trim()).toBeTruthy();
-      expect(e.platformDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      // Golden-corpus entries were harvested without a recorded date.
+      expect(e.platformDate).toMatch(/^(\d{4}-\d{2}-\d{2}|unknown)$/);
     }
     if (e.source === 'stage-0-platform-reprobe') {
       const id = e.evidenceRef!.split('#')[1];
@@ -220,7 +273,7 @@ describe('grammar parity catalog: G5 integrity', () => {
       expect(e.applyStatus).not.toBe('not-applicable');
     }
     if (e.platformStatus !== 'valid') expect(['not-applicable', 'not-recorded']).toContain(e.canonicalStatus);
-    if (e.canonicalStatus === 'matches') expect(typeof evidenceRow(e.evidenceRef!)?.platformCanonical).toBe('string');
+    if (e.canonicalStatus === 'matches' || e.canonicalStatus === 'differs') expect(typeof recordedCanonical(evidenceRow(e.evidenceRef!))).toBe('string');
 
     if (e.debtId !== null) expect(ledger.has(e.debtId), `${e.debtId} must be a ledger item`).toBe(true);
     // A platform-valid construct that ours does not fully support is a gap and needs an open debt item.
@@ -246,7 +299,9 @@ for (const [mode, r] of MODES) {
       if (e.scope === 'in' && !isOpenDebt(e.debtId)) {
         expect(m).toMatchObject({ oursStatus: 'accepts', roundTripStatus: 'stable', applyStatus: 'allowed' });
       }
-      if (e.canonicalStatus === 'matches') expect(m.generated).toBe(evidenceRow(e.evidenceRef!).platformCanonical);
+      const canonical = recordedCanonical(evidenceRow(e.evidenceRef!));
+      if (e.canonicalStatus === 'matches') expect(m.generated).toBe(canonical);
+      if (e.canonicalStatus === 'differs') expect(m.generated).not.toBe(canonical);
     });
 
     it.each(by('invalid'))('G3 %s: platform-invalid construct is rejected or Apply-blocked', (_id, e) => {
