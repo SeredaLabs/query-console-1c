@@ -64,6 +64,17 @@ function isCodeAt(ranges: Array<[number, number]>, pos: number): boolean {
   return ranges.some(([start, end]) => pos >= start && pos < end);
 }
 
+/** A `ВЫБОР` word in code, not in a literal or comment (C25 R9). Unknown lexical
+ * facts → false. */
+function hasCodeCaseWord(text: string): boolean {
+  const ranges = codeRanges(text);
+  if (!ranges) return false;
+  for (const m of text.matchAll(/(?:^|[^\p{L}\p{N}_&])(ВЫБОР)(?:[^\p{L}\p{N}_]|$)/gu)) {
+    if (isCodeAt(ranges, m.index + m[0].indexOf('ВЫБОР'))) return true;
+  }
+  return false;
+}
+
 /** Оборачивает выражение в SDBL-функцию агрегирования. */
 function wrapAggregate(func: AggregateFunction, expr: string): string {
   switch (func) {
@@ -944,7 +955,7 @@ function reindentVtCondition(condition: string, base: number): string {
         if (adj) r[q] = '\t'.repeat(base);
       }
       out.push(...r);
-    } else if (c.text.includes('\n') && /(?:^|[^\p{L}\p{N}_&])ВЫБОР(?:[^\p{L}\p{N}_]|$)/u.test(c.text)) {
+    } else if (c.text.includes('\n') && hasCodeCaseWord(c.text)) {
       // Конъюнкт-ВЫБОР: КОНЕЦ на base+1, КОГДА на base+2 (АБСОЛЮТНО относительно base,
       // не зависит от номера конъюнкта — проверено на корпусе). Строка ВЫБОР (line 0)
       // остаётся на ind конъюнкта.
@@ -957,7 +968,12 @@ function reindentVtCondition(condition: string, base: number): string {
       // И Номенклатура = …` — там КОНЕЦ на base+1). Узко гейтим по числу конъюнктов.
       const caseBase = conjuncts.length === 1 ? base : base + 1;
       const r = reindentLeafCase(c.text, caseBase).split('\n');
-      r[0] = '\t'.repeat(ind) + prefix + r[0].replace(/^\t+/u, '').replace(/\s+$/u, '');
+      // C25 R9: хвостовые пробелы строки ВЫБОР снимаются только в коде — строка
+      // может заканчиваться внутри многострочного литерала.
+      const caseRanges = codeRanges(r.join('\n'));
+      const tail = /\s+$/u.exec(r[0]);
+      const head = tail && caseRanges && isCodeAt(caseRanges, tail.index) ? r[0].slice(0, tail.index) : r[0];
+      r[0] = '\t'.repeat(ind) + prefix + head.replace(/^\t+/u, '');
       out.push(...r);
     } else if (c.text.includes('\n')) {
       // Многострочный конъюнкт-группа `И (… ИЛИ … И …)`. Продолжения `И`/`ИЛИ`
