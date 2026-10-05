@@ -1521,8 +1521,10 @@ export function reindentLeafCase(text: string, base: number, funcParenDepth = fa
   // тело — многострочное и НЕ начинается структурными словами CASE; склейка его строк
   // схлопнула бы подзапрос. Штатный guard `\bВЫБРАТЬ\b` (выше) не ловит `(ВЫБРАТЬ`
   // (ASCII-граница слова на кириллице), поэтому проверяем здесь по Unicode-границам.
-  const HAS_SUBQUERY_RE = /(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?:[^\p{L}\p{N}_]|$)/iu;
-  if (!HAS_SUBQUERY_RE.test(text)) {
+  // A1-5b: ВЫБРАТЬ counts only in code; unknown lexical facts → no reflow.
+  const HAS_SUBQUERY_RE = /(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?:[^\p{L}\p{N}_]|$)/giu;
+  const subRanges = codeRanges(text);
+  if (subRanges && codeWordMatches(text, subRanges, HAS_SUBQUERY_RE) === 0) {
     const STRUCT = new Set(['КОГДА', 'ТОГДА', 'ИНАЧЕ', 'КОНЕЦ', 'И', 'ИЛИ']);
     const fw = (s: string): string => {
       const m = /^[\t ]*([\p{L}]+)/u.exec(s);
