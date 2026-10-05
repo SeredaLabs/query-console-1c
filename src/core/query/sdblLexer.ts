@@ -371,11 +371,15 @@ export function replaceInCodeRanges(
 ): string {
   const ranges = codeRanges(text);
   if (!ranges) return text;
+  // `String.replace` has separate overloads for a string and a callback, so the
+  // union is narrowed once into a single rewrite of one code range.
+  const rewrite: (code: string) => string = typeof replacement === 'string'
+    ? code => code.replace(re, replacement)
+    : code => code.replace(re, replacement);
   let out = '';
   let last = 0;
   for (const [start, end] of ranges) {
-    const code = text.slice(start, end);
-    out += text.slice(last, start) + (typeof replacement === 'string' ? code.replace(re, replacement) : code.replace(re, replacement));
+    out += text.slice(last, start) + rewrite(text.slice(start, end));
     last = end;
   }
   return out + text.slice(last);
