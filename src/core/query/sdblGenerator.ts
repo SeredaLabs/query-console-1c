@@ -7,7 +7,7 @@ import { parseDocument } from './sdblParser';
 import { resolveAliases, isTabularSectionSource, qualifiedAutoAlias, synthesizedFieldAlias, joinKeyword } from './queryModelUtils';
 import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpression, formatJoinConjunct, normalizeLeafCase, stripNegatedFieldParens, stripNotFieldParens, stripRedundantLeafParens, appendIsNotNullTrailingSpace, renderOperatorRhs, flattenMultilineLeaf, reindentLeafSubquery, reindentLeafCase, reindentLeafBool, wrapBareCastOperand, reprintLeafArithmetic, canonicalizeComparisonOperands, setInlineSubqueryReflow, tightenLeafInOperator } from './exprFormatter';
 import { splitArgComments } from './argComments';
-import { tokenize, tryTokenize, codeRanges } from './sdblLexer';
+import { tokenize, tryTokenize, codeRanges, isCodeAt, replaceInCodeRanges } from './sdblLexer';
 import { parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { BARE_PARAM, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
@@ -40,28 +40,6 @@ let inConditionSubquery = false;
 /** Экранирует спецсимволы регулярного выражения в литеральной строке. */
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * `text.replace(re, replacement)` applied only inside the lexer's code ranges
- * (`codeRanges`): string/date literals and comments are copied unchanged. When
- * the boundaries are unknown, the text is returned unchanged.
- */
-function replaceInCodeRanges(text: string, re: RegExp, replacement: string): string {
-  const ranges = codeRanges(text);
-  if (!ranges) return text;
-  let out = '';
-  let last = 0;
-  for (const [start, end] of ranges) {
-    out += text.slice(last, start) + text.slice(start, end).replace(re, replacement);
-    last = end;
-  }
-  return out + text.slice(last);
-}
-
-/** Whether offset `pos` lies in one of the lexer's code ranges (`codeRanges`). */
-function isCodeAt(ranges: Array<[number, number]>, pos: number): boolean {
-  return ranges.some(([start, end]) => pos >= start && pos < end);
 }
 
 /** A `ВЫБОР` word in code, not in a literal or comment (C25 R9). Unknown lexical

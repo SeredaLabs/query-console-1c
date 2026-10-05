@@ -50,7 +50,7 @@ import type {
 
 import { defaultTableAlias, accountingPositionKeys } from './queryModel';
 import { renderOperatorRhs, needsFormatting, isRootNotGroup, normalizeLeafCase } from './exprFormatter';
-import { tokenize, tryTokenize, codeRanges } from './sdblLexer';
+import { tokenize, tryTokenize, replaceInCodeRanges } from './sdblLexer';
 import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
 import { fieldAlias } from './unionModel';
@@ -4568,15 +4568,7 @@ function matchPeriodBy(cur: Cursor): string | undefined {
 /** C25 R10: the period unit is upper-cased only in code; literal and comment
  * bytes stay. Unknown lexical facts keep the text. */
 function upperCaseCode(text: string): string {
-  const ranges = codeRanges(text);
-  if (!ranges) return text;
-  let out = '';
-  let last = 0;
-  for (const [start, end] of ranges) {
-    out += text.slice(last, start) + text.slice(start, end).toUpperCase();
-    last = end;
-  }
-  return out + text.slice(last);
+  return replaceInCodeRanges(text, /[\s\S]+/gu, code => code.toUpperCase());
 }
 
 /**

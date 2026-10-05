@@ -12,7 +12,7 @@
  * лексера). Распознаёт не-ключевые слова ИЛИ/НЕ/ВЫБОР/КОГДА/ТОГДА/ИНАЧЕ/КОНЕЦ/ЕСТЬ
  * по `.value.toUpperCase()`.
  */
-import { tokenize, tryTokenize, codeRanges, type Token } from './sdblLexer';
+import { tokenize, tryTokenize, codeRanges, isCodeAt, replaceInCodeRanges, type Token } from './sdblLexer';
 import { FUNCTION_CATALOG, type FunctionGroup, type FunctionLeaf } from './functionCatalog';
 import { LITERAL_WORDS, AGGREGATE_WORDS, COMPARISON_OPERATORS, PERIOD_WORDS as SHARED_PERIOD_WORDS } from './sdblKeywordSets';
 
@@ -192,7 +192,7 @@ export function appendIsNotNullTrailingSpace(text: string): string {
   return text.split('\n').map(line => {
     const base = lineStart;
     lineStart += line.length + 1;
-    return appendIsNotNullToLine(line, pos => ranges.some(([start, end]) => base + pos >= start && base + pos < end));
+    return appendIsNotNullToLine(line, pos => isCodeAt(ranges, base + pos));
   }).join('\n');
 }
 
@@ -487,7 +487,7 @@ export function reindentLeafSubquery(text: string, base: number): string {
   const ranges = codeRanges(text);
   if (!ranges) return text;
   for (let p = text.indexOf('\n'); p >= 0; p = text.indexOf('\n', p + 1)) {
-    if (!ranges.some(([start, end]) => p >= start && p < end)) return text;
+    if (!isCodeAt(ranges, p)) return text;
   }
   // Многострочный СПИСОК ЗНАЧЕНИЙ оператора `В (\n a,\n b)` внутри тела подзапроса
   // конструктор печатает инлайн на одной строке (фаза 6.15.20, MCP). Списки
@@ -2129,7 +2129,6 @@ export function reindentLeafBool(text: string, base: number): string {
   // Лексические факты неизвестны — текст сохраняется как есть.
   const ranges = codeRanges(text);
   if (!ranges) return text;
-  const inCode = (pos: number): boolean => ranges.some(([start, end]) => pos >= start && pos < end);
   const lines = text.split('\n');
   const lineStarts: number[] = [];
   for (let i = 0, pos = 0; i < lines.length; pos += lines[i].length + 1, i++) lineStarts.push(pos);
@@ -2158,7 +2157,7 @@ export function reindentLeafBool(text: string, base: number): string {
   let depth = parenDelta(lines[0]);
   for (let i = 1; i < lines.length; i++) {
     const raw = lines[i];
-    if (!inCode(lineStarts[i] - 1)) return text; // литерал — не наша цепочка
+    if (!isCodeAt(ranges, lineStarts[i] - 1)) return text; // литерал — не наша цепочка
     if (raw.trim() === '') { depth += parenDelta(raw); continue; }
     const w = firstWord(raw);
     if (w !== 'И' && w !== 'ИЛИ') return text; // продолжение не И/ИЛИ — не наша цепочка
@@ -4143,22 +4142,6 @@ export function stripNotFieldParens(text: string): string {
   return replaceInCodeRanges(text, NOT_FIELD_PARENS_RE, (_m, pre: string, path: string) => `${pre}НЕ ${path}`);
 }
 
-/**
- * C25: `text.replace(re, replacer)` applied only inside the lexer's code ranges
- * (`codeRanges`); string/date literals and comments are copied unchanged. When
- * the boundaries are unknown, the text is returned unchanged.
- */
-function replaceInCodeRanges(text: string, re: RegExp, replacer: (match: string, ...groups: string[]) => string): string {
-  const ranges = codeRanges(text);
-  if (!ranges) return text;
-  let out = '';
-  let last = 0;
-  for (const [start, end] of ranges) {
-    out += text.slice(last, start) + text.slice(start, end).replace(re, replacer);
-    last = end;
-  }
-  return out + text.slice(last);
-}
 
 function renderBool(
   node: Node,
