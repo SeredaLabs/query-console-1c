@@ -532,8 +532,16 @@ export function reindentLeafSubquery(text: string, base: number): string {
     // Схлопываем ТОЛЬКО чистый КОРТЕЖ-операнд `В`: сбалансированная пара скобок-списка,
     // за которой идёт ровно `В` (без булевых операторов/сравнений внутри). Иначе это
     // составное условие `(A = &X ИЛИ B В (…))`, чьи И/ИЛИ переносы трогать нельзя.
-    if (/^\([^()=<>]*\)\s+В$/u.test(body) &&
-      !/(?:^|[^\p{L}\p{N}_])(?:И|ИЛИ|НЕ|МЕЖДУ|ПОДОБНО|ССЫЛКА|ЕСТЬ)(?:[^\p{L}\p{N}_])/u.test(body)) {
+    // A1-5d: the gate reads only code — a `(`, `)`, `=`, `<`, `>` or a word inside a
+    // literal does not disqualify the tuple; unknown lexical facts → no collapse.
+    const bodyRanges = codeRanges(body);
+    const close = /\)\s+В$/u.exec(body);
+    let tupleHead = bodyRanges !== undefined && close !== null && body[0] === '(';
+    for (let k = 1; tupleHead && close && bodyRanges && k < close.index; k++) {
+      if ('()=<>'.includes(body[k]) && isCodeAt(bodyRanges, k)) tupleHead = false;
+    }
+    if (tupleHead && bodyRanges &&
+      codeWordMatches(body, bodyRanges, /(?:^|[^\p{L}\p{N}_])(?:И|ИЛИ|НЕ|МЕЖДУ|ПОДОБНО|ССЫЛКА|ЕСТЬ)(?:[^\p{L}\p{N}_])/gu) === 0) {
       lines.splice(0, start, lead + body);
       start = 1;
     }

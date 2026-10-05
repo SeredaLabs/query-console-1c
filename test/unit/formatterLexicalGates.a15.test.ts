@@ -58,3 +58,19 @@ describe('A1-5c opensWithVyborInCall: CASE opened inside a call after a multi-li
     expectIsolated(caseThen('ВЫРАЗИТЬ(Т.Сумма * $\n\t\t\t/ (Т.Код * ВЫБОР\n\t\t\t\tКОГДА Т.Код = "1"\n\t\t\t\t\tТОГДА 1\n\t\t\tКОНЕЦ) КАК Число(15, 2))'), payloads);
   });
 });
+
+describe('A1-5d reindentLeafSubquery: tuple-head gate before the collapse', () => {
+  // A literal `(`, `)`, `=` or word used to keep the head on two lines (C25 keeps its bytes).
+  const SUB = (a: string): string => `\n\t(ВЫБРАТЬ\n\t\t${a}.Код, ${a}.Код\n\tИЗ\n\t\tСправочник.Валюты КАК ${a})`;
+  const payloads = ['"a"', '"a ( b"', '"a ) b"', '"( x"', '"a=b"', '"a < b"', '"a И b"', '"НЕ"', '"a  ( b"'];
+  it('WHERE, JOIN and HAVING, literal last and first', () => {
+    expectIsolated(`ВЫБРАТЬ Т.Код КАК К ${F} ГДЕ (Т.Код,\n\t$) В${SUB('Х')}`, payloads);
+    expectIsolated(`ВЫБРАТЬ Т.Код КАК К ${F} ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Х ПО ($,\n\tХ.Код) В${SUB('Р')}`, payloads);
+    expectIsolated(`ВЫБРАТЬ Т.Код КАК К ${F} СГРУППИРОВАТЬ ПО Т.Код ИМЕЮЩИЕ (\n\tТ.Код,\n\t$\n) В${SUB('Х')}`, payloads);
+  });
+  it('code still decides: a code `=` or ИЛИ keeps the head as written', () => {
+    const head = (h: string): string => gen(`ВЫБРАТЬ Т.Код КАК К ${F} ГДЕ ${h} В${SUB('Х')}`);
+    expect(head('(Т.Код,\n\tТ.Код = 1)')).toContain('(Т.Код,\n');
+    expect(head('(Т.Код,\n\t"a" ИЛИ Т.Код)')).toContain('(Т.Код,\n');
+  });
+});
