@@ -30,20 +30,12 @@
  * ГРАНИЦ сегментов (см. `collectConditionTokens`), НЕ полный каталог SDBL.
  * Многие слова, функционально являющиеся ключевыми в реальной грамматике
  * (ИЛИ, НЕ, ВЫБОР, КОГДА, ТОГДА, ИНАЧЕ, КОНЕЦ, ЕСТЬ, МЕЖДУ, ССЫЛКА, …),
- * токенизируются им как `ident`, НЕ `keyword`. Поэтому здесь, как и в
- * существующем коде (`sdblParser.ts`'s `isIdentWord`), слово ищется по
- * `(type === 'ident' || type === 'keyword') && value.toUpperCase() === W`,
- * а не по одному только `type`.
+ * токенизируются им как `ident`, НЕ `keyword`. Поэтому слово ищется через
+ * `isWordToken` лексера (ident или keyword по каноническому значению), а не по
+ * одному только `type`.
  */
-import { tokenize } from './sdblLexer';
+import { tokenize, isWordToken } from './sdblLexer';
 import type { Token } from './sdblLexer';
-
-function isWord(t: Token | undefined, ...words: string[]): boolean {
-  if (!t) return false;
-  if (t.type !== 'ident' && t.type !== 'keyword') return false;
-  const v = t.value.toUpperCase();
-  return words.includes(v);
-}
 
 function isPunct(t: Token | undefined, value: string): boolean {
   return !!t && t.type === 'punct' && t.value === value;
@@ -85,7 +77,7 @@ function skipBalancedGroup(cur: ExprCursor): boolean {
 /** true, если то, что сейчас под курсором, похоже на начало подзапроса
  * (`ВЫБРАТЬ …`/`SELECT …`) — тогда группу в скобках не разбираем структурно. */
 function looksLikeSubquery(cur: ExprCursor): boolean {
-  return isWord(cur.peek(), 'ВЫБРАТЬ', 'SELECT');
+  return isWordToken(cur.peek(), 'ВЫБРАТЬ', 'SELECT');
 }
 
 /** `( <содержимое> )` после уже потреблённой `(`: подзапрос (пропускается по
@@ -99,7 +91,7 @@ function acceptGroupContent(cur: ExprCursor): boolean {
   // внутри скобок (aggregateFunctions в грамматике). Разрешаем ключевое слово
   // здесь в общем виде (не только для КОЛИЧЕСТВО) — не отличать, где именно
   // оно семантически уместно, безопаснее, чем отдельно перечислять функции.
-  if (isWord(cur.peek(), 'РАЗЛИЧНЫЕ', 'DISTINCT')) cur.next();
+  if (isWordToken(cur.peek(), 'РАЗЛИЧНЫЕ', 'DISTINCT')) cur.next();
   if (isPunct(cur.peek(), '*') && isPunct(cur.peek(1), ')')) { cur.next(); cur.next(); return true; }
   for (;;) {
     if (!acceptValue(cur)) return false;
@@ -114,26 +106,26 @@ function acceptGroupContent(cur: ExprCursor): boolean {
  * проверка, не различает булево/арифметическое место использования — см.
  * файловый комментарий). */
 function acceptCaseExpression(cur: ExprCursor): boolean {
-  if (!isWord(cur.peek(), 'КОГДА', 'WHEN')) {
+  if (!isWordToken(cur.peek(), 'КОГДА', 'WHEN')) {
     // необязательное expr перед первым КОГДА
     if (!acceptValue(cur)) return false;
   }
-  if (!isWord(cur.peek(), 'КОГДА', 'WHEN')) return false; // хотя бы одна ветка обязательна
+  if (!isWordToken(cur.peek(), 'КОГДА', 'WHEN')) return false; // хотя бы одна ветка обязательна
   let hasBranch = false;
-  while (isWord(cur.peek(), 'КОГДА', 'WHEN')) {
+  while (isWordToken(cur.peek(), 'КОГДА', 'WHEN')) {
     cur.next();
     if (!acceptValue(cur)) return false;
-    if (!isWord(cur.peek(), 'ТОГДА', 'THEN')) return false;
+    if (!isWordToken(cur.peek(), 'ТОГДА', 'THEN')) return false;
     cur.next();
     if (!acceptValue(cur)) return false;
     hasBranch = true;
   }
   if (!hasBranch) return false;
-  if (isWord(cur.peek(), 'ИНАЧЕ', 'ELSE')) {
+  if (isWordToken(cur.peek(), 'ИНАЧЕ', 'ELSE')) {
     cur.next();
     if (!acceptValue(cur)) return false;
   }
-  if (!isWord(cur.peek(), 'КОНЕЦ', 'END')) return false;
+  if (!isWordToken(cur.peek(), 'КОНЕЦ', 'END')) return false;
   cur.next();
   return true;
 }
@@ -147,7 +139,7 @@ function acceptCaseExpression(cur: ExprCursor): boolean {
  */
 function acceptCastFunction(cur: ExprCursor): boolean {
   if (!acceptValue(cur)) return false;
-  if (!isWord(cur.peek(), 'КАК', 'AS')) return false;
+  if (!isWordToken(cur.peek(), 'КАК', 'AS')) return false;
   cur.next();
   const typeTok = cur.peek();
   if (!typeTok || (typeTok.type !== 'ident' && typeTok.type !== 'keyword')) return false;
@@ -186,7 +178,7 @@ function acceptAtom(cur: ExprCursor): boolean {
     return acceptGroupContent(cur);
   }
 
-  if (isWord(t, 'ВЫБОР', 'CASE')) {
+  if (isWordToken(t, 'ВЫБОР', 'CASE')) {
     cur.next();
     return acceptCaseExpression(cur);
   }
@@ -201,7 +193,7 @@ function acceptAtom(cur: ExprCursor): boolean {
 
   if (t.type === 'param') { cur.next(); return true; }
 
-  if (isWord(t, 'NULL', 'НЕОПРЕДЕЛЕНО', 'UNDEFINED', 'ИСТИНА', 'TRUE', 'ЛОЖЬ', 'FALSE')) {
+  if (isWordToken(t, 'NULL', 'НЕОПРЕДЕЛЕНО', 'UNDEFINED', 'ИСТИНА', 'TRUE', 'ЛОЖЬ', 'FALSE')) {
     cur.next();
     return true;
   }
@@ -209,7 +201,7 @@ function acceptAtom(cur: ExprCursor): boolean {
   // ДАТАВРЕМЯ(...) — распознаётся общим правилом "имя + скобки" ниже (ident-like).
   // Идентификатор: голая ссылка на поле/mdo (a.b.c…) ИЛИ имя функции с вызовом.
   if (t.type === 'ident' || t.type === 'keyword') {
-    if (isWord(t, 'ВЫРАЗИТЬ', 'CAST') && isPunct(cur.peek(1), '(')) {
+    if (isWordToken(t, 'ВЫРАЗИТЬ', 'CAST') && isPunct(cur.peek(1), '(')) {
       cur.next(); // ВЫРАЗИТЬ/CAST
       cur.next(); // (
       return acceptCastFunction(cur);
@@ -254,7 +246,7 @@ function acceptDottedTail(cur: ExprCursor): void {
  * золотом корпусе (docs/development/known-issues.md, PR-14 шаг 2).
  */
 function acceptArithmeticValue(cur: ExprCursor): boolean {
-  while (isWord(cur.peek(), 'НЕ', 'NOT')) cur.next();
+  while (isWordToken(cur.peek(), 'НЕ', 'NOT')) cur.next();
   if (!acceptAtom(cur)) return false;
   for (;;) {
     const t = cur.peek();
@@ -275,7 +267,7 @@ function acceptArithmeticValue(cur: ExprCursor): boolean {
  * может быть 0 и более (`НЕ НЕ x` — избыточно, но не менее корректно).
  */
 function acceptValue(cur: ExprCursor): boolean {
-  while (isWord(cur.peek(), 'НЕ', 'NOT')) cur.next();
+  while (isWordToken(cur.peek(), 'НЕ', 'NOT')) cur.next();
   if (!acceptAtom(cur)) return false;
 
   for (;;) {
@@ -287,16 +279,16 @@ function acceptValue(cur: ExprCursor): boolean {
       if (!acceptValue(cur)) return false;
       continue;
     }
-    if (isWord(t, 'И', 'AND', 'ИЛИ', 'OR')) {
+    if (isWordToken(t, 'И', 'AND', 'ИЛИ', 'OR')) {
       cur.next();
       if (!acceptValue(cur)) return false;
       continue;
     }
-    if (isWord(t, 'ПОДОБНО', 'LIKE')) {
+    if (isWordToken(t, 'ПОДОБНО', 'LIKE')) {
       cur.next();
-      while (isWord(cur.peek(), 'НЕ', 'NOT')) cur.next();
+      while (isWordToken(cur.peek(), 'НЕ', 'NOT')) cur.next();
       if (!acceptValue(cur)) return false;
-      if (isWord(cur.peek(), 'СПЕЦСИМВОЛ', 'ESCAPE')) {
+      if (isWordToken(cur.peek(), 'СПЕЦСИМВОЛ', 'ESCAPE')) {
         cur.next();
         if (cur.peek()?.type !== 'string') return false;
         cur.next();
@@ -304,35 +296,35 @@ function acceptValue(cur: ExprCursor): boolean {
       }
       continue;
     }
-    if (isWord(t, 'ЕСТЬ', 'IS')) {
+    if (isWordToken(t, 'ЕСТЬ', 'IS')) {
       cur.next();
-      if (isWord(cur.peek(), 'НЕ', 'NOT')) cur.next();
-      if (!isWord(cur.peek(), 'NULL')) return false;
+      if (isWordToken(cur.peek(), 'НЕ', 'NOT')) cur.next();
+      if (!isWordToken(cur.peek(), 'NULL')) return false;
       cur.next();
       continue;
     }
-    if (isWord(t, 'МЕЖДУ', 'BETWEEN')) {
+    if (isWordToken(t, 'МЕЖДУ', 'BETWEEN')) {
       cur.next();
       if (!acceptArithmeticValue(cur)) return false;
-      if (!isWord(cur.peek(), 'И', 'AND')) return false;
+      if (!isWordToken(cur.peek(), 'И', 'AND')) return false;
       cur.next();
       if (!acceptArithmeticValue(cur)) return false;
       continue;
     }
-    if (isWord(t, 'НЕ', 'NOT') && isWord(cur.peek(1), 'В', 'IN')) {
+    if (isWordToken(t, 'НЕ', 'NOT') && isWordToken(cur.peek(1), 'В', 'IN')) {
       cur.next(); // НЕ
       // падает в ветку В/В ИЕРАРХИИ ниже на следующей итерации
       continue;
     }
-    if (isWord(t, 'В', 'IN')) {
+    if (isWordToken(t, 'В', 'IN')) {
       cur.next();
-      if (isWord(cur.peek(), 'ИЕРАРХИИ', 'HIERARCHY')) cur.next();
+      if (isWordToken(cur.peek(), 'ИЕРАРХИИ', 'HIERARCHY')) cur.next();
       if (!isPunct(cur.peek(), '(')) return false;
       cur.next();
       if (!acceptGroupContent(cur)) return false;
       continue;
     }
-    if (isWord(t, 'ССЫЛКА', 'REFS')) {
+    if (isWordToken(t, 'ССЫЛКА', 'REFS')) {
       cur.next();
       if (!acceptValue(cur)) return false; // mdo-ссылка синтаксически как значение
       continue;

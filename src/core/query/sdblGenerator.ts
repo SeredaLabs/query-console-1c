@@ -7,7 +7,7 @@ import { parseDocument } from './sdblParser';
 import { resolveAliases, isTabularSectionSource, qualifiedAutoAlias, synthesizedFieldAlias, joinKeyword } from './queryModelUtils';
 import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpression, formatJoinConjunct, normalizeLeafCase, stripNegatedFieldParens, stripNotFieldParens, stripRedundantLeafParens, appendIsNotNullTrailingSpace, renderOperatorRhs, flattenMultilineLeaf, reindentLeafSubquery, reindentLeafCase, reindentLeafBool, wrapBareCastOperand, reprintLeafArithmetic, canonicalizeComparisonOperands, setInlineSubqueryReflow, tightenLeafInOperator } from './exprFormatter';
 import { splitArgComments } from './argComments';
-import { tokenize, tryTokenize, codeRanges, isCodeAt, replaceInCodeRanges } from './sdblLexer';
+import { tokenize, tryTokenize, codeRanges, isCodeAt, isWordToken, replaceInCodeRanges } from './sdblLexer';
 import { parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { BARE_PARAM, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
@@ -1378,7 +1378,7 @@ function hasTopLevelOr(expr: string): boolean | undefined {
     if (t.type === 'punct') {
       if (t.value === '(') depth++;
       else if (t.value === ')') depth--;
-    } else if (depth === 0 && (t.type === 'ident' || t.type === 'keyword') && t.value.toUpperCase() === 'ИЛИ') {
+    } else if (depth === 0 && isWordToken(t, 'ИЛИ')) {
       return true;
     }
   }

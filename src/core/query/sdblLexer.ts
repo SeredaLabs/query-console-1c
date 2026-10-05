@@ -354,6 +354,16 @@ export function codeRanges(text: string): Array<[number, number]> | undefined {
   return ranges;
 }
 
+/**
+ * Whether `t` is one of `words` (given in canonical upper case) in any spelling:
+ * an ident or keyword whose canonical value, upper-cased, is in `words`. Keywords
+ * already carry the canonical upper-case value; idents compare case-insensitively.
+ * Literals, comments, numbers, parameters and punctuation are never words.
+ */
+export function isWordToken(t: Token | undefined, ...words: string[]): boolean {
+  return !!t && (t.type === 'ident' || t.type === 'keyword') && words.includes(t.value.toUpperCase());
+}
+
 /** Whether offset `pos` lies in one of the code ranges returned by `codeRanges`. */
 export function isCodeAt(ranges: Array<[number, number]>, pos: number): boolean {
   return ranges.some(([start, end]) => pos >= start && pos < end);
