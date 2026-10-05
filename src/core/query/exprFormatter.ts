@@ -3152,7 +3152,10 @@ function stripRedundantCaseClauseParens(content: string): string {
   if (inner === '') return content;
   // Зоны риска: ВЫРАЗИТЬ (особые правила оборачивания), ВЫБОР/ВЫБРАТЬ (вложенный
   // CASE/подзапрос), верхнеуровневый булев И/ИЛИ (раскладка по оператору).
-  if (/(?:^|[^\p{L}\p{N}_])(ВЫРАЗИТЬ|ВЫБОР|ВЫБРАТЬ)(?:[^\p{L}\p{N}_]|$)/iu.test(inner)) return content;
+  // A1-5a: the words count only in code; unknown lexical facts → the parens stay.
+  const innerRanges = codeRanges(inner);
+  if (!innerRanges ||
+    codeWordMatches(inner, innerRanges, /(?:^|[^\p{L}\p{N}_])(ВЫРАЗИТЬ|ВЫБОР|ВЫБРАТЬ)(?:[^\p{L}\p{N}_]|$)/giu) > 0) return content;
   if (leafHasTopBoolean(inner)) return content;
   return inner;
 }
