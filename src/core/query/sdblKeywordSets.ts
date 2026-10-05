@@ -24,3 +24,6 @@ export const PERIOD_WORDS = new Set([
 
 /** Meta-function/display words (`ЗНАЧЕНИЕ`, `ТИП`, `ПРЕДСТАВЛЕНИЕ`, `ПРЕДСТАВЛЕНИЕССЫЛКИ`). */
 export const META_FUNCTION_WORDS = new Set(['ЗНАЧЕНИЕ', 'ТИП', 'ПРЕДСТАВЛЕНИЕ', 'ПРЕДСТАВЛЕНИЕССЫЛКИ']);
+
+/** Primitive type names after `КАК` / inside `ТИП(…)`: СТРОКА, ЧИСЛО, ДАТА, БУЛЕВО. */
+export const PRIMITIVE_TYPE_WORDS = new Set(['СТРОКА', 'ЧИСЛО', 'ДАТА', 'БУЛЕВО']);

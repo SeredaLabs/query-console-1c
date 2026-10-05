@@ -12,9 +12,9 @@
  * лексера). Распознаёт не-ключевые слова ИЛИ/НЕ/ВЫБОР/КОГДА/ТОГДА/ИНАЧЕ/КОНЕЦ/ЕСТЬ
  * по `.value.toUpperCase()`.
  */
-import { tokenize, tryTokenize, codeRanges, isCodeAt, replaceInCodeRanges, type Token } from './sdblLexer';
+import { tokenize, tryTokenize, codeRanges, isCodeAt, isWordToken, replaceInCodeRanges, type Token } from './sdblLexer';
 import { FUNCTION_CATALOG, type FunctionGroup, type FunctionLeaf } from './functionCatalog';
-import { LITERAL_WORDS, AGGREGATE_WORDS, COMPARISON_OPERATORS, PERIOD_WORDS as SHARED_PERIOD_WORDS } from './sdblKeywordSets';
+import { LITERAL_WORDS, AGGREGATE_WORDS, COMPARISON_OPERATORS, PERIOD_WORDS as SHARED_PERIOD_WORDS, PRIMITIVE_TYPE_WORDS } from './sdblKeywordSets';
 
 export type ExprSlot = 'where' | 'having' | 'join' | 'select';
 
@@ -60,7 +60,6 @@ const FUNCTION_WORDS: Set<string> = (() => {
 const CALL_NOSPACE_WORDS = new Set(['ЗНАЧЕНИЕ']);
 
 /** Примитивные типы: верхний регистр в позиции типа (ВЫРАЗИТЬ … КАК <Тип>, ТИП(<Тип>)). */
-const PRIMITIVE_TYPE_WORDS = new Set(['СТРОКА', 'ЧИСЛО', 'ДАТА', 'БУЛЕВО']);
 
 /**
  * Литералы периода (гранулярность) в позиции аргумента `<Период>` функций дат
@@ -127,7 +126,7 @@ function leafHasSubquery(raw: string): boolean {
   } catch {
     return false;
   }
-  return toks.some((t) => (t.type === 'keyword' || t.type === 'ident') && t.value.toUpperCase() === 'ВЫБРАТЬ');
+  return toks.some((t) => isWordToken(t, 'ВЫБРАТЬ'));
 }
 
 /**
@@ -142,7 +141,7 @@ function leafHasCase(raw: string): boolean {
   } catch {
     return false;
   }
-  return toks.some((t) => (t.type === 'keyword' || t.type === 'ident') && t.value.toUpperCase() === 'ВЫБОР');
+  return toks.some((t) => isWordToken(t, 'ВЫБОР'));
 }
 
 /**
@@ -308,7 +307,7 @@ function leafHasBoolean(raw: string, anyDepth: boolean): boolean {
     if (t.type === 'punct' && t.value === '(') { depth++; continue; }
     if (t.type === 'punct' && t.value === ')') { if (depth > 0) depth--; continue; }
     if (!anyDepth && depth !== 0) continue;
-    if (isWord(t, 'МЕЖДУ')) { betweenPending++; continue; }
+    if (isWordToken(t, 'МЕЖДУ')) { betweenPending++; continue; }
     if (isOr(t)) return true;
     if (isAnd(t)) {
       if (betweenPending > 0) betweenPending--;
@@ -998,10 +997,8 @@ function splitInlineLeafCase(text: string): string {
     return text;
   }
   const sig = toks.filter((t) => t.type !== 'eof');
-  const isW = (t: Token, w: string): boolean =>
-    (t.type === 'keyword' || t.type === 'ident') && t.value.toUpperCase() === w;
-  if (sig.some((t) => isW(t, 'ВЫБРАТЬ'))) return text;
-  if (!sig.some((t) => isW(t, 'ВЫБОР'))) return text;
+  if (sig.some((t) => isWordToken(t, 'ВЫБРАТЬ'))) return text;
+  if (!sig.some((t) => isWordToken(t, 'ВЫБОР'))) return text;
   // Глубина скобок ПЕРЕД каждым токеном.
   const depthBefore: number[] = [];
   let pd = 0;
@@ -1012,9 +1009,9 @@ function splitInlineLeafCase(text: string): string {
   }
   // Селекторный ВЫБОР (`ВЫБОР <не-КОГДА> …`) — не наша зона, отдаём reflowLeafSelectorCase.
   for (let k = 0; k < sig.length; k++) {
-    if (isW(sig[k], 'ВЫБОР')) {
+    if (isWordToken(sig[k], 'ВЫБОР')) {
       const nx = sig[k + 1];
-      if (!nx || !isW(nx, 'КОГДА')) return text;
+      if (!nx || !isWordToken(nx, 'КОГДА')) return text;
     }
   }
   // Предпроход: условие КОГДА, ЦЕЛИКОМ обёрнутое в ОДНУ скобочную пару (`КОГДА (НЕ A И НЕ
@@ -1031,11 +1028,11 @@ function splitInlineLeafCase(text: string): string {
     const dropPos: number[] = [];
     for (let k = 0; k < sig.length; k++) {
       const t = sig[k];
-      if (isW(t, 'ВЫБОР')) { caseDepth.push(depthBefore[k]); continue; }
+      if (isWordToken(t, 'ВЫБОР')) { caseDepth.push(depthBefore[k]); continue; }
       const top = caseDepth[caseDepth.length - 1];
       if (top === undefined) continue;
-      if (isW(t, 'КОНЕЦ') && depthBefore[k] === top) { caseDepth.pop(); continue; }
-      if (!isW(t, 'КОГДА') || depthBefore[k] !== top) continue;
+      if (isWordToken(t, 'КОНЕЦ') && depthBefore[k] === top) { caseDepth.pop(); continue; }
+      if (!isWordToken(t, 'КОГДА') || depthBefore[k] !== top) continue;
       // Первый токен условия — `(` на уровне top.
       const open = sig[k + 1];
       if (!open || !(open.type === 'punct' && open.value === '(') || depthBefore[k + 1] !== top) continue;
@@ -1046,7 +1043,7 @@ function splitInlineLeafCase(text: string): string {
       for (; j < sig.length; j++) {
         const d = depthBefore[j];
         if (d <= top) break; // вышли из открытой пары (её `)` уже учтён в depthBefore)
-        if (d === top + 1 && (isW(sig[j], 'И') || isW(sig[j], 'ИЛИ'))) hasTopBool = true;
+        if (d === top + 1 && (isWordToken(sig[j], 'И') || isWordToken(sig[j], 'ИЛИ'))) hasTopBool = true;
       }
       // sig[j] — первый токен на глубине <= top после пары: это её `)` уже закрыт, значит
       // closeIdx = j-1 (последний токен внутри/закрывающая `)`); требуем, чтобы это была `)`
@@ -1054,7 +1051,7 @@ function splitInlineLeafCase(text: string): string {
       const closeTok = sig[j - 1];
       if (!closeTok || !(closeTok.type === 'punct' && closeTok.value === ')')) continue;
       const next = sig[j];
-      if (!next || !isW(next, 'ТОГДА') || depthBefore[j] !== top) continue;
+      if (!next || !isWordToken(next, 'ТОГДА') || depthBefore[j] !== top) continue;
       if (!hasTopBool) continue;
       closeIdx = j - 1;
       dropPos.push(open.pos, closeTok.pos);
@@ -1096,12 +1093,12 @@ function splitInlineLeafCase(text: string): string {
     const dep = depthBefore[k];
     if (t.type === 'punct' && t.value === '(') {
       const prev = sig[k - 1];
-      const isCallOpen = !!prev && (prev.type === 'ident' || (prev.type === 'keyword' && !isW(prev, 'И') && !isW(prev, 'ИЛИ') && !isW(prev, 'НЕ') && !isW(prev, 'КОГДА') && !isW(prev, 'МЕЖДУ')));
+      const isCallOpen = !!prev && (prev.type === 'ident' || (prev.type === 'keyword' && !isWordToken(prev, 'И') && !isWordToken(prev, 'ИЛИ') && !isWordToken(prev, 'НЕ') && !isWordToken(prev, 'КОГДА') && !isWordToken(prev, 'МЕЖДУ')));
       parenKind.push(!isCallOpen);
     } else if (t.type === 'punct' && t.value === ')') {
       parenKind.pop();
     }
-    if (isW(t, 'ВЫБОР')) {
+    if (isWordToken(t, 'ВЫБОР')) {
       caseStack.push(dep);
       inCondition = false;
       continue;
@@ -1111,7 +1108,7 @@ function splitInlineLeafCase(text: string): string {
     // `МЕЖДУ` отслеживаем ВНУТРИ условия на ЛЮБОЙ глубине (`dep >= top`): его `И` —
     // диапазонный, не булев разделитель, и его НЕ переносим ни на верхнем уровне, ни
     // внутри группы `(X МЕЖДУ a И b)`. Считаем ДО обработчиков И/ИЛИ.
-    if (inCondition && dep >= top && isW(t, 'МЕЖДУ')) { betweenPending++; continue; }
+    if (inCondition && dep >= top && isWordToken(t, 'МЕЖДУ')) { betweenPending++; continue; }
     // Операнд `ИЛИ`/`И` ровно на ОДИН уровень глубже текущего CASE (`dep === top+1`),
     // принадлежащий ГРУППИРУЮЩЕЙ скобке условия КОГДА (`И (X ИЛИ Y)`): конструктор 1С
     // тоже разносит его по строкам (оракул `И (X\n\t\tИЛИ Y)`). Узкий гейт: мы внутри
@@ -1121,10 +1118,10 @@ function splitInlineLeafCase(text: string): string {
       inCondition &&
       dep === top + 1 &&
       parenKind[parenKind.length - 1] === true &&
-      (isW(t, 'И') || isW(t, 'ИЛИ'))
+      (isWordToken(t, 'И') || isWordToken(t, 'ИЛИ'))
     ) {
       // Диапазонное `И` из `МЕЖДУ a И b` — не разрываем.
-      if (isW(t, 'И') && betweenPending > 0) { betweenPending--; continue; }
+      if (isWordToken(t, 'И') && betweenPending > 0) { betweenPending--; continue; }
       if (k > 0 && gluedToPrevAt(k)) breakBefore.add(k);
       continue;
     }
@@ -1133,22 +1130,22 @@ function splitInlineLeafCase(text: string): string {
     // (в зазоре нет `\n`): инлайн-CASE мы разбиваем, а уже разложенные построчно
     // структурные строки НЕ трогаем — иначе сорвём их ведущий отступ (фаза 6.16.71).
     const gluedToPrev = (): boolean => gluedToPrevAt(k);
-    if (isW(t, 'КОГДА')) {
+    if (isWordToken(t, 'КОГДА')) {
       if (k > 0 && gluedToPrev()) breakBefore.add(k);
       inCondition = true;
-    } else if (isW(t, 'ТОГДА')) {
+    } else if (isWordToken(t, 'ТОГДА')) {
       if (k > 0 && gluedToPrev()) breakBefore.add(k);
       inCondition = false;
-    } else if (isW(t, 'ИНАЧЕ')) {
+    } else if (isWordToken(t, 'ИНАЧЕ')) {
       if (k > 0 && gluedToPrev()) breakBefore.add(k);
       inCondition = false;
-    } else if (isW(t, 'КОНЕЦ')) {
+    } else if (isWordToken(t, 'КОНЕЦ')) {
       if (k > 0 && gluedToPrev()) breakBefore.add(k);
       caseStack.pop();
       inCondition = false;
-    } else if (inCondition && (isW(t, 'И') || isW(t, 'ИЛИ'))) {
+    } else if (inCondition && (isWordToken(t, 'И') || isWordToken(t, 'ИЛИ'))) {
       // `И` диапазона `МЕЖДУ a И b` — не булев разделитель условия, не переносим.
-      if (isW(t, 'И') && betweenPending > 0) { betweenPending--; continue; }
+      if (isWordToken(t, 'И') && betweenPending > 0) { betweenPending--; continue; }
       if (k > 0 && gluedToPrev()) breakBefore.add(k);
     }
   }
@@ -2042,10 +2039,8 @@ function reflowLeafSelectorCase(text: string, valueBaseInd: number): string | nu
     return null;
   }
   const sig = toks.filter((t) => t.type !== 'eof');
-  const isW = (t: Token, w: string): boolean =>
-    (t.type === 'keyword' || t.type === 'ident') && t.value.toUpperCase() === w;
-  if (!sig.some((t) => isW(t, 'ВЫБОР'))) return null;
-  if (sig.some((t) => isW(t, 'ВЫБРАТЬ'))) return null; // подзапрос — не наша зона
+  if (!sig.some((t) => isWordToken(t, 'ВЫБОР'))) return null;
+  if (sig.some((t) => isWordToken(t, 'ВЫБРАТЬ'))) return null; // подзапрос — не наша зона
   // Глубина скобок ПЕРЕД каждым токеном.
   const depthBefore: number[] = [];
   let d = 0;
@@ -2057,18 +2052,18 @@ function reflowLeafSelectorCase(text: string, valueBaseInd: number): string | nu
   // Первый ВЫБОР на глубине > 0 (внутри вызова функции).
   let vi = -1;
   for (let k = 0; k < sig.length; k++) {
-    if (isW(sig[k], 'ВЫБОР') && depthBefore[k] > 0) { vi = k; break; }
+    if (isWordToken(sig[k], 'ВЫБОР') && depthBefore[k] > 0) { vi = k; break; }
   }
   if (vi < 0) return null;
   // Более одного ВЫБОР в листе — арифметика/иная геометрия, не наш случай.
-  if (sig.some((t, k) => k !== vi && isW(t, 'ВЫБОР'))) return null;
+  if (sig.some((t, k) => k !== vi && isWordToken(t, 'ВЫБОР'))) return null;
   const caseDepth = depthBefore[vi];
   // У ВЫБОР должен быть СЕЛЕКТОР: следующий значимый токен — не КОГДА.
-  if (vi + 1 >= sig.length || isW(sig[vi + 1], 'КОГДА')) return null;
+  if (vi + 1 >= sig.length || isWordToken(sig[vi + 1], 'КОГДА')) return null;
   // Найти первый КОГДА на уровне CASE (после селектора).
   let firstWhen = -1;
   for (let k = vi + 1; k < sig.length; k++) {
-    if (depthBefore[k] === caseDepth && isW(sig[k], 'КОГДА')) { firstWhen = k; break; }
+    if (depthBefore[k] === caseDepth && isWordToken(sig[k], 'КОГДА')) { firstWhen = k; break; }
     // Скобка закрылась раньше КОГДА — нестандартно.
     if (depthBefore[k] < caseDepth) return null;
   }
@@ -2086,10 +2081,10 @@ function reflowLeafSelectorCase(text: string, valueBaseInd: number): string | nu
   for (let k = firstWhen; k < sig.length; k++) {
     if (depthBefore[k] !== caseDepth) continue;
     const t = sig[k];
-    if (isW(t, 'КОГДА')) marks.push({ k, word: 'КОГДА' });
-    else if (isW(t, 'ТОГДА')) marks.push({ k, word: 'ТОГДА' });
-    else if (isW(t, 'ИНАЧЕ')) marks.push({ k, word: 'ИНАЧЕ' });
-    else if (isW(t, 'КОНЕЦ')) { marks.push({ k, word: 'КОНЕЦ' }); break; }
+    if (isWordToken(t, 'КОГДА')) marks.push({ k, word: 'КОГДА' });
+    else if (isWordToken(t, 'ТОГДА')) marks.push({ k, word: 'ТОГДА' });
+    else if (isWordToken(t, 'ИНАЧЕ')) marks.push({ k, word: 'ИНАЧЕ' });
+    else if (isWordToken(t, 'КОНЕЦ')) { marks.push({ k, word: 'КОНЕЦ' }); break; }
   }
   // Последний mark обязан быть КОНЕЦ (CASE закрылся на своём уровне).
   if (marks.length === 0 || marks[marks.length - 1].word !== 'КОНЕЦ') return null;
@@ -2920,8 +2915,7 @@ export function stripRedundantLeafParens(raw: string): string {
   // конструктор печатает без обёртки (`(ВЫРАЗИТЬ(…)) В (&М)` → `ВЫРАЗИТЬ(…) В (&М)`),
   // тогда как у сравнения обёртку сохраняет. `В` не входит в PRED_NEIGHBOR_WORDS
   // (там `(` справа — список значений), поэтому обрабатываем его отдельно (фаза 6.16.77).
-  const isMembershipWord = (t: Token | undefined): boolean =>
-    !!t && (t.type === 'keyword' || t.type === 'ident') && t.value.toUpperCase() === 'В';
+  const isMembershipWord = (t: Token | undefined): boolean => isWordToken(t, 'В');
   // Правый сосед пары допускает снятие скобок.
   const rightOk = (nx: Token | undefined): boolean => {
     if (!nx) return true;
@@ -2961,7 +2955,7 @@ export function stripRedundantLeafParens(raw: string): string {
       if (c.type === 'punct' && c.value === '(') { d++; continue; }
       if (c.type === 'punct' && c.value === ')') { d--; continue; }
       if (d !== 0) continue;
-      if (isWord(c, 'МЕЖДУ')) between++;
+      if (isWordToken(c, 'МЕЖДУ')) between++;
       else if (isAnd(c)) { if (between > 0) between--; else lvl = Math.min(lvl, 2); }
       else if (isOr(c)) lvl = 1;
       // Префиксный НЕ — в начале или после булева оператора (не `ЕСТЬ НЕ`/`НЕ В`).
@@ -3326,35 +3320,29 @@ interface CaseClause {
 
 // --- helpers для распознавания слов-операторов ------------------------------
 
-function up(t: Token): string {
-  return t.value.toUpperCase();
-}
-function isWord(t: Token, w: string): boolean {
-  return (t.type === 'ident' || t.type === 'keyword') && up(t) === w;
-}
 function isOr(t: Token): boolean {
-  return isWord(t, 'ИЛИ');
+  return isWordToken(t, 'ИЛИ');
 }
 function isAnd(t: Token): boolean {
-  return t.type === 'keyword' && t.value === 'И';
+  return isWordToken(t, 'И');
 }
 function isNot(t: Token): boolean {
-  return isWord(t, 'НЕ');
+  return isWordToken(t, 'НЕ');
 }
 function isCase(t: Token): boolean {
-  return isWord(t, 'ВЫБОР');
+  return isWordToken(t, 'ВЫБОР');
 }
 function isWhen(t: Token): boolean {
-  return isWord(t, 'КОГДА');
+  return isWordToken(t, 'КОГДА');
 }
 function isThen(t: Token): boolean {
-  return isWord(t, 'ТОГДА');
+  return isWordToken(t, 'ТОГДА');
 }
 function isElse(t: Token): boolean {
-  return isWord(t, 'ИНАЧЕ');
+  return isWordToken(t, 'ИНАЧЕ');
 }
 function isEnd(t: Token): boolean {
-  return isWord(t, 'КОНЕЦ');
+  return isWordToken(t, 'КОНЕЦ');
 }
 /**
  * Является ли токен бинарным оператором (сравнения или арифметики), ПОСЛЕ которого
@@ -3588,7 +3576,7 @@ class Parser {
         (COMPARE_OPS.has(after.value) || ARITH_ADD.has(after.value) || ARITH_MUL.has(after.value))) {
       return true;
     }
-    if (isWord(after, 'МЕЖДУ') || isWord(after, 'ПОДОБНО')) return true;
+    if (isWordToken(after, 'МЕЖДУ') || isWordToken(after, 'ПОДОБНО')) return true;
     return false;
   }
 
@@ -3798,7 +3786,7 @@ class Parser {
           }
         }
         if (isThen(t) || isElse(t) || isEnd(t) || isWhen(t)) break;
-        if (isWord(t, 'МЕЖДУ')) betweenPending++;
+        if (isWordToken(t, 'МЕЖДУ')) betweenPending++;
       }
       to = t.pos + t.value.length;
       prevSig = t;
@@ -3859,8 +3847,8 @@ class Parser {
     // ведущие МЕЖДУ/ПОДОБНО — `(ВЫБОР…КОНЕЦ) МЕЖДУ &A И &B` / `КОНЕЦ ПОДОБНО &Ш`:
     // CASE — левый операнд диапазона/шаблона, скобки-обёртка лишние, оператор
     // печатается на строке КОНЕЦ без `)` (фаза 6.16.75).
-    const leadBetween = isWord(startTok, 'МЕЖДУ');
-    const leadLike = isWord(startTok, 'ПОДОБНО');
+    const leadBetween = isWordToken(startTok, 'МЕЖДУ');
+    const leadLike = isWordToken(startTok, 'ПОДОБНО');
     const leadOk =
       (startTok.type === 'punct' &&
         (COMPARE_OPS.has(startTok.value) ||
@@ -3902,7 +3890,7 @@ class Parser {
           if (leadBetween || leadLike || boolBoundary) break;
           this.i = save; return undefined;
         }
-        else if (isWord(t, 'МЕЖДУ')) betweenPending++;
+        else if (isWordToken(t, 'МЕЖДУ')) betweenPending++;
         else if (t.type === 'punct' && COMPARE_OPS.has(t.value)) cmpCount++;
       }
       to = t.pos + t.value.length;

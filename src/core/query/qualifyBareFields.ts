@@ -31,7 +31,7 @@ import type { QueryDocument } from './unionModel';
 import { resolveAliases } from './queryModelUtils';
 import { computeJoinVisibility } from './joinVisibility';
 import { matchesAtNearestLevel } from './nearestAncestor';
-import { LITERAL_WORDS, PERIOD_WORDS } from './sdblKeywordSets';
+import { LITERAL_WORDS, PERIOD_WORDS, PRIMITIVE_TYPE_WORDS } from './sdblKeywordSets';
 
 /** Структурные слова-операторы, никогда не являющиеся полем. */
 const STRUCTURAL = new Set([
@@ -53,7 +53,6 @@ const STRUCTURAL = new Set([
 const LITERALS = LITERAL_WORDS;
 
 /** Примитивные типы (позиция типа после КАК/в ТИП(…)) — не поле. */
-const PRIMITIVE_TYPES = new Set(['СТРОКА', 'ЧИСЛО', 'ДАТА', 'БУЛЕВО']);
 
 /**
  * Префиксы имён типов метаданных: голова `<Тип>.<Имя>[.<Значение>]` в
@@ -425,7 +424,7 @@ function qualifyExpression(raw: string, ctx: OwnerContext): string {
     // временные таблицы `#Имя` и односегментные имена, не попавшие в `aliases`.
     if (prevV === 'ИЗ' || prevV === 'СОЕДИНЕНИЕ' || prevV === 'ПОМЕСТИТЬ') continue;
     // Имя примитивного типа после `КАК` уже отсечено; в ТИП(СТРОКА) — пропускаем тип.
-    if (PRIMITIVE_TYPES.has(word) && (prevV === 'КАК' || prevV === '(')) continue;
+    if (PRIMITIVE_TYPE_WORDS.has(word) && (prevV === 'КАК' || prevV === '(')) continue;
     // Вызов функции — имя перед `(`.
     if (nextV === '(') continue;
 

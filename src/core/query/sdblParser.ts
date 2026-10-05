@@ -50,7 +50,7 @@ import type {
 
 import { defaultTableAlias, accountingPositionKeys } from './queryModel';
 import { renderOperatorRhs, needsFormatting, isRootNotGroup, normalizeLeafCase } from './exprFormatter';
-import { tokenize, tryTokenize, replaceInCodeRanges } from './sdblLexer';
+import { tokenize, tryTokenize, isWordToken, replaceInCodeRanges } from './sdblLexer';
 import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
 import { fieldAlias } from './unionModel';
@@ -3085,8 +3085,6 @@ function collectConditionTokens(cur: Cursor, stop: Set<string>): Token[] {
   // Глубина ВЫБОР … КОНЕЦ: стоп-слово внутри значения ТОГДА/ИНАЧЕ оператора ВЫБОР
   // не завершает секцию (всё выражение ВЫБОР — часть условия).
   let caseDepth = 0;
-  const isIdentWord = (t: Token, w: string): boolean =>
-    (t.type === 'ident' || t.type === 'keyword') && t.value.toUpperCase() === w;
   for (;;) {
     const t = cur.peek();
     if (t.type === 'eof') break;
@@ -3096,8 +3094,8 @@ function collectConditionTokens(cur: Cursor, stop: Set<string>): Token[] {
     if (depth === 0 && caseDepth === 0 && cur.isBuilderStart()) break;
     if (t.type === 'punct' && t.value === '(') depth++;
     else if (t.type === 'punct' && t.value === ')') depth--;
-    else if (isIdentWord(t, 'ВЫБОР')) caseDepth++;
-    else if (isIdentWord(t, 'КОНЕЦ') && caseDepth > 0) caseDepth--;
+    else if (isWordToken(t, 'ВЫБОР')) caseDepth++;
+    else if (isWordToken(t, 'КОНЕЦ') && caseDepth > 0) caseDepth--;
     tokens.push(cur.next());
   }
   return tokens;
@@ -3107,14 +3105,12 @@ function collectConditionTokens(cur: Cursor, stop: Set<string>): Token[] {
 function hasTopLevelOr(tokens: Token[]): boolean {
   let depth = 0;
   let caseDepth = 0;
-  const isIdentWord = (t: Token, w: string): boolean =>
-    (t.type === 'ident' || t.type === 'keyword') && t.value.toUpperCase() === w;
   for (const t of tokens) {
     if (t.type === 'punct' && t.value === '(') depth++;
     else if (t.type === 'punct' && t.value === ')') depth--;
-    else if (isIdentWord(t, 'ВЫБОР')) caseDepth++;
-    else if (isIdentWord(t, 'КОНЕЦ') && caseDepth > 0) caseDepth--;
-    else if (depth === 0 && caseDepth === 0 && isIdentWord(t, 'ИЛИ')) return true;
+    else if (isWordToken(t, 'ВЫБОР')) caseDepth++;
+    else if (isWordToken(t, 'КОНЕЦ') && caseDepth > 0) caseDepth--;
+    else if (depth === 0 && caseDepth === 0 && isWordToken(t, 'ИЛИ')) return true;
   }
   return false;
 }
@@ -3173,7 +3169,7 @@ function interpretCondition(
     // Отрицание голого поля при единственном источнике (`ГДЕ НЕ ПометкаУдаления` →
     // `ГДЕ НЕ Т.ПометкаУдаления`): первый токен — `НЕ`, остаток — чистый точечный
     // путь без квалификации. Конструктор 1С квалифицирует поле под `НЕ`.
-    if (tokens.length > 1 && isNotToken(tokens[0])) {
+    if (tokens.length > 1 && isWordToken(tokens[0], 'НЕ')) {
       const negBare = tryBareField(tokens.slice(1), aliasToId);
       if (negBare) {
         if (negBare.path.includes('.') && soleSource.outerAliasHead?.(negBare.head)) return { custom: true, expression: `НЕ ${negBare.path}` };
@@ -3213,7 +3209,7 @@ function interpretCondition(
   // ведущее `НЕ`, разбираем остаток как условие-подзапрос, помечаем negated —
   // генератор печатает `НЕ ` и сдвигает блок подзапроса (фаза 6.15.NN). Только
   // для подзапросного результата; обычные негативы остаются произвольным текстом.
-  if (tokens.length > 1 && isNotToken(tokens[0])) {
+  if (tokens.length > 1 && isWordToken(tokens[0], 'НЕ')) {
     const inner = trySimpleCondition(tokens.slice(1), source, aliasToId, soleSource, aliasSpelling);
     if (inner && inner.subquery) return { ...inner, negated: true };
   }
@@ -3390,7 +3386,7 @@ function trySimpleCondition(
 function isParamRhs(op: string, paramTokens: Token[]): boolean {
   if (op === 'МЕЖДУ') {
     const iIdx = paramTokens.findIndex(
-      t => (t.type === 'ident' || t.type === 'keyword') && t.text.toUpperCase() === 'И'
+      t => isWordToken(t, 'И')
     );
     if (iIdx <= 0) return false;
     return isParamChain(paramTokens.slice(0, iIdx)) && isParamChain(paramTokens.slice(iIdx + 1));
@@ -3398,7 +3394,7 @@ function isParamRhs(op: string, paramTokens: Token[]): boolean {
   let toks = paramTokens;
   if (op === 'В') {
     const head = toks[0];
-    if (head && (head.type === 'ident' || head.type === 'keyword') && head.text.toUpperCase() === 'ИЕРАРХИИ') {
+    if (head && isWordToken(head, 'ИЕРАРХИИ')) {
       toks = toks.slice(1);
     }
     const first = toks[0];
@@ -3425,9 +3421,6 @@ function isParamChain(toks: Token[]): boolean {
 }
 
 /** Токен логического отрицания `НЕ` (лексер выдаёт его как ident, не keyword). */
-function isNotToken(t: Token): boolean {
-  return (t.type === 'ident' || t.type === 'keyword') && t.text.toUpperCase() === 'НЕ';
-}
 
 function isCondOperatorToken(t: Token): boolean {
   if (t.type === 'punct') return COND_OPERATORS.has(t.value);
@@ -3579,8 +3572,6 @@ function splitJoinConjuncts(tokens: Token[]): Token[][] {
   let depth = 0;
   let caseDepth = 0;
   let betweenPending = 0;
-  const isIdentWord = (t: Token, w: string): boolean =>
-    (t.type === 'ident' || t.type === 'keyword') && t.value.toUpperCase() === w;
   const flush = (): void => {
     if (current.length > 0) segments.push(current);
     current = [];
@@ -3595,12 +3586,12 @@ function splitJoinConjuncts(tokens: Token[]): Token[][] {
           continue;
         }
       }
-      if (isIdentWord(t, 'МЕЖДУ')) betweenPending++;
+      if (isWordToken(t, 'МЕЖДУ')) betweenPending++;
     }
     if (t.type === 'punct' && t.value === '(') depth++;
     else if (t.type === 'punct' && t.value === ')') depth--;
-    else if (isIdentWord(t, 'ВЫБОР')) caseDepth++;
-    else if (isIdentWord(t, 'КОНЕЦ') && caseDepth > 0) caseDepth--;
+    else if (isWordToken(t, 'ВЫБОР')) caseDepth++;
+    else if (isWordToken(t, 'КОНЕЦ') && caseDepth > 0) caseDepth--;
     current.push(t);
   }
   flush();
@@ -3993,7 +3984,7 @@ function parseOrderModifiers(cur: Cursor): { direction: SortDirection; hierarchy
   } else {
     // `ВОЗР` — явное возрастание (не keyword в лексере); поглощаем как ident.
     const t = cur.peek();
-    if ((t.type === 'ident' || t.type === 'keyword') && t.value.toUpperCase() === 'ВОЗР') {
+    if (isWordToken(t, 'ВОЗР')) {
       cur.next();
     }
   }
@@ -4069,7 +4060,7 @@ function parseOrder(cur: Cursor, ctx: SectionResolveContext): Order {
       // сырой срез как expression — генератор печатает его через formatSelectExpression
       // (многострочная раскладка КОГДА/ТОГДА/ИНАЧЕ/КОНЕЦ). Без этого parseOrder
       // распознавал ВЫБОР как голую ссылку и терял тело CASE.
-      if (headTok.value.toUpperCase() === 'ВЫБОР') {
+      if (isWordToken(headTok, 'ВЫБОР')) {
         const exprTokens: Token[] = [cur.next()];
         let depth = 0;
         let caseDepth = 1;
@@ -4077,14 +4068,14 @@ function parseOrder(cur: Cursor, ctx: SectionResolveContext): Order {
           const t = cur.peek();
           if (t.type === 'eof') break;
           if (depth === 0 && caseDepth === 0) {
-            if (t.type === 'keyword' && (isSectionKeyword(t.value) || t.value === 'УБЫВ' || t.value === 'ВОЗР' || t.value === 'ИЕРАРХИЯ')) break;
-            if (t.type === 'ident' && t.text.toUpperCase() === 'ВОЗР') break;
+            if (t.type === 'keyword' && (isSectionKeyword(t.value) || t.value === 'УБЫВ' || t.value === 'ИЕРАРХИЯ')) break;
+            if (isWordToken(t, 'ВОЗР')) break;
             if (t.type === 'punct' && (t.value === ',' || t.value === ';' || t.value === '{' || t.value === '}')) break;
           }
           if (t.type === 'punct' && t.value === '(') depth++;
           else if (t.type === 'punct' && t.value === ')') depth--;
-          else if ((t.type === 'ident' || t.type === 'keyword') && t.value.toUpperCase() === 'ВЫБОР') caseDepth++;
-          else if ((t.type === 'ident' || t.type === 'keyword') && t.value.toUpperCase() === 'КОНЕЦ' && caseDepth > 0) caseDepth--;
+          else if (isWordToken(t, 'ВЫБОР')) caseDepth++;
+          else if (isWordToken(t, 'КОНЕЦ') && caseDepth > 0) caseDepth--;
           exprTokens.push(cur.next());
         }
         const { direction: caseDir, hierarchy: caseHier } = parseOrderModifiers(cur);
@@ -4125,8 +4116,8 @@ function parseOrder(cur: Cursor, ctx: SectionResolveContext): Order {
             break;
           }
           if (depth === 0) {
-            if (t.type === 'keyword' && (isSectionKeyword(t.value) || t.value === 'УБЫВ' || t.value === 'ВОЗР' || t.value === 'ИЕРАРХИЯ')) break;
-            if (t.type === 'ident' && (t.text.toUpperCase() === 'ВОЗР')) break;
+            if (t.type === 'keyword' && (isSectionKeyword(t.value) || t.value === 'УБЫВ' || t.value === 'ИЕРАРХИЯ')) break;
+            if (isWordToken(t, 'ВОЗР')) break;
             if (t.type === 'punct' && (t.value === ',' || t.value === ';' || t.value === '{' || t.value === '}')) break;
           }
           if (t.type === 'punct' && t.value === '(') depth++;
@@ -4170,7 +4161,7 @@ function parseOrder(cur: Cursor, ctx: SectionResolveContext): Order {
           }
           if (depth === 0) {
             if (t.type === 'keyword' && (isSectionKeyword(t.value) || t.value === 'УБЫВ' || t.value === 'ИЕРАРХИЯ')) break;
-            if ((t.type === 'ident' || t.type === 'keyword') && t.value.toUpperCase() === 'ВОЗР') break;
+            if (isWordToken(t, 'ВОЗР')) break;
             if (t.type === 'punct' && (t.value === ',' || t.value === ';' || t.value === '{' || t.value === '}')) break;
           }
           if (t.type === 'punct' && t.value === '(') depth++;
@@ -4188,15 +4179,15 @@ function parseOrder(cur: Cursor, ctx: SectionResolveContext): Order {
       }
       const peekIsEst = (): boolean => {
         const t = cur.peek();
-        return (t.type === 'ident' || t.type === 'keyword') && t.value.toUpperCase() === 'ЕСТЬ';
+        return isWordToken(t, 'ЕСТЬ');
       };
       if (peekIsEst()) {
         cur.next(); // ЕСТЬ
         const nt = cur.peek();
-        const neg = (nt.type === 'ident' || nt.type === 'keyword') && nt.value.toUpperCase() === 'НЕ';
+        const neg = isWordToken(nt, 'НЕ');
         if (neg) cur.next();
         const ntn = cur.peek();
-        if ((ntn.type === 'ident' || ntn.type === 'keyword') && ntn.value.toUpperCase() === 'NULL') cur.next();
+        if (isWordToken(ntn, 'NULL')) cur.next();
         const { direction: nullDir, hierarchy: nullHier } = parseOrderModifiers(cur);
         // Путь сохраняем голым/как-есть: квалификацию голой головы выполнит пасс
         // qualifyBareFields над expression поля упорядочивания.
@@ -4871,7 +4862,7 @@ function parseBuilderField(cur: Cursor, allowCondition = false): BuilderField {
   // Голова не похожа на ссылку поля (параметр/строка/скобка) → элемент-условие
   // блока `{ГДЕ}` (фаза 6.15.7). Ключевое слово `НЕ` — логическое отрицание, тоже
   // начало условия, а не ссылки поля (фаза 6.16).
-  if (allowCondition && ((first.type !== 'ident' && first.type !== 'keyword') || first.value === 'НЕ')) {
+  if (allowCondition && ((first.type !== 'ident' && first.type !== 'keyword') || isWordToken(first, 'НЕ'))) {
     return parseBuilderCondition(cur);
   }
   if (first.type !== 'ident' && first.type !== 'keyword') {

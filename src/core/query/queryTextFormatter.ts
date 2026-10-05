@@ -1,4 +1,4 @@
-import { tokenize } from './sdblLexer';
+import { tokenize, isWordToken } from './sdblLexer';
 import type { Token } from './sdblLexer';
 
 /**
@@ -18,10 +18,6 @@ const TWO_WORD_LIST_CLAUSES = new Set(['СГРУППИРОВАТЬ', 'УПОРЯ
 
 /** Секции, чьи элементы через запятую переносятся по одному на строку (с отступом). */
 const LIST_CLAUSES = new Set(['ВЫБРАТЬ', 'СГРУППИРОВАТЬ', 'УПОРЯДОЧИТЬ']);
-
-function isKw(t: Token, value: string): boolean {
-  return t.type === 'keyword' && t.value === value;
-}
 
 /**
  * Лексический pretty-printer текста запроса — ТОЛЬКО whitespace/переносы строк между
@@ -73,10 +69,10 @@ export function formatQueryText(text: string): string {
         sep = '\n';
       } else if (depth === 0 && CLAUSE_KEYWORDS.has(prev.value) && prev.type === 'keyword') {
         sep = '\n\t';
-      } else if (depth === 0 && TWO_WORD_LIST_CLAUSES.has(prev.value) && prev.type === 'keyword' && isKw(t, 'ПО')) {
+      } else if (depth === 0 && TWO_WORD_LIST_CLAUSES.has(prev.value) && prev.type === 'keyword' && isWordToken(t, 'ПО')) {
         sep = ' ';
       } else if (
-        depth === 0 && isKw(prev, 'ПО') && i >= 2 && TWO_WORD_LIST_CLAUSES.has(tokens[i - 2].value) && tokens[i - 2].type === 'keyword'
+        depth === 0 && isWordToken(prev, 'ПО') && i >= 2 && TWO_WORD_LIST_CLAUSES.has(tokens[i - 2].value) && tokens[i - 2].type === 'keyword'
       ) {
         sep = '\n\t';
       } else if (depth === 0 && listClauseActive && prev.type === 'punct' && prev.value === ',') {
