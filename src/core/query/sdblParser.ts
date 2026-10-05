@@ -1735,9 +1735,10 @@ function requalifyTabSectionExpr(
 }
 
 /**
- * Удаляет однострочные комментарии `//…` из сырого текста, учитывая строковые
- * (`"…"` с экранированием `""`) и датовые (`'…'`) литералы — `//` внутри литерала
- * комментарием НЕ считается. Геометрию повторяем за оракулом 1С (который
+ * Удаляет однострочные комментарии `//…` из сырого текста. Границы комментариев
+ * берутся из токенов лексера (`//` внутри литерала комментарием НЕ считается);
+ * неизвестные лексические факты — текст сохраняется как есть (A1-2). Геометрию
+ * повторяем за оракулом 1С (который
  * вычищает ВСЕ комментарии из канонического текста):
  *  - строка-комментарий целиком (необязательные пробелы + `//…`) удаляется ВМЕСТЕ
  *    со своим переводом строки (соседние строки кода смыкаются);
@@ -1747,35 +1748,23 @@ function requalifyTabSectionExpr(
  */
 function stripLineComments(text: string): string {
   if (text.indexOf('//') === -1) return text;
-  let inString = false;
-  let inDate = false;
+  const tokens = tryTokenize(text, { comments: true });
+  if (!tokens) return text;
+  // Конец комментария по позиции его `//` (до конца строки, без перевода строки).
+  const commentEnd = new Map<number, number>();
+  for (const t of tokens) if (t.type === 'comment') commentEnd.set(t.pos, t.pos + t.text.length);
   let out = '';
   // Признак того, что в текущей (накапливаемой в `out`) строке был вырезан
   // комментарий — нужен, чтобы НЕ трогать исходно-пустые/пробельные строки.
   let strippedOnLine = false;
   for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (inString) {
-      out += ch;
-      if (ch === '"') {
-        if (text[i + 1] === '"') { out += '"'; i++; } else { inString = false; }
-      }
-      continue;
-    }
-    if (inDate) {
-      out += ch;
-      if (ch === "'") inDate = false;
-      continue;
-    }
-    if (ch === '"') { inString = true; out += ch; continue; }
-    if (ch === "'") { inDate = true; out += ch; continue; }
-    if (ch === '/' && text[i + 1] === '/') {
-      // Пропускаем до конца строки (не включая перевод строки).
-      while (i < text.length && text[i] !== '\n') i++;
-      i--; // компенсируем i++ в цикле; на следующей итерации обработаем `\n`/конец.
+    const end = commentEnd.get(i);
+    if (end !== undefined) {
+      i = end - 1; // на следующей итерации обработаем `\n`/конец.
       strippedOnLine = true;
       continue;
     }
+    const ch = text[i];
     if (ch === '\n') {
       if (strippedOnLine) {
         // Откатываем хвостовые пробелы строки перед вырезанным комментарием.
@@ -5471,6 +5460,9 @@ const BATCH_SEPARATOR_RE =
  * `""`, могут содержать переводы строк) И однострочные комментарии `//…` (`;` в
  * комментарии — не разделитель). Нужны `parseBatch`: деление на разделителе
  * выполняется ДО токенизации (фаза 6.16).
+ *
+ * A1 exception: kept as its own scanner because `getBatchStatementSpans` runs
+ * on editor text that may not lex yet; `codeRanges` is undefined there.
  */
 function stringLiteralRanges(text: string): Array<readonly [number, number]> {
   const ranges: Array<readonly [number, number]> = [];
