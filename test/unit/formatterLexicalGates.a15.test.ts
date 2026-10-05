@@ -50,3 +50,11 @@ describe('A1-5b reindentLeafCase: nested-subquery gate before the CASE reflow', 
     expectIsolated(`ВЫБРАТЬ Т.Код КАК К ${F}\n{ГДЕ (ВЫБОР\nКОГДА Т.Код = 1 ТОГДА Т.Сумма\n+ $\nИНАЧЕ 0\nКОНЕЦ = 1)}`, payloads);
   });
 });
+
+describe('A1-5c opensWithVyborInCall: CASE opened inside a call after a multi-line head', () => {
+  const payloads = ['"a"', '"ВЫБРАТЬ"', '"ВЫБОР"', '"a ВЫБОР b"', '"x ВЫБРАТЬ y"', '"a\nВЫБОР"'];
+  it('literal in the nested WHEN and in the call head', () => {
+    expectIsolated(caseThen('ВЫРАЗИТЬ(Т.Сумма * Т.Код\n\t\t\t/ (Т.Код * ВЫБОР\n\t\t\t\tКОГДА Т.Код = $\n\t\t\t\t\tТОГДА 1\n\t\t\tКОНЕЦ) КАК Число(15, 2))'), payloads);
+    expectIsolated(caseThen('ВЫРАЗИТЬ(Т.Сумма * $\n\t\t\t/ (Т.Код * ВЫБОР\n\t\t\t\tКОГДА Т.Код = "1"\n\t\t\t\t\tТОГДА 1\n\t\t\tКОНЕЦ) КАК Число(15, 2))'), payloads);
+  });
+});
