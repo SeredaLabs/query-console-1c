@@ -354,6 +354,33 @@ export function codeRanges(text: string): Array<[number, number]> | undefined {
   return ranges;
 }
 
+/** Whether offset `pos` lies in one of the code ranges returned by `codeRanges`. */
+export function isCodeAt(ranges: Array<[number, number]>, pos: number): boolean {
+  return ranges.some(([start, end]) => pos >= start && pos < end);
+}
+
+/**
+ * `text.replace(re, replacement)` applied only inside the code ranges
+ * (`codeRanges`): string/date literals and comments are copied unchanged. When
+ * the boundaries are unknown, the text is returned unchanged.
+ */
+export function replaceInCodeRanges(
+  text: string,
+  re: RegExp,
+  replacement: string | ((match: string, ...groups: string[]) => string),
+): string {
+  const ranges = codeRanges(text);
+  if (!ranges) return text;
+  let out = '';
+  let last = 0;
+  for (const [start, end] of ranges) {
+    const code = text.slice(start, end);
+    out += text.slice(last, start) + (typeof replacement === 'string' ? code.replace(re, replacement) : code.replace(re, replacement));
+    last = end;
+  }
+  return out + text.slice(last);
+}
+
 function lexError(message: string, line: number, col: number, pos: number, extent: SdblLexError['extent']): Error {
   return new SdblLexError(`Лексическая ошибка ${line}:${col} — ${message}`, pos, extent);
 }
