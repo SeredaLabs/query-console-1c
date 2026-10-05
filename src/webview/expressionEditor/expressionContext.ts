@@ -2,7 +2,7 @@ import type { MetaField, MetaTable } from '../../core/metadata/types';
 import type { MetadataResolver } from '../../core/query/metadataResolver';
 import { resolveFieldPath } from '../../core/query/fieldPathResolver';
 import { describeFieldTypes } from '../../core/metadata/describeType';
-import { tokenize, type Token } from '../../core/query/sdblLexer';
+import { tokenize, SdblLexError, type Token } from '../../core/query/sdblLexer';
 import { isStructurallyValidExpression } from '../../core/query/expressionSyntaxCheck';
 
 /**
@@ -128,14 +128,8 @@ function collectChains(tokens: Token[]): Chain[] {
 
 function lexicalIssue(text: string, e: unknown): ExpressionIssue {
   const message = e instanceof Error ? e.message : String(e);
-  const m = message.match(/^Лексическая ошибка (\d+):(\d+)/);
-  if (!m) return { severity: 'error', kind: 'lexical', message };
-  const line = Number(m[1]);
-  const col = Number(m[2]);
-  const lines = text.split('\n');
-  let from = 0;
-  for (let i = 0; i < line - 1 && i < lines.length; i++) from += lines[i].length + 1;
-  from = Math.min(text.length, from + col - 1);
+  if (!(e instanceof SdblLexError)) return { severity: 'error', kind: 'lexical', message };
+  const from = Math.min(text.length, e.pos);
   return { from, to: Math.min(text.length, from + 1), severity: 'error', kind: 'lexical', message };
 }
 
