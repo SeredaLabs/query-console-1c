@@ -796,6 +796,17 @@ export function reindentLeafSubquery(text: string, base: number): string {
 }
 
 /**
+ * A1-4: occurrences of a CASE-gate word that lie in code. `re` (global) matches the
+ * word with its left boundary; the word itself starts at the first letter of the
+ * match. Literal and comment text never counts.
+ */
+function codeWordMatches(text: string, ranges: Array<[number, number]>, re: RegExp): number {
+  let n = 0;
+  for (const m of text.matchAll(re)) if (isCodeAt(ranges, m.index + m[0].search(/\p{L}/u))) n++;
+  return n;
+}
+
+/**
  * Является ли значение ветки CASE «ОДИНОЧНЫМ верхнеуровневым ВЫБОР» — то есть содержит
  * РОВНО ОДИН ВЫБОР, открытый бинарным оператором на ВЕРХНЕМ уровне скобок значения
  * (`Расчеты.Сумма * ВЫБОР … КОНЕЦ`: строка оканчивается словом ВЫБОР, баланс скобок
@@ -806,25 +817,31 @@ export function reindentLeafSubquery(text: string, base: number): string {
  */
 function isSingleTopLevelCaseValue(text: string): boolean {
   if (!text.includes('\n')) return false;
-  if (/(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?:[^\p{L}\p{N}_]|$)/iu.test(text)) return false;
+  // A1-4: the words are counted in code only; unknown lexical facts → not this gate.
+  const ranges = codeRanges(text);
+  if (!ranges) return false;
+  if (codeWordMatches(text, ranges, /(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?:[^\p{L}\p{N}_]|$)/giu) > 0) return false;
   // Ровно один ВЫБОР во всём значении.
-  const vyborCount = (text.match(/(?:^|[^\p{L}\p{N}_])ВЫБОР(?:[^\p{L}\p{N}_]|$)/giu) ?? []).length;
+  const vyborCount = codeWordMatches(text, ranges, /(?:^|[^\p{L}\p{N}_])ВЫБОР(?:[^\p{L}\p{N}_]|$)/giu);
   if (vyborCount !== 1) return false;
   const lines = text.split('\n');
-  // Позиция (индекс) начала слова ВЫБОР, если строка им оканчивается (на границе слова).
-  const trailingVyborPos = (line: string): number => {
+  // Позиция (индекс) начала слова ВЫБОР, если строка им оканчивается (на границе слова)
+  // и это слово — код (`at` — смещение строки в `text`).
+  const trailingVyborPos = (line: string, at: number): number => {
     const m = /(^|[^\p{L}\p{N}_])(ВЫБОР)\s*$/u.exec(line);
-    if (!m) return -1;
+    if (!m || !isCodeAt(ranges, at + m.index + m[1].length)) return -1;
     return m.index + m[1].length; // начало «ВЫБОР»
   };
   let depth = 0;
   let inStr = false;
+  let at = 0;
   for (const line of lines) {
     // Открывающий ВЫБОР конструктор всегда ставит В КОНЕЦ строки. Проверяем: строка
     // оканчивается словом ВЫБОР И баланс скобок ИМЕННО ПЕРЕД этим словом равен 0
     // (а не просто к началу строки — `ВЫРАЗИТЬ(A / ВЫБОР` открывает скобку до ВЫБОР,
     // глубина там 1, и под гейт не подпадает).
-    const viPos = trailingVyborPos(line);
+    const viPos = trailingVyborPos(line, at);
+    at += line.length + 1;
     let d = depth;
     let s: boolean = inStr;
     for (let c = 0; c < line.length; c++) {
@@ -850,14 +867,26 @@ function isSingleTopLevelCaseValue(text: string): boolean {
  */
 function opensWithTopLevelVybor(text: string): boolean {
   if (!text.includes('\n')) return false;
-  if (/(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?:[^\p{L}\p{N}_]|$)/iu.test(text)) return false;
+  // A1-4: ВЫБРАТЬ, the opener ВЫБОР and the reopening `КОНЕЦ … ВЫБОР` lines count
+  // only in code; unknown lexical facts → not this gate.
+  const ranges = codeRanges(text);
+  if (!ranges) return false;
+  if (codeWordMatches(text, ranges, /(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?:[^\p{L}\p{N}_]|$)/giu) > 0) return false;
   const lines = text.split('\n');
-  const first = lines.find((l) => l.trim() !== '');
+  const lineStart: number[] = [];
+  for (let i = 0, at = 0; i < lines.length; at += lines[i].length + 1, i++) lineStart.push(at);
+  // The line ends with the word ВЫБОР in code (`at` — the line's offset in `text`).
+  const endsWithCodeVybor = (line: string, at: number): boolean => {
+    const m = /(^|[^\p{L}\p{N}_])ВЫБОР\s*$/u.exec(line);
+    return !!m && isCodeAt(ranges, at + m.index + m[1].length);
+  };
+  const firstIdx = lines.findIndex((l) => l.trim() !== '');
+  const first = firstIdx < 0 ? undefined : lines[firstIdx];
   // Первая структурная строка ОКАНЧИВАЕТСЯ словом ВЫБОР — это открыватель CASE
   // (голый `ВЫБОР` для CASE-арифметики `ВЫБОР…КОНЕЦ - ВЫБОР…КОНЕЦ`, либо хвост
   // `… ВЫРАЗИТЬ(… / ВЫБОР` для CASE внутри вызова без селектора). reindentLeafCase
   // ниже сам отбракует нестандартную геометрию (несбалансированные скобки и т. п.).
-  if (first === undefined || !/(^|[^\p{L}\p{N}_])ВЫБОР\s*$/u.test(first)) return false;
+  if (first === undefined || !endsWithCodeVybor(first, lineStart[firstIdx])) return false;
   // Исключаем СМЕШАННУЮ скобочную ситуацию в строке-ПЕРЕОТКРЫТИИ `КОНЕЦ … ВЫБОР`, где
   // число открытых ВЫЗОВ-скобок не равно чистому балансу скобок (есть скобка-ГРУППИРОВКА
   // вокруг переоткрываемого ВЫБОР: `КОНЕЦ + (ВЫРАЗИТЬ(ЕСТЬNULL(ВЫБОР`). В таком листе
@@ -888,9 +917,11 @@ function opensWithTopLevelVybor(text: string): boolean {
     }
     return st.filter((isCall) => !isCall).length;
   };
-  for (const l of lines) {
-    if (!/^[\t ]*КОНЕЦ(?![\p{L}\p{N}_])/u.test(l)) continue;
-    if (!/(^|[^\p{L}\p{N}_])ВЫБОР\s*$/u.test(l)) continue;
+  for (let li = 0; li < lines.length; li++) {
+    const l = lines[li];
+    const konec = /^[\t ]*КОНЕЦ(?![\p{L}\p{N}_])/u.exec(l);
+    if (!konec || !isCodeAt(ranges, lineStart[li] + konec[0].length - 'КОНЕЦ'.length)) continue;
+    if (!endsWithCodeVybor(l, lineStart[li])) continue;
     const head = onlyParens(l.replace(/(^|[^\p{L}\p{N}_])ВЫБОР\s*$/u, '$1').replace(/^[\t ]*/u, ''));
     // Скобка-ГРУППИРОВКА, ОХВАТЫВАЮЩАЯ переоткрываемый ВЫБОР (`КОНЕЦ + (ВЫРАЗИТЬ(ЕСТЬNULL(
     // ВЫБОР`): funcParenDepth-семантика и чистый баланс расходятся, канон неоднозначен —
