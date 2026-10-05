@@ -7,6 +7,10 @@
 import { describe, it, expect } from 'vitest';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { generateBatch } from '../../src/core/query/sdblGenerator';
+import { tryOpenDesignerBatch } from '../../src/webview/openDesignerBatch';
+import { initialState, reducer } from '../../src/webview/state/queryStore';
+import { computeBatchTextSafe } from '../../src/webview/computeBatchText';
+import { decideApply, findStaticApplyBlocker } from '../../src/webview/applyGate';
 
 const gen = (text: string): string => generateBatch(parseBatch(text));
 /** Same lines and lengths, neutral content: `"a ВЫБОР"` → `"aaaaaaa"`. */
@@ -72,5 +76,29 @@ describe('A1-5d reindentLeafSubquery: tuple-head gate before the collapse', () =
     const head = (h: string): string => gen(`ВЫБРАТЬ Т.Код КАК К ${F} ГДЕ ${h} В${SUB('Х')}`);
     expect(head('(Т.Код,\n\tТ.Код = 1)')).toContain('(Т.Код,\n');
     expect(head('(Т.Код,\n\t"a" ИЛИ Т.Код)')).toContain('(Т.Код,\n');
+  });
+});
+
+describe('A1-5e renderSource: multi-line layout of an accounting-register virtual table', () => {
+  // The accounting path (`РегистрБухгалтерии`), not the accumulation one: a literal
+  // `(ВЫБРАТЬ` with a line break used to spread every parameter onto its own line.
+  const VT = (cond: string): string => `ВЫБРАТЬ О.Р КАК Р ИЗ РегистрБухгалтерии.Б.Остатки(, , , ${cond}) КАК О`;
+  const payloads = ['"a"', '"(ВЫБРАТЬ"', '"a\n(ВЫБРАТЬ"', '"(ВЫБРАТЬ\nx"', '"x (ВЫБРАТЬ y"'];
+  it('generator', () => {
+    expectIsolated(VT('Т.Х = $'), payloads);
+    expectIsolated(VT('Т.Х = $\n+ Т.У'), payloads);
+  });
+  it('Designer path: literal kept, parameters inline, Apply allowed', () => {
+    for (const payload of payloads) {
+      const open = tryOpenDesignerBatch(VT(`Т.Х = ${payload}`));
+      if (!open.ok) throw new Error(open.error);
+      const state = reducer(initialState(), { type: 'LOAD_BATCH', doc: open.doc });
+      const out = computeBatchTextSafe(state, true);
+      expect(out.text).toContain(`РегистрБухгалтерии.Б.Остатки(, , , Т.Х = ${payload}) КАК О`);
+      expect(decideApply(out.text, out.error, findStaticApplyBlocker(state), undefined).ok).toBe(true);
+    }
+  });
+  it('a code subquery still spreads the parameters', () => {
+    expect(gen(VT('Т.Х В\n(ВЫБРАТЬ Х.А ИЗ Справочник.Валюты КАК Х)'))).toContain('Остатки(\n');
   });
 });

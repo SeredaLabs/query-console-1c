@@ -251,7 +251,12 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
     // НЕ последней позицией (Обороты-корр), поэтому реиндентируем КАЖДУЮ составную
     // позицию, а не только последнюю. Простые параметры (период, ровные условия `=`/`В`)
     // остаются инлайн.
-    const multiline = positions.some(p => p && (hasTopLevelBooleanOp(p) === true || (p.includes('\n') && /\(ВЫБРАТЬ/u.test(p))));
+    // A1-5e: `(ВЫБРАТЬ` counts only in code; unknown lexical facts → not a subquery.
+    const opensCodeSubquery = (p: string): boolean => {
+      const ranges = codeRanges(p);
+      return !!ranges && hasCodeMatch(p, ranges, /\(ВЫБРАТЬ/gu);
+    };
+    const multiline = positions.some(p => p && (hasTopLevelBooleanOp(p) === true || (p.includes('\n') && opensCodeSubquery(p))));
     if (multiline) {
       return renderAccountingParams(t.fullName, positions, v.condition ?? '', bodyTabs);
     }
