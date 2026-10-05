@@ -42,16 +42,29 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Whether the global regex `re` has a match whose word lies in code (A1-3): the
+ * word is located inside the match by `at` (default: the first letter, since the
+ * gates' left boundary is a non-letter) and checked against `ranges`
+ * (`codeRanges(text)`). Text inside literals and comments is data, never a gate.
+ */
+function hasCodeMatch(text: string, ranges: Array<[number, number]>, re: RegExp, at: RegExp = /\p{L}/u): boolean {
+  for (const m of text.matchAll(re)) {
+    const offset = m[0].search(at);
+    if (offset >= 0 && isCodeAt(ranges, m.index + offset)) return true;
+  }
+  return false;
+}
+
 /** A `ВЫБОР` word in code, not in a literal or comment (C25 R9). Unknown lexical
  * facts → false. */
 function hasCodeCaseWord(text: string): boolean {
   const ranges = codeRanges(text);
-  if (!ranges) return false;
-  for (const m of text.matchAll(/(?:^|[^\p{L}\p{N}_&])(ВЫБОР)(?:[^\p{L}\p{N}_]|$)/gu)) {
-    if (isCodeAt(ranges, m.index + m[0].indexOf('ВЫБОР'))) return true;
-  }
-  return false;
+  return !!ranges && hasCodeMatch(text, ranges, /(?:^|[^\p{L}\p{N}_&])ВЫБОР(?:[^\p{L}\p{N}_]|$)/gu);
 }
+
+/** `<lhs> [НЕ] В [ИЕРАРХИИ] (ВЫБРАТЬ` — an inline membership subquery gate. */
+const INLINE_MEMBERSHIP_RE = /(?:^|[^\p{L}\p{N}_&])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/giu;
 
 /** Оборачивает выражение в SDBL-функцию агрегирования. */
 function wrapAggregate(func: AggregateFunction, expr: string): string {
@@ -464,9 +477,11 @@ function renderVirtualParams(fullName: string, positions: string[], condition: s
   // конструктор 1С тоже разносит параметры ВТ по строкам и раскладывает подзапрос
   // (корпус ОстаткиПартийЗЕРНО.Остатки(, Партия В (ВЫБРАТЬ …))). Без переноса строки
   // hasSubquery его не ловит — детектируем по `В (ВЫБРАТЬ` (тот же гейт, что у inlineCond).
+  // A1-3: gates read only code; a keyword-like literal never switches the layout.
+  // Unknown lexical facts → no gate fires (inline layout).
+  const condRanges = condition ? codeRanges(condition) : undefined;
   const hasInlineSubquery =
-    !!condition &&
-    /(?:^|[^\p{L}\p{N}_&])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/iu.test(condition);
+    !!condition && !!condRanges && hasCodeMatch(condition, condRanges, INLINE_MEMBERSHIP_RE);
   if (!condition || (!hasBool && !hasSubquery && !hasInlineSubquery)) {
     return `${fullName}(${positions.join(', ')})`;
   }
@@ -509,14 +524,13 @@ function renderVirtualParams(fullName: string, positions: string[], condition: s
     // корпус СдельныйНаряд), либо НАЧИНАЕТСЯ им (селекторный `ВЫБОР &Парам …` или
     // условный `ВЫБОР КОГДА …`, корпус ПланФактныйАнализПродаж). В обоих случаях это
     // лист-CASE на отступе строки параметра (КОНЕЦ на base), не подзапрос.
-    (/(^|[^\p{L}\p{N}_&])ВЫБОР\s*$/u.test(condFirstLine0) ||
+    (!!condRanges && hasCodeMatch(condFirstLine0, condRanges, /(^|[^\p{L}\p{N}_&])ВЫБОР\s*$/gu) ||
       /^ВЫБОР(?:[^\p{L}\p{N}_]|$)/u.test(condition.trim()));
   // Чистое условие-членство `Поле В (ВЫБРАТЬ … ИЗ …)`, набранное ИНЛАЙН: перепарсиваем
   // внутренний запрос и рендерим канонически (`(ВЫБРАТЬ` на base+1, тело глубже), как
   // оракул. reindentLeafSubquery инлайн-подзапрос не раскладывает (фаза 6.16).
   const inlineCond =
-    !hasBool && !isCaseValueParam &&
-    /(?:^|[^\p{L}\p{N}_&])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/iu.test(condition)
+    !hasBool && !isCaseValueParam && hasInlineSubquery
       ? reflowInlineMembershipSubquery(condition.trim(), base, base + 1, '')
       : null;
   if (inlineCond) {
@@ -745,11 +759,16 @@ function reflowInlineMembershipSubquery(
       // КАК В`) — тоже неканон: reindentLeafSubquery его не разнесёт, а оракул печатает
       // соединение отдельной строкой. Признак: в строке есть текст ПЕРЕД ключевым словом
       // соединения (т.е. соединение не в начале строки).
-      const gluedJoin = /(?:^|[^\p{L}\p{N}_])\S[^\n]*?[ \t](?:ВНУТРЕННЕЕ|ЛЕВОЕ|ПРАВОЕ|ПОЛНОЕ)(?:[ \t]+ВНЕШНЕЕ)?[ \t]+СОЕДИНЕНИЕ(?:[^\p{L}\p{N}_]|$)/u
-        .test(innerText);
+      // A1-3: the gates below read only code of the subquery body; unknown lexical
+      // facts → no reflow.
+      const innerRanges = codeRanges(innerText);
+      if (!innerRanges) return null;
+      const gluedJoin = hasCodeMatch(innerText, innerRanges,
+        /(?:^|[^\p{L}\p{N}_])\S[^\n]*?[ \t](?:ВНУТРЕННЕЕ|ЛЕВОЕ|ПРАВОЕ|ПОЛНОЕ)(?:[ \t]+ВНЕШНЕЕ)?[ \t]+СОЕДИНЕНИЕ(?:[^\p{L}\p{N}_]|$)/gu,
+        /(?:ВНУТРЕННЕЕ|ЛЕВОЕ|ПРАВОЕ|ПОЛНОЕ)(?:[ \t]+ВНЕШНЕЕ)?[ \t]+СОЕДИНЕНИЕ/u);
       const isCanonical =
         innerText.includes('\n') &&
-        !/(?:^|[^\p{L}\p{N}_&])ИЗ[ \t]+\S/u.test(innerText) &&
+        !hasCodeMatch(innerText, innerRanges, /(?:^|[^\p{L}\p{N}_&])ИЗ[ \t]+\S/gu) &&
         !gluedJoin;
       // ИСКЛЮЧЕНИЕ из canonical-bail (фаза 6.16): тело СО ВНЕШНЕ-канонической геометрией,
       // но с секцией `ГДЕ`/`ИМЕЮЩИЕ`, чья ВЕРХНЕУРОВНЕВАЯ ИЛИ-цепочка НЕ обёрнута во
@@ -764,8 +783,8 @@ function reflowInlineMembershipSubquery(
       // сдвиг (reindentLeafSubquery) сохранил бы эту НЕканоническую вложенность; оракул
       // же ВКЛАДЫВАЕТ внутренний CASE структурно. Перепарсиваем и рендерим канонически.
       // Признак: строка-значение `ТОГДА`/`ИНАЧЕ`, ОКАНЧИВАЮЩАЯСЯ голым словом ВЫБОР.
-      const hasNestedCaseValue =
-        /(?:^|[^\p{L}\p{N}_&])(?:ТОГДА|ИНАЧЕ)[ \t]+ВЫБОР[ \t]*(?:\r?\n|$)/u.test(innerText);
+      const hasNestedCaseValue = hasCodeMatch(innerText, innerRanges,
+        /(?:^|[^\p{L}\p{N}_&])(?:ТОГДА|ИНАЧЕ)[ \t]+ВЫБОР[ \t]*(?:\r?\n|$)/gu);
       if (isCanonical && !bodyHasUnwrappedBoolOr(innerText) && !hasNestedCaseValue) return null;
       let doc: QueryDocument;
       try { doc = parseDocument(innerText); }
@@ -806,7 +825,9 @@ function reflowInlineMembershipSubquery(
 function breakInlineParenGroup(text: string): string {
   const t = text.trimStart();
   if (!t.startsWith('(')) return text;
-  if (/(?:^|[^\p{L}\p{N}_&])(?:ВЫБРАТЬ|ВЫБОР)(?:[^\p{L}\p{N}_]|$)/u.test(t)) return text;
+  // A1-3: only a CASE/subquery in code bails; unknown lexical facts → unchanged.
+  const tRanges = codeRanges(t);
+  if (!tRanges || hasCodeMatch(t, tRanges, /(?:^|[^\p{L}\p{N}_&])(?:ВЫБРАТЬ|ВЫБОР)(?:[^\p{L}\p{N}_]|$)/gu)) return text;
   const lead = text.slice(0, text.length - t.length);
   let depth = 0;
   let inStr = false;
@@ -895,8 +916,11 @@ function reindentVtCondition(condition: string, base: number): string {
     // запрос и рендерим канонически (`(ВЫБРАТЬ` на base+2, тело глубже). Гейтим узко:
     // подзапрос ИНЛАЙН (`В (ВЫБРАТЬ` подряд) и закрывается в конце конъюнкта — иначе
     // прежний путь (фаза 6.16).
+    // A1-3: the two subquery gates of the conjunct read only code; unknown lexical
+    // facts → neither branch.
+    const conjRanges = codeRanges(c.text);
     const inlineReflow =
-      /(?:^|[^\p{L}\p{N}_&])В(?:\s+ИЕРАРХИИ)?\s*\(\s*ВЫБРАТЬ(?![\p{L}\p{N}_])/iu.test(c.text)
+      conjRanges && hasCodeMatch(c.text, conjRanges, INLINE_MEMBERSHIP_RE)
         ? reflowInlineMembershipSubquery(c.text, ind, base + 2, prefix)
         : null;
     // Конъюнкт — CASE (`ВЫБОР … КОНЕЦ`), В ТЕЛЕ которого есть подзапрос `В (ВЫБРАТЬ …)`
@@ -919,7 +943,8 @@ function reindentVtCondition(condition: string, base: number): string {
         if (adj) inlineReflow[q] = '\t'.repeat(base);
       }
       out.push(...inlineReflow);
-    } else if (!conjunctIsCase && c.text.includes('\n') && /\(\s*\n\s*ВЫБРАТЬ(?![\p{L}\p{N}_])|\(ВЫБРАТЬ/u.test(c.text)) {
+    } else if (!conjunctIsCase && c.text.includes('\n') && !!conjRanges &&
+      hasCodeMatch(c.text, conjRanges, /\(\s*\n\s*ВЫБРАТЬ(?![\p{L}\p{N}_])|\(ВЫБРАТЬ/gu)) {
       const r = reindentLeafSubquery(c.text, base + 2).split('\n');
       r[0] = '\t'.repeat(ind) + prefix + r[0].replace(/^\t+/u, '');
       // Разделитель ОБЪЕДИНИТЬ внутри подзапроса-операнда `В`, вложенного в параметр
@@ -1673,8 +1698,10 @@ function builderBlock(keyword: string, fields: BuilderField[]): string[] {
     // конструктор раскладывает по КАНОНУ относительно позиции поля в блоке (поле на
     // относительном табе 1, охватывающая `(` даёт +1 → КОНЕЦ на 2), а НЕ сохраняет
     // абсолютный отступ исходника (фаза 6.16.fmt, корпус СтатистикаЧековПоЧасам).
-    const isMultilineCase = f.condition && f.ref.includes('\n') &&
-      /(^|[^\p{L}\p{N}_&])ВЫБОР(?:[^\p{L}\p{N}_]|$)/u.test(f.ref);
+    // A1-3: gates read only code of the ref; an unlexable ref stays verbatim (lexOk).
+    const refRanges = codeRanges(f.ref);
+    const isMultilineCase = f.condition && f.ref.includes('\n') && !!refRanges &&
+      hasCodeMatch(f.ref, refRanges, /(^|[^\p{L}\p{N}_&])ВЫБОР(?:[^\p{L}\p{N}_]|$)/gu);
     // Многострочное БУЛЕВО условие построителя без ВЫБОР (`(A >= &X И (B ИЛИ C))`),
     // набранное разработчиком плоско: конструктор раскладывает его по конъюнктам
     // относительно позиции поля (поле на относительном табе 1 — база reindentLeafBool=1;
@@ -1682,10 +1709,10 @@ function builderBlock(keyword: string, fields: BuilderField[]): string[] {
     // перенос строки, есть верхнеуровневый булев оператор, нет ВЫБОР/подзапроса (фаза 6.16).
     const isMultilineBool = !isMultilineCase && f.condition && f.ref.includes('\n') &&
       hasTopLevelBooleanOp(f.ref) === true &&
-      !/(?:^|[^\p{L}\p{N}_&])(?:ВЫБОР|ВЫБРАТЬ)(?:[^\p{L}\p{N}_]|$)/u.test(f.ref) &&
+      !!refRanges && !hasCodeMatch(f.ref, refRanges, /(?:^|[^\p{L}\p{N}_&])(?:ВЫБОР|ВЫБРАТЬ)(?:[^\p{L}\p{N}_]|$)/gu) &&
       // Группа `НЕ(…)` несёт лишний +1 (НЕ — отдельный уровень), который reindentLeafBool
       // НЕ учитывает; такие условия не реиндентируем (оставляем геометрию как есть).
-      !/(?:^|[^\p{L}\p{N}_&])НЕ\s*\(/u.test(f.ref);
+      !hasCodeMatch(f.ref, refRanges, /(?:^|[^\p{L}\p{N}_&])НЕ\s*\(/gu);
     const lexOk = !!tryTokenize(f.ref);
     const ref = !lexOk ? f.ref : isMultilineCase
       ? reindentLeafCase(normalizeLeafCase(f.ref), 2)
