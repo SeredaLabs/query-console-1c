@@ -520,14 +520,15 @@ export function reindentLeafSubquery(text: string, base: number): string {
   // сохраняя отступ строки 0 (корпус СборкаЗапасов/РасходнаяНакладная/ЗаказПоставщику).
   if (start > 1) {
     const lead = (lines[0].match(/^[\t ]*/u) ?? [''])[0];
-    const body = lines.slice(0, start)
+    const joined = lines.slice(0, start)
       .map((l) => l.replace(/^[\t ]+/u, '').replace(/[ \t]+$/u, ''))
       .filter((l) => l !== '')
-      .join(' ')
-      .replace(/[ \t]+/gu, ' ')
-      .replace(/\(\s+/gu, '(')
-      .replace(/\s+\)/gu, ')')
-      .replace(/\s+,/gu, ',');
+      .join(' ');
+    // C25: the head's whitespace normalization rewrites code only, literal bytes are
+    // kept. Each pattern is whitespace plus `(`, `)` or `,`, so no match can cross a
+    // literal boundary; unknown lexical facts leave the text unchanged.
+    const body = ([[/[ \t]+/gu, ' '], [/\(\s+/gu, '('], [/\s+\)/gu, ')'], [/\s+,/gu, ',']] as const)
+      .reduce((text, [re, by]) => replaceInCodeRanges(text, re, by), joined);
     // Схлопываем ТОЛЬКО чистый КОРТЕЖ-операнд `В`: сбалансированная пара скобок-списка,
     // за которой идёт ровно `В` (без булевых операторов/сравнений внутри). Иначе это
     // составное условие `(A = &X ИЛИ B В (…))`, чьи И/ИЛИ переносы трогать нельзя.
