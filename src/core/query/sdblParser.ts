@@ -3491,17 +3491,22 @@ function codeWordStarts(line: string, at: number, ranges: Array<[number, number]
  * до следующей секции) и требуем верхнеуровневый (depth==0, вне строк) `ИЛИ`.
  */
 function hasRedundantHavingOrParens(inner: string): boolean {
-  const m = /(?:^|[^\p{L}\p{N}_])ИМЕЮЩИЕ(?![\p{L}\p{N}_])/u.exec(inner);
-  if (!m) return false;
-  let rest = inner.slice(m.index + m[0].length);
-  const tailKw = /(?:^|[^\p{L}\p{N}_])(?:ИНДЕКСИРОВАТЬ|УПОРЯДОЧИТЬ|ОБЪЕДИНИТЬ|ИТОГИ)(?![\p{L}\p{N}_])/u.exec(rest);
-  if (tailKw) rest = rest.slice(0, tailKw.index);
-  let depth = 0, inStr = false;
+  // A1-6c: ИМЕЮЩИЕ, the next section word and the top-level ИЛИ count only in code
+  // (the same patterns as before); unknown lexical facts → no (text route).
+  const ranges = codeRanges(inner);
+  if (!ranges) return false;
+  const having = codeWordStarts(inner, 0, ranges, /(?:^|[^\p{L}\p{N}_])ИМЕЮЩИЕ(?![\p{L}\p{N}_])/gu)[0];
+  if (having === undefined) return false;
+  const restStart = having + 'ИМЕЮЩИЕ'.length;
+  const tail = codeWordStarts(inner, 0, ranges, /(?:^|[^\p{L}\p{N}_])(?:ИНДЕКСИРОВАТЬ|УПОРЯДОЧИТЬ|ОБЪЕДИНИТЬ|ИТОГИ)(?![\p{L}\p{N}_])/gu)
+    .find(p => p >= restStart);
+  // As before, the section text ends at the separator before the next section word.
+  const rest = inner.slice(restStart, tail === undefined ? inner.length : tail - 1);
+  let depth = 0;
   const isW = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}_]/u.test(c);
   for (let i = 0; i < rest.length; i++) {
     const ch = rest[i];
-    if (inStr) { if (ch === '"') inStr = false; continue; }
-    if (ch === '"') { inStr = true; continue; }
+    if (!isCodeAt(ranges, restStart + i)) continue;
     if (ch === '(') { depth++; continue; }
     if (ch === ')') { depth--; continue; }
     if (depth === 0 && (ch === 'И' || ch === 'и') && !isW(rest[i - 1]) && /^ИЛИ(?![\p{L}\p{N}_])/iu.test(rest.slice(i))) {

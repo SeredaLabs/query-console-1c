@@ -82,3 +82,21 @@ describe('A1-6b isCompactSubquerySource: structural route of a non-field `В` su
     for (const payload of payloads) expect(designerApplies(`ВЫБРАТЬ Т.Код КАК К ${F} ГДЕ 1 В\n\t${SUBQ(`\tГДЕ\n\t\tХ.Код = ${payload}`)}`)).toBe(true);
   });
 });
+
+describe('A1-6c hasRedundantHavingOrParens: structural route for an ИМЕЮЩИЕ OR chain', () => {
+  const having = (cond: string): string =>
+    `ВЫБРАТЬ Т.Код КАК К ${F} ГДЕ 1 В\n\t${SUBQ(`\tСГРУППИРОВАТЬ ПО\n\t\tХ.Код\n\tИМЕЮЩИЕ\n\t\t${cond}`)}`;
+  it('a literal ИМЕЮЩИЕ … ИЛИ before a real ИМЕЮЩИЕ, and literal section words or ИЛИ inside it', () => {
+    // Excluded: R8 (ledger) — a literal line that starts with a section word at column 0
+    // (`"a⏎ИМЕЮЩИЕ …"`) is read by the parser's nestingPad scan. Not fixed here.
+    expectIsolated(`ВЫБРАТЬ Т.Код КАК К ${F} ГДЕ 1 В\n\t${SUBQ('\tГДЕ\n\t\tХ.Код = $\n\tСГРУППИРОВАТЬ ПО\n\t\tХ.Код')}`,
+      ['"a"', '"ИМЕЮЩИЕ a ИЛИ b"', '"a ИМЕЮЩИЕ\nx ИЛИ y"']);
+    expectIsolated(having('(МАКСИМУМ(Х.Код) = $\n\t\t\tИ МАКСИМУМ(Х.Код) = "1")\n\t\tИЛИ МАКСИМУМ(Х.Код) = "2"'),
+      ['"a"', '"УПОРЯДОЧИТЬ"', '"ИТОГИ"', '"x ОБЪЕДИНИТЬ y"']);
+    expectIsolated(having('(МАКСИМУМ(Х.Код) = $\n\t\t\tИ МАКСИМУМ(Х.Код) = "1")'), ['"a"', '"ИЛИ"', '"a ИЛИ b"']);
+  });
+  it('a code OR chain in ИМЕЮЩИЕ still takes the structural route; Designer applies', () => {
+    expect(model(having('(МАКСИМУМ(Х.Код) = "1"\n\t\t\tИ МАКСИМУМ(Х.Код) = "2")\n\t\tИЛИ МАКСИМУМ(Х.Код) = "3"'))).toContain('"leftExpr":"1"');
+    expect(designerApplies(having('(МАКСИМУМ(Х.Код) = "УПОРЯДОЧИТЬ"\n\t\t\tИ МАКСИМУМ(Х.Код) = "1")\n\t\tИЛИ МАКСИМУМ(Х.Код) = "2"'))).toBe(true);
+  });
+});
