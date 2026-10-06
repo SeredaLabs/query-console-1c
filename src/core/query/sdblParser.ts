@@ -50,7 +50,7 @@ import type {
 
 import { defaultTableAlias, accountingPositionKeys } from './queryModel';
 import { renderOperatorRhs, needsFormatting, isRootNotGroup, normalizeLeafCase } from './exprFormatter';
-import { tokenize, tryTokenize, isWordToken, replaceInCodeRanges } from './sdblLexer';
+import { tokenize, tryTokenize, isWordToken, replaceInCodeRanges, codeRanges, isCodeAt } from './sdblLexer';
 import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
 import { fieldAlias } from './unionModel';
@@ -3452,8 +3452,31 @@ function subqueryInnerText(paramTokens: Token[], source: string): string | undef
  * `ИЗ`, `ГДЕ` на отдельных строках — такой ввод НЕ компактен (фаза 6.15.27).
  */
 function isCompactSubquerySource(inner: string): boolean {
-  const re = /(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?:[^\p{L}\p{N}_].*?)(?:^|[^\p{L}\p{N}_])ИЗ(?:[^\p{L}\p{N}_]|$)/u;
-  return inner.split('\n').some((l) => re.test(l));
+  // A1-6b: both words count only in code; unknown lexical facts → not compact (text route).
+  const ranges = codeRanges(inner);
+  if (!ranges) return false;
+  let at = 0;
+  for (const line of inner.split('\n')) {
+    const select = codeWordStarts(line, at, ranges, /(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?=[^\p{L}\p{N}_])/gu);
+    const from = codeWordStarts(line, at, ranges, /(?:^|[^\p{L}\p{N}_])ИЗ(?=[^\p{L}\p{N}_]|$)/gu);
+    // As the former `ВЫБРАТЬ<sep>.*?<sep>ИЗ`: ИЗ starts at least two characters after ВЫБРАТЬ.
+    if (select.some(a => from.some(b => b >= a + 'ВЫБРАТЬ'.length + 2))) return true;
+    at += line.length + 1;
+  }
+  return false;
+}
+
+/**
+ * A1-6: offsets (in the whole text; `at` — offset of `line`) where a `re` (global) match
+ * in `line` starts its word, kept only when that word is code.
+ */
+function codeWordStarts(line: string, at: number, ranges: Array<[number, number]>, re: RegExp): number[] {
+  const starts: number[] = [];
+  for (const m of line.matchAll(re)) {
+    const start = at + m.index + m[0].search(/\p{L}/u);
+    if (isCodeAt(ranges, start)) starts.push(start);
+  }
+  return starts;
 }
 
 /**

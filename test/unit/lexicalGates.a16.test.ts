@@ -8,6 +8,10 @@ import { describe, it, expect } from 'vitest';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { generateBatch } from '../../src/core/query/sdblGenerator';
 import { renderOperatorRhs } from '../../src/core/query/exprFormatter';
+import { tryOpenDesignerBatch } from '../../src/webview/openDesignerBatch';
+import { initialState, reducer } from '../../src/webview/state/queryStore';
+import { computeBatchTextSafe } from '../../src/webview/computeBatchText';
+import { decideApply, findStaticApplyBlocker } from '../../src/webview/applyGate';
 
 const gen = (text: string): string => generateBatch(parseBatch(text));
 /** Same lines and lengths, neutral content: `"a, b"` → `"aaaa"`. */
@@ -33,6 +37,16 @@ function expectIsolated(template: string, payloads: string[]): void {
 }
 
 const F = 'ИЗ Справочник.Валюты КАК Т';
+/** Designer open → generated text → Apply allowed. */
+function designerApplies(text: string): boolean {
+  const open = tryOpenDesignerBatch(text);
+  if (!open.ok) return false;
+  const state = reducer(initialState(), { type: 'LOAD_BATCH', doc: open.doc });
+  const out = computeBatchTextSafe(state, true);
+  return decideApply(out.text, out.error, findStaticApplyBlocker(state), undefined).ok;
+}
+/** A canonical (not compact) membership subquery `<lhs> В (ВЫБРАТЬ …)`. */
+const SUBQ = (body: string): string => `(ВЫБРАТЬ\n\t\tХ.Код\n\tИЗ\n\t\tСправочник.Валюты КАК Х\n${body})`;
 
 describe('A1-6a isPureBalancedList + valueListIsMulti: value list of В', () => {
   const payloads = ['"a"', '"("', '")"', '","', '"(,"', '"a ( b"', '"ВЫБРАТЬ"', '"(ВЫБРАТЬ"', '"a\n("'];
@@ -51,5 +65,20 @@ describe('A1-6a isPureBalancedList + valueListIsMulti: value list of В', () => 
     // so only a direct call reaches this.
     expect(renderOperatorRhs('В', '("x, 1)')).toBe('В("x, 1)');
     expect(renderOperatorRhs('В', '("x,\n1)')).toBe('В("x,\n1)');
+  });
+});
+
+describe('A1-6b isCompactSubquerySource: structural route of a non-field `В` subquery', () => {
+  // A literal ВЫБРАТЬ … ИЗ on one line used to take the structural route.
+  const payloads = ['"a"', '"ВЫБРАТЬ x ИЗ y"', '"a ВЫБРАТЬ, ИЗ b"', '"a\nВЫБРАТЬ x ИЗ y"'];
+  it('literal in WHERE and in the select list of the subquery', () => {
+    expectIsolated(`ВЫБРАТЬ Т.Код КАК К ${F} ГДЕ 1 В\n\t${SUBQ('\tГДЕ\n\t\tХ.Код = $')}`, payloads);
+    expectIsolated(`ВЫБРАТЬ Т.Код КАК К ${F} ГДЕ &П В\n\t${SUBQ('\tГДЕ\n\t\tХ.Код = $')}`, payloads);
+    expectIsolated(`ВЫБРАТЬ Т.Код КАК К ${F} ГДЕ 1 В\n\t(ВЫБРАТЬ\n\t\t$\n\tИЗ\n\t\tСправочник.Валюты КАК Х)`, payloads);
+  });
+  it('a code-compact subquery still takes the structural route; Designer applies', () => {
+    const compact = `ВЫБРАТЬ Т.Код КАК К ${F} ГДЕ 1 В (ВЫБРАТЬ Х.Код ИЗ Справочник.Валюты КАК Х ГДЕ Х.Код = "ВЫБРАТЬ x ИЗ y")`;
+    expect(model(compact)).toContain('"leftExpr":"1"');
+    for (const payload of payloads) expect(designerApplies(`ВЫБРАТЬ Т.Код КАК К ${F} ГДЕ 1 В\n\t${SUBQ(`\tГДЕ\n\t\tХ.Код = ${payload}`)}`)).toBe(true);
   });
 });
