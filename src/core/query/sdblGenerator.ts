@@ -1422,8 +1422,10 @@ function expandAndChainConjuncts(conditions: NonNullable<Join['conditions']>): N
     // C6: ИЛИ only inside nested parentheses does not block the split — such a
     // conjunct (`(a ИЛИ b) И c`, from a parenthesized group) is the same AND chain,
     // and reopening split it and wrapped its parts anyway. И is associative.
+    // A1-6d: ВЫБОР counts only in code; unknown lexical facts → no split.
+    const ranges = codeRanges(e);
     if (c.custom && e && !hasLineComment(e) && hasTopLevelBooleanOp(e) === true && hasTopLevelOr(e) === false &&
-        !/(^|[^\p{L}\p{N}_&])ВЫБОР([^\p{L}\p{N}_]|$)/iu.test(e)) {
+        ranges && !hasCodeMatch(e, ranges, /(^|[^\p{L}\p{N}_&])ВЫБОР([^\p{L}\p{N}_]|$)/giu)) {
       const parts = splitTopLevelAnd(e);
       if (parts.length > 1) {
         // Помечаем пьесы как полученные расщеплением И-цепочки (фаза 6.16.78):

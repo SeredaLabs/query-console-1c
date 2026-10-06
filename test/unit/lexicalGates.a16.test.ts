@@ -100,3 +100,18 @@ describe('A1-6c hasRedundantHavingOrParens: structural route for an ИМЕЮЩИ
     expect(designerApplies(having('(МАКСИМУМ(Х.Код) = "УПОРЯДОЧИТЬ"\n\t\t\tИ МАКСИМУМ(Х.Код) = "1")\n\t\tИЛИ МАКСИМУМ(Х.Код) = "2"'))).toBe(true);
   });
 });
+
+describe('A1-6d expandAndChainConjuncts: split of a JOIN И chain', () => {
+  // A literal ВЫБОР kept the chain whole; reopening split it only on the second cycle.
+  const J = `ВЫБРАТЬ Т.Код КАК К ${F} ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Х ПО`;
+  const payloads = ['"a"', '"ВЫБОР"', '"выбор"', '"a ВЫБОР b"', '"a ВЫБОР\nb"', '"x\nВЫБОР"'];
+  it('the chain is split as with a neutral literal; QueryModel unchanged; stable at once', () => {
+    expectIsolated(`${J} Т.Ссылка = Х.Ссылка И (Х.Код = $ И Х.Код = "1")`, payloads);
+    expectIsolated(`${J} Т.Ссылка = Х.Ссылка И (Х.Код = "1" И Х.Код = $ И Х.Наименование = "2")`, payloads);
+    expectIsolated(`${J} (Т.Ссылка = Х.Ссылка И Х.Код = $) И Х.Код = "1"`, payloads);
+    for (const payload of payloads) expect(designerApplies(`${J} Т.Ссылка = Х.Ссылка И (Х.Код = ${payload} И Х.Код = "1")`)).toBe(true);
+  });
+  it('a code ВЫБОР still keeps the chain whole', () => {
+    expect(gen(`${J} Т.Ссылка = Х.Ссылка И (ВЫБОР КОГДА Х.Код = "1" ТОГДА 1 КОНЕЦ = 1 И Х.Код = "2")`)).toContain('ВЫБОР');
+  });
+});
