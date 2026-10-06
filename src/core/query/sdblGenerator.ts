@@ -661,21 +661,26 @@ function splitTopLevelBoolConjuncts(expr: string): { op: string; text: string }[
  * выражение НЕ целиком в одной внешней паре скобок — возвращаем true.
  */
 function bodyHasUnwrappedBoolOr(inner: string): boolean {
-  const secRe = /(?:^|[^\p{L}\p{N}_&])(ГДЕ|ИМЕЮЩИЕ)(?![\p{L}\p{N}_])/gu;
-  const nextSec = /(?:^|[^\p{L}\p{N}_&])(?:СГРУППИРОВАТЬ|ИМЕЮЩИЕ|УПОРЯДОЧИТЬ|ИНДЕКСИРОВАТЬ|ОБЪЕДИНИТЬ|ИТОГИ|ГДЕ)(?![\p{L}\p{N}_])/u;
-  let m: RegExpExecArray | null;
-  while ((m = secRe.exec(inner)) !== null) {
-    let seg = inner.slice(m.index + m[0].length);
-    const nm = nextSec.exec(seg);
+  // A1: section words and the top-level ИЛИ count only in code (the same patterns as
+  // before); unknown lexical facts → no, so a canonical body keeps the text path.
+  const ranges = codeRanges(inner);
+  if (!ranges) return false;
+  const inCode = (m: RegExpExecArray, from: number): boolean => isCodeAt(ranges, from + m.index + m[0].search(/\p{L}/u));
+  const nextSec = /(?:^|[^\p{L}\p{N}_&])(?:СГРУППИРОВАТЬ|ИМЕЮЩИЕ|УПОРЯДОЧИТЬ|ИНДЕКСИРОВАТЬ|ОБЪЕДИНИТЬ|ИТОГИ|ГДЕ)(?![\p{L}\p{N}_])/gu;
+  for (const m of inner.matchAll(/(?:^|[^\p{L}\p{N}_&])(ГДЕ|ИМЕЮЩИЕ)(?![\p{L}\p{N}_])/gu)) {
+    if (!inCode(m, 0)) continue;
+    const from = m.index + m[0].length;
+    let seg = inner.slice(from);
+    const nm = [...seg.matchAll(nextSec)].find(x => inCode(x, from));
     if (nm) seg = seg.slice(0, nm.index);
+    const at = from + (seg.length - seg.trimStart().length);
     seg = seg.trim();
     if (!seg) continue;
-    // Верхнеуровневый ИЛИ (depth==0, вне строк)?
-    let depth = 0, inStr = false, topOr = false;
+    // Верхнеуровневый ИЛИ (depth==0, в коде)?
+    let depth = 0, topOr = false;
     for (let i = 0; i < seg.length; i++) {
+      if (!isCodeAt(ranges, at + i)) continue;
       const ch = seg[i];
-      if (inStr) { if (ch === '"') inStr = false; continue; }
-      if (ch === '"') { inStr = true; continue; }
       if (ch === '(') { depth++; continue; }
       if (ch === ')') { depth--; continue; }
       if (depth === 0 && (ch === 'И' || ch === 'и') && !blocksKeywordStart(seg[i - 1]) && /^ИЛИ(?![\p{L}\p{N}_])/iu.test(seg.slice(i))) { topOr = true; break; }

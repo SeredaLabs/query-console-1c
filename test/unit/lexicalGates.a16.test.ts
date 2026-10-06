@@ -115,3 +115,23 @@ describe('A1-6d expandAndChainConjuncts: split of a JOIN И chain', () => {
     expect(gen(`${J} Т.Ссылка = Х.Ссылка И (ВЫБОР КОГДА Х.Код = "1" ТОГДА 1 КОНЕЦ = 1 И Х.Код = "2")`)).toContain('ВЫБОР');
   });
 });
+
+describe('A1 bodyHasUnwrappedBoolOr: canonical membership subquery with a top-level ИЛИ', () => {
+  // A literal ГДЕ/ИМЕЮЩИЕ … ИЛИ or a literal section word used to switch the reflow.
+  // Excluded: R8 (ledger) — literal lines that start with a section word at column 0.
+  const BODY = (where: string): string => `(ВЫБРАТЬ\n\t\tР.Код\n\tИЗ\n\t\tСправочник.Валюты КАК Р\n\tГДЕ\n\t\t${where})`;
+  const JOIN = (where: string): string =>
+    `ВЫБРАТЬ Т.Код КАК К ${F} ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Х ПО Т.Ссылка = Х.Ссылка И Х.Код В\n${BODY(where)}`;
+  const VT = (where: string): string =>
+    `ВЫБРАТЬ О.Р КАК Р ИЗ РегистрНакопления.Р.Остатки(, Т.Ф В\n${BODY(where)}) КАК О`;
+  const payloads = ['"a"', '"ГДЕ a ИЛИ b"', '"ИМЕЮЩИЕ x ИЛИ y"', '"x ГДЕ y"', '"УПОРЯДОЧИТЬ"', '"a ГДЕ\nx ИЛИ y"'];
+  it('JOIN and VT condition, AND and OR bodies', () => {
+    for (const make of [JOIN, VT]) {
+      expectIsolated(make('Р.Н = $\n\t\t\tИ Р.К = 1'), payloads);
+      expectIsolated(make('Р.Н = $\n\t\t\tИЛИ Р.К = 1'), payloads);
+    }
+    // A `(` in the literal: VT only — in a JOIN condition it is C26 (ledger), not this gate.
+    expectIsolated(VT('Р.Н = $\n\t\t\tИ Р.К = 1'), ['"a ( ИЛИ b"']);
+    for (const payload of payloads) expect(designerApplies(JOIN(`Р.Н = ${payload}\n\t\t\tИ Р.К = 1`))).toBe(true);
+  });
+});
