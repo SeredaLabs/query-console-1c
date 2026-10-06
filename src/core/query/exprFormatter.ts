@@ -532,8 +532,16 @@ export function reindentLeafSubquery(text: string, base: number): string {
     // Схлопываем ТОЛЬКО чистый КОРТЕЖ-операнд `В`: сбалансированная пара скобок-списка,
     // за которой идёт ровно `В` (без булевых операторов/сравнений внутри). Иначе это
     // составное условие `(A = &X ИЛИ B В (…))`, чьи И/ИЛИ переносы трогать нельзя.
-    if (/^\([^()=<>]*\)\s+В$/u.test(body) &&
-      !/(?:^|[^\p{L}\p{N}_])(?:И|ИЛИ|НЕ|МЕЖДУ|ПОДОБНО|ССЫЛКА|ЕСТЬ)(?:[^\p{L}\p{N}_])/u.test(body)) {
+    // A1-5d: the gate reads only code — a `(`, `)`, `=`, `<`, `>` or a word inside a
+    // literal does not disqualify the tuple; unknown lexical facts → no collapse.
+    const bodyRanges = codeRanges(body);
+    const close = /\)\s+В$/u.exec(body);
+    let tupleHead = bodyRanges !== undefined && close !== null && body[0] === '(';
+    for (let k = 1; tupleHead && close && bodyRanges && k < close.index; k++) {
+      if ('()=<>'.includes(body[k]) && isCodeAt(bodyRanges, k)) tupleHead = false;
+    }
+    if (tupleHead && bodyRanges &&
+      codeWordMatches(body, bodyRanges, /(?:^|[^\p{L}\p{N}_])(?:И|ИЛИ|НЕ|МЕЖДУ|ПОДОБНО|ССЫЛКА|ЕСТЬ)(?:[^\p{L}\p{N}_])/gu) === 0) {
       lines.splice(0, start, lead + body);
       start = 1;
     }
@@ -950,20 +958,26 @@ function opensWithTopLevelVybor(text: string): boolean {
  */
 function opensWithVyborInCall(text: string): boolean {
   if (!text.includes('\n')) return false;
-  if (/(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?:[^\p{L}\p{N}_]|$)/iu.test(text)) return false;
-  const vyborCount = (text.match(/(?:^|[^\p{L}\p{N}_])ВЫБОР(?:[^\p{L}\p{N}_]|$)/giu) ?? []).length;
+  // A1-5c: the words count only in code; unknown lexical facts → not this gate.
+  const ranges = codeRanges(text);
+  if (!ranges) return false;
+  if (codeWordMatches(text, ranges, /(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?:[^\p{L}\p{N}_]|$)/giu) > 0) return false;
+  const vyborCount = codeWordMatches(text, ranges, /(?:^|[^\p{L}\p{N}_])ВЫБОР(?:[^\p{L}\p{N}_]|$)/giu);
   if (vyborCount !== 1) return false;
   const lines = text.split('\n');
-  const trailingVyborPos = (line: string): number => {
+  // Начало слова ВЫБОР в конце строки, если это слово — код (`at` — смещение строки в `text`).
+  const trailingVyborPos = (line: string, at: number): number => {
     const m = /(^|[^\p{L}\p{N}_])(ВЫБОР)\s*$/u.exec(line);
-    return m ? m.index + m[1].length : -1;
+    return m && isCodeAt(ranges, at + m.index + m[1].length) ? m.index + m[1].length : -1;
   };
   let depth = 0;
   let inStr = false;
   let sawClose = false;
+  let at = 0;
   for (let li = 0; li < lines.length; li++) {
     const line = lines[li];
-    const viPos = trailingVyborPos(line);
+    const viPos = trailingVyborPos(line, at);
+    at += line.length + 1;
     let d = depth;
     let s: boolean = inStr;
     for (let c = 0; c < line.length; c++) {
@@ -1521,8 +1535,10 @@ export function reindentLeafCase(text: string, base: number, funcParenDepth = fa
   // тело — многострочное и НЕ начинается структурными словами CASE; склейка его строк
   // схлопнула бы подзапрос. Штатный guard `\bВЫБРАТЬ\b` (выше) не ловит `(ВЫБРАТЬ`
   // (ASCII-граница слова на кириллице), поэтому проверяем здесь по Unicode-границам.
-  const HAS_SUBQUERY_RE = /(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?:[^\p{L}\p{N}_]|$)/iu;
-  if (!HAS_SUBQUERY_RE.test(text)) {
+  // A1-5b: ВЫБРАТЬ counts only in code; unknown lexical facts → no reflow.
+  const HAS_SUBQUERY_RE = /(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?:[^\p{L}\p{N}_]|$)/giu;
+  const subRanges = codeRanges(text);
+  if (subRanges && codeWordMatches(text, subRanges, HAS_SUBQUERY_RE) === 0) {
     const STRUCT = new Set(['КОГДА', 'ТОГДА', 'ИНАЧЕ', 'КОНЕЦ', 'И', 'ИЛИ']);
     const fw = (s: string): string => {
       const m = /^[\t ]*([\p{L}]+)/u.exec(s);
@@ -3152,7 +3168,10 @@ function stripRedundantCaseClauseParens(content: string): string {
   if (inner === '') return content;
   // Зоны риска: ВЫРАЗИТЬ (особые правила оборачивания), ВЫБОР/ВЫБРАТЬ (вложенный
   // CASE/подзапрос), верхнеуровневый булев И/ИЛИ (раскладка по оператору).
-  if (/(?:^|[^\p{L}\p{N}_])(ВЫРАЗИТЬ|ВЫБОР|ВЫБРАТЬ)(?:[^\p{L}\p{N}_]|$)/iu.test(inner)) return content;
+  // A1-5a: the words count only in code; unknown lexical facts → the parens stay.
+  const innerRanges = codeRanges(inner);
+  if (!innerRanges ||
+    codeWordMatches(inner, innerRanges, /(?:^|[^\p{L}\p{N}_])(ВЫРАЗИТЬ|ВЫБОР|ВЫБРАТЬ)(?:[^\p{L}\p{N}_]|$)/giu) > 0) return content;
   if (leafHasTopBoolean(inner)) return content;
   return inner;
 }
