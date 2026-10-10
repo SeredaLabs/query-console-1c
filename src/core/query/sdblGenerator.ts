@@ -9,7 +9,7 @@ import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpre
 import { splitArgComments } from './argComments';
 import { tokenize, tryTokenize, codeRanges, isCodeAt, isWordToken, replaceInCodeRanges } from './sdblLexer';
 import { parseEmptyTableColumns } from './expressionSyntaxCheck';
-import { BARE_PARAM, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
+import { bareParamName, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
 
 // Регистрируем в exprFormatter канонический ре-рендер инлайн-подзапроса членства
@@ -1907,7 +1907,7 @@ function buildQueryBlock(
 
 /** Выражение — это ТОЛЬКО голый параметр `&Имя` (для отбраковки в группировке). */
 function isBareParamExpr(expression: string | undefined): boolean {
-  return expression !== undefined && BARE_PARAM.test(expression.trim());
+  return expression !== undefined && bareParamName(expression) !== undefined;
 }
 
 // Константное выражение группировки, которое конструктор 1С ОТБРАСЫВАЕТ из

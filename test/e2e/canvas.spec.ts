@@ -717,6 +717,43 @@ test.describe('Canvas roadmap reconciliation', () => {
   });
 });
 
+test.describe('UNION column alias: identifier alphabet is the lexer one (A1)', () => {
+  // The 1C Designer prints `&Ціна КАК Ціна` and `КАК Gültig`, so such aliases are valid.
+  test('classic: Unicode alias is accepted, a non-identifier is still rejected', async ({ page }) => {
+    await open(page, 'classic', 'ВЫБРАТЬ 1 КАК Первый ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ 2 КАК Первый');
+    await page.locator('[data-tab="Объединения/Псевдонимы"]').click();
+    const alias = page.locator('input').filter({ visible: true }).last();
+    await alias.fill('1Ціна');
+    await alias.press('Tab');
+    const classicError = page.getByText('Псевдоним поля должен начинаться с буквы', { exact: false });
+    await expect(classicError).toBeVisible();
+    await classicError.locator('xpath=following-sibling::button').click();
+    await alias.fill('Ціна');
+    await alias.press('Tab');
+    const output = await save(page, 'classic');
+    expect(parseBatch(output).members[0].members.map(m => m.model.fields[0].alias)).toEqual(['Ціна', 'Ціна']);
+  });
+
+  test('canvas: Unicode alias is accepted in the mapping dialog, a non-identifier is still rejected', async ({ page }) => {
+    await page.setViewportSize({ width: 1500, height: 1000 });
+    await open(page, 'canvas', 'ВЫБРАТЬ 1 КАК Первый ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ 2 КАК Первый');
+    await page.getByTitle('Маппинг полей (псевдонимы и порядок)', { exact: true }).filter({ visible: true }).click();
+    const mapping = page.getByRole('dialog', { name: 'Маппинг полей (псевдонимы и порядок)' });
+    await mapping.locator('input').first().fill('1Gültig');
+    await mapping.locator('input').first().press('Enter');
+    const canvasError = page.getByText('Некорректный псевдоним', { exact: false });
+    await expect(canvasError).toBeVisible();
+    await canvasError.locator('xpath=following-sibling::button').click();
+    await expect(mapping.locator('input').first()).toHaveValue('Первый');
+    await mapping.locator('input').first().fill('Gültig');
+    await mapping.locator('input').first().press('Enter');
+    await expect(mapping.locator('input').first()).toHaveValue('Gültig');
+    await mapping.getByTitle('Закрыть', { exact: true }).click();
+    const output = await save(page, 'canvas');
+    expect(parseBatch(output).members[0].members.map(m => m.model.fields[0].alias)).toEqual(['Gültig', 'Gültig']);
+  });
+});
+
 test.describe('Canvas roadmap reconciliation controls', () => {
   test('scalar UNION alias order and ALL edits save in both members', async ({ page }) => {
     await page.setViewportSize({ width: 1500, height: 1000 });

@@ -364,6 +364,25 @@ export function isWordToken(t: Token | undefined, ...words: string[]): boolean {
   return !!t && (t.type === 'ident' || t.type === 'keyword') && words.includes(t.value.toUpperCase());
 }
 
+/**
+ * Whether `t` is a name as this lexer reads it: an ident or keyword token (a keyword
+ * can serve as a name, see `Token.text`), excluding the `#…` designer-reference form.
+ */
+export function isNameToken(t: Token | undefined): t is Token {
+  return !!t && (t.type === 'ident' || t.type === 'keyword') && !t.text.startsWith('#');
+}
+
+/**
+ * Whether the whole of `text` is exactly one name (`isNameToken`), with no surrounding
+ * whitespace or comments. The identifier alphabet is this lexer's (`\p{L}`, `\p{N}`, `_`);
+ * consumers that validate a name outside a token stream (aliases, parameter names)
+ * ask here instead of keeping their own character class.
+ */
+export function isIdentifierName(text: string): boolean {
+  const tokens = tryTokenize(text, { comments: true });
+  return tokens !== undefined && tokens.length === 2 && isNameToken(tokens[0]) && tokens[0].text === text;
+}
+
 /** Whether offset `pos` lies in one of the code ranges returned by `codeRanges`. */
 export function isCodeAt(ranges: Array<[number, number]>, pos: number): boolean {
   return ranges.some(([start, end]) => pos >= start && pos < end);

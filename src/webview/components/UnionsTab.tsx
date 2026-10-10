@@ -1,14 +1,13 @@
 import * as React from 'react';
 import type { QueryMeta } from '../state/queryStore';
 import type { UnionColumn } from '../../core/query/unionModel';
+import { isIdentifierName } from '../../core/query/sdblLexer';
 import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
 import { PanelHeader } from './PanelHeader';
 import { IconButton } from './IconButton';
 import { BTN, DIALOG_PANEL, COLUMN_HEADER, GRID_ROW_BORDER, panelBox, ROW_PADDING_Y } from '../sharedStyles';
 import { t } from '../i18n';
 import { highlightParts } from '../expressionEditor/highlightedCode';
-
-const ALIAS_RE = /^[A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*$/;
 
 interface Props {
   queryList: QueryMeta[];
@@ -90,7 +89,7 @@ export function UnionsTab({
       setAliasDrafts(d => { const { [colIdx]: _omit, ...rest } = d; return rest; });
       return;
     }
-    if (!ALIAS_RE.test(next)) {
+    if (!isIdentifierName(next)) {
       setAliasError(t('unions.aliasError'));
       // Откатить отображаемый текст к исходному псевдониму.
       setAliasDrafts(d => { const { [colIdx]: _omit, ...rest } = d; return rest; });

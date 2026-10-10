@@ -53,6 +53,7 @@ import { renderOperatorRhs, needsFormatting, isRootNotGroup, normalizeLeafCase }
 import { tokenize, tryTokenize, isWordToken, replaceInCodeRanges, codeRanges, isCodeAt } from './sdblLexer';
 import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
+import { bareParamName } from './exprAutoAlias';
 import { fieldAlias } from './unionModel';
 import { extractComments, rememberConditionComments, rememberNestedConditionComments } from './commentBinder';
 import type { QueryDocument, UnionMember } from './unionModel';
@@ -353,8 +354,6 @@ type RawSelectItem =
   | { kind: 'tabSection'; ts: RawTabSection };
 
 const AUTO_ALIAS = /^Поле\d+$/;
-/** Голый параметр выборки `&Имя` (захватывает имя без `&`). */
-const BARE_PARAM_ALIAS = /^&([A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*)$/u;
 
 /**
  * The lexer keeps `'…'` as a `date` token for highlighting/formatting, but the
@@ -2504,7 +2503,7 @@ function interpretField(
     // Голый параметр `&Имя КАК Поле{n}`: разработчик задал явный `Поле{n}`, и
     // конструктор его сохраняет (НЕ переалиасит в имя параметра). Фиксируем
     // alias явно, иначе авто-правило `&Имя → Имя` сломает воспроизведение.
-    if (BARE_PARAM_ALIAS.test(rf.rawBody.trim())) field.alias = rf.alias;
+    if (bareParamName(rf.rawBody) !== undefined) field.alias = rf.alias;
     else {
       // Явно написанный `Поле{n}` конструктор СОХРАНЯЕТ ДОСЛОВНО (MCP-проба:
       // `… КАК Поле5` остаётся `Поле5`, а синтезируемый позиционный счётчик его
@@ -5383,8 +5382,7 @@ function assignExpressionFieldAliases(model: QueryModel): void {
     if (f.alias !== undefined) continue;
     // Голый параметр `&Имя` → псевдоним = имя параметра (без `&`), как у
     // конструктора; счётчик `Поле{n}` им не занимается.
-    const m = BARE_PARAM_ALIAS.exec(f.expression.trim());
-    f.alias = m ? m[1] : `Поле${++exprCounter}`;
+    f.alias = bareParamName(f.expression) ?? `Поле${++exprCounter}`;
   }
 }
 
