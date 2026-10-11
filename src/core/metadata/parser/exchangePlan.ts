@@ -32,8 +32,8 @@ export function parseExchangePlan(objectEl: any): ParsedObject | null {
   }
   std('НомерОтправленного', [{ kind: 'Число', digits: 9, fractionDigits: 0 }]);
   std('НомерПринятого', [{ kind: 'Число', digits: 9, fractionDigits: 0 }]);
-  // ДатаОбмена — стандартный реквизит плана обмена (всегда присутствует, в cf не описан).
-  std('ДатаОбмена', [{ kind: 'Дата' }]);
+  // C29: the XML lists the `ExchangeDate` standard attribute, but it is not a query
+  // field (platform: `Field not found`, SL_kza 2026-10-11), so it is not a column here.
 
   const { attributes, tabularSections } = parseChildObjects(objectEl);
   fields.push(...attributes);

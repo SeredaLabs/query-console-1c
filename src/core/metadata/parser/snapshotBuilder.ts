@@ -39,7 +39,9 @@ import type { MetadataModel } from '../types';
 
 /** Расширяется только когда предыдущий persisted-формат перестаёт гарантировать
  * эквивалентную семантику (ТЗ §10) — не при каждом структурном изменении JSON. */
-export const SNAPSHOT_FORMAT_VERSION = 1;
+// 2 (C29): column synthesis changed (Проведен, ДатаОбмена, Порядок, Auto separators),
+// so snapshots built by the previous parser are rebuilt from XML.
+export const SNAPSHOT_FORMAT_VERSION = 2;
 
 export interface MetadataSnapshotFile {
   formatVersion: number;

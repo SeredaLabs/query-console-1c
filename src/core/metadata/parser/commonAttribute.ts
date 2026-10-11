@@ -34,6 +34,10 @@ export function parseCommonAttribute(objectEl: any): ParsedCommonAttribute | nul
   if (!name) return null;
 
   const autoUse = nodeText(childByLocalName(props, 'AutoUse')) === 'Use';
+  // C29: an `Auto` data separator is a query field only in exchange plans (platform:
+  // `Field not found` in every other kind, SL_kza 2026-10-11). Non-separator `Auto` and
+  // explicit Use / DontUse are unchanged.
+  const separator = nodeText(childByLocalName(props, 'DataSeparation')) === 'Separate';
 
   const content: string[] = [];
   const dontUse: string[] = [];
@@ -44,7 +48,7 @@ export function parseCommonAttribute(objectEl: any): ParsedCommonAttribute | nul
       const ref = mapContentRef(nodeText(childByLocalName(item, 'Metadata')));
       if (!ref) continue;
       const use = nodeText(childByLocalName(item, 'Use'));
-      if (use === 'Use' || (use === 'Auto' && autoUse)) {
+      if (use === 'Use' || (use === 'Auto' && autoUse && (!separator || ref.startsWith('ПланОбмена.')))) {
         content.push(ref);
       } else if (use === 'DontUse') {
         dontUse.push(ref);
