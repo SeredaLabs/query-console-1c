@@ -112,3 +112,26 @@ describe('G: Designer → Apply → reopen keeps every statement and wildcard', 
     expect(designer(out).text).toBe(out);
   });
 });
+
+describe('A1 parseStar: a wildcard alias is one lexer name', () => {
+  // `parseStar` used its own `[\wА-Яа-яЁё]` class: `Ґа.*`, `Ціна.*`, `Gültig.*` were not
+  // seen as wildcards at all and stayed `… КАК Поле1` where `Га.*` expanded.
+  const swap = (text: string, alias: string): string =>
+    text.replace(/(?<![\p{L}\p{N}_])Га(?![\p{L}\p{N}_])/gu, alias);
+
+  it.each(['Ґа', 'Ціна', 'Gültig'])('%s.* expands exactly like Га.*', alias => {
+    const texts = [
+      'ВЫБРАТЬ Га.Код КАК К ИЗ ВТ КАК Га;\nВЫБРАТЬ Га.* ИЗ ВТ КАК Га',
+      `${PLACE}ВЫБРАТЬ Га.* ИЗ Справочник.Валюты КАК Га`,
+      'ВЫБРАТЬ Га.*, Га.Код КАК К2 ИЗ Справочник.Валюты КАК Га',
+    ];
+    for (const text of texts) for (const withResolver of [false, true]) {
+      expect(gen(swap(text, alias), withResolver)).toBe(swap(gen(text, withResolver), alias));
+    }
+    expect(designer(swap(texts[0], alias)).text).toBe(swap(designer(texts[0]).text, alias));
+  });
+
+  it('Ґа.* over an inferred temp table prints its columns', () => {
+    expect(last(gen('ВЫБРАТЬ Ґа.Код КАК К ИЗ ВТ КАК Ґа;\nВЫБРАТЬ Ґа.* ИЗ ВТ КАК Ґа'))).toContain('\tҐа.Код КАК Код\n');
+  });
+});

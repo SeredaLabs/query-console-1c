@@ -1,6 +1,7 @@
 import type { QueryModel, SelectedField, SelectedTabSectionField } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import { buildSelectAllModel } from './buildSelectAllModel';
+import { isIdentifierName } from './sdblLexer';
 
 /**
  * Развёртка `*` в списке выборки по метаданным (фаза 6.15.15).
@@ -206,9 +207,9 @@ function parseStar(f: SelectedField): StarInfo | null {
   if (!e.endsWith('*')) return null;
   const segs = e.split('.').map(s => s.trim());
   if (segs.length < 2 || segs[segs.length - 1] !== '*') return null;
-  // Любой сегмент кроме последнего — идентификатор (без пробелов/скобок).
+  // Любой сегмент кроме последнего — одно имя по алфавиту лексера (A1).
   const head = segs.slice(0, -1);
-  if (head.some(s => s === '' || /[^\wА-Яа-яЁё]/.test(s))) return null;
+  if (!head.every(isIdentifierName)) return null;
   return { alias: head[0], viaAttribute: head.length > 1 };
 }
 
