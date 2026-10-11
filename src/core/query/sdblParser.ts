@@ -72,7 +72,7 @@ import type { SourceInfo } from './qualifyBareFields';
 import { resolveBuilderStar } from './resolveBuilderStar';
 import { dropRedundantGroupDerefs, moveLeadingMovementCaseToEnd, moveBeforePrefixGroupDerefToEnd, substituteGroupFieldWithSelectExpr, dropFunctionallyDeterminedMovementCase, relocateKeptMovementCase } from './dropRedundantGroupDerefs';
 import { canonicalizeFieldCasing } from './canonicalizeFieldCasing';
-import { LITERAL_WORDS } from './sdblKeywordSets';
+import { LITERAL_WORDS, PERIOD_WORDS } from './sdblKeywordSets';
 
 // Инжектируем разборщик подзапросов в пасс квалификации голых полей (для подзапросов,
 // встроенных в СЫРЫЕ выражения условий/полей), избегая циклического импорта.
@@ -2812,7 +2812,8 @@ const EXPR_STOP_WORDS = new Set<string>([
   'NULL', 'ИСТИНА', 'ЛОЖЬ', 'НЕОПРЕДЕЛЕНО',
   'ИЕРАРХИИ', 'ИЕРАРХИЯ', 'УБЫВ', 'ВОЗР', 'РАЗЛИЧНЫЕ', 'КАК', 'ССЫЛКА',
   'ВЫБОР', 'КОГДА', 'ТОГДА', 'ИНАЧЕ', 'КОНЕЦ',
-  'ГОД', 'КВАРТАЛ', 'МЕСЯЦ', 'ДЕКАДА', 'НЕДЕЛЯ', 'ДЕНЬ', 'ЧАС', 'МИНУТА', 'СЕКУНДА',
+  // Единицы периода — из общего словаря (R6: своя копия теряла `ПОЛУГОДИЕ`).
+  ...PERIOD_WORDS,
 ]);
 
 /**
