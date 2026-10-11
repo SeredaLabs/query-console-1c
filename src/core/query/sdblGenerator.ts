@@ -1012,13 +1012,23 @@ function reindentVtCondition(condition: string, base: number): string {
       // лексировать — лексические факты неизвестны, все строки сохраняются как есть.
       const literalLines = tryTokenize(c.text, { comments: true }) ? literalContinuationLines(c.text) : new Set(lines.keys());
       const trimLine = (j: number): string => (literalLines.has(j + 1) ? lines[j].trimStart() : lines[j].trim());
-      const parenDelta = (s: string): number => {
+      // N3: parentheses count only in code, by the conjunct's code ranges (a line of a
+      // multi-line literal is not code). Unknown lexical facts → the line-local toggle.
+      const condRanges = codeRanges(c.text);
+      const lineStart: number[] = [];
+      for (let j = 0, pos = 0; j < lines.length; pos += lines[j].length + 1, j++) lineStart.push(pos);
+      const parenDelta = (j: number): number => {
+        const s = lines[j];
         let d = 0;
         let inS = false;
         for (let p = 0; p < s.length; p++) {
           const ch = s[p];
-          if (ch === '"') { inS = !inS; continue; }
-          if (inS) continue;
+          if (condRanges) {
+            if (!isCodeAt(condRanges, lineStart[j] + p)) continue;
+          } else {
+            if (ch === '"') { inS = !inS; continue; }
+            if (inS) continue;
+          }
           if (ch === '(') d++;
           else if (ch === ')') d--;
         }
@@ -1030,33 +1040,33 @@ function reindentVtCondition(condition: string, base: number): string {
       };
       // Скобочные уровни, несущие верхнеуровневый `ИЛИ` среди продолжений конъюнкта.
       const orLevels = new Set<number>();
-      let scanLvl = parenDelta(lines[0]);
+      let scanLvl = parenDelta(0);
       for (let j = 1; j < lines.length; j++) {
         if (literalLines.has(j)) break;
         if (lines[j].trim() === '') continue;
         const fw = firstWord(lines[j]);
         if (fw === 'И' || fw === 'ИЛИ') {
           if (fw === 'ИЛИ') orLevels.add(scanLvl);
-          scanLvl += parenDelta(lines[j]);
+          scanLvl += parenDelta(j);
         } else break;
       }
       out.push('\t'.repeat(ind) + prefix + trimLine(0));
       // Конъюнкт-группа открывает скобку (`И (…`): отбиваем продолжения по глубине
       // скобок + приоритету И>ИЛИ. Иначе (просто перенесённый по строкам лист, без
       // верхнеуровневой скобки) — прежний плоский ind+1.
-      const headDelta = parenDelta(lines[0]);
+      const headDelta = parenDelta(0);
       let condParen = headDelta;
       for (let j = 1; j < lines.length; j++) {
         if (literalLines.has(j)) {
           out.push(lines[j]);
-          if (headDelta > 0) condParen += parenDelta(lines[j]);
+          if (headDelta > 0) condParen += parenDelta(j);
           continue;
         }
         if (headDelta <= 0) { out.push('\t'.repeat(ind + 1) + trimLine(j)); continue; }
         const fw = firstWord(lines[j]);
         const orShift = fw === 'И' && orLevels.has(condParen) ? 1 : 0;
         out.push('\t'.repeat(ind + condParen + orShift) + trimLine(j));
-        condParen += parenDelta(lines[j]);
+        condParen += parenDelta(j);
       }
     } else {
       // Одиночный однострочный конъюнкт-ОТРИЦАНИЕ поля: снимаем избыточную обёртку, как
