@@ -3855,13 +3855,21 @@ function trySimpleJoinCondition(
   };
 }
 
-/** Снимает ровно одну пару внешних скобок, если всё выражение в них заключено. */
+/**
+ * Снимает ровно одну пару внешних скобок, если всё выражение в них заключено.
+ * C26: скобки считаются только в коде (скобка в строковом литерале — данные, иначе
+ * пара не снималась и генератор добавлял ещё одну на каждом открытии). Лексические
+ * факты неизвестны — пару не снимаем.
+ */
 function stripOuterParens(text: string): string {
   const s = text.trim();
   if (!s.startsWith('(') || !s.endsWith(')')) return s;
+  const ranges = codeRanges(s);
+  if (!ranges) return s;
   // Проверить, что первая открывающая скобка закрывается последней.
   let depth = 0;
   for (let i = 0; i < s.length; i++) {
+    if (!isCodeAt(ranges, i)) continue;
     if (s[i] === '(') depth++;
     else if (s[i] === ')') {
       depth--;
