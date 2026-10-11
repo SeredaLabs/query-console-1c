@@ -5109,8 +5109,17 @@ const SECTION_LINE = /^(\t*)(?:ИЗ|ГДЕ|СГРУППИРОВАТЬ|ИМЕЮЩ
 /** Tabs the query's own section lines are indented by: 0 at top level, the
  * nesting padding for the text of a nested query. */
 function nestingPad(text: string): number {
+  // R8: a continuation line of a multi-line literal is data, not a section line.
+  // Lexically rejected text: every line counts (its raw slices stay verbatim anyway).
+  const tokens = tryTokenize(text, { comments: true });
+  const literals = tokens ? tokens.filter(t => t.type === 'string' || t.type === 'date') : [];
   let pad = Infinity;
-  for (const line of text.split('\n').slice(1)) {
+  let start = 0;
+  for (const [i, line] of text.split('\n').entries()) {
+    const lineStart = start;
+    start += line.length + 1;
+    if (i === 0) continue;
+    if (literals.some(t => t.pos < lineStart && lineStart < t.pos + t.text.length)) continue;
     const m = SECTION_LINE.exec(line);
     if (m) pad = Math.min(pad, m[1].length);
   }
