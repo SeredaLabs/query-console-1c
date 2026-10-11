@@ -62,7 +62,7 @@ import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable, MetaField } from '../metadata/types';
 import type { SourceMapSink, SourceMapEvent, BatchSourceMapSink, AbsoluteSourceMapEvent, TextRange } from './sourceMap';
 import { RecordingSourceMapSink } from './sourceMap';
-import { expandStarFields } from './expandStarFields';
+import { expandStarFields, isWildcardExpression } from './expandStarFields';
 import { expandTabSectionFields } from './expandTabSectionFields';
 import { wrapTabSectionAggregates } from './wrapTabSectionAggregates';
 import { dropUserIBConditions } from './dropUserIBConditions';
@@ -5398,6 +5398,8 @@ function assignExpressionFieldAliases(model: QueryModel): void {
     // явного псевдонима (`f.alias ?? Поле${++exprCounter}`), т.е. произвольное поле
     // с явным `КАК` номер `Поле{n}` не занимает.
     if (f.alias !== undefined) continue;
+    // Звезда (не развёрнутая) псевдонима не получает и номер не занимает (C24).
+    if (isWildcardExpression(f.expression)) continue;
     // Голый параметр `&Имя` → псевдоним = имя параметра (без `&`), как у
     // конструктора; счётчик `Поле{n}` им не занимается.
     f.alias = bareParamName(f.expression) ?? `Поле${++exprCounter}`;

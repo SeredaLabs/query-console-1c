@@ -928,7 +928,7 @@ describe('parseQuery 6.2.C — временные таблицы (round-trip)', 
     );
     const consumer = batch.members[2].members[0].model;
     expect(consumer.fields).toEqual([{
-      tableId: '', path: '', expression: 'ВТ.*', alias: 'Поле1',
+      tableId: '', path: '', expression: 'ВТ.*',
     }]);
     expect(consumer.fields.some(field => field.path === 'Старое')).toBe(false);
   });

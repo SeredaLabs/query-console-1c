@@ -213,6 +213,16 @@ function parseStar(f: SelectedField): StarInfo | null {
   return { alias: head[0], viaAttribute: head.length > 1 };
 }
 
+/**
+ * Выражение поля выборки — звезда (`*`, `Алиас.*`, `Алиас.Поле.*`), по тем же
+ * правилам, что и развёртка. Звезда не получает автопсевдоним и не занимает номер
+ * `Поле{n}`: `* КАК Поле1` / `Т.* КАК Поле1` — синтаксическая ошибка платформы
+ * (СхемаЗапроса, SL_kza 2026-10-11; C24).
+ */
+export function isWildcardExpression(expression: string | undefined): boolean {
+  return expression !== undefined && parseStar({ tableId: '', path: '', expression }) !== null;
+}
+
 /** Псевдоним (или авто-псевдоним) явного поля для резервирования. */
 function fieldAlias(f: SelectedField): string | undefined {
   if (f.alias !== undefined) return f.alias;
