@@ -56,6 +56,13 @@ function hasCodeMatch(text: string, ranges: Array<[number, number]>, re: RegExp,
   return false;
 }
 
+/** A `КАК` word in code, not in a literal or comment (N1). Unknown lexical facts → true
+ * (treated as already aliased: the brace is kept as written). */
+function hasCodeAliasWord(text: string): boolean {
+  const ranges = codeRanges(text);
+  return !ranges || hasCodeMatch(text, ranges, /(?:^|[^\p{L}\p{N}_&])КАК(?:[^\p{L}\p{N}_]|$)/giu);
+}
+
 /** A `ВЫБОР` word in code, not in a literal or comment (C25 R9). Unknown lexical
  * facts → false. */
 function hasCodeCaseWord(text: string): boolean {
@@ -331,8 +338,8 @@ function wrapDcsBraceParam(text: string): string {
     const c = inner.trim();
     if (!c.startsWith('&')) return whole;
     if (c.startsWith('(')) return whole;
-    // Верхнеуровневая запятая или `КАК` → не одиночный параметр, не трогаем.
-    if (hasTopLevelComma(c) !== false || /(^|[^\p{L}\p{N}_&])КАК([^\p{L}\p{N}_]|$)/iu.test(c)) return whole;
+    // Верхнеуровневая запятая или `КАК` в коде → не одиночный параметр, не трогаем.
+    if (hasTopLevelComma(c) !== false || hasCodeAliasWord(c)) return whole;
     return `{(${c})}`;
   });
 }
@@ -355,7 +362,7 @@ function aliasDcsBraceExprs(text: string, state: { k: number }): string {
     if (!isCodeAt(ranges, offset) || !isCodeAt(ranges, offset + whole.length - 1)) return whole;
     const c = inner.trim();
     // Уже с псевдонимом — не трогаем (но всё равно считаем выражением-слотом).
-    if (/(^|[^\p{L}\p{N}_&])КАК([^\p{L}\p{N}_]|$)/iu.test(c)) { state.k += 1; return whole; }
+    if (hasCodeAliasWord(c)) { state.k += 1; return whole; }
     // Должна быть одиночная охватывающая пара скобок `( … )`.
     if (!c.startsWith('(') || !c.endsWith(')')) return whole;
     // Внутреннее содержимое.
