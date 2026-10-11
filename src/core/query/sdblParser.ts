@@ -50,9 +50,10 @@ import type {
 
 import { defaultTableAlias, accountingPositionKeys } from './queryModel';
 import { renderOperatorRhs, needsFormatting, isRootNotGroup, normalizeLeafCase } from './exprFormatter';
-import { tokenize, tryTokenize, isWordToken, replaceInCodeRanges } from './sdblLexer';
+import { tokenize, tryTokenize, isWordToken, replaceInCodeRanges, codeRanges, isCodeAt, isNameToken as isLexerName } from './sdblLexer';
 import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
+import { bareParamName } from './exprAutoAlias';
 import { fieldAlias } from './unionModel';
 import { extractComments, rememberConditionComments, rememberNestedConditionComments } from './commentBinder';
 import type { QueryDocument, UnionMember } from './unionModel';
@@ -353,8 +354,6 @@ type RawSelectItem =
   | { kind: 'tabSection'; ts: RawTabSection };
 
 const AUTO_ALIAS = /^Поле\d+$/;
-/** Голый параметр выборки `&Имя` (захватывает имя без `&`). */
-const BARE_PARAM_ALIAS = /^&([A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*)$/u;
 
 /**
  * The lexer keeps `'…'` as a `date` token for highlighting/formatting, but the
@@ -2504,7 +2503,7 @@ function interpretField(
     // Голый параметр `&Имя КАК Поле{n}`: разработчик задал явный `Поле{n}`, и
     // конструктор его сохраняет (НЕ переалиасит в имя параметра). Фиксируем
     // alias явно, иначе авто-правило `&Имя → Имя` сломает воспроизведение.
-    if (BARE_PARAM_ALIAS.test(rf.rawBody.trim())) field.alias = rf.alias;
+    if (bareParamName(rf.rawBody) !== undefined) field.alias = rf.alias;
     else {
       // Явно написанный `Поле{n}` конструктор СОХРАНЯЕТ ДОСЛОВНО (MCP-проба:
       // `… КАК Поле5` остаётся `Поле5`, а синтезируемый позиционный счётчик его
@@ -3452,8 +3451,31 @@ function subqueryInnerText(paramTokens: Token[], source: string): string | undef
  * `ИЗ`, `ГДЕ` на отдельных строках — такой ввод НЕ компактен (фаза 6.15.27).
  */
 function isCompactSubquerySource(inner: string): boolean {
-  const re = /(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?:[^\p{L}\p{N}_].*?)(?:^|[^\p{L}\p{N}_])ИЗ(?:[^\p{L}\p{N}_]|$)/u;
-  return inner.split('\n').some((l) => re.test(l));
+  // A1-6b: both words count only in code; unknown lexical facts → not compact (text route).
+  const ranges = codeRanges(inner);
+  if (!ranges) return false;
+  let at = 0;
+  for (const line of inner.split('\n')) {
+    const select = codeWordStarts(line, at, ranges, /(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?=[^\p{L}\p{N}_])/gu);
+    const from = codeWordStarts(line, at, ranges, /(?:^|[^\p{L}\p{N}_])ИЗ(?=[^\p{L}\p{N}_]|$)/gu);
+    // As the former `ВЫБРАТЬ<sep>.*?<sep>ИЗ`: ИЗ starts at least two characters after ВЫБРАТЬ.
+    if (select.some(a => from.some(b => b >= a + 'ВЫБРАТЬ'.length + 2))) return true;
+    at += line.length + 1;
+  }
+  return false;
+}
+
+/**
+ * A1-6: offsets (in the whole text; `at` — offset of `line`) where a `re` (global) match
+ * in `line` starts its word, kept only when that word is code.
+ */
+function codeWordStarts(line: string, at: number, ranges: Array<[number, number]>, re: RegExp): number[] {
+  const starts: number[] = [];
+  for (const m of line.matchAll(re)) {
+    const start = at + m.index + m[0].search(/\p{L}/u);
+    if (isCodeAt(ranges, start)) starts.push(start);
+  }
+  return starts;
 }
 
 /**
@@ -3468,17 +3490,22 @@ function isCompactSubquerySource(inner: string): boolean {
  * до следующей секции) и требуем верхнеуровневый (depth==0, вне строк) `ИЛИ`.
  */
 function hasRedundantHavingOrParens(inner: string): boolean {
-  const m = /(?:^|[^\p{L}\p{N}_])ИМЕЮЩИЕ(?![\p{L}\p{N}_])/u.exec(inner);
-  if (!m) return false;
-  let rest = inner.slice(m.index + m[0].length);
-  const tailKw = /(?:^|[^\p{L}\p{N}_])(?:ИНДЕКСИРОВАТЬ|УПОРЯДОЧИТЬ|ОБЪЕДИНИТЬ|ИТОГИ)(?![\p{L}\p{N}_])/u.exec(rest);
-  if (tailKw) rest = rest.slice(0, tailKw.index);
-  let depth = 0, inStr = false;
+  // A1-6c: ИМЕЮЩИЕ, the next section word and the top-level ИЛИ count only in code
+  // (the same patterns as before); unknown lexical facts → no (text route).
+  const ranges = codeRanges(inner);
+  if (!ranges) return false;
+  const having = codeWordStarts(inner, 0, ranges, /(?:^|[^\p{L}\p{N}_])ИМЕЮЩИЕ(?![\p{L}\p{N}_])/gu)[0];
+  if (having === undefined) return false;
+  const restStart = having + 'ИМЕЮЩИЕ'.length;
+  const tail = codeWordStarts(inner, 0, ranges, /(?:^|[^\p{L}\p{N}_])(?:ИНДЕКСИРОВАТЬ|УПОРЯДОЧИТЬ|ОБЪЕДИНИТЬ|ИТОГИ)(?![\p{L}\p{N}_])/gu)
+    .find(p => p >= restStart);
+  // As before, the section text ends at the separator before the next section word.
+  const rest = inner.slice(restStart, tail === undefined ? inner.length : tail - 1);
+  let depth = 0;
   const isW = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}_]/u.test(c);
   for (let i = 0; i < rest.length; i++) {
     const ch = rest[i];
-    if (inStr) { if (ch === '"') inStr = false; continue; }
-    if (ch === '"') { inStr = true; continue; }
+    if (!isCodeAt(ranges, restStart + i)) continue;
     if (ch === '(') { depth++; continue; }
     if (ch === ')') { depth--; continue; }
     if (depth === 0 && (ch === 'И' || ch === 'и') && !isW(rest[i - 1]) && /^ИЛИ(?![\p{L}\p{N}_])/iu.test(rest.slice(i))) {
@@ -5355,8 +5382,7 @@ function assignExpressionFieldAliases(model: QueryModel): void {
     if (f.alias !== undefined) continue;
     // Голый параметр `&Имя` → псевдоним = имя параметра (без `&`), как у
     // конструктора; счётчик `Поле{n}` им не занимается.
-    const m = BARE_PARAM_ALIAS.exec(f.expression.trim());
-    f.alias = m ? m[1] : `Поле${++exprCounter}`;
+    f.alias = bareParamName(f.expression) ?? `Поле${++exprCounter}`;
   }
 }
 
@@ -5737,7 +5763,9 @@ function parseBatchInner(
  *   - НЕ разрешаются базовым резолвером (не реальная/виртуальная таблица метаданных);
  *   - имеют хотя бы одну выведенную колонку (есть ссылки `<алиас>.<кол>`).
  * Колонки = односегментные ссылки `<алиас>.<кол>` на псевдонимы такой ВТ, собранные по
- * ВСЕМУ СЫРОМУ ТЕКСТУ пакета в порядке первого появления, дедуп без учёта регистра.
+ * всему пакету в порядке первого появления, дедуп без учёта регистра. Ссылки и звёзды
+ * берутся из токенов лексера (A1): имена — по его алфавиту, комментарии и литералы
+ * колонок не создают (R5). Нелексируемый оператор ничего не выводит.
  */
 function inferUndefinedTempTables(
   chunks: string[],
@@ -5786,22 +5814,29 @@ function inferUndefinedTempTables(
   const firstRefChunk = new Map<string, number>(); // ИМЯ_ВТ(upper) → индекс первого оператора-ссылки
   for (const c of candidates) { cols.set(c, []); seen.set(c, new Set()); }
 
-  const ref = /([A-Za-zА-Яа-яЁё_][\wА-Яа-яЁё]*)\.([A-Za-zА-Яа-яЁё_][\wА-Яа-яЁё]*)(\.)?/gu;
-  chunks.forEach((chunk, i) => {
+  // Токены кода оператора (без комментариев; строки — свои токены). Части пути идут
+  // вплотную (`Т.Код`, не `Т . Код`), как в прежнем шаблоне.
+  const chunkTokens = chunks.map(c => tryTokenize(c));
+  const adjacent = (a: Token, b: Token | undefined): boolean => b !== undefined && b.pos === a.pos + a.text.length;
+  const isDot = (t: Token | undefined): boolean => t?.type === 'punct' && t.value === '.';
+  chunkTokens.forEach((tokens, i) => {
     const aliasMap = aliasToTempPerChunk[i];
-    if (aliasMap.size === 0) return;
-    let mt: RegExpExecArray | null;
-    ref.lastIndex = 0;
-    while ((mt = ref.exec(chunk)) !== null) {
-      const tempName = aliasMap.get(mt[1].toUpperCase());
+    if (aliasMap.size === 0 || !tokens) return;
+    for (let k = 0; k < tokens.length; k++) {
+      const head = tokens[k], dot = tokens[k + 1], col = tokens[k + 2];
+      if (!isLexerName(head) || !isDot(dot) || !adjacent(head, dot) || !isLexerName(col) || !adjacent(dot, col)) continue;
+      const multi = isDot(tokens[k + 3]) && adjacent(col, tokens[k + 3]);
+      // Следующий поиск — после `<алиас>.<кол>[.]`, как продолжение прежнего шаблона.
+      k += multi ? 3 : 2;
+      const tempName = aliasMap.get(head.text.toUpperCase());
       if (!tempName) continue;
       if (!firstRefChunk.has(tempName)) firstRefChunk.set(tempName, i);
-      if (mt[3]) continue; // `<алиас>.<кол>.<...>` — многосегментная, не колонка ВТ
-      const colUp = mt[2].toUpperCase();
+      if (multi) continue; // `<алиас>.<кол>.<...>` — многосегментная, не колонка ВТ
+      const colUp = col.text.toUpperCase();
       const s = seen.get(tempName)!;
       if (s.has(colUp)) continue;
       s.add(colUp);
-      cols.get(tempName)!.push(mt[2]);
+      cols.get(tempName)!.push(col.text);
     }
   });
 
@@ -5810,20 +5845,21 @@ function inferUndefinedTempTables(
   // канонизацию, квалификацию). `Алиас.*` атрибутируется своему псевдониму;
   // голая `*` — всем ВТ-кандидатам-источникам своего оператора.
   const starred = new Set<string>();
-  // Сырой токен звезды: голая `*` (поле выборки) или `<алиас>.*`. Перед `*` —
-  // граница (запятая/перенос/«ВЫБРАТЬ»/скобка), чтобы не путать с умножением.
-  const dotStar = /([A-Za-zА-Яа-яЁё_][\wА-Яа-яЁё]*)\.\*/gu;
+  // Голая `*` (поле выборки): перед ней граница (запятая/перенос/«ВЫБРАТЬ»/скобка),
+  // после — запятая или конец строки, чтобы не путать с умножением; сама `*` — в коде.
   const bareStar = /(^|[,(\n\r\t ])\*(?=\s*(?:,|$|\r|\n))/gmu;
-  chunks.forEach((chunk, i) => {
+  chunkTokens.forEach((tokens, i) => {
     const aliasMap = aliasToTempPerChunk[i];
-    if (aliasMap.size === 0) return;
-    let m: RegExpExecArray | null;
-    dotStar.lastIndex = 0;
-    while ((m = dotStar.exec(chunk)) !== null) {
-      const t = aliasMap.get(m[1].toUpperCase());
+    if (aliasMap.size === 0 || !tokens) return;
+    for (let k = 0; k + 2 < tokens.length; k++) {
+      const head = tokens[k], dot = tokens[k + 1], star = tokens[k + 2];
+      if (!isLexerName(head) || !isDot(dot) || !adjacent(head, dot)) continue;
+      if (star.type !== 'punct' || star.value !== '*' || !adjacent(dot, star)) continue;
+      const t = aliasMap.get(head.text.toUpperCase());
       if (t) starred.add(t);
     }
-    if (bareStar.test(chunk)) {
+    const ranges = codeRanges(chunks[i]);
+    if (ranges && [...chunks[i].matchAll(bareStar)].some(m => isCodeAt(ranges, m.index + m[1].length))) {
       for (const t of aliasMap.values()) starred.add(t);
     }
   });
@@ -5934,6 +5970,9 @@ function augmentResolverWithTempTables(
   };
   return {
     tableByFullName: lookup,
+    // Без базовых метаданных этот резолвер знает только ВТ пакета: прочие источники
+    // для него неизвестны, а не пусты (C24).
+    metadataUnknown: base === undefined || base.metadataUnknown === true,
     // Виртуальный слой пробрасываем как есть — ВТ виртуальных таблиц не имеют.
     virtualTableByFullName: (fullName: string): MetaTable | undefined =>
       base?.virtualTableByFullName?.(fullName),

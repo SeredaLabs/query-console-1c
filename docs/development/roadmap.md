@@ -10,16 +10,15 @@ Canvas phase numbers. The ledger owns status/priority and exit boundaries;
    shipped in 0.1.97. The external grammar oracle (V2) is optional dev tooling,
    not a CI gate and not a prerequisite for Query Core v1: 1C Platform / Query
    Designer is authoritative for platform acceptance and canonicalization.
-2. **Incremental architecture:** migrate A1 lexical consumers one at a time;
-   obtain A2 producer/projection evidence, then unify lifetime/column facts.
+2. **Incremental architecture:** A1 (lexical ownership) is closed
+   (2026-10-11); obtain A2 producer/projection evidence, then unify lifetime/column facts.
    Retain accepted cycle/hooks/synchronous resolver discipline. A3 inference uses
    shared representation and attested types; no independent walker.
 3. **Grammar parity and verification (Query Core v1 gate, V5):** run the
    [grammar parity](grammar-parity.md) phases: attested suites and catalog
    consistency gate, then the catalog from independent sources, fuzz, a
    deduplicated live 1C batch and bounded per-construct fixes. Start C2 (P1)
-   from a bounded token-identity spike and attested RU/EN pairs, after or with
-   A1. Improve V1 provenance/negative coverage and add bounded V3
+   from a bounded token-identity spike and attested RU/EN pairs (A1 is closed). Improve V1 provenance/negative coverage and add bounded V3
    transformation checks. Acquire U1–U3 platform evidence rather than treating
    local tests as platform verdicts. The first phases need no live 1C and can
    accompany architecture slices.

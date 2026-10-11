@@ -109,9 +109,10 @@ No scope/reference index or `partial` completeness state is produced.
 
 Temporary-table facts still have three owners: parser registry, designer store
 and semantic lifetime/schema derivation. Scalar-head versus all-projection schema
-alignment is unfinished. The shared lexer likewise does not mean all raw
-expression scanners have disappeared. [A1/A2/A3](technical-debt.md#architecture)
-own these debts and their dependencies; the existing cycle/hooks/resolver above
+alignment is unfinished. The shared lexer owns Query Core lexical facts (A1,
+closed 2026-10-11); the local scanners that remain are named exceptions in the
+[A1 closure check](audits/a1-closure-2026-10-10.md). [A2/A3](technical-debt.md#architecture)
+own the remaining debts and their dependencies; the existing cycle/hooks/resolver above
 constrain decomposition.
 
 ## Stable contracts and scope

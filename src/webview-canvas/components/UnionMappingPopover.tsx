@@ -2,12 +2,11 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { assembleMembers } from '../../webview/state/queryStore/snapshots';
 import { deriveUnionColumns, unionHasTabSection, unionHasTrailing } from '../../core/query/unionModel';
+import { isIdentifierName } from '../../core/query/sdblLexer';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
 import type { SupportedLocale } from '../../shared/locale';
 import { t } from '../i18n';
 import { TOKENS } from '../theme';
-
-const ALIAS_RE = /^[A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*$/;
 
 const TH: React.CSSProperties = {
   textAlign: 'left',
@@ -97,7 +96,7 @@ export function UnionMappingPopover({
       return rest;
     });
     if (next === alias) return;
-    if (!ALIAS_RE.test(next)) {
+    if (!isIdentifierName(next)) {
       setAliasError(t(locale, 'unionMappingAliasError'));
       return;
     }

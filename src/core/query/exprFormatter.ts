@@ -2262,8 +2262,12 @@ export function renderOperatorRhs(op: string, param: string, leafSpacing = false
  */
 function isPureBalancedList(param: string): boolean {
   if (param[0] !== '(') return false;
+  // A1-6a: only code parentheses count; unknown lexical facts → not a pure list (no flattening).
+  const ranges = codeRanges(param);
+  if (!ranges) return false;
   let depth = 0;
   for (let i = 0; i < param.length; i++) {
+    if (!isCodeAt(ranges, i)) continue;
     const ch = param[i];
     if (ch === '(') depth++;
     else if (ch === ')') {
@@ -2280,10 +2284,22 @@ function isPureBalancedList(param: string): boolean {
  * Подзапрос (`(ВЫБРАТЬ …)`) — не список значений, трактуется как один элемент.
  */
 function valueListIsMulti(param: string): boolean {
-  const inner = param.slice(1, param.lastIndexOf(')'));
-  if (/(^|[^\p{L}\p{N}_])ВЫБРАТЬ([^\p{L}\p{N}_]|$)/u.test(inner)) return false;
+  // A1-6a: the closing parenthesis, ВЫБРАТЬ, nested parentheses and commas count only in
+  // code. Unknown lexical facts → false (one element): the function must answer, so it
+  // fails closed instead of falling back to the raw scan. Product input is a slice of
+  // lexed tokens, so the Designer path does not reach this.
+  const ranges = codeRanges(param);
+  if (!ranges) return false;
+  let close = param.length - 1;
+  while (close > 0 && !(param[close] === ')' && isCodeAt(ranges, close))) close--;
+  const inner = param.slice(1, close);
+  const innerRanges = codeRanges(inner);
+  if (!innerRanges) return false;
+  if (codeWordMatches(inner, innerRanges, /(^|[^\p{L}\p{N}_])ВЫБРАТЬ([^\p{L}\p{N}_]|$)/gu) > 0) return false;
   let depth = 0;
-  for (const ch of inner) {
+  for (let i = 0; i < inner.length; i++) {
+    if (!isCodeAt(innerRanges, i)) continue;
+    const ch = inner[i];
     if (ch === '(') depth++;
     else if (ch === ')') depth--;
     else if (ch === ',' && depth === 0) return true;

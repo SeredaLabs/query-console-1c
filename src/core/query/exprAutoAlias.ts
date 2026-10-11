@@ -2,9 +2,25 @@
 // sdblGenerator.ts, чтобы то же правило читали и генератор (печать `КАК …`), и
 // unionModel.ts (заголовки колонок объединения, псевдонимы колонок ВТ) без
 // расширения зависимости unionModel → sdblGenerator (см. guard в unionModel.test.ts).
+//
+// Лексические факты (что есть параметр, имя, алфавит идентификатора) берутся из
+// лексера (A1), а не из собственных классов символов: конструктор 1С даёт
+// `&Ціна КАК Ціна`, `ПРЕДСТАВЛЕНИЕ(ВТ.Ціна) КАК ЦінаПредставление`.
 
-/** Голый параметр выборки `&Имя` (без вызова/индексации/прочего). */
-export const BARE_PARAM = /^&([A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*)$/u;
+import { tryTokenize, isNameToken, isIdentifierName, isWordToken } from './sdblLexer';
+import type { Token } from './sdblLexer';
+
+/**
+ * Имя голого параметра выборки `&Имя` (без `&`), если всё выражение — один
+ * param-токен, а имя — идентификатор (`&123` не голый параметр с именем).
+ * Иначе (вызов, индексация, комментарий, нелексируемый текст) — `undefined`.
+ */
+export function bareParamName(expression: string): string | undefined {
+  const tokens = tryTokenize(expression, { comments: true });
+  if (!tokens || tokens.length !== 2 || tokens[0].type !== 'param') return undefined;
+  const name = tokens[0].text.slice(1);
+  return isIdentifierName(name) ? name : undefined;
+}
 
 /**
  * Автопсевдоним произвольного поля выборки без явного `КАК`. Конструктор 1С
@@ -13,8 +29,8 @@ export const BARE_PARAM = /^&([A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*
  * варианта `Поле{n}` инкрементирует переданный счётчик.
  */
 export function exprAutoAlias(expression: string, next: () => string): string {
-  const m = BARE_PARAM.exec(expression.trim());
-  if (m) return m[1];
+  const param = bareParamName(expression);
+  if (param !== undefined) return param;
   const repr = representationAutoAlias(expression);
   return repr ?? next();
 }
@@ -28,11 +44,25 @@ export function exprAutoAlias(expression: string, next: () => string): string {
  * Возвращает `undefined`, если выражение не подходит. Фаза 6.16.73.
  */
 export function representationAutoAlias(expression: string): string | undefined {
-  const m = /^(?:ПРЕДСТАВЛЕНИЕ|ПРЕДСТАВЛЕНИЕССЫЛКИ)\s*\(\s*([A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_.]*)\s*\)$/iu
-    .exec(expression.trim());
-  if (!m) return undefined;
-  const lastSeg = m[1].split('.').pop();
-  return lastSeg ? `${lastSeg}Представление` : undefined;
+  const tokens = tryTokenize(expression, { comments: true });
+  if (!tokens || !isWordToken(tokens[0], 'ПРЕДСТАВЛЕНИЕ', 'ПРЕДСТАВЛЕНИЕССЫЛКИ')) return undefined;
+  if (!isPunct(tokens[1], '(')) return undefined;
+  let i = 2;
+  let lastSeg: string;
+  for (;;) {
+    const seg = tokens[i];
+    if (!isNameToken(seg)) return undefined;
+    lastSeg = seg.text;
+    i++;
+    if (!isPunct(tokens[i], '.')) break;
+    i++;
+  }
+  if (!isPunct(tokens[i], ')') || tokens[i + 1]?.type !== 'eof') return undefined;
+  return `${lastSeg}Представление`;
+}
+
+function isPunct(t: Token | undefined, value: string): boolean {
+  return t?.type === 'punct' && t.value === value;
 }
 
 /**

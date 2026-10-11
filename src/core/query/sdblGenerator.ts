@@ -9,7 +9,7 @@ import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpre
 import { splitArgComments } from './argComments';
 import { tokenize, tryTokenize, codeRanges, isCodeAt, isWordToken, replaceInCodeRanges } from './sdblLexer';
 import { parseEmptyTableColumns } from './expressionSyntaxCheck';
-import { BARE_PARAM, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
+import { bareParamName, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
 
 // Регистрируем в exprFormatter канонический ре-рендер инлайн-подзапроса членства
@@ -661,21 +661,26 @@ function splitTopLevelBoolConjuncts(expr: string): { op: string; text: string }[
  * выражение НЕ целиком в одной внешней паре скобок — возвращаем true.
  */
 function bodyHasUnwrappedBoolOr(inner: string): boolean {
-  const secRe = /(?:^|[^\p{L}\p{N}_&])(ГДЕ|ИМЕЮЩИЕ)(?![\p{L}\p{N}_])/gu;
-  const nextSec = /(?:^|[^\p{L}\p{N}_&])(?:СГРУППИРОВАТЬ|ИМЕЮЩИЕ|УПОРЯДОЧИТЬ|ИНДЕКСИРОВАТЬ|ОБЪЕДИНИТЬ|ИТОГИ|ГДЕ)(?![\p{L}\p{N}_])/u;
-  let m: RegExpExecArray | null;
-  while ((m = secRe.exec(inner)) !== null) {
-    let seg = inner.slice(m.index + m[0].length);
-    const nm = nextSec.exec(seg);
+  // A1: section words and the top-level ИЛИ count only in code (the same patterns as
+  // before); unknown lexical facts → no, so a canonical body keeps the text path.
+  const ranges = codeRanges(inner);
+  if (!ranges) return false;
+  const inCode = (m: RegExpExecArray, from: number): boolean => isCodeAt(ranges, from + m.index + m[0].search(/\p{L}/u));
+  const nextSec = /(?:^|[^\p{L}\p{N}_&])(?:СГРУППИРОВАТЬ|ИМЕЮЩИЕ|УПОРЯДОЧИТЬ|ИНДЕКСИРОВАТЬ|ОБЪЕДИНИТЬ|ИТОГИ|ГДЕ)(?![\p{L}\p{N}_])/gu;
+  for (const m of inner.matchAll(/(?:^|[^\p{L}\p{N}_&])(ГДЕ|ИМЕЮЩИЕ)(?![\p{L}\p{N}_])/gu)) {
+    if (!inCode(m, 0)) continue;
+    const from = m.index + m[0].length;
+    let seg = inner.slice(from);
+    const nm = [...seg.matchAll(nextSec)].find(x => inCode(x, from));
     if (nm) seg = seg.slice(0, nm.index);
+    const at = from + (seg.length - seg.trimStart().length);
     seg = seg.trim();
     if (!seg) continue;
-    // Верхнеуровневый ИЛИ (depth==0, вне строк)?
-    let depth = 0, inStr = false, topOr = false;
+    // Верхнеуровневый ИЛИ (depth==0, в коде)?
+    let depth = 0, topOr = false;
     for (let i = 0; i < seg.length; i++) {
+      if (!isCodeAt(ranges, at + i)) continue;
       const ch = seg[i];
-      if (inStr) { if (ch === '"') inStr = false; continue; }
-      if (ch === '"') { inStr = true; continue; }
       if (ch === '(') { depth++; continue; }
       if (ch === ')') { depth--; continue; }
       if (depth === 0 && (ch === 'И' || ch === 'и') && !blocksKeywordStart(seg[i - 1]) && /^ИЛИ(?![\p{L}\p{N}_])/iu.test(seg.slice(i))) { topOr = true; break; }
@@ -1422,8 +1427,10 @@ function expandAndChainConjuncts(conditions: NonNullable<Join['conditions']>): N
     // C6: ИЛИ only inside nested parentheses does not block the split — such a
     // conjunct (`(a ИЛИ b) И c`, from a parenthesized group) is the same AND chain,
     // and reopening split it and wrapped its parts anyway. И is associative.
+    // A1-6d: ВЫБОР counts only in code; unknown lexical facts → no split.
+    const ranges = codeRanges(e);
     if (c.custom && e && !hasLineComment(e) && hasTopLevelBooleanOp(e) === true && hasTopLevelOr(e) === false &&
-        !/(^|[^\p{L}\p{N}_&])ВЫБОР([^\p{L}\p{N}_]|$)/iu.test(e)) {
+        ranges && !hasCodeMatch(e, ranges, /(^|[^\p{L}\p{N}_&])ВЫБОР([^\p{L}\p{N}_]|$)/giu)) {
       const parts = splitTopLevelAnd(e);
       if (parts.length > 1) {
         // Помечаем пьесы как полученные расщеплением И-цепочки (фаза 6.16.78):
@@ -1900,7 +1907,7 @@ function buildQueryBlock(
 
 /** Выражение — это ТОЛЬКО голый параметр `&Имя` (для отбраковки в группировке). */
 function isBareParamExpr(expression: string | undefined): boolean {
-  return expression !== undefined && BARE_PARAM.test(expression.trim());
+  return expression !== undefined && bareParamName(expression) !== undefined;
 }
 
 // Константное выражение группировки, которое конструктор 1С ОТБРАСЫВАЕТ из
