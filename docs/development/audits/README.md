@@ -17,7 +17,7 @@ This is an indexed historical archive, not a second status ledger.
 
 | Date | Audit / scope | Result → debt/fix | Disposition |
 |---|---|---|---|
-| 2026-10-10 | [A1 closure check](a1-closure-2026-10-10.md) | Identifier names owned by the lexer (live 1C runtime + native Designer evidence for `&Ціна`, `&Gültig`, `ПРЕДСТАВЛЕНИЕ(ВТ.Ціна)`); 17 scanners KEEP; exceptions listed; R4–R7, R11, R12, N1, N3, N4 given ledger rows | A1 OPEN: `inferUndefinedTempTables` identifier class (with R5), then `parseStar` |
+| 2026-10-10 | [A1 closure check](a1-closure-2026-10-10.md) | Identifier names owned by the lexer (live 1C runtime + native Designer evidence for `&Ціна`, `&Gültig`, `ПРЕДСТАВЛЕНИЕ(ВТ.Ціна)`); 17 scanners KEEP; exceptions listed; R4–R7, R11, R12, N1, N3, N4 given ledger rows | A1 OPEN on 2026-10-10; addendum 2026-10-11: inference (R5) and `parseStar` migrated, C24 data loss mitigated, **A1 CLOSED** |
 | 2026-10-04 | [A1 reconciliation and re-plan](a1-reconciliation-2026-10-04.md) | 321 sites re-mapped after C25: 30 still needed in 4 slices, exit criteria; 7 separate findings R1–R7 (R1–R3 literal rewrites of the C25 class) | PLAN; no code changed; R1–R3 reopened C25; R4–R7 in the ledger since 2026-10-10 |
 | 2026-10-04 | [A1 lexical ownership audit](a1-lexical-audit-2026-10-04.md) | 321 lexical sites classified; 9 confirmed literal-content rewrites (proposed C25); migration plan | AUDIT; no code changed |
 | 2026-10-04 | [SDBL grammar parity proposal](sdbl-grammar-parity-proposal-2026-10-04.md) | Query Core v1 gate: 0 known platform-valid gaps across a reviewed construct catalog with provenance and coverage confidence; scope decisions accepted | PROPOSED; not started, decisions not yet in ledger |
