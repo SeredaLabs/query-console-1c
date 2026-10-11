@@ -1180,14 +1180,21 @@ function renderArbitraryConjunct(expr: string, depth = 0, caseEndBase?: number, 
   // в конце первой строки ЛИБО разработчик отбил его на следующую строку — `поле =\n
   // ВЫБОР`, тогда reindentLeafCase сам сошьёт `= ВЫБОР`) и в теле РОВНО ОДИН КОНЕЦ —
   // это исключает CASE-цепочки (`ВЫБОР…КОНЕЦ + ВЫБОР…КОНЕЦ`) и ВЫРАЗИТЬ-обёртки.
-  if (caseEndBase !== undefined && body.includes('\n')) {
+  // R13: КОНЕЦ / ВЫБОР / the comparison count only in code — a literal line ending with
+  // ВЫБОР or a literal КОНЕЦ used to switch the reflow. Unknown lexical facts → no reflow.
+  const bodyRanges = caseEndBase !== undefined && body.includes('\n') ? codeRanges(body) : undefined;
+  if (bodyRanges) {
     const bodyLines = body.split('\n');
     const firstLine = bodyLines[0];
-    const secondLine = (bodyLines.find((l, i) => i > 0 && l.trim() !== '') ?? '');
-    const oneCase = (body.match(/(^|[^\p{L}\p{N}_&])КОНЕЦ(?=[^\p{L}\p{N}_]|$)/gu) ?? []).length === 1;
-    const opensCase = /(^|[^\p{L}\p{N}_&])ВЫБОР\s*$/u.test(firstLine) ||
-      (/[=<>]\s*$/u.test(firstLine) && /^[\t ]*ВЫБОР(?:[^\p{L}\p{N}_]|$)/u.test(secondLine));
-    if (oneCase && opensCase) {
+    const secondIdx = bodyLines.findIndex((l, i) => i > 0 && l.trim() !== '');
+    const secondLine = secondIdx > 0 ? bodyLines[secondIdx] : '';
+    const secondStart = secondIdx > 0 ? bodyLines.slice(0, secondIdx).join('\n').length + 1 : 0;
+    const codeCount = (text: string, offset: number, re: RegExp): number =>
+      [...text.matchAll(re)].filter(m => isCodeAt(bodyRanges, offset + (m.index ?? 0) + m[0].search(/\p{L}|[=<>]/u))).length;
+    const oneCase = codeCount(body, 0, /(^|[^\p{L}\p{N}_&])КОНЕЦ(?=[^\p{L}\p{N}_]|$)/gu) === 1;
+    const opensCase = codeCount(firstLine, 0, /(^|[^\p{L}\p{N}_&])ВЫБОР\s*$/gu) > 0 ||
+      (codeCount(firstLine, 0, /[=<>]\s*$/gu) > 0 && codeCount(secondLine, secondStart, /^[\t ]*ВЫБОР(?:[^\p{L}\p{N}_]|$)/gu) > 0);
+    if (oneCase && opensCase && caseEndBase !== undefined) {
       body = reindentLeafCase(body, caseEndBase);
     }
   }
