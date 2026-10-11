@@ -33,6 +33,7 @@ import type { Token } from './sdblLexer';
 import { isStructurallyValidExpression, parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { resolveFieldPath } from './fieldPathResolver';
 import { deriveTempTableLifetimes, visibleTempTableAt } from './tempTableSemantics';
+import { isWildcardExpression } from './expandStarFields';
 
 const EMPTY_METADATA_RESOLVER: MetadataResolver = {
   tableByFullName: () => undefined,
@@ -361,6 +362,16 @@ export function validateBatchSemantics(
     }
   };
 
+  // C24: a wildcard with an alias (`* КАК Поле1`, `Т.* КАК Х`) is a platform syntax
+  // error (СхемаЗапроса: `Syntax error "КАК"`), so it is neither opened nor applied.
+  const checkWildcardAlias = (model: QueryModel): void => {
+    for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
+      if (f.alias !== undefined && isWildcardExpression(f.expression)) {
+        errors.push({ message: `Звёздочка "${f.expression!.trim()}" не может иметь псевдоним "${f.alias}"` });
+      }
+    }
+  };
+
   const checkDuplicateAliases = (model: QueryModel): void => {
     const seen = new Map<string, number>();
     const reported = new Set<string>();
@@ -436,6 +447,7 @@ export function validateBatchSemantics(
       else checkTable(t);
     }
     checkDuplicateAliases(model);
+    checkWildcardAlias(model);
     checkDuplicateSourceAliases(model);
     checkFieldPaths(model, topLevel, statementIndex);
     walkConditions(model.conditions, statementIndex);

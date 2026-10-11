@@ -46,31 +46,31 @@ describe('A/C/E/F: a wildcard over a real table without metadata is kept', () =>
   it.each(['Т', 'Ціна', 'Ґа', 'Gültig'])('A: after ПОМЕСТИТЬ, alias %s', alias => {
     const out = gen(`${PLACE}ВЫБРАТЬ ${alias}.* ИЗ Справочник.Валюты КАК ${alias}`);
     expect(statements(out)).toHaveLength(2);
-    expect(last(out)).toContain(`\t${alias}.* КАК Поле1\n`);
+    expect(last(out)).toContain(`\t${alias}.*\n`);
   });
 
   it('A: bare * after ПОМЕСТИТЬ', () => {
-    expect(last(gen(`${PLACE}ВЫБРАТЬ * ИЗ Справочник.Валюты`))).toContain('\t* КАК Поле1\n');
+    expect(last(gen(`${PLACE}ВЫБРАТЬ * ИЗ Справочник.Валюты`))).toContain('\t*\n');
   });
 
   it('C: inferred temp table and a real table in one batch', () => {
     const out = gen(`${INFERRED}ВЫБРАТЬ Т.* ИЗ Справочник.Валюты КАК Т`);
     expect(statements(out)).toHaveLength(3);
-    expect(last(out)).toContain('\tТ.* КАК Поле1\n');
+    expect(last(out)).toContain('\tТ.*\n');
     expect(statements(out)[1]).toContain('В.Код КАК Код'); // the inferred star still expands
   });
 
   it('E: mixed projection keeps Т.* and the explicit field, in order', () => {
     const out = last(gen(`${INFERRED}ВЫБРАТЬ Т.*, Т.Код КАК К2 ИЗ Справочник.Валюты КАК Т`));
-    expect(out).toContain('\tТ.* КАК Поле1,\n\tТ.Код КАК К2\n');
+    expect(out).toContain('\tТ.*,\n\tТ.Код КАК К2\n');
   });
 
   it('bare * over a real table and a temp table is not partially expanded', () => {
-    expect(last(gen(`${PLACE}ВЫБРАТЬ * ИЗ Справочник.Валюты КАК Т, ВТ КАК В`))).toContain('\t* КАК Поле1\n');
+    expect(last(gen(`${PLACE}ВЫБРАТЬ * ИЗ Справочник.Валюты КАК Т, ВТ КАК В`))).toContain('\t*\n');
   });
 
   it('attribute star without metadata is kept', () => {
-    expect(last(gen(`${PLACE}ВЫБРАТЬ Т.Ссылка.* ИЗ Справочник.Валюты КАК Т`))).toContain('\tТ.Ссылка.* КАК Поле1\n');
+    expect(last(gen(`${PLACE}ВЫБРАТЬ Т.Ссылка.* ИЗ Справочник.Валюты КАК Т`))).toContain('\tТ.Ссылка.*\n');
   });
 });
 
@@ -84,7 +84,7 @@ describe('B/H: with a base resolver the behaviour is unchanged', () => {
 
   it('H: same text, without and with metadata', () => {
     const text = `${PLACE}ВЫБРАТЬ * ИЗ Справочник.Валюты КАК Т, ВТ КАК В`;
-    expect(last(gen(text))).toContain('\t* КАК Поле1\n');
+    expect(last(gen(text))).toContain('\t*\n');
     const known = last(gen(text, true));
     expect(known).toContain('\tТ.Ссылка КАК Ссылка,\n');
     expect(known).toContain('\tВ.А КАК А\n');

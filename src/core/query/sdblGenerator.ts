@@ -10,6 +10,7 @@ import { splitArgComments } from './argComments';
 import { tokenize, tryTokenize, codeRanges, isCodeAt, isWordToken, replaceInCodeRanges } from './sdblLexer';
 import { parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { bareParamName, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
+import { isWildcardExpression } from './expandStarFields';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
 
 // Регистрируем в exprFormatter канонический ре-рендер инлайн-подзапроса членства
@@ -2084,6 +2085,12 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
   };
 
   const fieldLine = (f: SelectedField): string => {
+    // C24: an unexpanded wildcard is printed as written, never with an auto alias
+    // (`* КАК Поле1` is a platform syntax error). An explicit alias is kept and the
+    // Apply check rejects it.
+    if (f.expression && f.alias === undefined && isWildcardExpression(f.expression)) {
+      return `\t${f.expression.trim()}`;
+    }
     if (f.expression) {
       // В подзапросе-операнде `В` (suppressAutoAlias) конструктор НЕ добавляет
       // автопсевдоним произвольному полю выборки (`1`/`ИСТИНА` остаются голыми);

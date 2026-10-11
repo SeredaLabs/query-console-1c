@@ -6,6 +6,7 @@ import { synthesizedFieldAlias } from './queryModelUtils';
 // unionModel → sdblGenerator, обоснованная (не misplaced logic).
 import { fieldExpr } from './sdblGenerator';
 import { createExprAutoAliaser } from './exprAutoAlias';
+import { isWildcardExpression } from './expandStarFields';
 
 /** Один запрос-участник объединения. */
 export interface UnionMember {
@@ -79,7 +80,8 @@ export function fieldAlias(field: SelectedField, model?: QueryModel): string {
 export function selectColumnAliases(fields: SelectedField[], model?: QueryModel): string[] {
   const reserved = [...fields, ...(model?.trailingFields ?? [])].flatMap(f => (f.alias !== undefined ? [f.alias] : []));
   const autoAlias = createExprAutoAliaser(reserved);
-  return fields.map(f => (f.expression && f.alias === undefined ? autoAlias(f.expression) : fieldAlias(f, model)));
+  // An unexpanded wildcard has no column alias and takes no `Поле{n}` number (C24).
+  return fields.map(f => (f.expression && f.alias === undefined && !isWildcardExpression(f.expression) ? autoAlias(f.expression) : fieldAlias(f, model)));
 }
 
 /**
