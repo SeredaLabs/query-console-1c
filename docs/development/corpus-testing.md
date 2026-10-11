@@ -34,7 +34,13 @@ validator environment; it is not the ordinary CI gate.
 `npm run probe:error -- <name.txt.json> | --all` reproduces configured error files
 and prints diffs. `npm run oracle:reprobe -- <name.txt.json> | --all` requests live
 `validate_query` using the configured MCP endpoint; credentials/environment and
-metadata are prerequisites. `--patch-golden` intentionally changes expected
+metadata are prerequisites. The endpoint comes from `MCP_URL` (else `.mcp.json`
+`1c-md`); a server that requires authentication takes the full header value from
+`MCP_AUTHORIZATION` in the local `.env` (never committed, never logged). The
+client reads the tool schema and sends `query` when the server declares it,
+otherwise the original `queryText`; the error text may come as `message` or
+`error`, and a valid answer without `query_text` is an error, not an empty
+canonical text. `--patch-golden` intentionally changes expected
 output and must follow the review policy below, never serve as automatic repair.
 Do not put private queries or credentials in this repository.
 

@@ -51,7 +51,7 @@ async function main(): Promise<void> {
     try { ours = generateBatch(parseBatch(input, resolver)); }
     catch (e) { ours = `<<EXC ${e instanceof Error ? e.message : String(e)}>>`; }
 
-    const r = await validateQuery(input, url);
+    const r = await validateQuery(input, url, { authorization: cfg.mcpAuthorization });
     if (!r.valid) {
       console.log(`\n=== ${file}\n  LIVE: INVALID (${r.message ?? ''})`);
       continue;

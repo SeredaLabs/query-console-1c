@@ -15,6 +15,8 @@ export interface CorpusConfig {
   queryCorpusDir: string;
   errorsDir: string;
   mcpUrl?: string;
+  /** Заголовок Authorization для MCP (`MCP_AUTHORIZATION`); секрет, не логировать. */
+  mcpAuthorization?: string;
 }
 
 /** Разобрать содержимое `.env`: пропустить пустые строки и `#`-комментарии, KEY=VALUE, снять кавычки. */
@@ -46,6 +48,7 @@ const DEFAULTS: Record<string, string> = {
   QUERY_CORPUS_DIR: 'tmp/query1c',
   ERRORS_DIR: 'tmp/corpus-errors',
   MCP_URL: '',
+  MCP_AUTHORIZATION: '',
 };
 
 export function getConfig(root = process.cwd()): CorpusConfig {
@@ -58,6 +61,7 @@ export function getConfig(root = process.cwd()): CorpusConfig {
   };
 
   const mcpRaw = resolveKey('MCP_URL').trim();
+  const authRaw = resolveKey('MCP_AUTHORIZATION').trim();
 
   return {
     metaQueriesDir: path.resolve(root, resolveKey('META_QUERIES_DIR')),
@@ -66,6 +70,7 @@ export function getConfig(root = process.cwd()): CorpusConfig {
     queryCorpusDir: path.resolve(root, resolveKey('QUERY_CORPUS_DIR')),
     errorsDir: path.resolve(root, resolveKey('ERRORS_DIR')),
     mcpUrl: mcpRaw === '' ? undefined : mcpRaw,
+    mcpAuthorization: authRaw === '' ? undefined : authRaw,
   };
 }
 

@@ -1,6 +1,11 @@
 /**
- * Тонкий MCP-over-HTTP клиент для инструмента 1c-md validate_query.
+ * Тонкий MCP-over-HTTP клиент для инструмента validate_query.
  * Только разработка/тесты — в бандл расширения не входит.
+ *
+ * Два контракта сервера: исходный `1c-md` (аргумент `queryText`, ошибка в
+ * `message`) и сервер на базе 1С (аргумент `query`, ошибка в `error`, BasicAuth).
+ * Имя аргумента берётся из схемы инструмента (`tools/list`), заголовок
+ * авторизации — из конфигурации (`MCP_AUTHORIZATION`), в логи он не попадает.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -34,29 +39,60 @@ export function parseValidateResponse(raw: any): ValidateQueryResult {
   const text = result?.content?.[0]?.text;
   if (typeof text !== 'string') throw new Error('Пустой content в ответе MCP');
   const inner = JSON.parse(text);
+  const valid = Boolean(inner.valid);
+  // Валидный ответ без канонического текста не годится в эталон: пустой
+  // query_text был бы записан в golden как текст конструктора.
+  if (valid && typeof inner.query_text !== 'string') throw new Error('MCP не вернул query_text для валидного запроса');
   return {
-    valid: Boolean(inner.valid),
-    message: String(inner.message ?? ''),
+    valid,
+    message: String(inner.message ?? inner.error ?? ''),
     query_text: normalizeQueryText(String(inner.query_text ?? '')),
   };
 }
 
+export interface McpOptions {
+  /** Значение заголовка Authorization (например, `Basic …`); без него — без заголовка. */
+  authorization?: string;
+}
+
 let nextId = 1;
 
-/** Вызвать validate_query через MCP HTTP. */
-export async function validateQuery(text: string, url = readMcpUrl()): Promise<ValidateQueryResult> {
-  const body = {
-    jsonrpc: '2.0',
-    id: nextId++,
-    method: 'tools/call',
-    params: { name: 'validate_query', arguments: { queryText: text } },
-  };
+async function rpc(url: string, method: string, params: unknown, opts: McpOptions): Promise<any> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' };
+  if (opts.authorization) headers.Authorization = opts.authorization;
   const resp = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
-    body: JSON.stringify(body),
+    headers,
+    body: JSON.stringify({ jsonrpc: '2.0', id: nextId++, method, params }),
   });
-  if (!resp.ok) throw new Error(`HTTP ${resp.status} от MCP`);
-  const raw = await resp.json();
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} от MCP${resp.status === 401 ? ' (проверьте MCP_AUTHORIZATION)' : ''}`);
+  return resp.json();
+}
+
+const queryArgByUrl = new Map<string, Promise<string>>();
+
+/**
+ * Имя аргумента текста запроса по схеме validate_query: `query`, если сервер его
+ * объявляет, иначе исходное `queryText` (в том числе когда `tools/list` недоступен).
+ */
+export function queryArgumentName(toolsListResponse: any): string {
+  const tools: any[] = toolsListResponse?.result?.tools ?? [];
+  const props = tools.find((t) => t?.name === 'validate_query')?.inputSchema?.properties;
+  return props && typeof props === 'object' && 'query' in props ? 'query' : 'queryText';
+}
+
+function queryArgument(url: string, opts: McpOptions): Promise<string> {
+  let arg = queryArgByUrl.get(url);
+  if (!arg) {
+    arg = rpc(url, 'tools/list', {}, opts).then(queryArgumentName, () => 'queryText');
+    queryArgByUrl.set(url, arg);
+  }
+  return arg;
+}
+
+/** Вызвать validate_query через MCP HTTP. */
+export async function validateQuery(text: string, url = readMcpUrl(), opts: McpOptions = {}): Promise<ValidateQueryResult> {
+  const arg = await queryArgument(url, opts);
+  const raw = await rpc(url, 'tools/call', { name: 'validate_query', arguments: { [arg]: text } }, opts);
   return parseValidateResponse(raw);
 }
