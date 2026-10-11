@@ -31,9 +31,9 @@ export function parseDocument(objectEl: any): ParsedObject | null {
     std('Номер', [num]);
   }
   std('Дата', [{ kind: 'Дата', dateFractions: 'DateTime' }]);
-  if (posting === 'Allow') {
-    std('Проведен', [{ kind: 'Булево' }]);
-  }
+  // C29: `Проведен` is a field of every document, also with `Posting = Deny`
+  // (platform, SL_kza 2026-10-11); `posting` stays a property only.
+  std('Проведен', [{ kind: 'Булево' }]);
 
   const { attributes, tabularSections } = parseChildObjects(objectEl);
   fields.push(...attributes);

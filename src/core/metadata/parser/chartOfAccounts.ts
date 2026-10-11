@@ -12,6 +12,7 @@ export function parseChartOfAccounts(objectEl: any): ParsedObject | null {
 
   const codeLength = Number(nodeText(childByLocalName(props, 'CodeLength')) || '0');
   const descriptionLength = Number(nodeText(childByLocalName(props, 'DescriptionLength')) || '0');
+  const orderLength = Number(nodeText(childByLocalName(props, 'OrderLength')) || '0');
 
   const maxExtDimensionCount = Number(nodeText(childByLocalName(props, 'MaxExtDimensionCount')) || '0');
   const extRaw = nodeText(childByLocalName(props, 'ExtDimensionTypes')); // 'ChartOfCharacteristicTypes.ВидыСубконто'
@@ -30,6 +31,11 @@ export function parseChartOfAccounts(objectEl: any): ParsedObject | null {
   }
   if (descriptionLength > 0) {
     std('Наименование', [{ kind: 'Строка', length: descriptionLength }]);
+  }
+  // C29: `Порядок` after `Наименование` (platform: ПланСчетов.Хозрасчетный). Its
+  // absence with `OrderLength = 0` follows the XML and is not yet confirmed on the platform.
+  if (orderLength > 0) {
+    std('Порядок', [{ kind: 'Строка', length: orderLength }]);
   }
   std('Вид', [{ kind: 'unknown' }]);
   std('Забалансовый', [{ kind: 'Булево' }]);
