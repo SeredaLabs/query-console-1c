@@ -50,7 +50,7 @@ import type {
 
 import { defaultTableAlias, accountingPositionKeys } from './queryModel';
 import { renderOperatorRhs, needsFormatting, isRootNotGroup, normalizeLeafCase } from './exprFormatter';
-import { tokenize, tryTokenize, isWordToken, replaceInCodeRanges, codeRanges, isCodeAt } from './sdblLexer';
+import { tokenize, tryTokenize, isWordToken, replaceInCodeRanges, codeRanges, isCodeAt, isNameToken as isLexerName } from './sdblLexer';
 import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
 import { bareParamName } from './exprAutoAlias';
@@ -5763,7 +5763,9 @@ function parseBatchInner(
  *   - НЕ разрешаются базовым резолвером (не реальная/виртуальная таблица метаданных);
  *   - имеют хотя бы одну выведенную колонку (есть ссылки `<алиас>.<кол>`).
  * Колонки = односегментные ссылки `<алиас>.<кол>` на псевдонимы такой ВТ, собранные по
- * ВСЕМУ СЫРОМУ ТЕКСТУ пакета в порядке первого появления, дедуп без учёта регистра.
+ * всему пакету в порядке первого появления, дедуп без учёта регистра. Ссылки и звёзды
+ * берутся из токенов лексера (A1): имена — по его алфавиту, комментарии и литералы
+ * колонок не создают (R5). Нелексируемый оператор ничего не выводит.
  */
 function inferUndefinedTempTables(
   chunks: string[],
@@ -5812,22 +5814,29 @@ function inferUndefinedTempTables(
   const firstRefChunk = new Map<string, number>(); // ИМЯ_ВТ(upper) → индекс первого оператора-ссылки
   for (const c of candidates) { cols.set(c, []); seen.set(c, new Set()); }
 
-  const ref = /([A-Za-zА-Яа-яЁё_][\wА-Яа-яЁё]*)\.([A-Za-zА-Яа-яЁё_][\wА-Яа-яЁё]*)(\.)?/gu;
-  chunks.forEach((chunk, i) => {
+  // Токены кода оператора (без комментариев; строки — свои токены). Части пути идут
+  // вплотную (`Т.Код`, не `Т . Код`), как в прежнем шаблоне.
+  const chunkTokens = chunks.map(c => tryTokenize(c));
+  const adjacent = (a: Token, b: Token | undefined): boolean => b !== undefined && b.pos === a.pos + a.text.length;
+  const isDot = (t: Token | undefined): boolean => t?.type === 'punct' && t.value === '.';
+  chunkTokens.forEach((tokens, i) => {
     const aliasMap = aliasToTempPerChunk[i];
-    if (aliasMap.size === 0) return;
-    let mt: RegExpExecArray | null;
-    ref.lastIndex = 0;
-    while ((mt = ref.exec(chunk)) !== null) {
-      const tempName = aliasMap.get(mt[1].toUpperCase());
+    if (aliasMap.size === 0 || !tokens) return;
+    for (let k = 0; k < tokens.length; k++) {
+      const head = tokens[k], dot = tokens[k + 1], col = tokens[k + 2];
+      if (!isLexerName(head) || !isDot(dot) || !adjacent(head, dot) || !isLexerName(col) || !adjacent(dot, col)) continue;
+      const multi = isDot(tokens[k + 3]) && adjacent(col, tokens[k + 3]);
+      // Следующий поиск — после `<алиас>.<кол>[.]`, как продолжение прежнего шаблона.
+      k += multi ? 3 : 2;
+      const tempName = aliasMap.get(head.text.toUpperCase());
       if (!tempName) continue;
       if (!firstRefChunk.has(tempName)) firstRefChunk.set(tempName, i);
-      if (mt[3]) continue; // `<алиас>.<кол>.<...>` — многосегментная, не колонка ВТ
-      const colUp = mt[2].toUpperCase();
+      if (multi) continue; // `<алиас>.<кол>.<...>` — многосегментная, не колонка ВТ
+      const colUp = col.text.toUpperCase();
       const s = seen.get(tempName)!;
       if (s.has(colUp)) continue;
       s.add(colUp);
-      cols.get(tempName)!.push(mt[2]);
+      cols.get(tempName)!.push(col.text);
     }
   });
 
@@ -5836,20 +5845,21 @@ function inferUndefinedTempTables(
   // канонизацию, квалификацию). `Алиас.*` атрибутируется своему псевдониму;
   // голая `*` — всем ВТ-кандидатам-источникам своего оператора.
   const starred = new Set<string>();
-  // Сырой токен звезды: голая `*` (поле выборки) или `<алиас>.*`. Перед `*` —
-  // граница (запятая/перенос/«ВЫБРАТЬ»/скобка), чтобы не путать с умножением.
-  const dotStar = /([A-Za-zА-Яа-яЁё_][\wА-Яа-яЁё]*)\.\*/gu;
+  // Голая `*` (поле выборки): перед ней граница (запятая/перенос/«ВЫБРАТЬ»/скобка),
+  // после — запятая или конец строки, чтобы не путать с умножением; сама `*` — в коде.
   const bareStar = /(^|[,(\n\r\t ])\*(?=\s*(?:,|$|\r|\n))/gmu;
-  chunks.forEach((chunk, i) => {
+  chunkTokens.forEach((tokens, i) => {
     const aliasMap = aliasToTempPerChunk[i];
-    if (aliasMap.size === 0) return;
-    let m: RegExpExecArray | null;
-    dotStar.lastIndex = 0;
-    while ((m = dotStar.exec(chunk)) !== null) {
-      const t = aliasMap.get(m[1].toUpperCase());
+    if (aliasMap.size === 0 || !tokens) return;
+    for (let k = 0; k + 2 < tokens.length; k++) {
+      const head = tokens[k], dot = tokens[k + 1], star = tokens[k + 2];
+      if (!isLexerName(head) || !isDot(dot) || !adjacent(head, dot)) continue;
+      if (star.type !== 'punct' || star.value !== '*' || !adjacent(dot, star)) continue;
+      const t = aliasMap.get(head.text.toUpperCase());
       if (t) starred.add(t);
     }
-    if (bareStar.test(chunk)) {
+    const ranges = codeRanges(chunks[i]);
+    if (ranges && [...chunks[i].matchAll(bareStar)].some(m => isCodeAt(ranges, m.index + m[1].length))) {
       for (const t of aliasMap.values()) starred.add(t);
     }
   });
