@@ -49,7 +49,7 @@ export async function run(): Promise<void> {
       const txtPath = path.join(corpusDir, file);
       const input = normInput(fs.readFileSync(txtPath, 'utf8'));
       try {
-        const r = await validateQuery(input, url);
+        const r = await validateQuery(input, url, { authorization: cfg.mcpAuthorization });
         if (r.valid) {
           out.write(JSON.stringify({ file, valid: true, input, query_text: normalizeQueryText(r.query_text) }) + '\n');
           ok++;
