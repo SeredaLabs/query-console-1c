@@ -28,7 +28,7 @@ import type { QueryDocument } from './unionModel';
 import { orderedSelectElements } from './unionModel';
 import type { QueryModel, SelectedTable, Condition, VirtualParams } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
-import { tokenize } from './sdblLexer';
+import { tokenize, tryTokenize } from './sdblLexer';
 import type { Token } from './sdblLexer';
 import { isStructurallyValidExpression, parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { resolveFieldPath } from './fieldPathResolver';
@@ -604,6 +604,20 @@ function periodByDateExpressions(periodBy: string): string[] {
   return args.slice(1);
 }
 
+/** `text` without a trailing top-level `КАК <имя>` (by lexer tokens); unlexable text as is. */
+function withoutTailAlias(text: string): string {
+  const tokens = tryTokenize(text);
+  if (!tokens || tokens.length < 3) return text;
+  const as = tokens[tokens.length - 3], name = tokens[tokens.length - 2];
+  if (as.type !== 'keyword' || as.value !== 'КАК' || (name.type !== 'ident' && name.type !== 'keyword')) return text;
+  let depth = 0;
+  for (const t of tokens.slice(0, -3)) {
+    if (t.type === 'punct' && t.value === '(') depth++;
+    else if (t.type === 'punct' && t.value === ')') depth--;
+  }
+  return depth === 0 ? text.slice(0, as.pos).trimEnd() : text;
+}
+
 export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCustomHit[] {
   const hits: MalformedCustomHit[] = [];
   const check = (text: string | undefined, kind: MalformedCustomHit['kind']): void => {
@@ -676,7 +690,9 @@ export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCus
       }
     }
     for (const f of model.totals?.totalFields ?? []) {
-      if (f.expression !== undefined) check(f.expression, 'totalField');
+      // A complex ИТОГИ aggregate keeps its `КАК <псевдоним>` (platform: `ВЫБОР … КОНЕЦ
+      // КАК Код`); the alias is not part of the expression being checked.
+      if (f.expression !== undefined) check(withoutTailAlias(f.expression), 'totalField');
     }
     for (const f of model.order?.fields ?? []) {
       if (f.expression !== undefined) check(f.expression, 'orderField');
