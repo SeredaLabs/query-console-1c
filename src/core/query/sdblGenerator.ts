@@ -1407,12 +1407,19 @@ export function splitTopLevelAnd(expr: string): string[] {
   return parts;
 }
 
-/** Снимает ровно один полностью охватывающий слой скобок `(…)`, если он есть. */
-function stripOneEnclosingParen(expr: string): string {
+/**
+ * Снимает ровно один полностью охватывающий слой скобок `(…)`, если он есть. Скобки
+ * считаются только в коде (C26, как `sdblParser.stripOuterParens`); лексические факты
+ * неизвестны — слой не снимаем.
+ */
+export function stripOneEnclosingParen(expr: string): string {
   const e = expr.trim();
   if (!(e.startsWith('(') && e.endsWith(')'))) return e;
+  const ranges = codeRanges(e);
+  if (!ranges) return e;
   let depth = 0;
   for (let i = 0; i < e.length; i++) {
+    if (!isCodeAt(ranges, i)) continue;
     if (e[i] === '(') depth++;
     else if (e[i] === ')') { depth--; if (depth === 0 && i !== e.length - 1) return e; }
   }

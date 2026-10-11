@@ -12,7 +12,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { parseBatch } from '../../src/core/query/sdblParser';
-import { generateBatch } from '../../src/core/query/sdblGenerator';
+import { generateBatch, stripOneEnclosingParen } from '../../src/core/query/sdblGenerator';
 import { tryOpenDesignerBatch } from '../../src/webview/openDesignerBatch';
 import { initialState, reducer } from '../../src/webview/state/queryStore';
 import { computeBatchTextSafe } from '../../src/webview/computeBatchText';
@@ -87,5 +87,27 @@ describe('C26: what still holds', () => {
     const first = designer(text);
     expect(first.text).toContain(`// ${mark}`);
     expect(designer(first.text).text).toBe(first.text);
+  });
+});
+
+describe('C26: stripOneEnclosingParen (generator helper)', () => {
+  it.each([
+    ['(a = 1)', 'a = 1'],
+    ['((a = 1))', '(a = 1)'],
+    ['(a = "(")', 'a = "("'],
+    ['(a = ")")', 'a = ")"'],
+    ['(a = "a)(b")', 'a = "a)(b"'],
+    ['(a = "x\n)")', 'a = "x\n)"'],
+  ])('%j → %j', (input, expected) => {
+    expect(stripOneEnclosingParen(input)).toBe(expected);
+  });
+
+  it.each([
+    '(a) И (b)',
+    '(a = ")") И (b)',
+    'a = "(x)"',
+    '(a = "unclosed)',
+  ])('%j keeps its parentheses', input => {
+    expect(stripOneEnclosingParen(input)).toBe(input);
   });
 });
