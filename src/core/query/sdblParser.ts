@@ -5970,6 +5970,9 @@ function augmentResolverWithTempTables(
   };
   return {
     tableByFullName: lookup,
+    // Без базовых метаданных этот резолвер знает только ВТ пакета: прочие источники
+    // для него неизвестны, а не пусты (C24).
+    metadataUnknown: base === undefined || base.metadataUnknown === true,
     // Виртуальный слой пробрасываем как есть — ВТ виртуальных таблиц не имеют.
     virtualTableByFullName: (fullName: string): MetaTable | undefined =>
       base?.virtualTableByFullName?.(fullName),

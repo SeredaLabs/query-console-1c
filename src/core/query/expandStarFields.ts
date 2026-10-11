@@ -117,19 +117,37 @@ export function expandStarFields(model: QueryModel, resolver?: MetadataResolver)
     return true;
   };
 
+  // C24: резолвер без метаданных конфигурации (путь Designer) не знает реальных
+  // таблиц. Неразрешённый источник-имя метаданных (`Справочник.X`, многосегментное)
+  // для него НЕИЗВЕСТЕН, а не пуст — звезду по нему оставляем как есть, а не удаляем.
+  // Односегментное имя — временная таблица: неопределённая ВТ даёт ноль колонок, как
+  // у платформы (`ВЫБРАТЬ * ИЗ ВТ2` → пустой текст СхемаЗапроса).
+  const unknownSource = (fullName: string | undefined): boolean =>
+    resolver.metadataUnknown === true && fullName !== undefined && fullName.includes('.') &&
+    !resolver.tableByFullName(fullName) && !resolver.virtualTableByFullName?.(fullName);
+
   for (const f of model.fields) {
     const star = parseStar(f);
     if (!star) { pushAfter(f); continue; }
 
     // Звезда по реквизиту-ссылке (`alias.field.*`) неразрешима — удаляем (правило 1).
-    if (star.viaAttribute) continue;
+    // Источник — неизвестное имя метаданных: тип реквизита неизвестен — оставляем (C24).
+    if (star.viaAttribute) {
+      if (star.alias && unknownSource(aliasToFull.get(star.alias.toUpperCase()))) pushAfter(f);
+      continue;
+    }
 
     if (star.alias) {
       // `<alias>.*` — разворачиваем единственный источник этого псевдонима.
       const fullName = aliasToFull.get(star.alias.toUpperCase());
+      if (unknownSource(fullName)) { pushAfter(f); continue; }
       if (expandOne(fullName, findTableId(model, star.alias))) sawExpandedStar = true;
       continue;
     }
+
+    // Голая `*` при неизвестном источнике остаётся целиком: частичная развёртка
+    // переставила бы колонки относительно платформы.
+    if (model.tables.some(t => !t.subquery && unknownSource(t.fullName))) { pushAfter(f); continue; }
 
     // Голая `*` — конструктор разворачивает ВСЕ источники секции ИЗ по порядку
     // (MCP-проба: `* ИЗ ВТ КАК А ЛЕВОЕ СОЕДИНЕНИЕ ВТ КАК Б` → колонки А, затем Б
