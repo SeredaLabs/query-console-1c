@@ -127,9 +127,16 @@ export function expandStarFields(model: QueryModel, resolver?: MetadataResolver)
     resolver.metadataUnknown === true && fullName !== undefined && fullName.includes('.') &&
     !resolver.tableByFullName(fullName) && !resolver.virtualTableByFullName?.(fullName);
 
+  // C24: a nested SELECT source has no metadata name; its columns are not resolved
+  // here (step 1), so a wildcard over it is kept as written, never removed — the
+  // platform expands it to the subquery's columns.
+  const subqueryAliases = new Set(model.tables.filter(t => t.subquery && t.alias).map(t => t.alias!.toUpperCase()));
+  const overSubquery = (alias: string | undefined): boolean => alias !== undefined && subqueryAliases.has(alias.toUpperCase());
+
   for (const f of model.fields) {
     const star = parseStar(f);
     if (!star) { pushAfter(f); continue; }
+    if (overSubquery(star.alias)) { pushAfter(f); continue; }
 
     // Звезда по реквизиту-ссылке (`alias.field.*`) неразрешима — удаляем (правило 1).
     // Источник — неизвестное имя метаданных: тип реквизита неизвестен — оставляем (C24).
@@ -146,9 +153,9 @@ export function expandStarFields(model: QueryModel, resolver?: MetadataResolver)
       continue;
     }
 
-    // Голая `*` при неизвестном источнике остаётся целиком: частичная развёртка
-    // переставила бы колонки относительно платформы.
-    if (model.tables.some(t => !t.subquery && unknownSource(t.fullName))) { pushAfter(f); continue; }
+    // Голая `*` при неизвестном источнике или при источнике-подзапросе остаётся
+    // целиком: частичная развёртка переставила бы колонки относительно платформы.
+    if (model.tables.some(t => t.subquery || unknownSource(t.fullName))) { pushAfter(f); continue; }
 
     // Голая `*` — конструктор разворачивает ВСЕ источники секции ИЗ по порядку
     // (MCP-проба: `* ИЗ ВТ КАК А ЛЕВОЕ СОЕДИНЕНИЕ ВТ КАК Б` → колонки А, затем Б
