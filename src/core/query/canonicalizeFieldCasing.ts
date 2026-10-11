@@ -2,6 +2,7 @@ import type { QueryModel, SelectedField, SelectedTable, Condition, Join } from '
 import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable } from '../metadata/types';
 import { resolveFieldPath } from './fieldPathResolver';
+import { codeRanges, isCodeAt } from './sdblLexer';
 
 /**
  * Канонизация РЕГИСТРА сегментов пути поля выборки по метаданным (фаза 6.16.66).
@@ -57,14 +58,16 @@ function canonExprText(
   resolver: MetadataResolver,
 ): string {
   const isWord = (c: string | undefined): boolean => c !== undefined && /[\p{L}\p{N}_]/u.test(c);
+  // Регистр меняется только в коде: литералы и комментарии — дословно (R4). Лексические
+  // факты неизвестны — выражение не трогаем.
+  const ranges = codeRanges(expr);
+  if (!ranges) return expr;
   let out = '';
-  let inStr = false;
   let i = 0;
   const n = expr.length;
   while (i < n) {
     const c = expr[i];
-    if (inStr) { out += c; if (c === '"') inStr = false; i++; continue; }
-    if (c === '"') { inStr = true; out += c; i++; continue; }
+    if (!isCodeAt(ranges, i)) { out += c; i++; continue; }
     // Начало идентификатора (не часть предыдущего слова, не после точки —
     // т.е. это ГОЛОВА цепочки `<алиас>.<сегменты>`).
     if (/[\p{L}_]/u.test(c) && !isWord(expr[i - 1]) && expr[i - 1] !== '.') {
