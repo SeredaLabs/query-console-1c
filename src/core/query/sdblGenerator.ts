@@ -250,6 +250,9 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
     if (positions.some(p => hasLineComment(p))) return emitRawCall(t.fullName, positions, bodyTabs);
     // Автопсевдоним `Поле<2k>` для выражений в DCS-скобках `{(…)}` (как в renderVirtualParams).
     const dcsStateAcc = { k: 0 };
+    // Соседние DCS-скобки склеиваются в одну, как в renderVirtualParams (N4; платформа:
+    // `{(&П1)} {(&П2)}` → `{(&П1), (&П2)}` и у регистра бухгалтерии, SL_kza 2026-10-11).
+    positions = positions.map(p => (p ? mergeDcsBraces(p) : p));
     positions = positions.map(p => (p ? aliasDcsBraceExprs(wrapDcsBraceParam(p), dcsStateAcc) : p));
     // Конструктор 1С разносит вызов виртуальной таблицы регистра бухгалтерии по
     // строкам, когда хотя бы одна позиция — СОСТАВНОЕ выражение (верхнеуровневый И/ИЛИ)
