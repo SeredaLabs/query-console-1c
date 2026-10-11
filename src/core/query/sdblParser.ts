@@ -72,7 +72,7 @@ import type { SourceInfo } from './qualifyBareFields';
 import { resolveBuilderStar } from './resolveBuilderStar';
 import { dropRedundantGroupDerefs, moveLeadingMovementCaseToEnd, moveBeforePrefixGroupDerefToEnd, substituteGroupFieldWithSelectExpr, dropFunctionallyDeterminedMovementCase, relocateKeptMovementCase } from './dropRedundantGroupDerefs';
 import { canonicalizeFieldCasing } from './canonicalizeFieldCasing';
-import { LITERAL_WORDS } from './sdblKeywordSets';
+import { LITERAL_WORDS, PERIOD_WORDS } from './sdblKeywordSets';
 
 // Инжектируем разборщик подзапросов в пасс квалификации голых полей (для подзапросов,
 // встроенных в СЫРЫЕ выражения условий/полей), избегая циклического импорта.
@@ -2812,7 +2812,8 @@ const EXPR_STOP_WORDS = new Set<string>([
   'NULL', 'ИСТИНА', 'ЛОЖЬ', 'НЕОПРЕДЕЛЕНО',
   'ИЕРАРХИИ', 'ИЕРАРХИЯ', 'УБЫВ', 'ВОЗР', 'РАЗЛИЧНЫЕ', 'КАК', 'ССЫЛКА',
   'ВЫБОР', 'КОГДА', 'ТОГДА', 'ИНАЧЕ', 'КОНЕЦ',
-  'ГОД', 'КВАРТАЛ', 'МЕСЯЦ', 'ДЕКАДА', 'НЕДЕЛЯ', 'ДЕНЬ', 'ЧАС', 'МИНУТА', 'СЕКУНДА',
+  // Единицы периода — из общего словаря (R6: своя копия теряла `ПОЛУГОДИЕ`).
+  ...PERIOD_WORDS,
 ]);
 
 /**
@@ -5108,8 +5109,17 @@ const SECTION_LINE = /^(\t*)(?:ИЗ|ГДЕ|СГРУППИРОВАТЬ|ИМЕЮЩ
 /** Tabs the query's own section lines are indented by: 0 at top level, the
  * nesting padding for the text of a nested query. */
 function nestingPad(text: string): number {
+  // R8: a continuation line of a multi-line literal is data, not a section line.
+  // Lexically rejected text: every line counts (its raw slices stay verbatim anyway).
+  const tokens = tryTokenize(text, { comments: true });
+  const literals = tokens ? tokens.filter(t => t.type === 'string' || t.type === 'date') : [];
   let pad = Infinity;
-  for (const line of text.split('\n').slice(1)) {
+  let start = 0;
+  for (const [i, line] of text.split('\n').entries()) {
+    const lineStart = start;
+    start += line.length + 1;
+    if (i === 0) continue;
+    if (literals.some(t => t.pos < lineStart && lineStart < t.pos + t.text.length)) continue;
     const m = SECTION_LINE.exec(line);
     if (m) pad = Math.min(pad, m[1].length);
   }

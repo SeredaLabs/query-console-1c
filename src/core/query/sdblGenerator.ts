@@ -56,6 +56,13 @@ function hasCodeMatch(text: string, ranges: Array<[number, number]>, re: RegExp,
   return false;
 }
 
+/** A `КАК` word in code, not in a literal or comment (N1). Unknown lexical facts → true
+ * (treated as already aliased: the brace is kept as written). */
+function hasCodeAliasWord(text: string): boolean {
+  const ranges = codeRanges(text);
+  return !ranges || hasCodeMatch(text, ranges, /(?:^|[^\p{L}\p{N}_&])КАК(?:[^\p{L}\p{N}_]|$)/giu);
+}
+
 /** A `ВЫБОР` word in code, not in a literal or comment (C25 R9). Unknown lexical
  * facts → false. */
 function hasCodeCaseWord(text: string): boolean {
@@ -243,6 +250,9 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
     if (positions.some(p => hasLineComment(p))) return emitRawCall(t.fullName, positions, bodyTabs);
     // Автопсевдоним `Поле<2k>` для выражений в DCS-скобках `{(…)}` (как в renderVirtualParams).
     const dcsStateAcc = { k: 0 };
+    // Соседние DCS-скобки склеиваются в одну, как в renderVirtualParams (N4; платформа:
+    // `{(&П1)} {(&П2)}` → `{(&П1), (&П2)}` и у регистра бухгалтерии, SL_kza 2026-10-11).
+    positions = positions.map(p => (p ? mergeDcsBraces(p) : p));
     positions = positions.map(p => (p ? aliasDcsBraceExprs(wrapDcsBraceParam(p), dcsStateAcc) : p));
     // Конструктор 1С разносит вызов виртуальной таблицы регистра бухгалтерии по
     // строкам, когда хотя бы одна позиция — СОСТАВНОЕ выражение (верхнеуровневый И/ИЛИ)
@@ -331,8 +341,8 @@ function wrapDcsBraceParam(text: string): string {
     const c = inner.trim();
     if (!c.startsWith('&')) return whole;
     if (c.startsWith('(')) return whole;
-    // Верхнеуровневая запятая или `КАК` → не одиночный параметр, не трогаем.
-    if (hasTopLevelComma(c) !== false || /(^|[^\p{L}\p{N}_&])КАК([^\p{L}\p{N}_]|$)/iu.test(c)) return whole;
+    // Верхнеуровневая запятая или `КАК` в коде → не одиночный параметр, не трогаем.
+    if (hasTopLevelComma(c) !== false || hasCodeAliasWord(c)) return whole;
     return `{(${c})}`;
   });
 }
@@ -355,7 +365,7 @@ function aliasDcsBraceExprs(text: string, state: { k: number }): string {
     if (!isCodeAt(ranges, offset) || !isCodeAt(ranges, offset + whole.length - 1)) return whole;
     const c = inner.trim();
     // Уже с псевдонимом — не трогаем (но всё равно считаем выражением-слотом).
-    if (/(^|[^\p{L}\p{N}_&])КАК([^\p{L}\p{N}_]|$)/iu.test(c)) { state.k += 1; return whole; }
+    if (hasCodeAliasWord(c)) { state.k += 1; return whole; }
     // Должна быть одиночная охватывающая пара скобок `( … )`.
     if (!c.startsWith('(') || !c.endsWith(')')) return whole;
     // Внутреннее содержимое.
@@ -522,9 +532,10 @@ function renderVirtualParams(fullName: string, positions: string[], condition: s
   // первая строка условия ОКАНЧИВАЕТСЯ словом ВЫБОР и нет `ВЫБРАТЬ` (корпус
   // СдельныйНаряд: `ДокументПроизводства = ВЫБОР … КОНЕЦ`).
   const condFirstLine0 = condition.includes('\n') ? condition.slice(0, condition.indexOf('\n')) : condition;
+  // Прежний `!/\bВЫБРАТЬ\b/iu` здесь был всегда истинным (`\b` в JS — ASCII-граница,
+  // R12) и удалён без изменения поведения.
   const isCaseValueParam =
     !hasBool &&
-    !/\bВЫБРАТЬ\b/iu.test(condition) &&
     // Параметр-CASE: первая строка либо ОКАНЧИВАЕТСЯ словом ВЫБОР (`Имя = ВЫБОР`,
     // корпус СдельныйНаряд), либо НАЧИНАЕТСЯ им (селекторный `ВЫБОР &Парам …` или
     // условный `ВЫБОР КОГДА …`, корпус ПланФактныйАнализПродаж). В обоих случаях это
@@ -1001,13 +1012,23 @@ function reindentVtCondition(condition: string, base: number): string {
       // лексировать — лексические факты неизвестны, все строки сохраняются как есть.
       const literalLines = tryTokenize(c.text, { comments: true }) ? literalContinuationLines(c.text) : new Set(lines.keys());
       const trimLine = (j: number): string => (literalLines.has(j + 1) ? lines[j].trimStart() : lines[j].trim());
-      const parenDelta = (s: string): number => {
+      // N3: parentheses count only in code, by the conjunct's code ranges (a line of a
+      // multi-line literal is not code). Unknown lexical facts → the line-local toggle.
+      const condRanges = codeRanges(c.text);
+      const lineStart: number[] = [];
+      for (let j = 0, pos = 0; j < lines.length; pos += lines[j].length + 1, j++) lineStart.push(pos);
+      const parenDelta = (j: number): number => {
+        const s = lines[j];
         let d = 0;
         let inS = false;
         for (let p = 0; p < s.length; p++) {
           const ch = s[p];
-          if (ch === '"') { inS = !inS; continue; }
-          if (inS) continue;
+          if (condRanges) {
+            if (!isCodeAt(condRanges, lineStart[j] + p)) continue;
+          } else {
+            if (ch === '"') { inS = !inS; continue; }
+            if (inS) continue;
+          }
           if (ch === '(') d++;
           else if (ch === ')') d--;
         }
@@ -1019,33 +1040,33 @@ function reindentVtCondition(condition: string, base: number): string {
       };
       // Скобочные уровни, несущие верхнеуровневый `ИЛИ` среди продолжений конъюнкта.
       const orLevels = new Set<number>();
-      let scanLvl = parenDelta(lines[0]);
+      let scanLvl = parenDelta(0);
       for (let j = 1; j < lines.length; j++) {
         if (literalLines.has(j)) break;
         if (lines[j].trim() === '') continue;
         const fw = firstWord(lines[j]);
         if (fw === 'И' || fw === 'ИЛИ') {
           if (fw === 'ИЛИ') orLevels.add(scanLvl);
-          scanLvl += parenDelta(lines[j]);
+          scanLvl += parenDelta(j);
         } else break;
       }
       out.push('\t'.repeat(ind) + prefix + trimLine(0));
       // Конъюнкт-группа открывает скобку (`И (…`): отбиваем продолжения по глубине
       // скобок + приоритету И>ИЛИ. Иначе (просто перенесённый по строкам лист, без
       // верхнеуровневой скобки) — прежний плоский ind+1.
-      const headDelta = parenDelta(lines[0]);
+      const headDelta = parenDelta(0);
       let condParen = headDelta;
       for (let j = 1; j < lines.length; j++) {
         if (literalLines.has(j)) {
           out.push(lines[j]);
-          if (headDelta > 0) condParen += parenDelta(lines[j]);
+          if (headDelta > 0) condParen += parenDelta(j);
           continue;
         }
         if (headDelta <= 0) { out.push('\t'.repeat(ind + 1) + trimLine(j)); continue; }
         const fw = firstWord(lines[j]);
         const orShift = fw === 'И' && orLevels.has(condParen) ? 1 : 0;
         out.push('\t'.repeat(ind + condParen + orShift) + trimLine(j));
-        condParen += parenDelta(lines[j]);
+        condParen += parenDelta(j);
       }
     } else {
       // Одиночный однострочный конъюнкт-ОТРИЦАНИЕ поля: снимаем избыточную обёртку, как

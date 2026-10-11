@@ -34,7 +34,7 @@
  * `isWordToken` лексера (ident или keyword по каноническому значению), а не по
  * одному только `type`.
  */
-import { tokenize, isWordToken } from './sdblLexer';
+import { tokenize, isWordToken, codeRanges, isCodeAt } from './sdblLexer';
 import type { Token } from './sdblLexer';
 
 function isPunct(t: Token | undefined, value: string): boolean {
@@ -311,9 +311,11 @@ function acceptValue(cur: ExprCursor): boolean {
       if (!acceptArithmeticValue(cur)) return false;
       continue;
     }
-    if (isWordToken(t, 'НЕ', 'NOT') && isWordToken(cur.peek(1), 'В', 'IN')) {
+    // Инфиксное `НЕ` перед В / ПОДОБНО / МЕЖДУ (`Т.Имя НЕ ПОДОБНО "%т%"`; платформа
+    // принимает и печатает префиксом `НЕ Т.Имя ПОДОБНО …`, SL_kza 2026-10-11).
+    if (isWordToken(t, 'НЕ', 'NOT') && isWordToken(cur.peek(1), 'В', 'IN', 'ПОДОБНО', 'LIKE', 'МЕЖДУ', 'BETWEEN')) {
       cur.next(); // НЕ
-      // падает в ветку В/В ИЕРАРХИИ ниже на следующей итерации
+      // падает в ветку В / ПОДОБНО / МЕЖДУ ниже на следующей итерации
       continue;
     }
     if (isWordToken(t, 'В', 'IN')) {
@@ -368,6 +370,19 @@ function isAsteriskField(tokens: Token[]): boolean {
  * не можем судить о валидности содержимого, которое сами не подставляли.
  */
 const TEMPLATE_MARKER_CHARS = /[%#@[\]]/;
+const TEMPLATE_MARKER_CHARS_G = /[%#@[\]]/g;
+
+/**
+ * Маркер шаблона в КОДЕ выражения (R7): `%`/`#`/… внутри строкового литерала или
+ * комментария — обычное содержимое (`"50%"`), а не заготовка, и проверку не
+ * отключает. Нелексируемый текст (сами маркеры могут ломать лексер) — по-старому,
+ * по всему тексту.
+ */
+function hasTemplateMarker(text: string): boolean {
+  const ranges = codeRanges(text);
+  if (!ranges) return TEMPLATE_MARKER_CHARS.test(text);
+  return [...text.matchAll(TEMPLATE_MARKER_CHARS_G)].some(m => isCodeAt(ranges, m.index));
+}
 
 /**
  * Поле выборки `ПУСТАЯТАБЛИЦА.(<колонки>)` — пустая таблица (live 1C 8.3, RP14).
@@ -414,7 +429,7 @@ export function parseEmptyTableColumns(text: string): string[] | undefined {
 export function isStructurallyValidExpression(text: string): boolean {
   const trimmed = text.trim();
   if (trimmed === '') return true;
-  if (TEMPLATE_MARKER_CHARS.test(trimmed)) return true;
+  if (hasTemplateMarker(trimmed)) return true;
   let tokens: Token[];
   try {
     // tokenize() всегда дописывает завершающий токен type==='eof' — исключаем

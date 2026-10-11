@@ -1499,8 +1499,6 @@ export function reindentLeafCase(text: string, base: number, funcParenDepth = fa
   // (фаза 6.16.71). На многострочном каноне сплит идемпотентен (переводы уже стоят).
   text = splitInlineLeafCase(text);
   if (!text.includes('\n')) return text;
-  // Подзапросы внутри листа обрабатывает reindentLeafSubquery — здесь не трогаем.
-  if (/\bВЫБРАТЬ\b/u.test(text)) return text;
   const lines = text.split('\n');
 
   // Найти первую строку, ОКАНЧИВАЮЩУЮСЯ словом ВЫБОР (открытие CASE — конструктор
@@ -1533,8 +1531,8 @@ export function reindentLeafCase(text: string, base: number, funcParenDepth = fa
   // Рефлоу применяем ТОЛЬКО когда в листе нет вложенного подзапроса. Подзапрос
   // (`КОГДА … В (ВЫБРАТЬ …)`) раскладывается своим путём (reindentLeafSubquery), а его
   // тело — многострочное и НЕ начинается структурными словами CASE; склейка его строк
-  // схлопнула бы подзапрос. Штатный guard `\bВЫБРАТЬ\b` (выше) не ловит `(ВЫБРАТЬ`
-  // (ASCII-граница слова на кириллице), поэтому проверяем здесь по Unicode-границам.
+  // схлопнула бы подзапрос. Прежний guard `\bВЫБРАТЬ\b` выше никогда не срабатывал
+  // (`\b` в JS — ASCII-граница, R12) и удалён; подзапрос проверяется здесь.
   // A1-5b: ВЫБРАТЬ counts only in code; unknown lexical facts → no reflow.
   const HAS_SUBQUERY_RE = /(?:^|[^\p{L}\p{N}_])ВЫБРАТЬ(?:[^\p{L}\p{N}_]|$)/giu;
   const subRanges = codeRanges(text);
@@ -2166,7 +2164,8 @@ function reflowLeafSelectorCase(text: string, valueBaseInd: number): string | nu
  */
 export function reindentLeafBool(text: string, base: number): string {
   if (!text.includes('\n')) return text;
-  if (/\bВЫБРАТЬ\b|\bВЫБОР\b/u.test(text)) return text; // подзапрос/CASE — не наша зона
+  // CASE и подзапрос отсекаются формой строк ниже (продолжение обязано начинаться с
+  // И/ИЛИ). Прежний guard `\bВЫБРАТЬ\b|\bВЫБОР\b` никогда не срабатывал (R12) и удалён.
   // Строка-продолжение многострочного литерала (перенос перед ней — не код) — не
   // продолжение цепочки, даже если текст литерала начинается с `И`/`ИЛИ` (C25d).
   // Лексические факты неизвестны — текст сохраняется как есть.
