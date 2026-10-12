@@ -44,7 +44,7 @@ export function acceptAgainstOracle(
 ): OracleAcceptResult {
   let ours: string;
   try {
-    ours = generateBatch(parseBatch(input, resolver, { wildcardPolicy: 'constructor' })); // C24: oracle parity
+    ours = generateBatch(parseBatch(input, resolver, { wildcardPolicy: 'constructor' }), { wildcardPolicy: 'constructor' }); // C24: oracle parity
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     const errorClass = (e && (e as any).constructor && (e as any).constructor.name) || 'Error';

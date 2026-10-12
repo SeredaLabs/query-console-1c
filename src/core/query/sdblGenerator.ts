@@ -8,9 +8,10 @@ import { resolveAliases, joinKeyword } from './queryModelUtils';
 import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpression, formatJoinConjunct, normalizeLeafCase, stripNegatedFieldParens, stripNotFieldParens, stripRedundantLeafParens, appendIsNotNullTrailingSpace, renderOperatorRhs, flattenMultilineLeaf, reindentLeafSubquery, reindentLeafCase, reindentLeafBool, wrapBareCastOperand, reprintLeafArithmetic, canonicalizeComparisonOperands, setInlineSubqueryReflow, tightenLeafInOperator } from './exprFormatter';
 import { splitArgComments } from './argComments';
 import { tokenize, tryTokenize, codeRanges, isCodeAt, isWordToken, replaceInCodeRanges } from './sdblLexer';
+import type { Token } from './sdblLexer';
 import { parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { bareParamName } from './exprAutoAlias';
-import { isWildcardExpression } from './expandStarFields';
+import { isWildcardExpression, type WildcardPolicy } from './expandStarFields';
 import { isSynthesizedAlias } from './columnNames';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
 
@@ -38,6 +39,38 @@ let suppressAutoAlias = false;
  * как у suppressAutoAlias.
  */
 let inConditionSubquery = false;
+
+/**
+ * C31: generation mode, the same split as the parser's (`WildcardPolicy`).
+ * `preserve` (default — the Designer and every other caller) keeps what BSL code may
+ * replace as text: a bare parameter in the select list without a printed name, a
+ * parameter in СГРУППИРОВАТЬ ПО, parentheses around a condition parameter.
+ * `constructor` (oracle/corpus only) prints what the 1C query constructor prints.
+ *
+ * Scoped to one entry-point call: `generate` / `generateDocument` / `generateBatch`
+ * set it from `GenerateOptions` (no option = `preserve`, whatever ran before) and
+ * restore the previous value on return or throw. Nested generation inside that call
+ * (subquery sources, condition subqueries, union members, batch statements) goes
+ * through the private `generateModel` / `generateDocumentMembers` and inherits it.
+ * Not a parameter of every render function: condition subqueries are also rendered
+ * from the expression formatter's reflow callback (`setInlineSubqueryReflow`), so a
+ * parameter would have to pass through the whole formatter.
+ */
+let generationPolicy: WildcardPolicy = 'preserve';
+
+export interface GenerateOptions {
+  wildcardPolicy?: WildcardPolicy;
+}
+
+function withGenerationPolicy<T>(opts: GenerateOptions, run: () => T): T {
+  const prev = generationPolicy;
+  generationPolicy = opts.wildcardPolicy ?? 'preserve';
+  try {
+    return run();
+  } finally {
+    generationPolicy = prev;
+  }
+}
 
 /** Экранирует спецсимволы регулярного выражения в литеральной строке. */
 function escapeRegExp(s: string): string {
@@ -111,7 +144,7 @@ function renderConditionSubquery(subquery: QueryDocument, baseTabs: number, lead
   inConditionSubquery = true;
   let text: string;
   try {
-    text = generateDocument(subquery);
+    text = generateDocumentMembers(subquery);
   } finally {
     suppressAutoAlias = prev;
     inConditionSubquery = prevInSubquery;
@@ -219,7 +252,7 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
     // первая строка инлайн (`(ВЫБРАТЬ`), продолжения — на `bodyTabs` табов. Источник
     // в списке ИЗ стоит на 1 табе (bodyTabs=1, по умолчанию); ПРИСОЕДИНЯЕМЫЙ источник
     // соединения — на 2+depth табах, его тело глубже соответственно (фаза 6.15.19, MCP).
-    const text = generateDocument(t.subquery);
+    const text = generateDocumentMembers(t.subquery);
     const inner = text.split('\n');
     const literalLines = literalContinuationLines(text);
     const pad = '\t'.repeat(bodyTabs);
@@ -810,7 +843,7 @@ function reflowInlineMembershipSubquery(
         /(?:^|[^\p{L}\p{N}_&])(?:ТОГДА|ИНАЧЕ)[ \t]+ВЫБОР[ \t]*(?:\r?\n|$)/gu);
       if (isCanonical && !bodyHasUnwrappedBoolOr(innerText) && !hasNestedCaseValue) return null;
       let doc: QueryDocument;
-      try { doc = parseDocument(innerText); }
+      try { doc = parseDocument(innerText, undefined, { wildcardPolicy: generationPolicy }); }
       catch { return null; }
       const block = renderConditionSubquery(doc, subBase).split('\n');
       // ЛЕВЫЙ операнд `В` — кортеж `(поле1, поле2, …)`, набранный разработчиком на
@@ -1338,6 +1371,12 @@ function renderJoinConjuncts(conditions: NonNullable<Join['conditions']>, aliase
   // нестандартный — в скобках (MCP). Разворачиваем такие конъюнкты в плоский
   // список; пьесы с ИЛИ/ВЫБОР не трогаем (их рендерит структурный путь).
   const expanded = expandAndChainConjuncts(conditions);
+  // C31: `(&Условие)` inside a conjunct (`ВЫБОР КОГДА … И (&Условие) …`) keeps its
+  // parentheses, see maskParenthesizedParams.
+  const keepingParamParens = (text: string, render: (masked: string) => string): string => {
+    const mask = maskParenthesizedParams(text);
+    return mask ? mask.restore(render(mask.text)) ?? text : render(text);
+  };
   expanded.forEach((c, k) => {
     let sub: string[];
     if (!c.custom) {
@@ -1351,7 +1390,7 @@ function renderJoinConjuncts(conditions: NonNullable<Join['conditions']>, aliase
       // A user-authored line comment: verbatim, never split or reformatted.
       sub = indentCommentedCondition(wrapJoinConjunctCommentSafe(c.expression ?? ''), '\t'.repeat(cont)).split('\n');
     } else if (conjunctNeedsComplexFormat(c)) {
-      sub = formatJoinConjunct((c.expression ?? '').trim(), k === 0, 2 + depth).split('\n');
+      sub = keepingParamParens((c.expression ?? '').trim(), e => formatJoinConjunct(e, k === 0, 2 + depth)).split('\n');
     } else {
       // Для продолжающего конъюнкта (`И …`) известен отступ его строки (cont):
       // многострочный CASE в правой части сравнения раскладываем на нём (КОНЕЦ=cont).
@@ -1366,7 +1405,7 @@ function renderJoinConjuncts(conditions: NonNullable<Join['conditions']>, aliase
       // обёртки — как простое сравнение. Гейт: ровно один конъюнкт и !parenthesized
       // (скобки во вводе → сохраняем обёртку, фаза ВидыКонтактнойИнформации).
       const standaloneUnwrap = expanded.length === 1 && !joinParenthesized;
-      sub = [renderArbitraryConjunct(c.expression ?? '', depth, caseBase, !!(c as { __fromAndSplit?: boolean }).__fromAndSplit || standaloneUnwrap)];
+      sub = [keepingParamParens(c.expression ?? '', e => renderArbitraryConjunct(e, depth, caseBase, !!(c as { __fromAndSplit?: boolean }).__fromAndSplit || standaloneUnwrap))];
     }
     if (c.commentLeading?.length) sub = [...c.commentLeading, ...sub];
     if (c.commentTrailing?.length) sub.push(...c.commentTrailing.map(text => `${'\t'.repeat(cont)}${text}`));
@@ -1955,7 +1994,11 @@ const CONST_GROUP_RE = /^("(?:[^"]|"")*"|\d+(?:\.\d+)?|ИСТИНА|ЛОЖЬ|Н�
 function isConstGroupExpr(expression: string | undefined): boolean {
   if (expression === undefined) return false;
   const e = expression.trim();
-  return isBareParamExpr(e) || CONST_GROUP_RE.test(e);
+  // C31: in `preserve` a parameter item stays — BSL code may replace it with grouping
+  // fields (`СГРУППИРОВАТЬ ПО &ПоляГруппировки`). For a parameter value grouping by a
+  // constant changes nothing (СхемаЗапроса drops it; the platform returns the same rows).
+  if (isBareParamExpr(e)) return generationPolicy === 'constructor';
+  return CONST_GROUP_RE.test(e);
 }
 
 /**
@@ -2051,6 +2094,17 @@ function renderTabProjection(
  * что раньше формировал `generate`.
  */
 /**
+ * C31: in `preserve`, a bare parameter without `КАК` stays without one — BSL code may
+ * replace it with a column list (`&ВыбираемыеКолонки`), and an added `КАК <имя>` breaks
+ * that list. For a parameter value the platform gives the column the same name
+ * either way (C30), so the text is equivalent.
+ */
+function keepsBareParam(f: SelectedField): boolean {
+  return generationPolicy !== 'constructor' && f.expression !== undefined && bareParamName(f.expression) !== undefined
+    && (f.alias === undefined || isSynthesizedAlias(f));
+}
+
+/**
  * A name the parser synthesized for an expression, which `В (ВЫБРАТЬ …)` does not print
  * (`Поле{n}`, `<Поле>Представление`); a parameter name is printed there as before.
  */
@@ -2093,6 +2147,7 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
       const expr = formatSelectExpression(f.expression);
       const explicit = f.alias !== undefined && !isSynthesizedAlias(f);
       if (keptWildcard && !explicit) return `\t${expr}`;
+      if (!explicit && keepsBareParam(f)) return `\t${expr}`;
       // В подзапросе-операнде `В` (suppressAutoAlias) конструктор НЕ добавляет
       // автопсевдоним произвольному полю выборки (`1`/`ИСТИНА` остаются голыми);
       // явный псевдоним (в т. ч. написанный `Поле{n}`) сохраняется (фаза 6.15.27,
@@ -2164,6 +2219,14 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
  * только нормализацию регистра/пробелов листа.
  */
 export function formatSelectExpression(expression: string): string {
+  // C31: a parenthesized parameter operand keeps its parentheses here too (`ВЫБОР КОГДА
+  // А И (&Условие) …`, `А И (&Условие) КАК Ф`), see maskParenthesizedParams.
+  const mask = maskParenthesizedParams(expression);
+  if (!mask) return formatSelectExpressionText(expression);
+  return mask.restore(formatSelectExpressionText(mask.text)) ?? expression;
+}
+
+function formatSelectExpressionText(expression: string): string {
   if (!tryTokenize(expression)) return expression;
   // `ПУСТАЯТАБЛИЦА.(Код, Наименование)` → канон конструктора 1С (live, RP14): каждый
   // элемент — пустое значение + ` КАК Имя`, элементы через `, `
@@ -2512,7 +2575,11 @@ export function renderIndex(indexing: Indexing | undefined, model: QueryModel): 
   return ['ИНДЕКСИРОВАТЬ ПО НАБОРАМ', '(', ...setLines, ')'];
 }
 
-export function generate(model: QueryModel): string {
+export function generate(model: QueryModel, opts: GenerateOptions = {}): string {
+  return withGenerationPolicy(opts, () => generateModel(model));
+}
+
+function generateModel(model: QueryModel): string {
   // УНИЧТОЖИТЬ — самостоятельный запрос, до всех остальных проверок.
   if (model.queryType === 'dropTemp') {
     // C17: comments of the statement are printed before it.
@@ -2585,7 +2652,8 @@ function buildUnionBlocksScalar(members: UnionMember[]): string[] {
       const expr = col.cells[i] ?? 'NULL';
       if (i !== 0) return `\t${expr}`;
       const f0 = head0[ci];
-      const emitAlias = !suppressAutoAlias || (f0 !== undefined && f0.alias !== undefined && !hiddenUnderSuppress(f0));
+      const emitAlias = (f0 === undefined || !keepsBareParam(f0))
+        && (!suppressAutoAlias || (f0 !== undefined && f0.alias !== undefined && !hiddenUnderSuppress(f0)));
       return emitAlias ? `\t${expr} КАК ${col.alias}` : `\t${expr}`;
     });
     const aliases = resolveAliases(m.model.tables);
@@ -2619,7 +2687,7 @@ function buildUnionBlocksWithTabSection(members: UnionMember[]): string[] {
       // Псевдоним столбца берём с поля участника-головы (его псевдоним выборки).
       const alias = elementAlias(el, m.model);
       const synthesizedExpr = el.field.expression !== undefined && (el.field.alias === undefined || hiddenUnderSuppress(el.field));
-      const emitAlias = !suppressAutoAlias || !synthesizedExpr;
+      const emitAlias = !keepsBareParam(el.field) && (!suppressAutoAlias || !synthesizedExpr);
       fieldLines.push(emitAlias ? `\t${expr} КАК ${alias}` : `\t${expr}`);
     }
     return buildQueryBlock(m.model, fieldLines, aliases, i === 0);
@@ -2636,10 +2704,14 @@ function buildUnionBlocksWithTabSection(members: UnionMember[]): string[] {
  *   Разделитель между участниками: `ОБЪЕДИНИТЬ ВСЕ` или `ОБЪЕДИНИТЬ`
  *   (если у следующего участника `distinct === true`), с пустыми строками вокруг.
  */
-export function generateDocument(doc: QueryDocument): string {
+export function generateDocument(doc: QueryDocument, opts: GenerateOptions = {}): string {
+  return withGenerationPolicy(opts, () => generateDocumentMembers(doc));
+}
+
+function generateDocumentMembers(doc: QueryDocument): string {
   const members = doc.members;
   if (members.length === 0) return '';
-  if (members.length === 1) return generate(members[0].model);
+  if (members.length === 1) return generateModel(members[0].model);
 
   // Объединение с проекцией ТЧ выравнивается по ПОЛНОМУ списку элементов выборки
   // (скалярные поля + проекции ТЧ + хвостовые поля, в порядке selectOrder) — иначе
@@ -2689,7 +2761,11 @@ export function generateDocument(doc: QueryDocument): string {
  *   отбрасываются, остальные соединяются разделителем пакета 1С: строка `;`,
  *   пустая строка, ровно 80 символов `/`, перевод строки.
  */
-export function generateBatch(batch: BatchDocument): string {
+export function generateBatch(batch: BatchDocument, opts: GenerateOptions = {}): string {
+  return withGenerationPolicy(opts, () => generateBatchStatements(batch));
+}
+
+function generateBatchStatements(batch: BatchDocument): string {
   const SEP = '\n;\n\n' + '/'.repeat(80) + '\n';
   // Хвостовой разделитель без завершающего перевода строки: пакет, чей ПОСЛЕДНИЙ
   // оператор дал пустое тело (`ВЫБРАТЬ * ПОМЕСТИТЬ … ИЗ &Параметр` — звезда по
@@ -2698,13 +2774,13 @@ export function generateBatch(batch: BatchDocument): string {
   const TAIL_SEP = '\n;\n\n' + '/'.repeat(80);
   const members = batch.members;
   if (members.length === 0) return '';
-  if (members.length === 1) return generateDocument(members[0]);
+  if (members.length === 1) return generateDocumentMembers(members[0]);
 
   // Тело каждого оператора. Пустые тела (нерезолвимая звезда и т. п.) НЕ участвуют
   // как блоки, но отслеживаются: пустой ПОСЛЕДНИЙ оператор оставляет хвостовой
   // разделитель (асимметрия конструктора — пустой оператор В СЕРЕДИНЕ отбрасывается
   // полностью, MCP-проба).
-  const rendered = members.map(generateDocument);
+  const rendered = members.map(m => generateDocumentMembers(m));
   const blocks = rendered.filter(b => b !== '');
   const out = blocks.join(SEP);
   const lastEmpty = rendered[rendered.length - 1] === '';
@@ -3213,6 +3289,69 @@ function indentCommentedCondition(text: string, pad = '\t'): string {
   });
 }
 
+/**
+ * C31: in `preserve` a parameter alone in parentheses (`И (&Условие)`, `НЕ (&Условие)`)
+ * keeps them — BSL code may replace it with `А ИЛИ Б`, and without the parentheses the
+ * precedence changes. The condition formatter drops such parentheses in several
+ * places (constructor behaviour), so each group is replaced by a parameter atom for
+ * the formatting and restored afterwards. For a parameter value the parentheses
+ * change nothing.
+ *
+ * No collisions: the marker prefix is extended until it occurs nowhere in the input,
+ * in any letter case (identifiers are case-insensitive), so a marker in the output
+ * can only be one of ours. Restoring reads parameter tokens with the shared lexer
+ * (string literals untouched) and requires every marker exactly once; otherwise
+ * `restore` returns `undefined` and the caller keeps the condition as written.
+ */
+export function maskParenthesizedParams(text: string): { text: string; restore: (rendered: string) => string | undefined } | undefined {
+  if (generationPolicy === 'constructor' || !text.includes('&')) return undefined;
+  const toks = tryTokenize(text);
+  if (!toks) return undefined;
+  const spans: Array<{ start: number; end: number; param: string }> = [];
+  // Only a standalone boolean operand: after the start, `И`, `ИЛИ`, `НЕ`, `КОГДА` or `(`,
+  // and before the end, `И`, `ИЛИ`, `ТОГДА` or `)` — not the list of `В (&Список)` or a
+  // call argument.
+  const isWord = (t: Token | undefined, ...words: string[]): boolean => !!t && words.some(w => isWordToken(t, w));
+  const isPunct = (t: Token | undefined, v: string): boolean => t?.type === 'punct' && t.value === v;
+  for (let i = 0; i + 2 < toks.length; i++) {
+    const [open, param, close] = [toks[i], toks[i + 1], toks[i + 2]];
+    const prev = toks[i - 1], next = toks[i + 3];
+    const operandBefore = prev === undefined || isWord(prev, 'И', 'ИЛИ', 'НЕ', 'КОГДА') || isPunct(prev, '(');
+    const operandAfter = next === undefined || next.type === 'eof' || isWord(next, 'И', 'ИЛИ', 'ТОГДА') || isPunct(next, ')');
+    if (operandBefore && operandAfter && isPunct(open, '(') && param.type === 'param' && isPunct(close, ')')) {
+      spans.push({ start: open.pos, end: close.pos + 1, param: param.text });
+      i += 2;
+    }
+  }
+  if (spans.length === 0) return undefined;
+  const upper = text.toUpperCase();
+  let mark = 'C31ПараметрВСкобках';
+  while (upper.includes(mark.toUpperCase())) mark += '_';
+  const markUpper = `&${mark.toUpperCase()}`;
+  let masked = text;
+  for (let k = spans.length - 1; k >= 0; k--) masked = masked.slice(0, spans[k].start) + `&${mark}${k}` + masked.slice(spans[k].end);
+  return {
+    text: masked,
+    restore: rendered => {
+      const out = tryTokenize(rendered);
+      if (!out) return undefined;
+      const seen = new Array<boolean>(spans.length).fill(false);
+      let result = '';
+      let at = 0;
+      for (const t of out) {
+        if (t.type !== 'param' || !t.text.toUpperCase().startsWith(markUpper)) continue;
+        const digits = t.text.slice(markUpper.length);
+        const k = /^\d+$/u.test(digits) ? Number(digits) : -1;
+        if (k < 0 || k >= spans.length || seen[k]) return undefined;
+        seen[k] = true;
+        result += rendered.slice(at, t.pos) + `(${spans[k].param})`;
+        at = t.pos + t.text.length;
+      }
+      return seen.every(Boolean) ? result + rendered.slice(at) : undefined;
+    },
+  };
+}
+
 function buildConditionStrings(
   conditions: Condition[] | undefined,
   aliases: Map<string, string>,
@@ -3245,7 +3384,8 @@ function buildConditionStrings(
       // Ведущее `НЕ` подхватывает reindentLeafSubquery (+1 к отступу подзапроса) —
       // как у обычного `НЕ X В (…)`. Только для кортежа (скобка с верхнеуровневой
       // запятой); одиночный операнд `X НЕ В` сюда не попадает.
-      let expr = moveNotBeforeTuple((c.expression ?? '').trim());
+      const mask = maskParenthesizedParams((c.expression ?? '').trim());
+      let expr = moveNotBeforeTuple(mask?.text ?? (c.expression ?? '').trim());
       // ИМЕЮЩИЕ: голый агрегат МАКСИМУМ/МИНИМУМ булева выражения как самостоятельный
       // конъюнкт конструктор печатает без обёртки (см. unwrapHavingMaxMin).
       if (slot === 'having') expr = unwrapHavingMaxMin(expr);
@@ -3278,7 +3418,11 @@ function buildConditionStrings(
       // условие стало произвольным листом из-за переквалификации голого поля.
       const tightenIn = (s: string): string =>
         slot === 'where' && !inConditionSubquery ? tightenLeafInOperator(s) : s;
-      if (expr) push(needsFormatting(expr) || isRootNotGroup(expr) ? formatExpression(expr, slot, inConditionSubquery ? 1 : undefined) : appendIsNotNullTrailingSpace(tightenIn(stripNotFieldParens(stripNegatedFieldParens(wrapBareCastOperand(stripRedundantLeafParens(normalizeLeafCase(reindentLeafCase(reindentLeafSubquery(canonicalizeComparisonOperands(flattenMultilineLeaf(expr)), subBase), caseBaseLeaf, true)))))))));
+      if (expr) {
+        const rendered = needsFormatting(expr) || isRootNotGroup(expr) ? formatExpression(expr, slot, inConditionSubquery ? 1 : undefined) : appendIsNotNullTrailingSpace(tightenIn(stripNotFieldParens(stripNegatedFieldParens(wrapBareCastOperand(stripRedundantLeafParens(normalizeLeafCase(reindentLeafCase(reindentLeafSubquery(canonicalizeComparisonOperands(flattenMultilineLeaf(expr)), subBase), caseBaseLeaf, true))))))));
+        // An unrestorable mask (not expected) keeps the condition as written.
+        push(mask ? mask.restore(rendered) ?? (c.expression ?? '').trim() : rendered);
+      }
       continue;
     }
     // Нессылочный левый операнд `В`-подзапроса (`1 В (ВЫБРАТЬ …)`, фаза 6.15.27):

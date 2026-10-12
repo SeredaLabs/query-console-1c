@@ -16,7 +16,8 @@ describe('oracle golden (курируемые эталоны конструкт�
       continue;
     }
     it(`${f}: ${c.name}`, () => {
-      expect(generateBatch(parseBatch(c.input))).toBe(c.expected);
+      // Curated 1C query-constructor text: the constructor-parity mode (C24/R11/C31).
+      expect(generateBatch(parseBatch(c.input, undefined, { wildcardPolicy: 'constructor' }), { wildcardPolicy: 'constructor' })).toBe(c.expected);
     });
   }
 });

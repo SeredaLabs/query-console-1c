@@ -4,6 +4,7 @@ import type { MetaTable } from '../metadata/types';
 import { buildSelectAllModel } from './buildSelectAllModel';
 import { isIdentifierName } from './sdblLexer';
 import { columnNames, isSynthesizedAlias } from './columnNames';
+import { bareParamName } from './exprAutoAlias';
 
 /**
  * How a wildcard is expanded (C24 step 1a).
@@ -51,6 +52,9 @@ function explicitAlias(f: SelectedField): string | undefined {
 export function provenColumnNames(model: QueryModel): string[] | undefined {
   if (model.tabSectionFields?.length || model.trailingFields?.length) return undefined;
   if (model.fields.some(f => isWildcardExpression(f.expression))) return undefined;
+  // C31: a bare parameter without `КАК` may be a BSL placeholder for a column list, so
+  // its column is not proven (with `КАК` it is one named column).
+  if (model.fields.some(f => f.expression !== undefined && bareParamName(f.expression) !== undefined && (f.alias === undefined || isSynthesizedAlias(f)))) return undefined;
   const names = columnNames(model, model.fields.map(field => ({ kind: 'field' as const, field })));
   const seen = new Set<string>();
   for (const name of names) {

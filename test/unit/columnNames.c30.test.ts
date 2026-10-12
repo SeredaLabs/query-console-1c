@@ -30,6 +30,7 @@ import { generateBatch } from '../../src/core/query/sdblGenerator';
 import { deriveUnionColumns, selectColumnAliases } from '../../src/core/query/unionModel';
 import type { QueryModel } from '../../src/core/query/queryModel';
 import { resolveAliases } from '../../src/core/query/queryModelUtils';
+import { tokenize } from '../../src/core/query/sdblLexer';
 import { deriveTempTableLifetimes, visibleTempTableAt } from '../../src/core/query/tempTableSemantics';
 
 interface PlatformCase { name: string; query: string; platform: string }
@@ -66,10 +67,19 @@ const TEXT_ONLY: Record<string, (platform: string) => string> = {
   P01_repr_bare_dotted: t => t.replace('ПРЕДСТАВЛЕНИЕ(Валюты.Ссылка.Код)', 'ПРЕДСТАВЛЕНИЕ(Ссылка.Код)'),
 };
 
+// C31: the Designer keeps a bare parameter of the select list without `КАК` (it may be
+// a BSL placeholder); the platform gives the column the same name either way, so the
+// platform's `КАК <имя>` after a parameter that was bare in the input is not expected.
+function withoutBareParamNames(platform: string, query: string): string {
+  const toks = tokenize(query).filter(t => t.type !== 'eof');
+  const bare = toks.filter((t, i) => t.type === 'param' && toks[i + 1]?.text.toUpperCase() !== 'КАК').map(t => t.text);
+  return bare.reduce((text, p) => text.replace(new RegExp(`(\\t${p.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}) КАК [^,\\n]+`, 'u'), '$1'), platform);
+}
+
 describe('C30: Designer text equals СхемаЗапроса for every probed naming case', () => {
   it.each(evidence.cases.map(c => [c.name, c] as const))('%s', (_name, c) => {
     const out = stable(c.query);
-    const expected = TEXT_ONLY[c.name]?.(c.platform) ?? c.platform;
+    const expected = withoutBareParamNames(TEXT_ONLY[c.name]?.(c.platform) ?? c.platform, c.query);
     expect(out).toBe(expected);
   });
 });

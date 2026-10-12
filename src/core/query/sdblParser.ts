@@ -3124,7 +3124,10 @@ function segmentConditionTokens(tokens: Token[]): Token[][] {
   for (const seg of splitJoinConjuncts(tokens)) {
     if (hasBalancedOuterParens(seg)) {
       const inner = seg.slice(1, -1);
-      if (inner.length > 0 && !hasTopLevelOr(inner)) {
+      // C31: `(&Условие)` stays one segment with its parentheses outside the
+      // constructor-parity mode (BSL code may replace the parameter with `А ИЛИ Б`).
+      const placeholder = inner.length === 1 && inner[0].type === 'param' && wildcardPolicy !== 'constructor';
+      if (inner.length > 0 && !placeholder && !hasTopLevelOr(inner)) {
         out.push(...segmentConditionTokens(inner));
         continue;
       }
@@ -3182,13 +3185,15 @@ function interpretCondition(
   // конструктор 1С снимает скобки, когда всё условие ГДЕ — единственный голый
   // параметр в скобках. (В условии соединения `ПО` конструктор, наоборот, скобки
   // добавляет — но это другой код-путь, не interpretCondition.)
+  // C31: only in the constructor-parity mode — BSL code may replace the parameter with
+  // `А ИЛИ Б`, and `X И (А ИЛИ Б)` must not become `X И А ИЛИ Б`; the Designer keeps them.
   if (
     tokens.length === 3 &&
     tokens[0].type === 'punct' && tokens[0].value === '(' &&
     tokens[1].type === 'param' &&
     tokens[2].type === 'punct' && tokens[2].value === ')'
   ) {
-    return { custom: true, expression: tokens[1].text };
+    return { custom: true, expression: wildcardPolicy === 'constructor' ? tokens[1].text : `(${tokens[1].text})` };
   }
   // Объединённый ИЛИ-блок (фаза 6.14): сегмент с верхнеуровневым `ИЛИ` — всегда
   // произвольное условие целиком. Без этой проверки trySimpleCondition «съедал» бы

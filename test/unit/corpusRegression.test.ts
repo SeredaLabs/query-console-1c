@@ -42,7 +42,7 @@ describe('корпус 1С: байт-в-байт против оракула (з
       let ours: string;
       try {
         // C24 step 1a: the oracle is the 1C constructor — constructor-parity policy.
-        ours = generateBatch(parseBatch(g.input, resolver, { wildcardPolicy: 'constructor' }));
+        ours = generateBatch(parseBatch(g.input, resolver, { wildcardPolicy: 'constructor' }), { wildcardPolicy: 'constructor' });
       } catch (e) {
         failures.push({ file: g.file, reason: `parse-exception: ${e instanceof Error ? e.message : String(e)}` });
         continue;

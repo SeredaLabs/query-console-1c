@@ -65,19 +65,23 @@ describe('bareParamName — голый параметр по токену лек
   });
 });
 
+// The constructor text is checked in the constructor-parity mode; the Designer keeps a
+// bare parameter without `КАК` (C31: it may be a BSL placeholder) — same column name.
+const ctor = { wildcardPolicy: 'constructor' } as const;
 describe('голый параметр: автопсевдоним = имя параметра (эталон конструктора)', () => {
   for (const [name, native] of NATIVE_PARAM) {
     it(`&${name}: модель, текст конструктора и стабильность повторного открытия`, () => {
       const text = `ВЫБРАТЬ &${name}`;
       expect(firstModel(text).fields[0].alias).toBe(name);
-      const g1 = generateBatch(parseBatch(text));
+      const g1 = generateBatch(parseBatch(text, undefined, ctor), ctor);
       expect(g1).toBe(native);
-      expect(generateBatch(parseBatch(g1))).toBe(g1);
+      expect(generateBatch(parseBatch(g1, undefined, ctor), ctor)).toBe(g1);
+      expect(generateBatch(parseBatch(text))).toBe(`ВЫБРАТЬ\n\t&${name}`);
     });
 
     it(`&${name}: генератор без псевдонима в модели (поле из UI) и колонка объединения`, () => {
       const model = { tables: [], fields: [{ tableId: '', path: '', expression: `&${name}` }] } as unknown as QueryModel;
-      expect(generate(model)).toBe(native);
+      expect(generate(model, ctor)).toBe(native);
       expect(deriveUnionColumns([{ name: 'Запрос 1', distinct: false, model }]).map(c => c.alias)).toEqual([name]);
     });
   }

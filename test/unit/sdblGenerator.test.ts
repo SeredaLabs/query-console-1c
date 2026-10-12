@@ -1804,7 +1804,8 @@ describe('автопсевдоним произвольного поля: без
   ];
   for (const [name, fields, aliases] of cases) {
     it(name, () => {
-      const text = generate(m(fields));
+      // Constructor-parity mode: the Designer keeps a bare parameter without `КАК` (C31).
+      const text = generate(m(fields), { wildcardPolicy: 'constructor' });
       const printed = [...text.matchAll(/ КАК ([^\s,]+)/g)].map(x => x[1]).filter(a => a !== 'Валюты');
       expect(printed).toEqual(aliases);
       expect(tryOpenBatch(text, undefined, {}).ok).toBe(true);
