@@ -1371,6 +1371,12 @@ function renderJoinConjuncts(conditions: NonNullable<Join['conditions']>, aliase
   // нестандартный — в скобках (MCP). Разворачиваем такие конъюнкты в плоский
   // список; пьесы с ИЛИ/ВЫБОР не трогаем (их рендерит структурный путь).
   const expanded = expandAndChainConjuncts(conditions);
+  // C31: `(&Условие)` inside a conjunct (`ВЫБОР КОГДА … И (&Условие) …`) keeps its
+  // parentheses, see maskParenthesizedParams.
+  const keepingParamParens = (text: string, render: (masked: string) => string): string => {
+    const mask = maskParenthesizedParams(text);
+    return mask ? mask.restore(render(mask.text)) ?? text : render(text);
+  };
   expanded.forEach((c, k) => {
     let sub: string[];
     if (!c.custom) {
@@ -1384,7 +1390,7 @@ function renderJoinConjuncts(conditions: NonNullable<Join['conditions']>, aliase
       // A user-authored line comment: verbatim, never split or reformatted.
       sub = indentCommentedCondition(wrapJoinConjunctCommentSafe(c.expression ?? ''), '\t'.repeat(cont)).split('\n');
     } else if (conjunctNeedsComplexFormat(c)) {
-      sub = formatJoinConjunct((c.expression ?? '').trim(), k === 0, 2 + depth).split('\n');
+      sub = keepingParamParens((c.expression ?? '').trim(), e => formatJoinConjunct(e, k === 0, 2 + depth)).split('\n');
     } else {
       // Для продолжающего конъюнкта (`И …`) известен отступ его строки (cont):
       // многострочный CASE в правой части сравнения раскладываем на нём (КОНЕЦ=cont).
@@ -1399,7 +1405,7 @@ function renderJoinConjuncts(conditions: NonNullable<Join['conditions']>, aliase
       // обёртки — как простое сравнение. Гейт: ровно один конъюнкт и !parenthesized
       // (скобки во вводе → сохраняем обёртку, фаза ВидыКонтактнойИнформации).
       const standaloneUnwrap = expanded.length === 1 && !joinParenthesized;
-      sub = [renderArbitraryConjunct(c.expression ?? '', depth, caseBase, !!(c as { __fromAndSplit?: boolean }).__fromAndSplit || standaloneUnwrap)];
+      sub = [keepingParamParens(c.expression ?? '', e => renderArbitraryConjunct(e, depth, caseBase, !!(c as { __fromAndSplit?: boolean }).__fromAndSplit || standaloneUnwrap))];
     }
     if (c.commentLeading?.length) sub = [...c.commentLeading, ...sub];
     if (c.commentTrailing?.length) sub.push(...c.commentTrailing.map(text => `${'\t'.repeat(cont)}${text}`));
@@ -2213,6 +2219,14 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
  * только нормализацию регистра/пробелов листа.
  */
 export function formatSelectExpression(expression: string): string {
+  // C31: a parenthesized parameter operand keeps its parentheses here too (`ВЫБОР КОГДА
+  // А И (&Условие) …`, `А И (&Условие) КАК Ф`), see maskParenthesizedParams.
+  const mask = maskParenthesizedParams(expression);
+  if (!mask) return formatSelectExpressionText(expression);
+  return mask.restore(formatSelectExpressionText(mask.text)) ?? expression;
+}
+
+function formatSelectExpressionText(expression: string): string {
   if (!tryTokenize(expression)) return expression;
   // `ПУСТАЯТАБЛИЦА.(Код, Наименование)` → канон конструктора 1С (live, RP14): каждый
   // элемент — пустое значение + ` КАК Имя`, элементы через `, `
@@ -3294,15 +3308,16 @@ export function maskParenthesizedParams(text: string): { text: string; restore: 
   const toks = tryTokenize(text);
   if (!toks) return undefined;
   const spans: Array<{ start: number; end: number; param: string }> = [];
-  // Only a standalone boolean operand: after the start, `И`, `ИЛИ`, `НЕ` or `(`, and
-  // before the end, `И`, `ИЛИ` or `)` — not the list of `В (&Список)` or a call argument.
+  // Only a standalone boolean operand: after the start, `И`, `ИЛИ`, `НЕ`, `КОГДА` or `(`,
+  // and before the end, `И`, `ИЛИ`, `ТОГДА` or `)` — not the list of `В (&Список)` or a
+  // call argument.
   const isWord = (t: Token | undefined, ...words: string[]): boolean => !!t && words.some(w => isWordToken(t, w));
   const isPunct = (t: Token | undefined, v: string): boolean => t?.type === 'punct' && t.value === v;
   for (let i = 0; i + 2 < toks.length; i++) {
     const [open, param, close] = [toks[i], toks[i + 1], toks[i + 2]];
     const prev = toks[i - 1], next = toks[i + 3];
-    const operandBefore = prev === undefined || isWord(prev, 'И', 'ИЛИ', 'НЕ') || isPunct(prev, '(');
-    const operandAfter = next === undefined || next.type === 'eof' || isWord(next, 'И', 'ИЛИ') || isPunct(next, ')');
+    const operandBefore = prev === undefined || isWord(prev, 'И', 'ИЛИ', 'НЕ', 'КОГДА') || isPunct(prev, '(');
+    const operandAfter = next === undefined || next.type === 'eof' || isWord(next, 'И', 'ИЛИ', 'ТОГДА') || isPunct(next, ')');
     if (operandBefore && operandAfter && isPunct(open, '(') && param.type === 'param' && isPunct(close, ')')) {
       spans.push({ start: open.pos, end: close.pos + 1, param: param.text });
       i += 2;

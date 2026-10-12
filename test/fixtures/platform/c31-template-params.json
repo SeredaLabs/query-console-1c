@@ -1,5 +1,5 @@
 {
- "source": "execute_query on SL_kza, 2026-10-12 (C31): the BSL substitution applied to the original template and to the Designer → Apply text",
+ "source": "execute_query on SL_kza, 2026-10-12 (C31): the BSL substitution applied to the original template and to the Designer → Apply text; expr_* cases: parenthesized placeholders inside expressions (ВЫБОР in the select list / ГДЕ / ПО / УПОРЯДОЧИТЬ, a boolean select column, a nested subquery) — same check, 2026-10-12",
  "cases": [
   {
    "name": "select_placeholder",
@@ -244,6 +244,259 @@
      "rows": 11,
      "columns": [
       "Код"
+     ]
+    },
+    "sameData": true
+   }
+  },
+  {
+   "name": "expr_select_case",
+   "template": "ВЫБРАТЬ Т.Код КАК Код, ВЫБОР КОГДА Т.Код = \"999\" И (&Условие) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Ф ИЗ Справочник.Валюты КАК Т",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код,\n\tВЫБОР\n\t\tКОГДА Т.Код = \"999\"\n\t\t\t\tИ (&Условие)\n\t\t\tТОГДА 1\n\t\tИНАЧЕ 0\n\tКОНЕЦ КАК Ф\nИЗ\n\tСправочник.Валюты КАК Т",
+   "bslSubstitution": {
+    "&Условие": "Т.Код = \"980\" ИЛИ Т.Код = \"840\""
+   },
+   "platform": {
+    "original": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Ф"
+     ]
+    },
+    "applied": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Ф"
+     ]
+    },
+    "sameData": true
+   },
+   "beforeFix": "1 row(s) with different values (parentheses dropped)"
+  },
+  {
+   "name": "expr_select_bool",
+   "template": "ВЫБРАТЬ Т.Код КАК Код, Т.Код = \"999\" И (&Условие) КАК Ф ИЗ Справочник.Валюты КАК Т",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код,\n\tТ.Код = \"999\"\n\t\tИ (&Условие) КАК Ф\nИЗ\n\tСправочник.Валюты КАК Т",
+   "bslSubstitution": {
+    "&Условие": "Т.Код = \"980\" ИЛИ Т.Код = \"840\""
+   },
+   "platform": {
+    "original": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Ф"
+     ]
+    },
+    "applied": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Ф"
+     ]
+    },
+    "sameData": true
+   },
+   "beforeFix": "1 row(s) with different values (parentheses dropped)"
+  },
+  {
+   "name": "expr_select_case_not",
+   "template": "ВЫБРАТЬ Т.Код КАК Код, ВЫБОР КОГДА НЕ (&Условие) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Ф ИЗ Справочник.Валюты КАК Т",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код,\n\tВЫБОР\n\t\tКОГДА НЕ (&Условие)\n\t\t\tТОГДА 1\n\t\tИНАЧЕ 0\n\tКОНЕЦ КАК Ф\nИЗ\n\tСправочник.Валюты КАК Т",
+   "bslSubstitution": {
+    "&Условие": "Т.Код = \"980\" И Т.Код = \"840\""
+   },
+   "platform": {
+    "original": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Ф"
+     ]
+    },
+    "applied": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Ф"
+     ]
+    },
+    "sameData": true
+   },
+   "beforeFix": "10 row(s) with different values (parentheses dropped)"
+  },
+  {
+   "name": "expr_select_nested_subquery",
+   "template": "ВЫБРАТЬ Т.Код КАК Код, ВЫБОР КОГДА Т.Код В (ВЫБРАТЬ Вл.Код ИЗ Справочник.Валюты КАК Вл ГДЕ Вл.Код = \"999\" И (&Условие)) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Ф ИЗ Справочник.Валюты КАК Т",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код,\n\tВЫБОР\n\t\tКОГДА Т.Код В\n\t\t\t\t(ВЫБРАТЬ\n\t\t\t\t\tВл.Код\n\t\t\t\tИЗ\n\t\t\t\t\tСправочник.Валюты КАК Вл\n\t\t\t\tГДЕ\n\t\t\t\t\tВл.Код = \"999\"\n\t\t\t\t\tИ (&Условие))\n\t\t\tТОГДА 1\n\t\tИНАЧЕ 0\n\tКОНЕЦ КАК Ф\nИЗ\n\tСправочник.Валюты КАК Т",
+   "bslSubstitution": {
+    "&Условие": "Вл.Код = \"980\" ИЛИ Вл.Код = \"840\""
+   },
+   "platform": {
+    "original": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Ф"
+     ]
+    },
+    "applied": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Ф"
+     ]
+    },
+    "sameData": true
+   },
+   "beforeFix": "1 row(s) with different values (parentheses dropped)"
+  },
+  {
+   "name": "expr_where_case",
+   "template": "ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ ВЫБОР КОГДА Т.Код = \"999\" И (&Условие) ТОГДА ИСТИНА ИНАЧЕ ЛОЖЬ КОНЕЦ",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\nГДЕ\n\tВЫБОР\n\t\t\tКОГДА Т.Код = \"999\"\n\t\t\t\t\tИ (&Условие)\n\t\t\t\tТОГДА ИСТИНА\n\t\t\tИНАЧЕ ЛОЖЬ\n\t\tКОНЕЦ",
+   "bslSubstitution": {
+    "&Условие": "Т.Код = \"980\" ИЛИ Т.Код = \"840\""
+   },
+   "platform": {
+    "original": {
+     "rows": 0,
+     "columns": [
+      "Код"
+     ]
+    },
+    "applied": {
+     "rows": 0,
+     "columns": [
+      "Код"
+     ]
+    },
+    "sameData": true
+   },
+   "beforeFix": "0 → 1 rows (parentheses dropped)"
+  },
+  {
+   "name": "expr_join_case",
+   "template": "ВЫБРАТЬ Т.Код КАК Код, Т2.Код КАК Код2 ИЗ Справочник.Валюты КАК Т ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Т2 ПО Т.Ссылка = Т2.Ссылка И ВЫБОР КОГДА Т.Код = \"999\" И (&Условие) ТОГДА ИСТИНА ИНАЧЕ ЛОЖЬ КОНЕЦ",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код,\n\tТ2.Код КАК Код2\nИЗ\n\tСправочник.Валюты КАК Т\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Т2\n\t\tПО Т.Ссылка = Т2.Ссылка\n\t\t\tИ (ВЫБОР\n\t\t\t\tКОГДА Т.Код = \"999\"\n\t\t\t\t\t\tИ (&Условие)\n\t\t\t\t\tТОГДА ИСТИНА\n\t\t\t\tИНАЧЕ ЛОЖЬ\n\t\t\tКОНЕЦ)",
+   "bslSubstitution": {
+    "&Условие": "Т.Код = \"980\" ИЛИ Т.Код = \"840\""
+   },
+   "platform": {
+    "original": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Код2"
+     ]
+    },
+    "applied": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Код2"
+     ]
+    },
+    "sameData": true
+   },
+   "beforeFix": "1 row(s) with different values (parentheses dropped)"
+  },
+  {
+   "name": "expr_order_case",
+   "template": "ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т УПОРЯДОЧИТЬ ПО ВЫБОР КОГДА Т.Код = \"999\" И (&Условие) ТОГДА 0 ИНАЧЕ 1 КОНЕЦ, Т.Код",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\n\nУПОРЯДОЧИТЬ ПО\n\tВЫБОР\n\t\tКОГДА Т.Код = \"999\"\n\t\t\t\tИ (&Условие)\n\t\t\tТОГДА 0\n\t\tИНАЧЕ 1\n\tКОНЕЦ,\n\tТ.Код",
+   "bslSubstitution": {
+    "&Условие": "Т.Код = \"980\" ИЛИ Т.Код = \"840\""
+   },
+   "platform": {
+    "original": {
+     "rows": 11,
+     "columns": [
+      "Код"
+     ]
+    },
+    "applied": {
+     "rows": 11,
+     "columns": [
+      "Код"
+     ]
+    },
+    "sameData": true
+   },
+   "beforeFix": "row order changed (parentheses dropped)"
+  },
+  {
+   "name": "expr_having_case",
+   "template": "ВЫБРАТЬ Т.Код КАК Код, КОЛИЧЕСТВО(*) КАК К ИЗ Справочник.Валюты КАК Т СГРУППИРОВАТЬ ПО Т.Код ИМЕЮЩИЕ МАКСИМУМ(ВЫБОР КОГДА Т.Код = \"999\" И (&Условие) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ) = 0",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код,\n\tКОЛИЧЕСТВО(*) КАК К\nИЗ\n\tСправочник.Валюты КАК Т\n\nСГРУППИРОВАТЬ ПО\n\tТ.Код\n\nИМЕЮЩИЕ\n\tМАКСИМУМ(ВЫБОР\n\t\t\tКОГДА Т.Код = \"999\"\n\t\t\t\t\tИ (&Условие)\n\t\t\t\tТОГДА 1\n\t\t\tИНАЧЕ 0\n\t\tКОНЕЦ) = 0",
+   "bslSubstitution": {
+    "&Условие": "Т.Код = \"980\" ИЛИ Т.Код = \"840\""
+   },
+   "platform": {
+    "original": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "К"
+     ]
+    },
+    "applied": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "К"
+     ]
+    },
+    "sameData": true
+   }
+  },
+  {
+   "name": "expr_value_select_case",
+   "template": "ВЫБРАТЬ Т.Код КАК Код, ВЫБОР КОГДА Т.Код = \"840\" И (&Условие) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Ф ИЗ Справочник.Валюты КАК Т",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код,\n\tВЫБОР\n\t\tКОГДА Т.Код = \"840\"\n\t\t\t\tИ (&Условие)\n\t\t\tТОГДА 1\n\t\tИНАЧЕ 0\n\tКОНЕЦ КАК Ф\nИЗ\n\tСправочник.Валюты КАК Т",
+   "params": {
+    "Условие": true
+   },
+   "platform": {
+    "original": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Ф"
+     ]
+    },
+    "applied": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Ф"
+     ]
+    },
+    "sameData": true
+   }
+  },
+  {
+   "name": "expr_value_join_case",
+   "template": "ВЫБРАТЬ Т.Код КАК Код, Т2.Код КАК Код2 ИЗ Справочник.Валюты КАК Т ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Т2 ПО Т.Ссылка = Т2.Ссылка И ВЫБОР КОГДА Т.Код = \"840\" И (&Условие) ТОГДА ИСТИНА ИНАЧЕ ЛОЖЬ КОНЕЦ",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код,\n\tТ2.Код КАК Код2\nИЗ\n\tСправочник.Валюты КАК Т\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Т2\n\t\tПО Т.Ссылка = Т2.Ссылка\n\t\t\tИ (ВЫБОР\n\t\t\t\tКОГДА Т.Код = \"840\"\n\t\t\t\t\t\tИ (&Условие)\n\t\t\t\t\tТОГДА ИСТИНА\n\t\t\t\tИНАЧЕ ЛОЖЬ\n\t\t\tКОНЕЦ)",
+   "params": {
+    "Условие": true
+   },
+   "platform": {
+    "original": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Код2"
+     ]
+    },
+    "applied": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Код2"
      ]
     },
     "sameData": true

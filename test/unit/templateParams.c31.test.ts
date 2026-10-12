@@ -102,6 +102,37 @@ describe('C31: placeholder forms survive Designer → Apply → reopen', () => {
   });
 });
 
+describe('C31: a parenthesized placeholder inside an expression keeps its parentheses', () => {
+  // Platform: `expr_*` in c31-template-params.json — without the parentheses the
+  // substituted `А ИЛИ Б` changed values, rows and row order.
+  const CASE = 'ВЫБОР КОГДА Т.Код = "1" И (&Условие) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ';
+  const J = 'ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Т2 ПО Т.Ссылка = Т2.Ссылка';
+  it.each([
+    ['ВЫБОР in the select list', `ВЫБРАТЬ Т.Код, ${CASE} КАК Ф ${F}`, ['И ( &Условие ) ТОГДА']],
+    ['КОГДА НЕ (&Условие)', `ВЫБРАТЬ Т.Код, ВЫБОР КОГДА НЕ (&Условие) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Ф ${F}`, ['КОГДА НЕ ( &Условие ) ТОГДА']],
+    ['a boolean select column', `ВЫБРАТЬ Т.Код, Т.Код = "1" И (&Условие) КАК Ф ${F}`, ['И ( &Условие ) КАК Ф']],
+    ['a subquery inside ВЫБОР', `ВЫБРАТЬ Т.Код, ВЫБОР КОГДА Т.Код В (ВЫБРАТЬ Вл.Код ИЗ Справочник.Валюты КАК Вл ГДЕ Вл.Код = "1" И (&Условие)) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Ф ${F}`, ['И ( &Условие ) )']],
+    ['ВЫБОР in ГДЕ', `ВЫБРАТЬ Т.Код ${F} ГДЕ ВЫБОР КОГДА Т.Код = "1" И (&Условие) ТОГДА ИСТИНА ИНАЧЕ ЛОЖЬ КОНЕЦ`, ['И ( &Условие ) ТОГДА']],
+    ['ВЫБОР in ПО', `ВЫБРАТЬ Т.Код ${F} ${J} И ВЫБОР КОГДА Т.Код = "1" И (&Условие) ТОГДА ИСТИНА ИНАЧЕ ЛОЖЬ КОНЕЦ`, ['И ( &Условие ) ТОГДА']],
+    ['ВЫБОР in УПОРЯДОЧИТЬ ПО', `ВЫБРАТЬ Т.Код ${F} УПОРЯДОЧИТЬ ПО ${CASE}`, ['И ( &Условие ) ТОГДА']],
+    ['a UNION member column', `ВЫБРАТЬ Т.Код, ${CASE} КАК Ф ${F} ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ Т.Код, ${CASE} ${F}`, ['И ( &Условие ) ТОГДА']],
+    ['ПО with a placeholder conjunct', `ВЫБРАТЬ Т.Код ${F} ${J} И (&Условие)`, ['Т2 . Ссылка И ( &Условие )']],
+    ['ПО that is only the placeholder', `ВЫБРАТЬ Т.Код ${F} ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Т2 ПО (&Условие)`, ['ПО ( &Условие )']],
+  ])('%s', (_name, input, sequences) => {
+    const out = stable(input as string);
+    const count = (text: string) => (` ${lexed(text)} `.match(/ \( &Условие \) /gu) ?? []).length;
+    expect(count(out)).toBe(count(input as string));
+    for (const sequence of sequences as string[]) expect(has(out, sequence)).toBe(true);
+    expect(lexed(out)).not.toContain('( ( &Условие ) )');
+  });
+
+  it('`В (&Список)` and a call argument are not touched', () => {
+    const out = stable(`ВЫБРАТЬ Т.Код, ВЫБОР КОГДА Т.Код В (&Коды) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Ф, ЕСТЬNULL(&Значение, 0) КАК З ${F}`);
+    expect(has(out, 'В ( &Коды ) ТОГДА')).toBe(true);
+    expect(has(out, 'ЕСТЬNULL ( &Значение , 0 )')).toBe(true);
+  });
+});
+
 describe('C31: nested SELECT, UNION, temp tables', () => {
   it('nested SELECT: the placeholder stays bare inside', () => {
     const out = stable(`ВЫБРАТЬ П.Код ИЗ (ВЫБРАТЬ Т.Код КАК Код, &ВыбираемыеКолонки ${F} СГРУППИРОВАТЬ ПО Т.Код, &ПоляГруппировки) КАК П`);
@@ -163,6 +194,8 @@ describe('C31: the constructor-parity mode keeps the platform text', () => {
     [`ВЫБРАТЬ КОЛИЧЕСТВО(*) КАК К ${F} СГРУППИРОВАТЬ ПО &ПоляГруппировки`, 'К ИЗ Справочник . Валюты КАК Т'],
     [`ВЫБРАТЬ Т.Код ${F} ГДЕ Т.Код = "1" И (&Условие)`, 'И &Условие'],
     [`ВЫБРАТЬ Т.Код ${F} ГДЕ НЕ (&Условие)`, 'НЕ &Условие'],
+    [`ВЫБРАТЬ Т.Код, ВЫБОР КОГДА Т.Код = "1" И (&Условие) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Ф ${F}`, 'И &Условие ТОГДА'],
+    [`ВЫБРАТЬ Т.Код ${F} ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Т2 ПО Т.Ссылка = Т2.Ссылка И ВЫБОР КОГДА Т.Код = "1" И (&Условие) ТОГДА ИСТИНА ИНАЧЕ ЛОЖЬ КОНЕЦ`, 'И &Условие ТОГДА'],
   ])('%j', (input, sequence) => {
     const out = constructor(input);
     expect(has(out, sequence)).toBe(true);
