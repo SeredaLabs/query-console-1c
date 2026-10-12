@@ -5,8 +5,7 @@ import { synthesizedFieldAlias } from './queryModelUtils';
 // операция, см. `queryModelUtils.ts`) — единственная оставшаяся зависимость
 // unionModel → sdblGenerator, обоснованная (не misplaced logic).
 import { fieldExpr } from './sdblGenerator';
-import { createExprAutoAliaser } from './exprAutoAlias';
-import { isWildcardExpression } from './expandStarFields';
+import { columnNames } from './columnNames';
 
 /** Один запрос-участник объединения. */
 export interface UnionMember {
@@ -69,19 +68,33 @@ export function fieldAlias(field: SelectedField, model?: QueryModel): string {
 }
 
 /**
+ * Result-column names of the whole select list, by element (C30: `columnNames`, the
+ * platform rule). A wildcard kept as written has no entry.
+ */
+export function selectElementNames(model: QueryModel): Map<SelectedField | SelectedTabSectionField, string> {
+  const elements = orderedSelectElements(model);
+  const names = columnNames(model, elements);
+  const out = new Map<SelectedField | SelectedTabSectionField, string>();
+  elements.forEach((el, i) => {
+    const name = names[i];
+    if (name !== undefined) out.set(el.kind === 'field' ? el.field : el.tsf, name);
+  });
+  return out;
+}
+
+/**
  * Псевдонимы столбцов выборки так, как их напечатает генератор (`buildFieldLines`):
- * произвольное поле БЕЗ псевдонима (добавлено в UI, парсер такие поля не оставляет)
- * получает автопсевдоним генератора — имя голого параметра, `<Поле>Представление`
- * или сквозной `Поле{n}` (нумерация только по таким полям, как в генераторе);
- * остальные — `fieldAlias`. Нужен там, где псевдоним ВИДЕН или ПЕЧАТАЕТСЯ как
- * имя колонки (заголовки объединения, колонки ВТ), — `fieldAlias` отдаёт для
- * такого поля сам текст выражения (это ключ совпадения, а не имя колонки).
+ * C30 — одно правило платформы для всех потребителей (`columnNames`). Без `model`
+ * (поля без источников) список считается отдельной выборкой. Нужен там, где псевдоним
+ * ВИДЕН или ПЕЧАТАЕТСЯ как имя колонки (заголовки объединения, колонки ВТ), —
+ * `fieldAlias` отдаёт для произвольного поля сам текст выражения (это ключ
+ * совпадения, а не имя колонки). Звезда, оставленная как есть, имени колонки не имеет
+ * и отдаётся своим текстом.
  */
 export function selectColumnAliases(fields: SelectedField[], model?: QueryModel): string[] {
-  const reserved = [...fields, ...(model?.trailingFields ?? [])].flatMap(f => (f.alias !== undefined ? [f.alias] : []));
-  const autoAlias = createExprAutoAliaser(reserved);
-  // An unexpanded wildcard has no column alias and takes no `Поле{n}` number (C24).
-  return fields.map(f => (f.expression && f.alias === undefined && !isWildcardExpression(f.expression) ? autoAlias(f.expression) : fieldAlias(f, model)));
+  const own = model && fields.every(f => model.fields.includes(f) || (model.trailingFields ?? []).includes(f));
+  const names = selectElementNames(own ? model : ({ ...(model ?? {}), tables: model?.tables ?? [], fields, tabSectionFields: undefined, trailingFields: undefined } as QueryModel));
+  return fields.map(f => names.get(f) ?? fieldAlias(f, model));
 }
 
 /**
@@ -166,13 +179,7 @@ export function unionHasTrailing(members: UnionMember[]): boolean {
 
 /** Псевдоним столбца-элемента участника-головы (поле → fieldAlias; ТЧ → её псевдоним). */
 export function elementAlias(el: SelectElement, model: QueryModel): string {
-  if (el.kind === 'field') {
-    if (el.field.expression && el.field.alias === undefined) {
-      const all = [...model.fields, ...(model.trailingFields ?? [])];
-      const idx = all.indexOf(el.field);
-      if (idx >= 0) return selectColumnAliases(all, model)[idx];
-    }
-    return fieldAlias(el.field, model);
-  }
-  return el.tsf.alias ?? el.tsf.tsName;
+  const name = selectElementNames(model).get(el.kind === 'field' ? el.field : el.tsf);
+  if (name !== undefined) return name;
+  return el.kind === 'field' ? fieldAlias(el.field, model) : (el.tsf.alias ?? el.tsf.tsName);
 }

@@ -63,22 +63,20 @@ export function qualifiedAutoAlias(path: string, tabularSource: boolean): string
 
 /**
  * Синтезированный автопсевдоним простого поля выборки без явного `КАК`, как его
- * ставит конструктор 1С. Квалифицированному полю (`Алиас.Путь`) — склейка
- * сегментов (с отбрасыванием ведущего `Ссылка` у ТЧ), голому — последний сегмент.
- * Источник поля определяется по `model.tables`. Единая точка правды для
- * генератора (`fieldLine`), выравнивания колонок объединения (`unionModel`) и
- * read-only анализа (`queryAnalysisService`).
+ * ставит конструктор 1С: склейка сегментов пути (с отбрасыванием ведущего `Ссылка`
+ * у ТЧ) — у квалифицированного (`Алиас.Путь`) и у голого поля одинаково (C30,
+ * СхемаЗапроса SL_kza 2026-10-12: `Ссылка.Код` → `СсылкаКод`, `ЗаказКлиента.Номер` →
+ * `ЗаказКлиентаНомер`; прежнее правило «голому — последний сегмент» платформой не
+ * подтвердилось). Источник поля определяется по `model.tables`. Единая точка правды
+ * для `columnNames` (генератор, объединения, ВТ) и read-only анализа.
  */
 export function synthesizedFieldAlias(model: QueryModel, field: SelectedField): string {
-  if (field.qualified) {
-    // Нерезолвимая навигация по источнику-ВТ: автопсевдоним = ПОЛНЫЙ точечный путь
-    // дословно (`СтавкаНДС.Перечисление`), без склейки сегментов (фаза 6.18, парсер
-    // `markDottedAutoAlias`).
-    if (field.autoAliasDotted) return field.path;
-    const t = model.tables.find(tb => tb.id === field.tableId);
-    return qualifiedAutoAlias(field.path, isTabularSectionSource(t));
-  }
-  return field.path.split('.').pop() ?? field.path;
+  // Нерезолвимая навигация по источнику-ВТ: автопсевдоним = ПОЛНЫЙ точечный путь
+  // дословно (`СтавкаНДС.Перечисление`), без склейки сегментов (фаза 6.18, парсер
+  // `markDottedAutoAlias`).
+  if (field.qualified && field.autoAliasDotted) return field.path;
+  const t = model.tables.find(tb => tb.id === field.tableId);
+  return qualifiedAutoAlias(field.path, isTabularSectionSource(t));
 }
 
 /**

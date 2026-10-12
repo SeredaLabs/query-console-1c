@@ -196,7 +196,7 @@ describe('D5: a kept wildcard does not rename its neighbours', () => {
     const open = tryOpenDesignerBatch(`ВЫБРАТЬ А.*, &Дата ${F}`);
     if (!open.ok) throw new Error(open.error);
     const field = open.doc.members[0].members[0].model.fields[1];
-    expect(field.paramAutoAlias).toBe(true);
+    expect(field.aliasSynthesized).toBe('Дата');
     field.alias = 'Д';
     expect(generateBatch(open.doc)).toContain('\t&Дата КАК Д\n');
   });
@@ -268,9 +268,9 @@ describe('complex scenarios: Designer text equals СхемаЗапроса (SL_k
     expect(stable(input)).toBe(platform);
   });
 
-  it('`В (ВЫБРАТЬ * …)`: expanded; the platform prints no name inside `В`, which changes nothing', () => {
+  it('`В (ВЫБРАТЬ * …)`: expanded without a name inside `В`, as the platform prints it (C30)', () => {
     const out = stable('ВЫБРАТЬ 1 КАК А ПОМЕСТИТЬ ВТ;\nВЫБРАТЬ ВТ.А ИЗ ВТ ГДЕ ВТ.А В (ВЫБРАТЬ * ИЗ ВТ)');
-    expect(out).toContain('(ВЫБРАТЬ\n\t\t\t\tВТ.А КАК А\n\t\t\tИЗ\n\t\t\t\tВТ)');
+    expect(out).toContain('(ВЫБРАТЬ\n\t\t\t\tВТ.А\n\t\t\tИЗ\n\t\t\t\tВТ)');
   });
 
   it('a nested SELECT over a kept wildcard stays as written, neighbours unnamed', () => {

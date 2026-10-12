@@ -91,9 +91,11 @@ describe('synthesizedFieldAlias', () => {
     fields: [],
   };
 
-  it('голое поле (не qualified) — последний сегмент пути', () => {
+  // C30: the platform joins the segments of a bare path too (СхемаЗапроса, SL_kza
+  // 2026-10-12: `ЗаказКлиента.Номер` → `ЗаказКлиентаНомер`, `Ссылка.Код` → `СсылкаКод`).
+  it('голое поле (не qualified) — склейка сегментов, как у квалифицированного', () => {
     const field: SelectedField = { tableId: 't1', path: 'Владелец.Наименование', qualified: false };
-    expect(synthesizedFieldAlias(model, field)).toBe('Наименование');
+    expect(synthesizedFieldAlias(model, field)).toBe('ВладелецНаименование');
   });
 
   it('квалифицированное поле обычного источника — склейка сегментов, Ссылка сохраняется', () => {

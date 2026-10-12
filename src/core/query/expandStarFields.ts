@@ -3,8 +3,7 @@ import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable } from '../metadata/types';
 import { buildSelectAllModel } from './buildSelectAllModel';
 import { isIdentifierName } from './sdblLexer';
-import { synthesizedFieldAlias } from './queryModelUtils';
-import { representationAutoAlias } from './exprAutoAlias';
+import { columnNames, isSynthesizedAlias } from './columnNames';
 
 /**
  * How a wildcard is expanded (C24 step 1a).
@@ -37,78 +36,27 @@ export function markProvenTempTable(table: MetaTable, columns: string[] | undefi
   else provenTempTableColumns.delete(table);
 }
 
-/**
- * The parser named a bare `&Имя` field without `КАК` after the parameter. The flag is
- * trusted only while the name is still that one (a rename in the Designer is explicit).
- */
-export function isSynthesizedParamAlias(f: SelectedField): boolean {
-  return f.paramAutoAlias === true && f.alias !== undefined && f.expression?.trim() === `&${f.alias}`;
-}
-
-/** An explicit `КАК` of a select field (not an alias synthesized by the parser). */
+/** An explicit `КАК` of a select field (not a name the parser synthesized). */
 function explicitAlias(f: SelectedField): string | undefined {
-  if (f.alias === undefined) return undefined;
-  if (isSynthesizedParamAlias(f)) return undefined;
-  if (f.expression !== undefined && /^Поле\d+$/u.test(f.alias) && !f.exprAliasExplicit) return undefined;
-  return f.alias;
+  return f.alias !== undefined && !isSynthesizedAlias(f) ? f.alias : undefined;
 }
 
 /**
  * The column names of a select list (member 0 of a nested SELECT or of a temp-table
- * creator), or `undefined` when they are not proven. Proven: every field has an
- * explicit `КАК` or is a plain field path, whose implicit name the platform
- * deduplicates with a suffix (`Код`, `Код1` — СхемаЗапроса, SL_kza 2026-10-12).
- * An expression without `КАК` takes the parser's `Поле{n}` (or `<Поле>Представление`),
- * which is what the generator prints. Not proven: a wildcard, a tabular-section
- * projection, an aggregate without `КАК`, a dotted name, an implicit name equal to
- * an explicit one written LATER (the platform renames the implicit one, the generator
- * would not), two equal explicit names.
+ * creator), or `undefined` when they are not proven: the names are the platform's
+ * (`columnNames`, C30), so they are proven unless the list has a wildcard, a
+ * tabular-section projection or trailing columns, or two equal explicit names.
  */
 export function provenColumnNames(model: QueryModel): string[] | undefined {
   if (model.tabSectionFields?.length || model.trailingFields?.length) return undefined;
-  const explicit = new Set<string>();
-  for (const f of model.fields) {
-    const a = explicitAlias(f);
-    if (a !== undefined) {
-      if (explicit.has(a.toUpperCase())) return undefined;
-      explicit.add(a.toUpperCase());
-    }
+  if (model.fields.some(f => isWildcardExpression(f.expression))) return undefined;
+  const names = columnNames(model, model.fields.map(field => ({ kind: 'field' as const, field })));
+  const seen = new Set<string>();
+  for (const name of names) {
+    if (name === undefined || !isIdentifierName(name) || seen.has(name.toUpperCase())) return undefined;
+    seen.add(name.toUpperCase());
   }
-  // Explicit names not yet reached, left to right.
-  const later = new Set(explicit);
-  const used = new Set<string>();
-  const names: string[] = [];
-  let representation = false, numbered = false;
-  for (const f of model.fields) {
-    if (isWildcardExpression(f.expression)) return undefined;
-    let name = explicitAlias(f);
-    if (name !== undefined) {
-      later.delete(name.toUpperCase());
-      if (used.has(name.toUpperCase())) return undefined;
-    }
-    if (name === undefined && f.expression !== undefined && f.func === undefined && f.alias !== undefined) {
-      // The parser numbered it `Поле{n}`; the generator prints that or
-      // `<Поле>Представление` — the name the platform gives it as well.
-      const repr = representationAutoAlias(f.expression);
-      if (repr !== undefined) representation = true; else if (!isSynthesizedParamAlias(f)) numbered = true;
-      // The parser also counts a `ПРЕДСТАВЛЕНИЕ(…)` field in `Поле{n}`, the platform
-      // does not (subq_expr_repr, SL_kza 2026-10-12): with both, the numbers differ.
-      if (representation && numbered) return undefined;
-      name = repr ?? f.alias;
-      if (used.has(name.toUpperCase()) || later.has(name.toUpperCase())) return undefined;
-    } else if (name === undefined) {
-      if (f.expression !== undefined || f.func !== undefined || f.alias !== undefined) return undefined;
-      const base = synthesizedFieldAlias(model, f);
-      if (!isIdentifierName(base)) return undefined;
-      name = base;
-      for (let k = 1; used.has(name.toUpperCase()); k++) name = `${base}${k}`;
-      if (later.has(name.toUpperCase())) return undefined;
-    }
-    if (!isIdentifierName(name)) return undefined;
-    used.add(name.toUpperCase());
-    names.push(name);
-  }
-  return names.length ? names : undefined;
+  return names.length ? (names as string[]) : undefined;
 }
 
 /** Proven columns of one FROM source, or `undefined`. */
@@ -126,10 +74,7 @@ function provenSourceColumns(t: SelectedTable, resolver: MetadataResolver | unde
 
 /**
  * `preserve` expansion: all wildcards of the select list or none. Column names
- * follow the platform rule (СхемаЗапроса, SL_kza 2026-10-12): an explicit `КАК` is
- * reserved up front; the other columns are named left to right with the smallest
- * free suffix. The expanded columns get explicit names; a plain field after them is
- * then deduplicated by the generator in print order, as the platform does.
+ * follow the platform rule (`columnNames`, C30).
  */
 function expandProvenWildcards(model: QueryModel, resolver: MetadataResolver | undefined): void {
   if (model.tabSectionFields?.length || model.trailingFields?.length) return;
@@ -155,34 +100,27 @@ function expandProvenWildcards(model: QueryModel, resolver: MetadataResolver | u
     plans.set(f, plan);
   }
 
-  const reserved = new Set<string>();
-  for (const f of model.fields) {
-    const a = parseStar(f) ? undefined : explicitAlias(f);
-    if (a !== undefined) reserved.add(a.toUpperCase());
-  }
-  const used = new Set<string>();
-  const free = (base: string, avoidReserved: boolean): string => {
-    let name = base;
-    for (let k = 1; used.has(name.toUpperCase()) || (avoidReserved && reserved.has(name.toUpperCase())); k++) name = `${base}${k}`;
-    used.add(name.toUpperCase());
-    return name;
-  };
+  // The expanded columns are named with the other columns left to right, as the
+  // platform does (`columnNames`), and keep that name as a synthesized one (sections
+  // such as `ИТОГИ … ПО <имя>` refer to columns by name).
   const fields: SelectedField[] = [];
+  const expanded = new Set<SelectedField>();
   for (const f of model.fields) {
     const plan = plans.get(f);
-    if (!plan) {
-      fields.push(f);
-      const a = explicitAlias(f);
-      // A plain field without `КАК` is named by the generator in print order (no
-      // regard to later explicit names), so it is counted the same way here.
-      if (a !== undefined) used.add(a.toUpperCase());
-      else free(synthesizedFieldAlias(model, f), false);
-      continue;
-    }
+    if (!plan) { fields.push(f); continue; }
     for (const { tableId, columns } of plan) {
-      for (const c of columns) fields.push({ tableId, path: c, alias: free(c, true) });
+      for (const c of columns) {
+        const column: SelectedField = { tableId, path: c, qualified: true };
+        expanded.add(column);
+        fields.push(column);
+      }
     }
   }
+  const names = columnNames(model, fields.map(field => ({ kind: 'field' as const, field })));
+  fields.forEach((f, i) => {
+    const name = names[i];
+    if (expanded.has(f) && name !== undefined) { f.alias = name; f.aliasSynthesized = name; }
+  });
   model.fields = fields;
 }
 

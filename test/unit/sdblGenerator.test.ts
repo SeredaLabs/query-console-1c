@@ -113,8 +113,9 @@ describe('generate', () => {
       tables: [{ id: 't1', fullName: 'Справочник.Валюты' }],
       fields: [{ tableId: 't1', path: 'ОсновнаяВалюта.Код' }],
     };
+    // C30: the column name joins the path segments, as the platform does.
     expect(generate(model)).toBe(
-      'ВЫБРАТЬ\n\tВалюты.ОсновнаяВалюта.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Валюты'
+      'ВЫБРАТЬ\n\tВалюты.ОсновнаяВалюта.Код КАК ОсновнаяВалютаКод\nИЗ\n\tСправочник.Валюты КАК Валюты'
     );
   });
 
