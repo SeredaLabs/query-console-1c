@@ -48,7 +48,7 @@ async function main(): Promise<void> {
     const golden: string = d.текстВалидатора;
     const file: string = d.файл;
     let ours = '';
-    try { ours = generateBatch(parseBatch(input, resolver)); }
+    try { ours = generateBatch(parseBatch(input, resolver, { wildcardPolicy: 'constructor' })); } // C24: oracle parity
     catch (e) { ours = `<<EXC ${e instanceof Error ? e.message : String(e)}>>`; }
 
     const r = await validateQuery(input, url, { authorization: cfg.mcpAuthorization });

@@ -44,8 +44,11 @@ describe('C24 step 0: a wildcard is printed without an alias', () => {
   });
 
   it('a wildcard takes no Поле{n} number (platform numbering)', () => {
-    expect(gen(`ВЫБРАТЬ Т.*, 1 + 1 ${F}`)).toContain('\tТ.*,\n\t1 + 1 КАК Поле1\n');
-    expect(gen(`ВЫБРАТЬ 1 + 1, Т.*, 2 + 2 ${F}`)).toContain('\t1 + 1 КАК Поле1,\n\tТ.*,\n\t2 + 2 КАК Поле2\n');
+    const aliases = (text: string) => parseBatch(text).members[0].members[0].model.fields.map(f => f.alias);
+    expect(aliases(`ВЫБРАТЬ Т.*, 1 + 1 ${F}`)).toEqual([undefined, 'Поле1']);
+    expect(aliases(`ВЫБРАТЬ 1 + 1, Т.*, 2 + 2 ${F}`)).toEqual(['Поле1', undefined, 'Поле2']);
+    // C24 step 1a (D5): next to the kept wildcard the synthesized names are not printed.
+    expect(gen(`ВЫБРАТЬ 1 + 1, Т.*, 2 + 2 ${F}`)).toContain('\t1 + 1,\n\tТ.*,\n\t2 + 2\n');
   });
 
   it('a star over a temp table of the batch still expands', () => {

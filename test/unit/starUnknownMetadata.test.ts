@@ -13,6 +13,12 @@
  * expands, and an undefined temp table (one-segment name) still contributes no columns,
  * as the platform does (`СхемаЗапроса`: `ВЫБРАТЬ * ИЗ ВТ2` → empty text,
  * `ВЫБРАТЬ *, 1 КАК Б ИЗ ВТ2` → `1 КАК Б`; SL_kza, 2026-10-11).
+ *
+ * C24 step 1a: "with metadata" is the constructor-parity mode (`wildcardPolicy:
+ * 'constructor'`, oracle/corpus only). Without metadata — the Designer path — the
+ * policy is `preserve`: a wildcard over an undefined or inferred temp table is kept
+ * as written (D1/D2: the table may come from a temp-table manager, and the inferred
+ * columns are only those the batch happens to mention).
  */
 import * as path from 'path';
 import { describe, it, expect } from 'vitest';
@@ -27,7 +33,7 @@ import { decideApply, findStaticApplyBlocker } from '../../src/webview/applyGate
 const SEP = '////////////////////////////////////////////////////////////////////////////////';
 const resolver = buildYamlResolver(path.join(__dirname, '../fixtures/corpus/metadata/cf'));
 const gen = (text: string, withResolver = false): string =>
-  generateBatch(parseBatch(text, withResolver ? resolver : undefined));
+  generateBatch(withResolver ? parseBatch(text, resolver, { wildcardPolicy: 'constructor' }) : parseBatch(text));
 const statements = (text: string): string[] => text.split(SEP);
 const last = (text: string): string => statements(text).pop()!;
 
@@ -57,7 +63,9 @@ describe('A/C/E/F: a wildcard over a real table without metadata is kept', () =>
     const out = gen(`${INFERRED}ВЫБРАТЬ Т.* ИЗ Справочник.Валюты КАК Т`);
     expect(statements(out)).toHaveLength(3);
     expect(last(out)).toContain('\tТ.*\n');
-    expect(statements(out)[1]).toContain('В.Код КАК Код'); // the inferred star still expands
+    // An inferred temp table is not a complete source (C24 step 1a, D2): kept.
+    expect(statements(out)[1]).toContain('\tВ.*\n');
+    expect(statements(gen(`${INFERRED}ВЫБРАТЬ Т.* ИЗ Справочник.Валюты КАК Т`, true))[1]).toContain('В.Код КАК Код');
   });
 
   it('E: mixed projection keeps Т.* and the explicit field, in order', () => {
@@ -92,9 +100,14 @@ describe('B/H: with a base resolver the behaviour is unchanged', () => {
 });
 
 describe('D: an undefined temp table contributes no columns (platform behaviour)', () => {
-  it.each([false, true])('with resolver: %s', withResolver => {
-    expect(last(gen(`${PLACE}ВЫБРАТЬ * ИЗ ВТ2`, withResolver))).toBe('');
-    expect(last(gen(`${PLACE}ВЫБРАТЬ *, 1 КАК Б ИЗ ВТ2`, withResolver))).toBe('\nВЫБРАТЬ\n\t1 КАК Б\nИЗ\n\tВТ2 КАК ВТ2');
+  it('constructor parity', () => {
+    expect(last(gen(`${PLACE}ВЫБРАТЬ * ИЗ ВТ2`, true))).toBe('');
+    expect(last(gen(`${PLACE}ВЫБРАТЬ *, 1 КАК Б ИЗ ВТ2`, true))).toBe('\nВЫБРАТЬ\n\t1 КАК Б\nИЗ\n\tВТ2 КАК ВТ2');
+  });
+
+  it('Designer path (preserve): the wildcard is kept (C24 step 1a, D1)', () => {
+    expect(last(gen(`${PLACE}ВЫБРАТЬ * ИЗ ВТ2`))).toBe('\nВЫБРАТЬ\n\t*\nИЗ\n\tВТ2 КАК ВТ2');
+    expect(last(gen(`${PLACE}ВЫБРАТЬ *, 1 КАК Б ИЗ ВТ2`))).toBe('\nВЫБРАТЬ\n\t*,\n\t1 КАК Б\nИЗ\n\tВТ2 КАК ВТ2');
   });
 });
 
@@ -131,7 +144,7 @@ describe('A1 parseStar: a wildcard alias is one lexer name', () => {
     expect(designer(swap(texts[0], alias)).text).toBe(swap(designer(texts[0]).text, alias));
   });
 
-  it('Ґа.* over an inferred temp table prints its columns', () => {
-    expect(last(gen('ВЫБРАТЬ Ґа.Код КАК К ИЗ ВТ КАК Ґа;\nВЫБРАТЬ Ґа.* ИЗ ВТ КАК Ґа'))).toContain('\tҐа.Код КАК Код\n');
+  it('Ґа.* over an inferred temp table prints its columns (constructor parity)', () => {
+    expect(last(gen('ВЫБРАТЬ Ґа.Код КАК К ИЗ ВТ КАК Ґа;\nВЫБРАТЬ Ґа.* ИЗ ВТ КАК Ґа', true))).toContain('\tҐа.Код КАК Код\n');
   });
 });

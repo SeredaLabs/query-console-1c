@@ -10,7 +10,7 @@ import { splitArgComments } from './argComments';
 import { tokenize, tryTokenize, codeRanges, isCodeAt, isWordToken, replaceInCodeRanges } from './sdblLexer';
 import { parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { bareParamName, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
-import { isWildcardExpression } from './expandStarFields';
+import { isWildcardExpression, isSynthesizedParamAlias } from './expandStarFields';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
 
 // Регистрируем в exprFormatter канонический ре-рендер инлайн-подзапроса членства
@@ -1970,7 +1970,7 @@ function isConstGroupExpr(expression: string | undefined): boolean {
 function renderTabProjection(
   tsf: SelectedTabSectionField,
   aliases: Map<string, string>,
-  opts: { suppress: boolean; outerAlias?: (name: string, explicit: string | undefined) => string }
+  opts: { suppress: boolean; outerAlias?: (name: string, explicit: string | undefined) => string | undefined }
 ): string {
   const tableAlias = aliases.get(tsf.tableId) ?? tsf.tableId;
   // Проекция ТЧ, ДОСТИГНУТАЯ через ссылочную навигацию (путь до `.(` длиннее одного
@@ -2041,7 +2041,7 @@ function renderTabProjection(
   const body = `\t${head}.${tsf.tsName}.(\n${subLines.join('\n')}\n\t)`;
   if (opts.suppress) return body;
   const tsAlias = opts.outerAlias ? opts.outerAlias(tsf.tsName, tsf.alias) : (tsf.alias ?? tsf.tsName);
-  return `${body} КАК ${tsAlias}`;
+  return tsAlias === undefined ? body : `${body} КАК ${tsAlias}`;
 }
 
 /**
@@ -2084,6 +2084,14 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
     return out;
   };
 
+  // C24 step 1a (D5): next to a wildcard kept as written, a name the generator would
+  // synthesize is not printed. The platform names the other columns after the
+  // wildcard's own (СхемаЗапроса, SL_kza 2026-10-12: `А.*, Б.HSКод` → `HSКод1`, while
+  // `А.*, Б.HSКод КАК HSКод` moves `HSКод` to Б), so an added `КАК` could move a
+  // name from a wildcard column to its neighbour. Explicit names stay as written.
+  const keptWildcard = [...model.fields, ...(model.trailingFields ?? [])]
+    .some(f => f.expression !== undefined && f.alias === undefined && isWildcardExpression(f.expression));
+
   const fieldLine = (f: SelectedField): string => {
     // C24: an unexpanded wildcard is printed as written, never with an auto alias
     // (`* КАК Поле1` is a platform syntax error). An explicit alias is kept and the
@@ -2096,7 +2104,8 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
       // автопсевдоним произвольному полю выборки (`1`/`ИСТИНА` остаются голыми);
       // явный (НЕ `Поле{n}`) псевдоним сохраняется (фаза 6.15.27, MCP). Парсер уже
       // навесил авто-`Поле{n}` (assignExpressionFieldAliases) — снимаем его здесь.
-      if (suppressAutoAlias && (f.alias === undefined || /^Поле\d+$/u.test(f.alias))) {
+      if (keptWildcard && isSynthesizedParamAlias(f)) return `\t${formatSelectExpression(f.expression)}`;
+      if ((suppressAutoAlias || keptWildcard) && (f.alias === undefined || /^Поле\d+$/u.test(f.alias))) {
         // Явно написанный разработчиком `Поле{n}` конструктор СОХРАНЯЕТ даже под
         // подавлением (MCP-проба); синтезированный — снимает (фаза 6.16.77).
         if (f.exprAliasExplicit) {
@@ -2135,7 +2144,7 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
     // лишь к парсерным агрегатам с флагом `funcOperandQualified` (legacy/UI-модели,
     // где функция из общего списка `aggregates`, не трогаем).
     let autoAlias: string | undefined;
-    if (!suppressAutoAlias) {
+    if (!suppressAutoAlias && !keptWildcard) {
       if (!func) {
         autoAlias = synthesizedFieldAlias(model, f);
       } else if (f.func !== undefined && f.funcOperandQualified) {
@@ -2158,7 +2167,7 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
       // Дедупликация псевдонима всей ТЧ (как раньше): явный — как есть, авто — через
       // наименьший целый суффикс при коллизии.
       outerAlias: (name, explicit) =>
-        explicit !== undefined ? (usedAliases.add(explicit), explicit) : uniqueAlias(name),
+        explicit !== undefined ? (usedAliases.add(explicit), explicit) : keptWildcard ? undefined : uniqueAlias(name),
     });
 
   // Поля до первой ТЧ (`model.fields`) — всегда первыми и в своём порядке.

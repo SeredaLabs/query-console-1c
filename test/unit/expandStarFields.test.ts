@@ -33,8 +33,10 @@ const resolver: MetadataResolver = {
   tableByFullName: (fullName) => (fullName === 'Справочник.Таб' ? ТАБ : undefined),
 };
 
+// With metadata these cases check constructor parity (C24 step 1a: `wildcardPolicy:
+// 'constructor'`, oracle/corpus only; the Designer never removes a wildcard).
 const render = (input: string, r?: MetadataResolver): string =>
-  generateBatch(parseBatch(input, r));
+  generateBatch(r ? parseBatch(input, r, { wildcardPolicy: 'constructor' }) : parseBatch(input));
 
 describe('expandStarFields — развёртка * по метаданным', () => {
   it('ВЫБРАТЬ * по единственному источнику: порядок полей, ТЧ, завершающие стандартные', () => {

@@ -7,6 +7,11 @@
  *  - комментарий или строковый литерал колонок не создают и звезду не включают
  *    (`// см. Т.Фантом` и `"Т.Строка"` раньше добавляли колонки `Фантом`/`Строка`).
  * Путь Designer (открытие без метаданных) выводит ВТ так же, как генератор.
+ *
+ * C24 step 1a: the inferred columns are visible only through the constructor-parity
+ * expansion (`wildcardPolicy: 'constructor'`, oracle/corpus). The Designer keeps a
+ * wildcard over an inferred temp table as written (D2: the batch mentions only some
+ * of its columns).
  */
 import { describe, it, expect } from 'vitest';
 import { parseBatch } from '../../src/core/query/sdblParser';
@@ -17,7 +22,8 @@ import { computeBatchTextSafe } from '../../src/webview/computeBatchText';
 import { decideApply, findStaticApplyBlocker } from '../../src/webview/applyGate';
 
 const SEP = '////////////////////////////////////////////////////////////////////////////////';
-const gen = (text: string): string => generateBatch(parseBatch(text, undefined, { preserveComments: true }));
+const gen = (text: string): string =>
+  generateBatch(parseBatch(text, undefined, { preserveComments: true, wildcardPolicy: 'constructor' }));
 /** Последний оператор пакета — тот, где разворачивается звезда. */
 const starStatement = (text: string): string => gen(text).split(SEP).pop()!;
 const batch = (first: string, star = 'ВЫБРАТЬ Т.* ИЗ ВТ КАК Т'): string => `${first}\n;\n${star}`;
@@ -48,11 +54,12 @@ describe('inferred temp-table columns: names come from the lexer', () => {
     expect(starStatement(batch('ВЫБРАТЬ Т.Ціна КАК Х ИЗ ВТ КАК Т'))).toContain('\tТ.Ціна КАК Ціна\n');
   });
 
-  it('Designer path: the whole name, Apply allowed, reopen stable', () => {
+  it('Designer path: the wildcard is kept (D2), Apply allowed, reopen stable', () => {
     const { text, applyOk } = designer(batch('ВЫБРАТЬ Т.Gültig КАК Х ИЗ ВТ КАК Т'));
-    expect(text).toContain('\tТ.Gültig КАК Gültig\n');
+    expect(text).toContain('\tТ.Gültig КАК Х\n');
+    expect(text.split(SEP).pop()).toBe('\nВЫБРАТЬ\n\tТ.*\nИЗ\n\tВТ КАК Т');
     expect(applyOk).toBe(true);
-    expect(gen(text)).toBe(text);
+    expect(designer(text).text).toBe(text);
   });
 });
 
