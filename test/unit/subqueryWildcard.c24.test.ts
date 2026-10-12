@@ -4,8 +4,11 @@
  * Designer gets once the batch has a temp table — `ВЫБРАТЬ Вл.* ИЗ (ВЫБРАТЬ …) КАК Вл`
  * and `ВЫБРАТЬ * ИЗ (ВЫБРАТЬ …) КАК Вл` lost their wildcard and the whole statement
  * (Designer → Apply allowed it). The platform expands such a star to the subquery's
- * columns (СхемаЗапроса, SL_kza 2026-10-11: `Вл.К КАК К`). Resolving those columns is
- * C24 step 1; until then the wildcard is kept as written, never removed.
+ * columns (СхемаЗапроса, SL_kza 2026-10-11: `Вл.К КАК К`).
+ *
+ * C24 step 1a: on the Designer path (`preserve`) the wildcard now expands to those
+ * proven columns; the constructor-parity mode (metadata, oracle/corpus) still keeps it.
+ * Either way nothing is removed.
  */
 import * as path from 'path';
 import { describe, it, expect } from 'vitest';
@@ -19,7 +22,8 @@ import { decideApply, findStaticApplyBlocker } from '../../src/webview/applyGate
 
 const SEP = '////////////////////////////////////////////////////////////////////////////////';
 const resolver = buildYamlResolver(path.join(__dirname, '../fixtures/corpus/metadata/cf'));
-const gen = (text: string, withResolver = false): string => generateBatch(parseBatch(text, withResolver ? resolver : undefined));
+const gen = (text: string, withResolver = false): string =>
+  generateBatch(withResolver ? parseBatch(text, resolver, { wildcardPolicy: 'constructor' }) : parseBatch(text));
 const statements = (text: string): string[] => text.split(SEP);
 function designer(text: string): { text: string; applyOk: boolean } {
   const open = tryOpenDesignerBatch(text);
@@ -36,6 +40,7 @@ const forms: Record<string, string> = {
   unqualified: `ВЫБРАТЬ * ИЗ ${SUB}`,
   qualifiedMixed: `ВЫБРАТЬ Вл.*, 1 КАК Х ИЗ ${SUB}`,
 };
+const EXPANDED = '\tВл.К КАК К,\n\tВл.Н КАК Н';
 
 describe('C24: a wildcard over a nested SELECT is never removed', () => {
   for (const [name, statement] of Object.entries(forms)) {
@@ -47,7 +52,7 @@ describe('C24: a wildcard over a nested SELECT is never removed', () => {
         const out = gen(text, withResolver);
         expect(statements(out)).toHaveLength(prelude ? 2 : 1);
         const star = name === 'unqualified' ? '\t*' : '\tВл.*';
-        expect(statements(out).pop()).toContain(star);
+        expect(statements(out).pop()).toContain(withResolver ? star : EXPANDED);
         expect(out).toContain('"a  (b"');
       });
 
@@ -56,7 +61,7 @@ describe('C24: a wildcard over a nested SELECT is never removed', () => {
         expect(first.applyOk).toBe(true);
         expect(statements(first.text)).toHaveLength(prelude ? 2 : 1);
         expect(first.text).toContain('"a  (b"');
-        expect(statements(first.text).pop()).toMatch(/\t(Вл\.)?\*/u);
+        expect(statements(first.text).pop()).toContain(EXPANDED);
         let current = first.text;
         for (let cycle = 0; cycle < 3; cycle++) {
           const next = designer(current);

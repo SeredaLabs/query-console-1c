@@ -62,7 +62,7 @@ import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable, MetaField } from '../metadata/types';
 import type { SourceMapSink, SourceMapEvent, BatchSourceMapSink, AbsoluteSourceMapEvent, TextRange } from './sourceMap';
 import { RecordingSourceMapSink } from './sourceMap';
-import { expandStarFields, isWildcardExpression } from './expandStarFields';
+import { expandStarFields, isWildcardExpression, markProvenTempTable, provenColumnNames, type WildcardPolicy } from './expandStarFields';
 import { expandTabSectionFields } from './expandTabSectionFields';
 import { wrapTabSectionAggregates } from './wrapTabSectionAggregates';
 import { dropUserIBConditions } from './dropUserIBConditions';
@@ -93,6 +93,8 @@ let sourceResolver: MetadataResolver | undefined;
  * parses without an explicit `preserveComments` inherit it.
  */
 let keepArgComments = false;
+/** C24 step 1a: wildcard policy of the current parse; nested parses inherit it. */
+let wildcardPolicy: WildcardPolicy = 'preserve';
 // Глубина вложенности подзапроса-источника `ИЗ (ВЫБРАТЬ …)`. >0 при разборе тела
 // такого подзапроса — конструктор 1С реконструирует его СГРУППИРОВАТЬ ПО из схемы
 // (подстановка листа выражением, фаза 6.19), тогда как ВЕРХНЕУРОВНЕВУЮ группировку
@@ -5040,6 +5042,12 @@ export interface ParseOptions {
    * there (`recoveredSnapshot`), not here.
    */
   batchSourceMap?: BatchSourceMapSink;
+  /**
+   * C24 step 1a: `preserve` (default) never removes a wildcard and expands one only
+   * over columns proven from the batch text; `constructor` is the oracle/corpus
+   * parity mode (see `WildcardPolicy`) and must not be used by the Designer.
+   */
+  wildcardPolicy?: WildcardPolicy;
 }
 
 /**
@@ -5178,8 +5186,10 @@ export function parseDocument(
 ): QueryDocument {
   const prevSourceResolver = sourceResolver;
   const prevKeepArgComments = keepArgComments;
+  const prevWildcardPolicy = wildcardPolicy;
   sourceResolver = resolver;
   if (opts?.preserveComments !== undefined) keepArgComments = opts.preserveComments;
+  if (opts?.wildcardPolicy !== undefined) wildcardPolicy = opts.wildcardPolicy;
   try {
     const doc = parseDocumentInner(text, resolver, opts?.sourceMap);
     const pad = nestingPad(text);
@@ -5193,6 +5203,7 @@ export function parseDocument(
   } finally {
     sourceResolver = prevSourceResolver;
     keepArgComments = prevKeepArgComments;
+    wildcardPolicy = prevWildcardPolicy;
   }
 }
 
@@ -5257,7 +5268,7 @@ function parseDocumentInner(
     canonicalizeFieldCasing(model, resolver);
     // Развёртка `*` по метаданным (фаза 6.15.15): до назначения автопсевдонимов
     // `ПолеN`, чтобы развёрнутые/удалённые звёзды не получали лишний `Поле1`.
-    expandStarFields(model, resolver);
+    expandStarFields(model, resolver, wildcardPolicy);
     // Развёртка простого поля-ссылки на табличную часть в проекцию её колонок
     // (фаза 6.15.23). После звёздной развёртки, до назначения автопсевдонимов.
     expandTabSectionFields(model, resolver);
@@ -5402,7 +5413,9 @@ function assignExpressionFieldAliases(model: QueryModel): void {
     if (isWildcardExpression(f.expression)) continue;
     // Голый параметр `&Имя` → псевдоним = имя параметра (без `&`), как у
     // конструктора; счётчик `Поле{n}` им не занимается.
-    f.alias = bareParamName(f.expression) ?? `Поле${++exprCounter}`;
+    const param = bareParamName(f.expression);
+    if (param !== undefined) f.paramAutoAlias = true;
+    f.alias = param ?? `Поле${++exprCounter}`;
   }
 }
 
@@ -5644,11 +5657,14 @@ export function parseBatch(
 ): BatchDocument {
   // C16: statement parses below inherit the flag (they pass only `sourceMap`).
   const prevKeepArgComments = keepArgComments;
+  const prevWildcardPolicy = wildcardPolicy;
   keepArgComments = !!opts?.preserveComments;
+  wildcardPolicy = opts?.wildcardPolicy ?? 'preserve';
   try {
     return parseBatchInner(text, resolver, opts);
   } finally {
     keepArgComments = prevKeepArgComments;
+    wildcardPolicy = prevWildcardPolicy;
   }
 }
 
@@ -5949,7 +5965,13 @@ function registerTempTables(doc: QueryDocument, tempTables: Map<string, MetaTabl
     seen.add(alias.toUpperCase());
     cols.push({ alias, scalar: isScalarLiteralExpr(f.expression) });
   }
-  if (cols.length === 0) return;
+  if (cols.length === 0) {
+    // C24: a redefinition without registrable columns leaves the old entry for the
+    // constructor path, but its columns are no longer proven.
+    const old = tempTables.get(m0.tempTableName.toUpperCase());
+    if (old) markProvenTempTable(old, undefined);
+    return;
+  }
   // Колонка из ЧИСТОГО литерала (`"строка"`/число/булево) — ДОКАЗУЕМО нессылочная:
   // даём ей примитивный тип, чтобы `resolveBuilderStar` снял `.*` (`Товары.Ссылка.*`
   // на ВТ, где `Ссылка` — строковый литерал, → `Товары.Ссылка`). Прочие колонки
@@ -5959,12 +5981,15 @@ function registerTempTables(doc: QueryDocument, tempTables: Map<string, MetaTabl
     kind: 'attribute',
     types: scalar ? [{ primitive: 'Строка' as const }] : [],
   }));
-  tempTables.set(m0.tempTableName.toUpperCase(), {
+  const table: MetaTable = {
     kind: 'Справочник', // вид не используется развёрткой ВТ (нет ТЧ/виртуальных полей)
     name: m0.tempTableName,
     fullName: m0.tempTableName,
     fields,
-  });
+  };
+  tempTables.set(m0.tempTableName.toUpperCase(), table);
+  // C24 step 1a: columns a wildcard may expand to — only when all are proven.
+  markProvenTempTable(table, provenColumnNames(m0));
 }
 
 /**

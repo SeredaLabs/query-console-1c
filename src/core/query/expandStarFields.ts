@@ -1,7 +1,190 @@
-import type { QueryModel, SelectedField, SelectedTabSectionField } from './queryModel';
+import type { QueryModel, SelectedField, SelectedTabSectionField, SelectedTable } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
+import type { MetaTable } from '../metadata/types';
 import { buildSelectAllModel } from './buildSelectAllModel';
 import { isIdentifierName } from './sdblLexer';
+import { synthesizedFieldAlias } from './queryModelUtils';
+import { representationAutoAlias } from './exprAutoAlias';
+
+/**
+ * How a wildcard is expanded (C24 step 1a).
+ *  - `preserve` (default, production Designer): a wildcard expands only when every
+ *    column of its sources is proven from the batch text (a temp table created by
+ *    `ПОМЕСТИТЬ` in this batch, a nested SELECT), and only when every wildcard of the
+ *    select list does; otherwise the select list is left exactly as written. Nothing
+ *    is ever removed. Metadata tables are not expanded (step 1b: completeness of the
+ *    configuration metadata is not proven).
+ *  - `analysis`: the model-only parse of hover/completion (`buildSemanticSnapshot`),
+ *    never turned into query text. Expands like the constructor when the metadata
+ *    resolves every source of every wildcard (so a temp table made by `*` keeps its
+ *    columns for completion), otherwise as `preserve`; never removes a wildcard.
+ *  - `constructor`: byte parity with the 1C query constructor (СхемаЗапроса) for the
+ *    oracle and corpus tests only. It also REMOVES wildcards the constructor drops
+ *    (parameter source, unknown table, `Т.Поле.*`), so it must never reach the
+ *    Designer or any other production code.
+ */
+export type WildcardPolicy = 'preserve' | 'analysis' | 'constructor';
+
+/**
+ * Columns of a temp table created in the batch, by its registry entry — set only
+ * when every column name is proven (see `provenColumnNames`). An inferred temp
+ * table or one whose creator kept a wildcard has no entry.
+ */
+const provenTempTableColumns = new WeakMap<MetaTable, string[]>();
+
+export function markProvenTempTable(table: MetaTable, columns: string[] | undefined): void {
+  if (columns?.length) provenTempTableColumns.set(table, columns);
+  else provenTempTableColumns.delete(table);
+}
+
+/**
+ * The parser named a bare `&Имя` field without `КАК` after the parameter. The flag is
+ * trusted only while the name is still that one (a rename in the Designer is explicit).
+ */
+export function isSynthesizedParamAlias(f: SelectedField): boolean {
+  return f.paramAutoAlias === true && f.alias !== undefined && f.expression?.trim() === `&${f.alias}`;
+}
+
+/** An explicit `КАК` of a select field (not an alias synthesized by the parser). */
+function explicitAlias(f: SelectedField): string | undefined {
+  if (f.alias === undefined) return undefined;
+  if (isSynthesizedParamAlias(f)) return undefined;
+  if (f.expression !== undefined && /^Поле\d+$/u.test(f.alias) && !f.exprAliasExplicit) return undefined;
+  return f.alias;
+}
+
+/**
+ * The column names of a select list (member 0 of a nested SELECT or of a temp-table
+ * creator), or `undefined` when they are not proven. Proven: every field has an
+ * explicit `КАК` or is a plain field path, whose implicit name the platform
+ * deduplicates with a suffix (`Код`, `Код1` — СхемаЗапроса, SL_kza 2026-10-12).
+ * An expression without `КАК` takes the parser's `Поле{n}` (or `<Поле>Представление`),
+ * which is what the generator prints. Not proven: a wildcard, a tabular-section
+ * projection, an aggregate without `КАК`, a dotted name, an implicit name equal to
+ * an explicit one written LATER (the platform renames the implicit one, the generator
+ * would not), two equal explicit names.
+ */
+export function provenColumnNames(model: QueryModel): string[] | undefined {
+  if (model.tabSectionFields?.length || model.trailingFields?.length) return undefined;
+  const explicit = new Set<string>();
+  for (const f of model.fields) {
+    const a = explicitAlias(f);
+    if (a !== undefined) {
+      if (explicit.has(a.toUpperCase())) return undefined;
+      explicit.add(a.toUpperCase());
+    }
+  }
+  // Explicit names not yet reached, left to right.
+  const later = new Set(explicit);
+  const used = new Set<string>();
+  const names: string[] = [];
+  let representation = false, numbered = false;
+  for (const f of model.fields) {
+    if (isWildcardExpression(f.expression)) return undefined;
+    let name = explicitAlias(f);
+    if (name !== undefined) {
+      later.delete(name.toUpperCase());
+      if (used.has(name.toUpperCase())) return undefined;
+    }
+    if (name === undefined && f.expression !== undefined && f.func === undefined && f.alias !== undefined) {
+      // The parser numbered it `Поле{n}`; the generator prints that or
+      // `<Поле>Представление` — the name the platform gives it as well.
+      const repr = representationAutoAlias(f.expression);
+      if (repr !== undefined) representation = true; else if (!isSynthesizedParamAlias(f)) numbered = true;
+      // The parser also counts a `ПРЕДСТАВЛЕНИЕ(…)` field in `Поле{n}`, the platform
+      // does not (subq_expr_repr, SL_kza 2026-10-12): with both, the numbers differ.
+      if (representation && numbered) return undefined;
+      name = repr ?? f.alias;
+      if (used.has(name.toUpperCase()) || later.has(name.toUpperCase())) return undefined;
+    } else if (name === undefined) {
+      if (f.expression !== undefined || f.func !== undefined || f.alias !== undefined) return undefined;
+      const base = synthesizedFieldAlias(model, f);
+      if (!isIdentifierName(base)) return undefined;
+      name = base;
+      for (let k = 1; used.has(name.toUpperCase()); k++) name = `${base}${k}`;
+      if (later.has(name.toUpperCase())) return undefined;
+    }
+    if (!isIdentifierName(name)) return undefined;
+    used.add(name.toUpperCase());
+    names.push(name);
+  }
+  return names.length ? names : undefined;
+}
+
+/** Proven columns of one FROM source, or `undefined`. */
+function provenSourceColumns(t: SelectedTable, resolver: MetadataResolver | undefined): string[] | undefined {
+  if (t.subquery) {
+    const m0 = t.subquery.members[0]?.model;
+    return m0 ? provenColumnNames(m0) : undefined;
+  }
+  // A metadata name (`Справочник.X`, a virtual table), a parameter `&Т` or `#Т`
+  // is not a batch temp table.
+  if (t.virtual || !t.fullName || !isIdentifierName(t.fullName)) return undefined;
+  const meta = resolver?.tableByFullName(t.fullName);
+  return meta ? provenTempTableColumns.get(meta) : undefined;
+}
+
+/**
+ * `preserve` expansion: all wildcards of the select list or none. Column names
+ * follow the platform rule (СхемаЗапроса, SL_kza 2026-10-12): an explicit `КАК` is
+ * reserved up front; the other columns are named left to right with the smallest
+ * free suffix. The expanded columns get explicit names; a plain field after them is
+ * then deduplicated by the generator in print order, as the platform does.
+ */
+function expandProvenWildcards(model: QueryModel, resolver: MetadataResolver | undefined): void {
+  if (model.tabSectionFields?.length || model.trailingFields?.length) return;
+  // An expression or aggregate without `КАК` is named later (`Поле{n}`, `<Поле>Представление`,
+  // a parameter name) without regard to the expanded names: keep the wildcards.
+  if (model.fields.some(f => !parseStar(f) && explicitAlias(f) === undefined && (f.expression !== undefined || f.func !== undefined || f.alias !== undefined))) return;
+
+  const byAlias = new Map<string, SelectedTable>();
+  for (const t of model.tables) if (t.alias) byAlias.set(t.alias.toUpperCase(), t);
+  const plans = new Map<SelectedField, Array<{ tableId: string; columns: string[] }>>();
+  for (const f of model.fields) {
+    const star = parseStar(f);
+    if (!star) continue;
+    if (star.viaAttribute) return;
+    const sources = star.alias ? [byAlias.get(star.alias.toUpperCase())] : model.tables;
+    if (sources.length === 0) return;
+    const plan: Array<{ tableId: string; columns: string[] }> = [];
+    for (const t of sources) {
+      const columns = t ? provenSourceColumns(t, resolver) : undefined;
+      if (!t || !columns) return;
+      plan.push({ tableId: t.id, columns });
+    }
+    plans.set(f, plan);
+  }
+
+  const reserved = new Set<string>();
+  for (const f of model.fields) {
+    const a = parseStar(f) ? undefined : explicitAlias(f);
+    if (a !== undefined) reserved.add(a.toUpperCase());
+  }
+  const used = new Set<string>();
+  const free = (base: string, avoidReserved: boolean): string => {
+    let name = base;
+    for (let k = 1; used.has(name.toUpperCase()) || (avoidReserved && reserved.has(name.toUpperCase())); k++) name = `${base}${k}`;
+    used.add(name.toUpperCase());
+    return name;
+  };
+  const fields: SelectedField[] = [];
+  for (const f of model.fields) {
+    const plan = plans.get(f);
+    if (!plan) {
+      fields.push(f);
+      const a = explicitAlias(f);
+      // A plain field without `КАК` is named by the generator in print order (no
+      // regard to later explicit names), so it is counted the same way here.
+      if (a !== undefined) used.add(a.toUpperCase());
+      else free(synthesizedFieldAlias(model, f), false);
+      continue;
+    }
+    for (const { tableId, columns } of plan) {
+      for (const c of columns) fields.push({ tableId, path: c, alias: free(c, true) });
+    }
+  }
+  model.fields = fields;
+}
 
 /**
  * Развёртка `*` в списке выборки по метаданным (фаза 6.15.15).
@@ -28,14 +211,18 @@ import { isIdentifierName } from './sdblLexer';
  * псевдониму трактуются как неразрешимые — удаляются (правило 1). В корпусе таких
  * случаев нет; развёртка по типу реквизита потребовала бы обхода ссылок.
  */
-export function expandStarFields(model: QueryModel, resolver?: MetadataResolver): void {
+export function expandStarFields(model: QueryModel, resolver?: MetadataResolver, policy: WildcardPolicy = 'preserve'): void {
+  // Объединение и прочие участники обрабатываются вызывающим по отдельности —
+  // здесь работаем с одним QueryModel.
+  if (!hasStar(model.fields)) return;
+  if (policy === 'preserve' || (policy === 'analysis' && !(resolver && everySourceResolves(model, resolver)))) {
+    expandProvenWildcards(model, resolver);
+    return;
+  }
   // Без резолвера развёртка не выполняется: поведение прежнее (звезда остаётся
   // произвольным полем `* КАК ПолеN`). Так слой webview/extension без метаданных
   // не меняет вывод; развёртка включается только когда резолвер передан (приёмка).
   if (!resolver) return;
-  // Объединение и прочие участники обрабатываются вызывающим по отдельности —
-  // здесь работаем с одним QueryModel.
-  if (!hasStar(model.fields)) return;
 
   // Псевдоним → fullName источника (регистронезависимо, как везде в 1С).
   const aliasToFull = new Map<string, string>();
@@ -176,6 +363,27 @@ export function expandStarFields(model: QueryModel, resolver?: MetadataResolver)
   if (trailing.length) {
     model.trailingFields = [...trailing, ...(model.trailingFields ?? [])];
   }
+}
+
+/**
+ * `analysis`: every wildcard has sources, none is a nested SELECT or `Т.Поле.*`, and
+ * the resolver knows every source — the constructor algorithm then removes nothing.
+ */
+function everySourceResolves(model: QueryModel, resolver: MetadataResolver): boolean {
+  const byAlias = new Map<string, SelectedTable>();
+  for (const t of model.tables) if (t.alias) byAlias.set(t.alias.toUpperCase(), t);
+  for (const f of model.fields) {
+    const star = parseStar(f);
+    if (!star) continue;
+    if (star.viaAttribute) return false;
+    const sources = star.alias ? [byAlias.get(star.alias.toUpperCase())] : model.tables;
+    if (sources.length === 0) return false;
+    for (const t of sources) {
+      if (!t || t.subquery || !t.fullName) return false;
+      if (!resolver.tableByFullName(t.fullName) && !resolver.virtualTableByFullName?.(t.fullName)) return false;
+    }
+  }
+  return true;
 }
 
 /** Создаёт развёрнутое поле с дедупом псевдонима против `reserved`. */

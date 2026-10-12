@@ -164,6 +164,12 @@ export interface SelectedField {
    */
   exprAliasExplicit?: string;
   /**
+   * C24 step 1a: `alias` is the parameter name the parser gave a bare `&Имя` field
+   * without `КАК` (not written by the user). Next to a wildcard kept as written the
+   * generator does not print it (see `buildFieldLines`).
+   */
+  paramAutoAlias?: boolean;
+  /**
    * Фаза 8.1 — сохранённые комментарии запроса (вид 2): строки `//…` (с префиксом
    * `//`), стоявшие ОТДЕЛЬНЫМИ строками ПЕРЕД этим полем. Привязаны к синониму поля:
    * исчезают при удалении поля (поле выпадает из массива) и при его переименовании

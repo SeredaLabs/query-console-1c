@@ -82,7 +82,7 @@ export function buildSemanticSnapshotFromText(
   let plain: SemanticSnapshot | undefined;
   try {
     const sink = new RecordingBatchSourceMapSink();
-    const model = parseBatch(sourceText, resolver, { batchSourceMap: sink });
+    const model = parseBatch(sourceText, resolver, { batchSourceMap: sink, wildcardPolicy: 'analysis' });
     plain = withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, model, 'complete', sink.events));
     if (parens === undefined) return preferNestedRecovery(plain, documentVersion, sourceText, resolver);
   } catch {
@@ -134,10 +134,10 @@ function recoveredSnapshot(
   resolver: MetadataResolver | undefined,
 ): SemanticSnapshot {
   if (repairedText.length !== sourceText.length + inserted.length) {
-    return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, parseBatch(repairedText, resolver), 'recovered'));
+    return withSymbolIndex(createSemanticSnapshot(documentVersion, sourceText, parseBatch(repairedText, resolver, { wildcardPolicy: 'analysis' }), 'recovered'));
   }
   const sink = new RecordingBatchSourceMapSink();
-  const model = parseBatch(repairedText, resolver, { batchSourceMap: sink });
+  const model = parseBatch(repairedText, resolver, { batchSourceMap: sink, wildcardPolicy: 'analysis' });
   const events = inserted.length === 0 ? sink.events : sink.events.map(e => ({
     ...e,
     range: { start: toSourceOffset(e.range.start, inserted), end: toSourceOffset(e.range.end, inserted) },
