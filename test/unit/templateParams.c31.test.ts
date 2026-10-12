@@ -25,7 +25,8 @@ import { initialState, reducer } from '../../src/webview/state/queryStore';
 import { computeBatchTextSafe } from '../../src/webview/computeBatchText';
 import { decideApply, findStaticApplyBlocker } from '../../src/webview/applyGate';
 import { parseBatch } from '../../src/core/query/sdblParser';
-import { generateBatch } from '../../src/core/query/sdblGenerator';
+import { generate, generateBatch, generateDocument, maskParenthesizedParams } from '../../src/core/query/sdblGenerator';
+import { parseDocument } from '../../src/core/query/sdblParser';
 import { tokenize } from '../../src/core/query/sdblLexer';
 
 function designer(text: string): { text: string; applyOk: boolean } {
@@ -177,5 +178,94 @@ describe('C31: the Designer text is the one verified on the platform', () => {
   it.each(evidence.cases.map((c: { name: string }) => [c.name, c]))('%s', (_name, c: any) => {
     expect(c.platform.sameData).toBe(true);
     expect(stable(c.template)).toBe(c.designerApplied);
+  });
+});
+
+describe('C31: the generation policy belongs to one call', () => {
+  // Each nested path: a subquery source, a condition subquery re-read by the expression
+  // formatter, UNION members, batch statements.
+  const SUB = '(ВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = "1" ИЛИ В.Код = "2" И (&Условие))';
+  const NESTED = [
+    `ВЫБРАТЬ &Поля ПОМЕСТИТЬ ВТ ${F};`,
+    `ВЫБРАТЬ П.Код ИЗ (ВЫБРАТЬ Т.Код КАК Код, &Поля ${F}) КАК П`,
+    `ГДЕ П.Код В ${SUB} ИЛИ П.Код = "3"`,
+    `ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ &Поля ${F}`,
+  ].join('\n');
+  const parsed = (policy: 'preserve' | 'constructor') => parseBatch(NESTED, undefined, { wildcardPolicy: policy });
+  const isConstructorText = (out: string): boolean => {
+    // UNION members after the first get no `КАК` in either mode.
+    expect(lexed(out)).not.toContain('( &Условие )');
+    return has(out, '&Поля КАК Поля ПОМЕСТИТЬ') && has(out, '&Поля КАК Поля ИЗ') && has(out, 'И &Условие');
+  };
+  const isPreserveText = (out: string): boolean => {
+    expect(lexed(out)).not.toContain('КАК Поля');
+    return has(out, '&Поля ПОМЕСТИТЬ') && has(out, ', &Поля ИЗ') && has(out, 'И ( &Условие )');
+  };
+
+  it('every nested level gets the mode of the call', () => {
+    expect(isConstructorText(generateBatch(parsed('constructor'), { wildcardPolicy: 'constructor' }))).toBe(true);
+    expect(isPreserveText(generateBatch(parsed('preserve'), { wildcardPolicy: 'preserve' }))).toBe(true);
+  });
+
+  it('a call without options is `preserve`, whatever ran before', () => {
+    const ctor = parsed('constructor');
+    const kept = parsed('preserve');
+    const preserveText = generateBatch(kept);
+    const constructorText = generateBatch(ctor, { wildcardPolicy: 'constructor' });
+    for (let i = 0; i < 3; i++) {
+      expect(generateBatch(ctor, { wildcardPolicy: 'constructor' })).toBe(constructorText);
+      expect(generateBatch(kept)).toBe(preserveText);
+      expect(generateBatch(kept, {})).toBe(preserveText);
+      expect(generateBatch(kept, { wildcardPolicy: undefined })).toBe(preserveText);
+    }
+    expect(isPreserveText(preserveText)).toBe(true);
+  });
+
+  it('`generate` and `generateDocument` take the same option', () => {
+    // Parsed in `preserve`: the parentheses are in the model, the generator decides.
+    const doc = parseDocument(`ВЫБРАТЬ Т.Код, &Поля ${F} ГДЕ Т.Код = "1" И (&Условие)`);
+    const model = doc.members[0].model;
+    expect(has(generate(model, { wildcardPolicy: 'constructor' }), '&Поля КАК Поля')).toBe(true);
+    expect(has(generate(model), '&Поля ИЗ')).toBe(true);
+    expect(has(generateDocument(doc, { wildcardPolicy: 'constructor' }), 'И &Условие')).toBe(true);
+    expect(has(generateDocument(doc), 'И ( &Условие )')).toBe(true);
+  });
+
+  it('a call that throws does not leave its mode behind', () => {
+    const kept = parsed('preserve');
+    const before = generateBatch(kept);
+    expect(() => generateBatch(undefined as never, { wildcardPolicy: 'constructor' })).toThrow();
+    expect(generateBatch(kept)).toBe(before);
+  });
+});
+
+describe('C31: the parenthesized-parameter marker cannot collide', () => {
+  it.each([
+    ['a parameter named like the marker', `ВЫБРАТЬ Т.Код ${F} ГДЕ Т.Код = &C31ПараметрВСкобках0 И (&Условие)`, ['= &C31ПараметрВСкобках0', 'И ( &Условие )']],
+    ['the same name in another case', `ВЫБРАТЬ Т.Код ${F} ГДЕ Т.Код = &c31параметрвскобках0 И (&Условие)`, ['= &c31параметрвскобках0', 'И ( &Условие )']],
+    ['the marker as a parenthesized parameter itself', `ВЫБРАТЬ Т.Код ${F} ГДЕ (&C31ПараметрВСкобках1) И (&Условие)`, ['( &C31ПараметрВСкобках1 ) И ( &Условие )']],
+    ['the marker inside a string literal', `ВЫБРАТЬ Т.Код ${F} ГДЕ Т.Наименование = "&C31ПараметрВСкобках0" И (&Условие)`, ['"&C31ПараметрВСкобках0" И ( &Условие )']],
+    ['the marker as a field name', `ВЫБРАТЬ Т.Код ${F} ГДЕ Т.C31ПараметрВСкобках0 = 1 И (&Условие)`, ['Т . C31ПараметрВСкобках0 = 1 И ( &Условие )']],
+  ])('%s', (_name, input, sequences) => {
+    const out = stable(input as string);
+    for (const sequence of sequences as string[]) expect(has(out, sequence)).toBe(true);
+  });
+
+  it('the marker is absent from the input in any case', () => {
+    const text = 'Т.Код = &C31ПараметрВСкобках0 И &c31параметрвскобках_0 И (&Условие)';
+    const mask = maskParenthesizedParams(text)!;
+    const marker = /&(C31ПараметрВСкобках_*)0$/u.exec(mask.text)![1];
+    expect(text.toUpperCase()).not.toContain(marker.toUpperCase());
+    expect(mask.restore(mask.text)).toBe(text);
+  });
+
+  it('restoring needs every marker exactly once, outside string literals', () => {
+    const mask = maskParenthesizedParams('А = 1 И (&П1) И НЕ (&П2)')!;
+    const [m0, m1] = mask.text.match(/&C31ПараметрВСкобках_*\d+/gu)!;
+    expect(mask.restore(`${m0} И ${m1}`)).toBe('(&П1) И (&П2)');
+    expect(mask.restore(`${m0} И ${m0} И ${m1}`)).toBeUndefined();
+    expect(mask.restore(`${m0}`)).toBeUndefined();
+    expect(mask.restore(`${m0} И "${m1}"`)).toBeUndefined();
+    expect(mask.restore(`${m0} И ${m1} И "${m1}"`)).toBe(`(&П1) И (&П2) И "${m1}"`);
   });
 });

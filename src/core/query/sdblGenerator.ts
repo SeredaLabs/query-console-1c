@@ -46,7 +46,15 @@ let inConditionSubquery = false;
  * replace as text: a bare parameter in the select list without a printed name, a
  * parameter in СГРУППИРОВАТЬ ПО, parentheses around a condition parameter.
  * `constructor` (oracle/corpus only) prints what the 1C query constructor prints.
- * Set by the entry points (`GenerateOptions`); nested generation inherits it.
+ *
+ * Scoped to one entry-point call: `generate` / `generateDocument` / `generateBatch`
+ * set it from `GenerateOptions` (no option = `preserve`, whatever ran before) and
+ * restore the previous value on return or throw. Nested generation inside that call
+ * (subquery sources, condition subqueries, union members, batch statements) goes
+ * through the private `generateModel` / `generateDocumentMembers` and inherits it.
+ * Not a parameter of every render function: condition subqueries are also rendered
+ * from the expression formatter's reflow callback (`setInlineSubqueryReflow`), so a
+ * parameter would have to pass through the whole formatter.
  */
 let generationPolicy: WildcardPolicy = 'preserve';
 
@@ -55,9 +63,8 @@ export interface GenerateOptions {
 }
 
 function withGenerationPolicy<T>(opts: GenerateOptions, run: () => T): T {
-  if (opts.wildcardPolicy === undefined) return run();
   const prev = generationPolicy;
-  generationPolicy = opts.wildcardPolicy;
+  generationPolicy = opts.wildcardPolicy ?? 'preserve';
   try {
     return run();
   } finally {
@@ -137,7 +144,7 @@ function renderConditionSubquery(subquery: QueryDocument, baseTabs: number, lead
   inConditionSubquery = true;
   let text: string;
   try {
-    text = generateDocument(subquery);
+    text = generateDocumentMembers(subquery);
   } finally {
     suppressAutoAlias = prev;
     inConditionSubquery = prevInSubquery;
@@ -245,7 +252,7 @@ function renderSource(t: SelectedTable, bodyTabs = 1): string {
     // первая строка инлайн (`(ВЫБРАТЬ`), продолжения — на `bodyTabs` табов. Источник
     // в списке ИЗ стоит на 1 табе (bodyTabs=1, по умолчанию); ПРИСОЕДИНЯЕМЫЙ источник
     // соединения — на 2+depth табах, его тело глубже соответственно (фаза 6.15.19, MCP).
-    const text = generateDocument(t.subquery);
+    const text = generateDocumentMembers(t.subquery);
     const inner = text.split('\n');
     const literalLines = literalContinuationLines(text);
     const pad = '\t'.repeat(bodyTabs);
@@ -836,7 +843,7 @@ function reflowInlineMembershipSubquery(
         /(?:^|[^\p{L}\p{N}_&])(?:ТОГДА|ИНАЧЕ)[ \t]+ВЫБОР[ \t]*(?:\r?\n|$)/gu);
       if (isCanonical && !bodyHasUnwrappedBoolOr(innerText) && !hasNestedCaseValue) return null;
       let doc: QueryDocument;
-      try { doc = parseDocument(innerText); }
+      try { doc = parseDocument(innerText, undefined, { wildcardPolicy: generationPolicy }); }
       catch { return null; }
       const block = renderConditionSubquery(doc, subBase).split('\n');
       // ЛЕВЫЙ операнд `В` — кортеж `(поле1, поле2, …)`, набранный разработчиком на
@@ -2690,7 +2697,7 @@ export function generateDocument(doc: QueryDocument, opts: GenerateOptions = {})
 function generateDocumentMembers(doc: QueryDocument): string {
   const members = doc.members;
   if (members.length === 0) return '';
-  if (members.length === 1) return generate(members[0].model);
+  if (members.length === 1) return generateModel(members[0].model);
 
   // Объединение с проекцией ТЧ выравнивается по ПОЛНОМУ списку элементов выборки
   // (скалярные поля + проекции ТЧ + хвостовые поля, в порядке selectOrder) — иначе
@@ -2753,13 +2760,13 @@ function generateBatchStatements(batch: BatchDocument): string {
   const TAIL_SEP = '\n;\n\n' + '/'.repeat(80);
   const members = batch.members;
   if (members.length === 0) return '';
-  if (members.length === 1) return generateDocument(members[0]);
+  if (members.length === 1) return generateDocumentMembers(members[0]);
 
   // Тело каждого оператора. Пустые тела (нерезолвимая звезда и т. п.) НЕ участвуют
   // как блоки, но отслеживаются: пустой ПОСЛЕДНИЙ оператор оставляет хвостовой
   // разделитель (асимметрия конструктора — пустой оператор В СЕРЕДИНЕ отбрасывается
   // полностью, MCP-проба).
-  const rendered = members.map(m => generateDocument(m));
+  const rendered = members.map(m => generateDocumentMembers(m));
   const blocks = rendered.filter(b => b !== '');
   const out = blocks.join(SEP);
   const lastEmpty = rendered[rendered.length - 1] === '';
@@ -3275,13 +3282,17 @@ function indentCommentedCondition(text: string, pad = '\t'): string {
  * places (constructor behaviour), so each group is replaced by a parameter atom for
  * the formatting and restored afterwards. For a parameter value the parentheses
  * change nothing.
+ *
+ * No collisions: the marker prefix is extended until it occurs nowhere in the input,
+ * in any letter case (identifiers are case-insensitive), so a marker in the output
+ * can only be one of ours. Restoring reads parameter tokens with the shared lexer
+ * (string literals untouched) and requires every marker exactly once; otherwise
+ * `restore` returns `undefined` and the caller keeps the condition as written.
  */
-function maskParenthesizedParams(text: string): { text: string; restore: (rendered: string) => string } | undefined {
+export function maskParenthesizedParams(text: string): { text: string; restore: (rendered: string) => string | undefined } | undefined {
   if (generationPolicy === 'constructor' || !text.includes('&')) return undefined;
   const toks = tryTokenize(text);
   if (!toks) return undefined;
-  const MARK = 'C31ПараметрВСкобках';
-  if (text.includes(MARK)) return undefined;
   const spans: Array<{ start: number; end: number; param: string }> = [];
   // Only a standalone boolean operand: after the start, `И`, `ИЛИ`, `НЕ` or `(`, and
   // before the end, `И`, `ИЛИ` or `)` — not the list of `В (&Список)` or a call argument.
@@ -3298,11 +3309,31 @@ function maskParenthesizedParams(text: string): { text: string; restore: (render
     }
   }
   if (spans.length === 0) return undefined;
+  const upper = text.toUpperCase();
+  let mark = 'C31ПараметрВСкобках';
+  while (upper.includes(mark.toUpperCase())) mark += '_';
+  const markUpper = `&${mark.toUpperCase()}`;
   let masked = text;
-  for (let k = spans.length - 1; k >= 0; k--) masked = masked.slice(0, spans[k].start) + `&${MARK}${k}` + masked.slice(spans[k].end);
+  for (let k = spans.length - 1; k >= 0; k--) masked = masked.slice(0, spans[k].start) + `&${mark}${k}` + masked.slice(spans[k].end);
   return {
     text: masked,
-    restore: rendered => rendered.replace(new RegExp(`&${MARK}(\\d+)(?![\\p{L}\\p{N}_])`, 'gu'), (_m, k: string) => `(${spans[Number(k)].param})`),
+    restore: rendered => {
+      const out = tryTokenize(rendered);
+      if (!out) return undefined;
+      const seen = new Array<boolean>(spans.length).fill(false);
+      let result = '';
+      let at = 0;
+      for (const t of out) {
+        if (t.type !== 'param' || !t.text.toUpperCase().startsWith(markUpper)) continue;
+        const digits = t.text.slice(markUpper.length);
+        const k = /^\d+$/u.test(digits) ? Number(digits) : -1;
+        if (k < 0 || k >= spans.length || seen[k]) return undefined;
+        seen[k] = true;
+        result += rendered.slice(at, t.pos) + `(${spans[k].param})`;
+        at = t.pos + t.text.length;
+      }
+      return seen.every(Boolean) ? result + rendered.slice(at) : undefined;
+    },
   };
 }
 
@@ -3374,7 +3405,8 @@ function buildConditionStrings(
         slot === 'where' && !inConditionSubquery ? tightenLeafInOperator(s) : s;
       if (expr) {
         const rendered = needsFormatting(expr) || isRootNotGroup(expr) ? formatExpression(expr, slot, inConditionSubquery ? 1 : undefined) : appendIsNotNullTrailingSpace(tightenIn(stripNotFieldParens(stripNegatedFieldParens(wrapBareCastOperand(stripRedundantLeafParens(normalizeLeafCase(reindentLeafCase(reindentLeafSubquery(canonicalizeComparisonOperands(flattenMultilineLeaf(expr)), subBase), caseBaseLeaf, true))))))));
-        push(mask ? mask.restore(rendered) : rendered);
+        // An unrestorable mask (not expected) keeps the condition as written.
+        push(mask ? mask.restore(rendered) ?? (c.expression ?? '').trim() : rendered);
       }
       continue;
     }
