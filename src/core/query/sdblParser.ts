@@ -54,7 +54,7 @@ import { tokenize, tryTokenize, isWordToken, replaceInCodeRanges, codeRanges, is
 import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
 import { bareParamName } from './exprAutoAlias';
-import { fieldAlias } from './unionModel';
+import { selectColumnAliases, selectElementNames } from './unionModel';
 import { extractComments, rememberConditionComments, rememberNestedConditionComments } from './commentBinder';
 import type { QueryDocument, UnionMember } from './unionModel';
 import type { BatchDocument } from './batchModel';
@@ -62,7 +62,7 @@ import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable, MetaField } from '../metadata/types';
 import type { SourceMapSink, SourceMapEvent, BatchSourceMapSink, AbsoluteSourceMapEvent, TextRange } from './sourceMap';
 import { RecordingSourceMapSink } from './sourceMap';
-import { expandStarFields, isWildcardExpression, markProvenTempTable, provenColumnNames, type WildcardPolicy } from './expandStarFields';
+import { expandStarFields, markProvenTempTable, provenColumnNames, type WildcardPolicy } from './expandStarFields';
 import { expandTabSectionFields } from './expandTabSectionFields';
 import { wrapTabSectionAggregates } from './wrapTabSectionAggregates';
 import { dropUserIBConditions } from './dropUserIBConditions';
@@ -5345,7 +5345,7 @@ function parseDocumentInner(
   // Участник 0 эмитит ровно одну строку поля на колонку, поэтому его поля
   // взаимно-однозначны с колонками объединения.
   /* v8 ignore next -- splitUnionMembers всегда даёт >=1 участника ⇒ ветвь [] недостижима */
-  const columnAliases = models.length > 0 ? models[0].fields.map(f => fieldAlias(f, models[0])) : [];
+  const columnAliases = models.length > 0 ? selectColumnAliases(models[0].fields, models[0]) : [];
 
   const members: UnionMember[] = models.map((model, i) => {
     if (i > 0) rewriteMemberAliases(model, columnAliases);
@@ -5396,26 +5396,20 @@ function markDottedAutoAlias(model: QueryModel, resolver: MetadataResolver | und
 }
 
 /**
- * Присваивает автопсевдоним `Поле{n}` каждому произвольному полю выборки участника
- * без явного `КАК`. Нумерация — сквозная по произвольным полям в порядке выборки,
- * как в генераторе (`buildFieldLines`). Простые поля и поля с явным псевдонимом не
- * трогаются. Идемпотентно: уже присвоенный явный псевдоним сохраняется.
+ * Stores the result-column name of every expression without `КАК` (C30): the name
+ * the platform gives it (`columnNames` — a free `Поле{n}`, a parameter name,
+ * `<Поле>Представление`; explicit names are reserved first), marked as synthesized.
+ * Field paths keep no stored name: every consumer derives theirs by the same rule.
+ * A wildcard kept as written gets none and takes no number (C24).
  */
 function assignExpressionFieldAliases(model: QueryModel): void {
-  let exprCounter = 0;
-  for (const f of model.fields) {
-    if (f.expression === undefined) continue;
-    // Нумерация совпадает с `buildFieldLines`: счётчик растёт ТОЛЬКО для полей без
-    // явного псевдонима (`f.alias ?? Поле${++exprCounter}`), т.е. произвольное поле
-    // с явным `КАК` номер `Поле{n}` не занимает.
-    if (f.alias !== undefined) continue;
-    // Звезда (не развёрнутая) псевдонима не получает и номер не занимает (C24).
-    if (isWildcardExpression(f.expression)) continue;
-    // Голый параметр `&Имя` → псевдоним = имя параметра (без `&`), как у
-    // конструктора; счётчик `Поле{n}` им не занимается.
-    const param = bareParamName(f.expression);
-    if (param !== undefined) f.paramAutoAlias = true;
-    f.alias = param ?? `Поле${++exprCounter}`;
+  const names = selectElementNames(model);
+  for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
+    if (f.expression === undefined || f.alias !== undefined) continue;
+    const name = names.get(f);
+    if (name === undefined) continue;
+    f.alias = name;
+    f.aliasSynthesized = name;
   }
 }
 
@@ -5953,16 +5947,12 @@ function registerTempTables(doc: QueryDocument, tempTables: Map<string, MetaTabl
   }
   if (m0.queryType !== 'createTemp') return;
   const cols: { alias: string; scalar: boolean }[] = [];
-  const seen = new Set<string>();
+  // C30: the column names every consumer uses (`columnNames`). A wildcard kept as
+  // written (its source not resolved) has no name and is not registered.
+  const names = selectElementNames(m0);
   for (const f of m0.fields) {
-    const a = fieldAlias(f, m0);
-    // Звезда, которую не удалось развернуть (нерезолвимый источник самой ВТ),
-    // остаётся как поле-выражение `*` — её в реестр колонок не добавляем.
-    if (!a || a === '*') continue;
-    let alias = a;
-    let n = 0;
-    while (seen.has(alias.toUpperCase())) alias = `${a}${++n}`;
-    seen.add(alias.toUpperCase());
+    const alias = names.get(f);
+    if (alias === undefined) continue;
     cols.push({ alias, scalar: isScalarLiteralExpr(f.expression) });
   }
   if (cols.length === 0) {

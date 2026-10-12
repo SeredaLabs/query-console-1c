@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { isIdentifierName } from '../../src/core/query/sdblLexer';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { generate, generateBatch } from '../../src/core/query/sdblGenerator';
-import { bareParamName, representationAutoAlias } from '../../src/core/query/exprAutoAlias';
+import { bareParamName, representationArgPath } from '../../src/core/query/exprAutoAlias';
 import { deriveUnionColumns } from '../../src/core/query/unionModel';
 import type { QueryModel } from '../../src/core/query/queryModel';
 
@@ -93,15 +93,16 @@ describe('голый параметр: автопсевдоним = имя па�
 });
 
 describe('ПРЕДСТАВЛЕНИЕ(<поле>) без КАК → <Сегмент>Представление', () => {
+  // C30: the argument path is a lexical fact; the name is built by `columnNames`.
   it('сегменты любого алфавита', () => {
-    expect(representationAutoAlias('ПРЕДСТАВЛЕНИЕ(ВТ.Ціна)')).toBe('ЦінаПредставление');
-    expect(representationAutoAlias('представлениессылки( Т.Gültig )')).toBe('GültigПредставление');
-    expect(representationAutoAlias('ПРЕДСТАВЛЕНИЕ(Т.Номенклатура)')).toBe('НоменклатураПредставление');
+    expect(representationArgPath('ПРЕДСТАВЛЕНИЕ(ВТ.Ціна)')).toEqual(['ВТ', 'Ціна']);
+    expect(representationArgPath('представлениессылки( Т.Gültig )')).toEqual(['Т', 'Gültig']);
+    expect(representationArgPath('ПРЕДСТАВЛЕНИЕ(Т.Номенклатура)')).toEqual(['Т', 'Номенклатура']);
   });
   it('не путь из имён → undefined', () => {
     for (const s of ['ПРЕДСТАВЛЕНИЕ(Т.А + 1)', 'ПРЕДСТАВЛЕНИЕ("Т.А")', 'ПРЕДСТАВЛЕНИЕ(Т.)', 'ПРЕДСТАВЛЕНИЕ(Т.А) + 1',
       'ПРЕДСТАВЛЕНИЕ(Т.А // к\n)', 'ПРЕДСТАВЛЕНИЕ(&П)', 'ПРЕДСТАВЛЕНИЕ()', 'ДРУГОЕ(Т.А)']) {
-      expect(representationAutoAlias(s), JSON.stringify(s)).toBeUndefined();
+      expect(representationArgPath(s), JSON.stringify(s)).toBeUndefined();
     }
   });
   it('пакет: текст конструктора и стабильность повторного открытия', () => {

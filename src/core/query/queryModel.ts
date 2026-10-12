@@ -164,11 +164,13 @@ export interface SelectedField {
    */
   exprAliasExplicit?: string;
   /**
-   * C24 step 1a: `alias` is the parameter name the parser gave a bare `&Имя` field
-   * without `КАК` (not written by the user). Next to a wildcard kept as written the
-   * generator does not print it (see `buildFieldLines`).
+   * C30: the name the parser synthesized for an expression without `КАК` (`Поле{n}`,
+   * a parameter name, `<Поле>Представление` — see `columnNames.ts`). While `alias`
+   * equals it the name is synthesized, not the user's: next to a wildcard kept as
+   * written or inside `В (ВЫБРАТЬ …)` it is not printed. A rename in the Designer
+   * changes `alias` and so makes the name explicit.
    */
-  paramAutoAlias?: boolean;
+  aliasSynthesized?: string;
   /**
    * Фаза 8.1 — сохранённые комментарии запроса (вид 2): строки `//…` (с префиксом
    * `//`), стоявшие ОТДЕЛЬНЫМИ строками ПЕРЕД этим полем. Привязаны к синониму поля:

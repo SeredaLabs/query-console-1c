@@ -1,16 +1,17 @@
 import type { QueryModel, SelectedTable, SelectedField, SelectedTabSectionField, AggregateFunction, FieldRef, Condition, Join, Order, Totals, TotalKind, BuilderField, Indexing } from './queryModel';
 import { defaultTableAlias, accountingPositionKeys } from './queryModel';
 import type { QueryDocument } from './unionModel';
-import { deriveUnionColumns, unionHasTabSection, unionHasTrailing, orderedSelectElements, elementAlias, type UnionMember } from './unionModel';
+import { deriveUnionColumns, unionHasTabSection, unionHasTrailing, orderedSelectElements, elementAlias, selectElementNames, type UnionMember } from './unionModel';
 import type { BatchDocument } from './batchModel';
 import { parseDocument } from './sdblParser';
-import { resolveAliases, isTabularSectionSource, qualifiedAutoAlias, synthesizedFieldAlias, joinKeyword } from './queryModelUtils';
+import { resolveAliases, joinKeyword } from './queryModelUtils';
 import { needsFormatting, selectColumnNeedsBoolWrap, isRootNotGroup, formatExpression, formatJoinConjunct, normalizeLeafCase, stripNegatedFieldParens, stripNotFieldParens, stripRedundantLeafParens, appendIsNotNullTrailingSpace, renderOperatorRhs, flattenMultilineLeaf, reindentLeafSubquery, reindentLeafCase, reindentLeafBool, wrapBareCastOperand, reprintLeafArithmetic, canonicalizeComparisonOperands, setInlineSubqueryReflow, tightenLeafInOperator } from './exprFormatter';
 import { splitArgComments } from './argComments';
 import { tokenize, tryTokenize, codeRanges, isCodeAt, isWordToken, replaceInCodeRanges } from './sdblLexer';
 import { parseEmptyTableColumns } from './expressionSyntaxCheck';
-import { bareParamName, createExprAutoAliaser, representationAutoAlias } from './exprAutoAlias';
-import { isWildcardExpression, isSynthesizedParamAlias } from './expandStarFields';
+import { bareParamName } from './exprAutoAlias';
+import { isWildcardExpression } from './expandStarFields';
+import { isSynthesizedAlias } from './columnNames';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
 
 // Регистрируем в exprFormatter канонический ре-рендер инлайн-подзапроса членства
@@ -2049,6 +2050,14 @@ function renderTabProjection(
  * `model.fields`, табличные части и хвостовые поля. Совпадает байт-в-байт с тем,
  * что раньше формировал `generate`.
  */
+/**
+ * A name the parser synthesized for an expression, which `В (ВЫБРАТЬ …)` does not print
+ * (`Поле{n}`, `<Поле>Представление`); a parameter name is printed there as before.
+ */
+function hiddenUnderSuppress(f: SelectedField): boolean {
+  return isSynthesizedAlias(f) && f.expression !== undefined && bareParamName(f.expression) === undefined;
+}
+
 function buildFieldLines(model: QueryModel, aliases: Map<string, string>): string[] {
   const aggregates = model.grouping?.aggregates ?? [];
   // Резерв для legacy-моделей (UI), где функция агрегата живёт ТОЛЬКО в общем
@@ -2060,29 +2069,10 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
   const aggregateFunc = (tableId: string, path: string): AggregateFunction | undefined =>
     fieldsCarryFunc ? undefined : aggregates.find(a => a.tableId === tableId && a.path === path)?.func;
 
-  // Автопсевдонимы произвольных полей без КАК (их создаёт только UI — парсер
-  // присваивает псевдоним всегда): `Поле{n}`/имя параметра/`…Представление`, но
-  // не совпадающие с явными псевдонимами этого списка выборки — иначе печатался
-  // дубль, и собственный текст не открывался («Повторяющийся псевдоним»).
-  const exprAutoAliasFor = createExprAutoAliaser(
-    [...model.fields, ...(model.trailingFields ?? [])].flatMap(f => (f.alias !== undefined ? [f.alias] : [])),
-  );
-
-  // Дедупликация автопсевдонимов простых полей (фаза 6.16, сверено MCP): при
-  // коллизии вычисленного автопсевдонима с уже занятым именем конструктор 1С
-  // добавляет наименьший целый суффикс (`Комментарий` → `Комментарий1`). Явные `КАК`
-  // и автопсевдонимы выражений (`Поле{n}`/имя параметра) регистрируются как есть.
-  // Порядок исполнения `fieldLine`/`tsLine` совпадает с порядком печати, поэтому
-  // суффикс назначается по позиции в выборке, как у оракула.
-  const usedAliases = new Set<string>();
-  const uniqueAlias = (alias: string): string => {
-    if (!usedAliases.has(alias)) { usedAliases.add(alias); return alias; }
-    let k = 1;
-    while (usedAliases.has(`${alias}${k}`)) k++;
-    const out = `${alias}${k}`;
-    usedAliases.add(out);
-    return out;
-  };
+  // C30: result-column names by the platform rule, the same ones every other consumer
+  // uses (`columnNames`): explicit `КАК` reserved first, the rest left to right with
+  // the smallest free suffix, `Поле{n}` skipping taken numbers.
+  const names = selectElementNames(model);
 
   // C24 step 1a (D5): next to a wildcard kept as written, a name the generator would
   // synthesize is not printed. The platform names the other columns after the
@@ -2100,29 +2090,16 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
       return `\t${f.expression.trim()}`;
     }
     if (f.expression) {
+      const expr = formatSelectExpression(f.expression);
+      const explicit = f.alias !== undefined && !isSynthesizedAlias(f);
+      if (keptWildcard && !explicit) return `\t${expr}`;
       // В подзапросе-операнде `В` (suppressAutoAlias) конструктор НЕ добавляет
       // автопсевдоним произвольному полю выборки (`1`/`ИСТИНА` остаются голыми);
-      // явный (НЕ `Поле{n}`) псевдоним сохраняется (фаза 6.15.27, MCP). Парсер уже
-      // навесил авто-`Поле{n}` (assignExpressionFieldAliases) — снимаем его здесь.
-      if (keptWildcard && isSynthesizedParamAlias(f)) return `\t${formatSelectExpression(f.expression)}`;
-      if ((suppressAutoAlias || keptWildcard) && (f.alias === undefined || /^Поле\d+$/u.test(f.alias))) {
-        // Явно написанный разработчиком `Поле{n}` конструктор СОХРАНЯЕТ даже под
-        // подавлением (MCP-проба); синтезированный — снимает (фаза 6.16.77).
-        if (f.exprAliasExplicit) {
-          return `\t${formatSelectExpression(f.expression)} КАК ${f.exprAliasExplicit}`;
-        }
-        return `\t${formatSelectExpression(f.expression)}`;
-      }
-      // `ПРЕДСТАВЛЕНИЕ(<поле>)`/`ПРЕДСТАВЛЕНИЕССЫЛКИ(<поле>)` без явного `КАК` получает
-      // `<ПоследнийСегмент>Представление` (а не сквозной `Поле{n}`). Парсер уже навесил
-      // авто-`Поле{n}` (assignExpressionFieldAliases), поэтому распознаём этот случай по
-      // авто-псевдониму (`Поле{n}` или его отсутствию) и пересчитываем. Явный `КАК` (не
-      // `Поле{n}`) сохраняется как есть.
-      const autoExpr = f.alias === undefined || /^Поле\d+$/u.test(f.alias);
-      const repr = autoExpr ? representationAutoAlias(f.expression) : undefined;
-      const alias = f.alias === undefined ? exprAutoAliasFor(f.expression) : (repr ?? f.alias);
-      usedAliases.add(alias);
-      return `\t${formatSelectExpression(f.expression)} КАК ${alias}`;
+      // явный псевдоним (в т. ч. написанный `Поле{n}`) сохраняется (фаза 6.15.27,
+      // 6.16.77, MCP). Имя параметра печатается, как и прежде.
+      if (suppressAutoAlias && (f.alias === undefined || hiddenUnderSuppress(f))) return `\t${expr}`;
+      const name = explicit ? f.alias : (names.get(f) ?? f.alias);
+      return name !== undefined ? `\t${expr} КАК ${name}` : `\t${expr}`;
     }
     const tableAlias = aliases.get(f.tableId) ?? f.tableId;
     // Функция агрегата берётся ПРЯМО с поля (различает два агрегата одного
@@ -2131,43 +2108,24 @@ function buildFieldLines(model: QueryModel, aliases: Map<string, string>): strin
     const lhs = func
       ? wrapAggregate(func, `${tableAlias}.${f.path}`)
       : `${tableAlias}.${f.path}`;
-    // Автопсевдоним простого поля без явного `КАК`:
-    //  • квалифицированное поле (`Алиас.Путь`) — склейка ВСЕХ сегментов пути
-    //    (`Родитель.Имя` → `РодительИмя`), с отбрасыванием ведущего `Ссылка` у
-    //    источника-ТЧ (см. qualifiedAutoAlias, фаза 6.16, сверено MCP);
-    //  • голое поле (квалифицировано единственным источником) — последний сегмент
-    //    (`Владелец.Наименование` → `Наименование`, курируемый 0043).
-    // Агрегат над КВАЛИФИЦИРОВАННЫМ операндом (`МАКСИМУМ(Док.Контрагент.Наименование)`)
-    // тоже получает автопсевдоним склейкой сегментов (`КонтрагентНаименование`) —
-    // сверено по golden-корпусу (195 случаев) и живому оракулу; агрегат над ГОЛЫМ
-    // операндом (`МАКСИМУМ(ИмяУзла)`) остаётся без псевдонима (13 случаев). Применяем
-    // лишь к парсерным агрегатам с флагом `funcOperandQualified` (legacy/UI-модели,
-    // где функция из общего списка `aggregates`, не трогаем).
-    let autoAlias: string | undefined;
-    if (!suppressAutoAlias && !keptWildcard) {
-      if (!func) {
-        autoAlias = synthesizedFieldAlias(model, f);
-      } else if (f.func !== undefined && f.funcOperandQualified) {
-        const tbl = model.tables.find(tb => tb.id === f.tableId);
-        autoAlias = qualifiedAutoAlias(f.path, isTabularSectionSource(tbl));
-      }
+    if (suppressAutoAlias || keptWildcard) {
+      return f.alias !== undefined && !isSynthesizedAlias(f) ? `\t${lhs} КАК ${f.alias}` : `\t${lhs}`;
     }
-    let effAlias = f.alias ?? autoAlias;
-    if (effAlias !== undefined) {
-      // Явный псевдоним регистрируется как есть; автопсевдоним простого поля —
-      // через дедуп (наименьший целый суффикс при коллизии).
-      effAlias = f.alias !== undefined ? (usedAliases.add(f.alias), f.alias) : uniqueAlias(effAlias);
-    }
-    return effAlias ? `\t${lhs} КАК ${effAlias}` : `\t${lhs}`;
+    if (f.alias !== undefined) return `\t${lhs} КАК ${f.alias}`;
+    // Агрегат legacy/UI-модели (функция из общего списка) — без `КАК`, как раньше.
+    // Агрегат парсера печатается с квалифицированным операндом и получает имя, как у
+    // платформы, также для голого операнда во вводе (C30 R12b/P05/P06: `МАКСИМУМ(Код)` →
+    // `МАКСИМУМ(Валюты.Код) КАК Код`; без `КАК` повторное открытие добавляло его).
+    if (func && f.func === undefined) return `\t${lhs}`;
+    const name = names.get(f);
+    return name !== undefined ? `\t${lhs} КАК ${name}` : `\t${lhs}`;
   };
 
   const tsLine = (tsf: SelectedTabSectionField): string =>
     renderTabProjection(tsf, aliases, {
       suppress: false,
-      // Дедупликация псевдонима всей ТЧ (как раньше): явный — как есть, авто — через
-      // наименьший целый суффикс при коллизии.
       outerAlias: (name, explicit) =>
-        explicit !== undefined ? (usedAliases.add(explicit), explicit) : keptWildcard ? undefined : uniqueAlias(name),
+        explicit !== undefined ? explicit : keptWildcard ? undefined : (names.get(tsf) ?? name),
     });
 
   // Поля до первой ТЧ (`model.fields`) — всегда первыми и в своём порядке.
@@ -2626,9 +2584,8 @@ function buildUnionBlocksScalar(members: UnionMember[]): string[] {
     const fieldLines = columns.map((col, ci) => {
       const expr = col.cells[i] ?? 'NULL';
       if (i !== 0) return `\t${expr}`;
-      const a0 = head0[ci]?.alias;
-      const explicitAlias = a0 !== undefined && !/^Поле\d+$/u.test(a0);
-      const emitAlias = !suppressAutoAlias || explicitAlias;
+      const f0 = head0[ci];
+      const emitAlias = !suppressAutoAlias || (f0 !== undefined && f0.alias !== undefined && !hiddenUnderSuppress(f0));
       return emitAlias ? `\t${expr} КАК ${col.alias}` : `\t${expr}`;
     });
     const aliases = resolveAliases(m.model.tables);
@@ -2661,8 +2618,8 @@ function buildUnionBlocksWithTabSection(members: UnionMember[]): string[] {
       if (i !== 0) { fieldLines.push(`\t${expr}`); continue; }
       // Псевдоним столбца берём с поля участника-головы (его псевдоним выборки).
       const alias = elementAlias(el, m.model);
-      const explicitAlias = !/^Поле\d+$/u.test(alias);
-      const emitAlias = !suppressAutoAlias || explicitAlias;
+      const synthesizedExpr = el.field.expression !== undefined && (el.field.alias === undefined || hiddenUnderSuppress(el.field));
+      const emitAlias = !suppressAutoAlias || !synthesizedExpr;
       fieldLines.push(emitAlias ? `\t${expr} КАК ${alias}` : `\t${expr}`);
     }
     return buildQueryBlock(m.model, fieldLines, aliases, i === 0);
