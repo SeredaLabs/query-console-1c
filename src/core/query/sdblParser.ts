@@ -5045,7 +5045,8 @@ export interface ParseOptions {
   /**
    * C24 step 1a: `preserve` (default) never removes a wildcard and expands one only
    * over columns proven from the batch text; `constructor` is the oracle/corpus
-   * parity mode (see `WildcardPolicy`) and must not be used by the Designer.
+   * parity mode (see `WildcardPolicy`; it also enables the constructor's GROUP BY
+   * rewrites, R11) and must not be used by the Designer.
    */
   wildcardPolicy?: WildcardPolicy;
 }
@@ -5292,24 +5293,31 @@ function parseDocumentInner(
     // Дотированный автопсевдоним квалифицированного поля с НЕРЕЗОЛВИМОЙ навигацией
     // по источнику-ВТ (фаза 6.18). После квалификации, до автопсевдонимов.
     markDottedAutoAlias(model, resolver);
-    // Тихий дроп избыточной многосегментной ссылки `Алиас.A.B` из СГРУППИРОВАТЬ ПО
-    // (фаза 6.18, по метаданным): когда префикс `Алиас.A` (ссылочное поле) тоже в
-    // группировке и `Алиас.A.B` не выбрано отдельной колонкой — оракул его отбрасывает.
-    dropRedundantGroupDerefs(model, resolver);
-    // Перенос ссылки `Алиас.A.B` (стоящей ПЕРЕД сгруппированным префиксом `Алиас.A`,
-    // потребляемой агрегатным выражением выборки) в конец явной группировки (фаза
-    // 6.18, корпус ФормированиеПартийЗЕРНО bsl_5). После прямого дропа.
-    moveBeforePrefixGroupDerefToEnd(model, resolver);
-    // Перенос ведущего `ВЫБОР` с результатом-видом движения регистра в конец
-    // СГРУППИРОВАТЬ ПО (фаза 6.18): конструктор 1С ставит такой элемент последним.
-    moveLeadingMovementCaseToEnd(model);
-    // FD-минимизация GROUP BY: дроп/сохранение+перенос CASE-вида-движения (фаза 6.19,
-    // Взаимозачет). Только вид-движения; различитель keep/drop — сгруппирована ли голая ссылка.
-    dropFunctionallyDeterminedMovementCase(model, resolver);
-    relocateKeptMovementCase(model, resolver);
-    // Замена простого поля группировки `Алиас.Имя` НЕагрегатным выражением-CASE выборки
-    // `… КАК Имя`, ещё не присутствующим в группировке (фаза 6.19, ЗависшиеЗадачи).
-    substituteGroupFieldWithSelectExpr(model, resolver, subquerySourceDepth > 0);
+    // R11: the GROUP BY rewrites below copy what the 1C query constructor prints and
+    // run only in the constructor-parity mode (oracle/corpus). The Designer keeps the
+    // GROUP BY as written: one of them changed the result (СхемаЗапроса + execute_query,
+    // SL_kza 2026-10-12: a nested query's `Т.Наименование` replaced by a `ВЫБОР` — 11
+    // rows became 2), and they ran there only when the batch had a temp table.
+    if (wildcardPolicy === 'constructor') {
+      // Тихий дроп избыточной многосегментной ссылки `Алиас.A.B` из СГРУППИРОВАТЬ ПО
+      // (фаза 6.18, по метаданным): когда префикс `Алиас.A` (ссылочное поле) тоже в
+      // группировке и `Алиас.A.B` не выбрано отдельной колонкой — оракул его отбрасывает.
+      dropRedundantGroupDerefs(model, resolver);
+      // Перенос ссылки `Алиас.A.B` (стоящей ПЕРЕД сгруппированным префиксом `Алиас.A`,
+      // потребляемой агрегатным выражением выборки) в конец явной группировки (фаза
+      // 6.18, корпус ФормированиеПартийЗЕРНО bsl_5). После прямого дропа.
+      moveBeforePrefixGroupDerefToEnd(model, resolver);
+      // Перенос ведущего `ВЫБОР` с результатом-видом движения регистра в конец
+      // СГРУППИРОВАТЬ ПО (фаза 6.18): конструктор 1С ставит такой элемент последним.
+      moveLeadingMovementCaseToEnd(model);
+      // FD-минимизация GROUP BY: дроп/сохранение+перенос CASE-вида-движения (фаза 6.19,
+      // Взаимозачет). Только вид-движения; различитель keep/drop — сгруппирована ли голая ссылка.
+      dropFunctionallyDeterminedMovementCase(model, resolver);
+      relocateKeptMovementCase(model, resolver);
+      // Замена простого поля группировки `Алиас.Имя` НЕагрегатным выражением-CASE выборки
+      // `… КАК Имя`, ещё не присутствующим в группировке (фаза 6.19, ЗависшиеЗадачи).
+      substituteGroupFieldWithSelectExpr(model, resolver, subquerySourceDepth > 0);
+    }
     // Пометка иерархических источников (для суффикса ИЕРАРХИЯ в УПОРЯДОЧИТЬ ПО,
     // фаза 6.16.6). undefined означает отсутствие метаданных, а не false.
     if (resolver) {
