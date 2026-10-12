@@ -48,7 +48,7 @@ function classifyAll(golden: Golden[]): CorpusClassMap {
     try {
       const doc = parseBatch(g.input, resolver, { wildcardPolicy: 'constructor' }); // C24: oracle parity
       rawFallbackCount = findRawFallbackHits(doc).length;
-      roundTripMismatch = generateBatch(doc) !== g.query_text;
+      roundTripMismatch = generateBatch(doc, { wildcardPolicy: 'constructor' }) !== g.query_text;
     } catch (e) {
       parseError = e instanceof Error ? e.message : String(e);
     }

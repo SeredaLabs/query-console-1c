@@ -107,7 +107,7 @@ const recordedCanonical = (row: any): unknown => row?.platformCanonical ?? row?.
 const resolver = buildYamlResolver(path.join(ROOT, 'test/fixtures/corpus/metadata/cf'));
 const MODES: Array<[string, MetadataResolver | undefined]> = [['without resolver', undefined], ['with resolver', resolver]];
 
-type Measured = Pick<Entry, 'oursStatus' | 'roundTripStatus' | 'applyStatus'> & { generated?: string };
+type Measured = Pick<Entry, 'oursStatus' | 'roundTripStatus' | 'applyStatus'> & { generated?: string; canonical?: string };
 
 /** Same steps as the product: Designer open gate, generation, reopening the
  * generated text through the same gate (second pass), Apply gate. */
@@ -124,11 +124,14 @@ function measure(text: string, r: MetadataResolver | undefined): Measured {
     roundTripStatus: second === generated ? 'stable' : 'unstable',
     applyStatus: apply.ok ? 'allowed' : 'blocked',
     generated,
+    // C31: the canonical text is constructor parity, compared in that mode; the Designer
+    // (`preserve`) keeps BSL placeholder forms the constructor rewrites.
+    canonical: generateBatch(open.doc, { wildcardPolicy: 'constructor' }),
   };
 }
 
 const recorded = (e: Entry) => ({ oursStatus: e.oursStatus, roundTripStatus: e.roundTripStatus, applyStatus: e.applyStatus });
-const strip = ({ generated: _g, ...status }: Measured) => status;
+const strip = ({ generated: _g, canonical: _c, ...status }: Measured) => status;
 
 /** Higher = more of the construct survives open → round trip → Apply. */
 const supportRank = (s: ReturnType<typeof recorded>) =>
@@ -300,8 +303,8 @@ for (const [mode, r] of MODES) {
         expect(m).toMatchObject({ oursStatus: 'accepts', roundTripStatus: 'stable', applyStatus: 'allowed' });
       }
       const canonical = recordedCanonical(evidenceRow(e.evidenceRef!));
-      if (e.canonicalStatus === 'matches') expect(m.generated).toBe(canonical);
-      if (e.canonicalStatus === 'differs') expect(m.generated).not.toBe(canonical);
+      if (e.canonicalStatus === 'matches') expect(m.canonical).toBe(canonical);
+      if (e.canonicalStatus === 'differs') expect(m.canonical).not.toBe(canonical);
     });
 
     it.each(by('invalid'))('G3 %s: platform-invalid construct is rejected or Apply-blocked', (_id, e) => {

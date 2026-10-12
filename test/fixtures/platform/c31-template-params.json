@@ -1,0 +1,253 @@
+{
+ "source": "execute_query on SL_kza, 2026-10-12 (C31): the BSL substitution applied to the original template and to the Designer → Apply text",
+ "cases": [
+  {
+   "name": "select_placeholder",
+   "template": "ВЫБРАТЬ Т.ЗагружатьИзИнтернета КАК Флаг, &ВыбираемыеКолонки ИЗ Справочник.Валюты КАК Т",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.ЗагружатьИзИнтернета КАК Флаг,\n\t&ВыбираемыеКолонки\nИЗ\n\tСправочник.Валюты КАК Т",
+   "bslSubstitution": {
+    "&ВыбираемыеКолонки": "Т.Код КАК Код, Т.Наименование КАК Имя"
+   },
+   "platform": {
+    "original": {
+     "rows": 11,
+     "columns": [
+      "Флаг",
+      "Код",
+      "Имя"
+     ]
+    },
+    "applied": {
+     "rows": 11,
+     "columns": [
+      "Флаг",
+      "Код",
+      "Имя"
+     ]
+    },
+    "sameData": true
+   },
+   "beforeFix": "syntax error (… КАК Имя КАК ВыбираемыеКолонки)"
+  },
+  {
+   "name": "select_placeholder_plain",
+   "template": "ВЫБРАТЬ Т.ЗагружатьИзИнтернета КАК Флаг, &ВыбираемыеКолонки ИЗ Справочник.Валюты КАК Т",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.ЗагружатьИзИнтернета КАК Флаг,\n\t&ВыбираемыеКолонки\nИЗ\n\tСправочник.Валюты КАК Т",
+   "bslSubstitution": {
+    "&ВыбираемыеКолонки": "Т.Код, Т.Наименование"
+   },
+   "platform": {
+    "original": {
+     "rows": 11,
+     "columns": [
+      "Флаг",
+      "Код",
+      "Наименование"
+     ]
+    },
+    "applied": {
+     "rows": 11,
+     "columns": [
+      "Флаг",
+      "Код",
+      "Наименование"
+     ]
+    },
+    "sameData": true
+   },
+   "beforeFix": "column Наименование renamed to ВыбираемыеКолонки"
+  },
+  {
+   "name": "groupby_placeholder",
+   "template": "ВЫБРАТЬ КОЛИЧЕСТВО(*) КАК К ИЗ Справочник.Валюты КАК Т СГРУППИРОВАТЬ ПО &ПоляГруппировки",
+   "designerApplied": "ВЫБРАТЬ\n\tКОЛИЧЕСТВО(*) КАК К\nИЗ\n\tСправочник.Валюты КАК Т\n\nСГРУППИРОВАТЬ ПО\n\t&ПоляГруппировки",
+   "bslSubstitution": {
+    "&ПоляГруппировки": "Т.ЗагружатьИзИнтернета"
+   },
+   "platform": {
+    "original": {
+     "rows": 2,
+     "columns": [
+      "К"
+     ]
+    },
+    "applied": {
+     "rows": 2,
+     "columns": [
+      "К"
+     ]
+    },
+    "sameData": true
+   },
+   "beforeFix": "2 rows → 1"
+  },
+  {
+   "name": "where_and_placeholder",
+   "template": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = \"999\" И (&Условие)",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\nГДЕ\n\tТ.Код = \"999\"\n\tИ (&Условие)",
+   "bslSubstitution": {
+    "&Условие": "Т.Код = \"980\" ИЛИ Т.Код = \"840\""
+   },
+   "platform": {
+    "original": {
+     "rows": 0,
+     "columns": [
+      "Код"
+     ]
+    },
+    "applied": {
+     "rows": 0,
+     "columns": [
+      "Код"
+     ]
+    },
+    "sameData": true
+   },
+   "beforeFix": "0 rows → 1"
+  },
+  {
+   "name": "where_not_placeholder",
+   "template": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ НЕ (&Условие)",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\nГДЕ\n\tНЕ (&Условие)",
+   "bslSubstitution": {
+    "&Условие": "Т.Код = \"980\" ИЛИ Т.Код = \"840\""
+   },
+   "platform": {
+    "original": {
+     "rows": 9,
+     "columns": [
+      "Код"
+     ]
+    },
+    "applied": {
+     "rows": 9,
+     "columns": [
+      "Код"
+     ]
+    },
+    "sameData": true
+   },
+   "beforeFix": "9 rows → 10"
+  },
+  {
+   "name": "nested_union_placeholders",
+   "template": "ВЫБРАТЬ П.К ИЗ (ВЫБРАТЬ КОЛИЧЕСТВО(*) КАК К ИЗ Справочник.Валюты КАК Т ГДЕ НЕ (&Условие) СГРУППИРОВАТЬ ПО &ПоляГруппировки) КАК П ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ 0",
+   "designerApplied": "ВЫБРАТЬ\n\tП.К КАК К\nИЗ\n\t(ВЫБРАТЬ\n\t\tКОЛИЧЕСТВО(*) КАК К\n\tИЗ\n\t\tСправочник.Валюты КАК Т\n\tГДЕ\n\t\tНЕ (&Условие)\n\t\n\tСГРУППИРОВАТЬ ПО\n\t\t&ПоляГруппировки) КАК П\n\nОБЪЕДИНИТЬ ВСЕ\n\nВЫБРАТЬ\n\t0",
+   "bslSubstitution": {
+    "&Условие": "Т.Код = \"980\" ИЛИ Т.Код = \"840\"",
+    "&ПоляГруппировки": "Т.ЗагружатьИзИнтернета"
+   },
+   "platform": {
+    "original": {
+     "rows": 3,
+     "columns": [
+      "К"
+     ]
+    },
+    "applied": {
+     "rows": 3,
+     "columns": [
+      "К"
+     ]
+    },
+    "sameData": true
+   }
+  },
+  {
+   "name": "value_select",
+   "template": "ВЫБРАТЬ Т.Код, &Флаг ИЗ Справочник.Валюты КАК Т",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код,\n\t&Флаг\nИЗ\n\tСправочник.Валюты КАК Т",
+   "params": {
+    "Флаг": true
+   },
+   "platform": {
+    "original": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Флаг"
+     ]
+    },
+    "applied": {
+     "rows": 11,
+     "columns": [
+      "Код",
+      "Флаг"
+     ]
+    },
+    "sameData": true
+   }
+  },
+  {
+   "name": "value_groupby",
+   "template": "ВЫБРАТЬ Т.ЗагружатьИзИнтернета КАК З, КОЛИЧЕСТВО(*) КАК К ИЗ Справочник.Валюты КАК Т СГРУППИРОВАТЬ ПО Т.ЗагружатьИзИнтернета, &П",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.ЗагружатьИзИнтернета КАК З,\n\tКОЛИЧЕСТВО(*) КАК К\nИЗ\n\tСправочник.Валюты КАК Т\n\nСГРУППИРОВАТЬ ПО\n\tТ.ЗагружатьИзИнтернета,\n\t&П",
+   "params": {
+    "П": 1
+   },
+   "platform": {
+    "original": {
+     "rows": 2,
+     "columns": [
+      "З",
+      "К"
+     ]
+    },
+    "applied": {
+     "rows": 2,
+     "columns": [
+      "З",
+      "К"
+     ]
+    },
+    "sameData": true
+   }
+  },
+  {
+   "name": "value_where",
+   "template": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.ЗагружатьИзИнтернета И (&Флаг)",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\nГДЕ\n\tТ.ЗагружатьИзИнтернета\n\tИ (&Флаг)",
+   "params": {
+    "Флаг": true
+   },
+   "platform": {
+    "original": {
+     "rows": 2,
+     "columns": [
+      "Код"
+     ]
+    },
+    "applied": {
+     "rows": 2,
+     "columns": [
+      "Код"
+     ]
+    },
+    "sameData": true
+   }
+  },
+  {
+   "name": "value_not",
+   "template": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ НЕ (&Флаг)",
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\nГДЕ\n\tНЕ (&Флаг)",
+   "params": {
+    "Флаг": false
+   },
+   "platform": {
+    "original": {
+     "rows": 11,
+     "columns": [
+      "Код"
+     ]
+    },
+    "applied": {
+     "rows": 11,
+     "columns": [
+      "Код"
+     ]
+    },
+    "sameData": true
+   }
+  }
+ ]
+}
