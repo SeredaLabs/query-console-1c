@@ -103,3 +103,18 @@ regenerate and verify the media after relevant UI changes.
 The GitHub Actions workflow verifies pull requests and `main`. A `v*` tag also
 packages a versioned VSIX and creates a GitHub Release. Versioning and tagging are
 maintainer actions, not part of an ordinary contribution.
+
+`main` is protected by the repository ruleset *Protect main*: every change goes
+through a pull request whose `verify` check passed (no approval is required), and
+force pushes and deletion are blocked. Tags are not covered by the ruleset. A
+release therefore runs as:
+
+1. Open a pull request that bumps the version (`package.json`, `package-lock.json`)
+   and adds the `CHANGELOG.md` section; merge it after `verify` is green.
+2. Tag the merge commit on `main` and push the tag:
+   `git tag vX.Y.Z <merge-commit> && git push origin vX.Y.Z`. The tag run of the
+   workflow verifies again, packages the VSIX and creates the GitHub Release.
+3. Publish the same commit to the Marketplace from a checkout of the tag
+   (`npx @vscode/vsce publish`), then confirm the new version is listed there.
+
+Every published version needs its tag; without it the GitHub Release is missing.
