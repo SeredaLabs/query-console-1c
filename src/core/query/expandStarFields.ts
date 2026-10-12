@@ -19,7 +19,8 @@ import { columnNames, isSynthesizedAlias } from './columnNames';
  *    columns for completion), otherwise as `preserve`; never removes a wildcard.
  *  - `constructor`: byte parity with the 1C query constructor (СхемаЗапроса) for the
  *    oracle and corpus tests only. It also REMOVES wildcards the constructor drops
- *    (parameter source, unknown table, `Т.Поле.*`), so it must never reach the
+ *    (parameter source, unknown table, `Т.Поле.*`) and enables the constructor's GROUP BY
+ *    rewrites (R11, `dropRedundantGroupDerefs.ts`), so it must never reach the
  *    Designer or any other production code.
  */
 export type WildcardPolicy = 'preserve' | 'analysis' | 'constructor';
