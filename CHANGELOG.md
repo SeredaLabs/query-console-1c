@@ -3,6 +3,33 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## 0.1.98 - 2026-10-12
+
+### Fixed
+
+- The query designer no longer removes or partly drops `*`: a wildcard over a
+  temp table not created in the query, an inferred temp table, a parameter
+  source, a nested query or a configuration table is kept as written. It is
+  expanded only when all columns of its sources are known from the query text
+  (temp tables created in the same query, nested queries), with the same
+  column names as the 1C query constructor. Fields next to a kept `*` no longer
+  get an added `КАК` that could move a column name.
+- `* КАК Поле1` / `Т.* КАК Поле1` (a platform syntax error) is no longer written;
+  a wildcard with an alias is not applied.
+- Result-column names after applying the designer now match the platform:
+  `ПРЕДСТАВЛЕНИЕ(...)` no longer shifts the `Поле{n}` numbers of other columns,
+  dotted paths and aggregates are named by the joined path, and names are
+  deduplicated the platform's way in UNION, temp tables and nested queries. A
+  column renamed in the designer keeps its name. Valid queries such as
+  `1 + 1, 2 КАК Поле1` or `&Дата, &Дата` open and apply again.
+- Metadata columns follow the platform: every document has `Проведен`,
+  exchange plans have no `ДатаОбмена`, charts of accounts have `Порядок`, and a
+  data-separation common attribute used automatically appears only in exchange
+  plans. Cached metadata is rebuilt automatically after the update.
+- Parentheses, braces, `КАК` and other syntax inside string literals and
+  comments no longer change how conditions, virtual-table parameters and
+  JOIN conditions are reformatted or add parentheses on every reopen.
+
 ## 0.1.97 - 2026-10-03
 
 ### Fixed
