@@ -2,11 +2,60 @@ import type { QueryModel, FieldRef, SelectedTable } from './queryModel';
 import { defaultTableAlias } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable } from '../metadata/types';
-import { tokenize } from './sdblLexer';
+import { tokenize, tryTokenize, isWordToken, isNameToken, type Token } from './sdblLexer';
 import { META_FUNCTION_WORDS } from './sdblKeywordSets';
 import { resolveFieldPath } from './fieldPathResolver';
 
-const AGG_RE = /(?:^|[^\p{L}])(СУММА|КОЛИЧЕСТВО|МАКСИМУМ|МИНИМУМ|СРЕДНЕЕ|SUM|COUNT|MAX|MIN|AVG)\s*\(/iu;
+/*
+ * R11 step 2: the gates below read expressions through the shared lexer — a word
+ * inside a string literal or a comment is not code (СхемаЗапроса reads a neutral and
+ * a code-like literal alike: S2, S3b, S6, L1–L4 in
+ * test/fixtures/platform/r11-group-by.json). Field names still match
+ * case-sensitively, as before.
+ * An expression the lexer cannot read never lets a rule fire.
+ */
+
+/** Code tokens of `expr` (comments dropped); `undefined` when it does not tokenize. */
+function codeTokens(expr: string): Token[] | undefined {
+  return tryTokenize(expr)?.filter(t => t.type !== 'eof');
+}
+
+const isPunct = (t: Token | undefined, v: string): boolean => t?.type === 'punct' && t.value === v;
+
+/** Aggregate names (English ones belong to C2 and stay as they were). */
+const AGG_WORDS = ['СУММА', 'КОЛИЧЕСТВО', 'МАКСИМУМ', 'МИНИМУМ', 'СРЕДНЕЕ', 'SUM', 'COUNT', 'MAX', 'MIN', 'AVG'];
+
+/** `expr` calls an aggregate: an aggregate name followed by `(`. */
+function hasAggregateCall(expr: string): boolean {
+  const toks = codeTokens(expr);
+  return !!toks && toks.some((t, i) => isWordToken(t, ...AGG_WORDS) && isPunct(toks[i + 1], '('));
+}
+
+/**
+ * Start indexes in `toks` where the name chain `rendered` (`Алиас.Путь`, compared
+ * case-sensitively) begins as whole names — not a tail of a longer chain (`X.` before
+ * it). `whole` also requires the chain to end there (no `.` after it).
+ */
+function fieldChainStarts(toks: Token[], rendered: string, whole: boolean): number[] {
+  const segs = rendered.split('.');
+  const starts: number[] = [];
+  for (let i = 0; i < toks.length; i++) {
+    if (isPunct(toks[i - 1], '.')) continue;
+    let ok = true;
+    for (let k = 0; k < segs.length && ok; k++) {
+      const name = toks[i + 2 * k];
+      ok = isNameToken(name) && name.text === segs[k] && (k === 0 || isPunct(toks[i + 2 * k - 1], '.'));
+    }
+    if (ok && (!whole || !isPunct(toks[i + 2 * segs.length - 1], '.'))) starts.push(i);
+  }
+  return starts;
+}
+
+/** `ЗНАЧЕНИЕ ( ВидДвиженияНакопления|ВидДвиженияБухгалтерии .` starts at `toks[i]`. */
+function isMovementValueAt(toks: Token[], i: number): boolean {
+  return isWordToken(toks[i], 'ЗНАЧЕНИЕ') && isPunct(toks[i + 1], '(')
+    && isWordToken(toks[i + 2], 'ВИДДВИЖЕНИЯНАКОПЛЕНИЯ', 'ВИДДВИЖЕНИЯБУХГАЛТЕРИИ') && isPunct(toks[i + 3], '.');
+}
 
 /**
  * Тихий дроп ИЗБЫТОЧНОЙ многосегментной ссылки `Алиас.A.B…` из СГРУППИРОВАТЬ ПО
@@ -59,7 +108,7 @@ export function dropRedundantGroupDerefs(model: QueryModel, resolver?: MetadataR
   const nonAggSelectExprs: string[] = [];
   for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
     if (f.expression !== undefined) {
-      if (f.func === undefined && !AGG_RE.test(f.expression)) nonAggSelectExprs.push(f.expression);
+      if (f.func === undefined && !hasAggregateCall(f.expression)) nonAggSelectExprs.push(f.expression);
       continue;
     }
     if (f.func !== undefined) continue;
@@ -149,7 +198,7 @@ export function moveBeforePrefixGroupDerefToEnd(model: QueryModel, resolver?: Me
   // Тексты агрегатных выражений выборки (для проверки «потребителя» ссылки).
   const aggExprTexts: string[] = [];
   for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
-    if (f.expression !== undefined && AGG_RE.test(f.expression)) aggExprTexts.push(f.expression);
+    if (f.expression !== undefined && hasAggregateCall(f.expression)) aggExprTexts.push(f.expression);
   }
   if (aggExprTexts.length === 0) return;
 
@@ -173,7 +222,11 @@ export function moveBeforePrefixGroupDerefToEnd(model: QueryModel, resolver?: Me
     const table = aliasToTable.get(f.tableId);
     const alias = table ? defaultTableAlias(table) : f.tableId;
     const rendered = alias + '.' + f.path;
-    const used = aggExprTexts.some(t => t.includes(rendered));
+    // A further navigation through the reference (`Алиас.Путь.X`) is a use too.
+    const used = aggExprTexts.some(t => {
+      const toks = codeTokens(t);
+      return !!toks && fieldChainStarts(toks, rendered, false).length > 0;
+    });
     if (!used) continue;
     moveIdx = i;
     break; // переносим ровно одну такую ссылку (корпус: единственный случай)
@@ -193,21 +246,25 @@ function keyOf(tableId: string, path: string): string {
   return tableId + '' + path;
 }
 
-/** Нормализация выражения для сравнения «уже в группировке» (схлопывание пробелов). */
-function normExpr(s: string): string {
-  return s.replace(/\s+/gu, ' ').trim();
+/**
+ * Ключ выражения для сравнения «уже в группировке»: его токены через пробел —
+ * раскладка и комментарии не важны, литералы сравниваются байт-в-байт.
+ * `undefined`, если лексер выражение не читает: такое выражение ни с чем не сравнимо.
+ */
+function normExpr(s: string): string | undefined {
+  return codeTokens(s)?.map(t => t.text).join(' ');
+}
+
+/** `expr` is not grouped yet; one the lexer cannot read never qualifies. */
+function isNewGroupExpr(expr: string, grouped: ReadonlySet<string>): boolean {
+  const key = normExpr(expr);
+  return key !== undefined && !grouped.has(key);
 }
 
 /** `expr` содержит ссылку `rendered` (`Алиас.Путь`) как ЦЕЛУЮ токен-цепочку. */
 function containsFieldRef(expr: string, rendered: string): boolean {
-  const isWordChar = (c: string | undefined): boolean => c !== undefined && /[\p{L}\p{N}_.]/u.test(c);
-  let from = 0;
-  for (;;) {
-    const idx = expr.indexOf(rendered, from);
-    if (idx < 0) return false;
-    if (!isWordChar(expr[idx - 1]) && !isWordChar(expr[idx + rendered.length])) return true;
-    from = idx + rendered.length;
-  }
+  const toks = codeTokens(expr);
+  return !!toks && fieldChainStarts(toks, rendered, true).length > 0;
 }
 
 /**
@@ -249,7 +306,7 @@ export function substituteGroupFieldWithSelectExpr(model: QueryModel, resolver?:
       if (
         f.func === undefined && f.alias &&
         /^ВЫБОР(?![\p{L}\p{N}_])/iu.test(f.expression.trim()) &&
-        !AGG_RE.test(f.expression)
+        !hasAggregateCall(f.expression)
       ) {
         exprCols.push({ alias: f.alias, expression: f.expression });
       }
@@ -261,8 +318,14 @@ export function substituteGroupFieldWithSelectExpr(model: QueryModel, resolver?:
   if (exprCols.length === 0) return;
 
   // Выражения, УЖЕ присутствующие в группировке (нормализованные) — лист не заменяем.
+  // A grouped expression the lexer cannot read could not be compared: no substitution.
   const groupedExprNorm = new Set<string>();
-  for (const g of fields) if (g.expression !== undefined) groupedExprNorm.add(normExpr(g.expression));
+  for (const g of fields) {
+    if (g.expression === undefined) continue;
+    const key = normExpr(g.expression);
+    if (key === undefined) return;
+    groupedExprNorm.add(key);
+  }
 
   const anchorBefore: boolean[] = [];
   let seenAnchor = false;
@@ -286,7 +349,7 @@ export function substituteGroupFieldWithSelectExpr(model: QueryModel, resolver?:
     const expr = exprCols.find(
       e => e.alias.toUpperCase() === nameUp &&
         containsFieldRef(e.expression, rendered) &&
-        !groupedExprNorm.has(normExpr(e.expression))
+        isNewGroupExpr(e.expression, groupedExprNorm)
     );
     if (!expr) continue;
     const explicit = fields.slice(0, explicitCount);
@@ -333,9 +396,9 @@ export function moveLeadingMovementCaseToEnd(model: QueryModel): void {
  * регистра (`ВидДвиженияНакопления`/`ВидДвиженияБухгалтерии`) через `ЗНАЧЕНИЕ(…)`.
  */
 function isMovementCaseExpr(expr: string): boolean {
-  const up = expr.toUpperCase();
-  if (!up.includes('ВЫБОР')) return false;
-  return /ЗНАЧЕНИЕ\s*\(\s*ВИДДВИЖЕНИЯ(НАКОПЛЕНИЯ|БУХГАЛТЕРИИ)\s*\./u.test(up);
+  const toks = codeTokens(expr);
+  if (!toks || !toks.some(t => isWordToken(t, 'ВЫБОР'))) return false;
+  return toks.some((_, i) => isMovementValueAt(toks, i));
 }
 
 /**
@@ -406,7 +469,11 @@ function metaFor(fullName: string, resolver: MetadataResolver): MetaTable | unde
 // `ЗНАЧЕНИЕ(ВидДвиженияНакопления/Бухгалтерии.…)`. CASE, лишь СРАВНИВАЮЩИЙ поле с видом
 // движения в УСЛОВИИ (`КОГДА X.ВидДвижения = ЗНАЧЕНИЕ(…) ТОГДА <другое>`), сюда НЕ
 // относится — иначе оверфайр (УчетНДФЛ bsl_65/66, ФормаРасшифровкиПлатежа, РаботаСПодарочными).
-const MOVEMENT_RE = /(?:^|[^\p{L}\p{N}_])(?:ТОГДА|ИНАЧЕ)\s+(?:-\s*)?ЗНАЧЕНИЕ\s*\(\s*ВИДДВИЖЕНИЯ(?:НАКОПЛЕНИЯ|БУХГАЛТЕРИИ)\s*\./iu;
+function isMovementResultExpr(expr: string): boolean {
+  const toks = codeTokens(expr);
+  return !!toks && toks.some((t, i) =>
+    isWordToken(t, 'ТОГДА', 'ИНАЧЕ') && isMovementValueAt(toks, isPunct(toks[i + 1], '-') ? i + 2 : i + 1));
+}
 const META_FUNCS = META_FUNCTION_WORDS;
 
 /**
@@ -464,13 +531,10 @@ function extractFieldRefs(expr: string, aliasUp: Set<string>): Set<string> {
  * как ЦЕЛАЯ токен-цепочка. Условие `КОГДА … rendered …` под предикат НЕ подпадает.
  */
 function derefInResultPosition(expr: string, rendered: string): boolean {
-  const re = new RegExp(
-    '(?:^|[^\\p{L}\\p{N}_.])(?:ТОГДА|ИНАЧЕ)\\s+' +
-      rendered.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&') +
-      '(?![\\p{L}\\p{N}_.])',
-    'u'
-  );
-  return re.test(expr);
+  const toks = codeTokens(expr);
+  // An expression the lexer cannot read counts as a consumer: the reference stays.
+  if (!toks) return true;
+  return fieldChainStarts(toks, rendered, true).some(i => isWordToken(toks[i - 1], 'ТОГДА', 'ИНАЧЕ'));
 }
 
 /**
@@ -514,7 +578,7 @@ export function dropFunctionallyDeterminedMovementCase(model: QueryModel, resolv
   for (let i = 0; i < explicitCount && i < fields.length; i++) {
     const f = fields[i];
     if (f.expression === undefined) continue;
-    if (!MOVEMENT_RE.test(f.expression)) continue; // только вид-движения
+    if (!isMovementResultExpr(f.expression)) continue; // только вид-движения
     const refs = extractFieldRefs(f.expression, aliasUp);
     if (refs.size === 0) continue;
     let allGrouped = true;
@@ -578,7 +642,7 @@ export function relocateKeptMovementCase(model: QueryModel, resolver?: MetadataR
   let caseIdx = -1;
   for (let i = 0; i < explicitCount && i < fields.length; i++) {
     const f = fields[i];
-    if (f.expression === undefined || !MOVEMENT_RE.test(f.expression)) continue;
+    if (f.expression === undefined || !isMovementResultExpr(f.expression)) continue;
     const refs = extractFieldRefs(f.expression, aliasUp);
     if (refs.size === 0) continue;
     let allGrouped = true, navThroughGroupedRef = false;
