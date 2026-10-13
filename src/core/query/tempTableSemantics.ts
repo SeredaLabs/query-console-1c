@@ -13,6 +13,7 @@
  */
 import type { MetaField, MetaTable } from '../metadata/types';
 import type { BatchDocument } from './batchModel';
+import { deriveTempTableLifetimePositions, newestLifetimeAt, type TempTableLifetime as LifetimePositions } from './tempTableLifetimes';
 import { isStructurallyValidExpression } from './expressionSyntaxCheck';
 import {
   compoundCarrierOf,
@@ -27,11 +28,7 @@ export interface TempTableSchema {
   complete: boolean;
 }
 
-export interface TempTableLifetime {
-  name: string;
-  createIndex: number;
-  appendIndices: number[];
-  dropIndex: number | null;
+export interface TempTableLifetime extends LifetimePositions {
   schema: TempTableSchema;
 }
 
@@ -99,37 +96,14 @@ export function inferCreatedTempTableSchema(doc: QueryDocument): TempTableSchema
 /** Build every create/append/drop lifetime in package order. */
 export function deriveTempTableLifetimes(batch: BatchDocument): TempTableLifetimes {
   const byName = new Map<string, TempTableLifetime[]>();
-
-  const openAt = (upperName: string, statementIndex: number): TempTableLifetime | undefined =>
-    newestLifetimeAt(byName.get(upperName), statementIndex);
-
-  for (let statementIndex = 0; statementIndex < batch.members.length; statementIndex++) {
-    const doc = batch.members[statementIndex];
-    const carrier = compoundCarrierOf(doc);
-    if (!carrier.tempTableName) continue;
-    const upperName = carrier.tempTableName.toUpperCase();
-
-    if (carrier.queryType === 'createTemp') {
-      const schema = inferCreatedTempTableSchema(doc);
-      if (!schema) continue;
-      const lifetime: TempTableLifetime = {
-        name: carrier.tempTableName,
-        createIndex: statementIndex,
-        appendIndices: [],
-        dropIndex: null,
-        schema,
-      };
-      const list = byName.get(upperName);
-      if (list) list.push(lifetime);
-      else byName.set(upperName, [lifetime]);
-    } else if (carrier.queryType === 'appendTemp') {
-      openAt(upperName, statementIndex)?.appendIndices.push(statementIndex);
-    } else if (carrier.queryType === 'dropTemp') {
-      const lifetime = openAt(upperName, statementIndex);
-      if (lifetime) lifetime.dropIndex = statementIndex;
+  for (const [name, positions] of deriveTempTableLifetimePositions(batch.members)) {
+    const lifetimes: TempTableLifetime[] = [];
+    for (const lifetime of positions) {
+      const schema = inferCreatedTempTableSchema(batch.members[lifetime.createIndex]);
+      if (schema) lifetimes.push({ ...lifetime, schema });
     }
+    if (lifetimes.length) byName.set(name, lifetimes);
   }
-
   return byName;
 }
 
@@ -140,22 +114,4 @@ export function visibleTempTableAt(
   fullName: string,
 ): TempTableSchema | undefined {
   return newestLifetimeAt(lifetimes.get(fullName.toUpperCase()), statementIndex)?.schema;
-}
-
-/** The newest lifetime created before `statementIndex` and not yet dropped. */
-function newestLifetimeAt(
-  list: readonly TempTableLifetime[] | undefined,
-  statementIndex: number,
-): TempTableLifetime | undefined {
-  if (!list) return undefined;
-  for (let i = list.length - 1; i >= 0; i--) {
-    const lifetime = list[i];
-    if (
-      lifetime.createIndex < statementIndex &&
-      (lifetime.dropIndex === null || lifetime.dropIndex >= statementIndex)
-    ) {
-      return lifetime;
-    }
-  }
-  return undefined;
 }

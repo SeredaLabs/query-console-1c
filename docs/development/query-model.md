@@ -14,7 +14,8 @@ elements. `deriveProjectionFacts` combines their print order with C30 output nam
 is not proof of schema completeness; unknown stars have no output name.
 Generator/semantic schemas use `orderedSelectElements`; scalar UNION
 mapping and parser/designer temp schemas do not yet share that full derivation.
-[A2](technical-debt.md#architecture) owns the remaining lifetime/schema work.
+Designer and semantics share lifecycle positions through `tempTableLifetimes.ts`.
+[A2](technical-debt.md#architecture) owns the remaining parser-lifecycle/schema work.
 Opaque HAVING, characteristics, grouping/report blocks and optional flags must
 survive unrelated edits; preservation and unsafe-input rules are specified in the
 [safety contract](contracts/safety-and-preservation.md).

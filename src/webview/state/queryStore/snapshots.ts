@@ -1,7 +1,8 @@
 import { tryTokenize } from '../../../core/query/sdblLexer';
 import type { MetaField, MetaTable } from '../../../core/metadata/types';
 import type { Condition, Grouping, Indexing, Order, QueryModel, QueryType, ReportBuilder, Totals } from '../../../core/query/queryModel';
-import { compoundCarrierOf, selectColumnAliases, type QueryDocument, type UnionMember } from '../../../core/query/unionModel';
+import { selectColumnAliases, type QueryDocument, type UnionMember } from '../../../core/query/unionModel';
+import { deriveTempTableLifetimePositions, newestLifetimeAt, type TempTableLifetime as LifetimePositions } from '../../../core/query/tempTableLifetimes';
 import type { BatchDocument } from '../../../core/query/batchModel';
 import type { BatchSnapshot, QueryState, SavedQuery } from '../queryStore';
 
@@ -192,69 +193,16 @@ export function compoundTempTableName(state: QueryState): string {
   return state.savedQueries[0]?.tempTableName ?? '';
 }
 
-/**
- * Одне "життя" тимчасової таблиці в межах пакета: відкривається `createTemp`,
- * накопичує `appendTemp`, і може закриватися `dropTemp`. Ціле ім'я (упер-кейс)
- * може мати КІЛЬКА lifetimes по черзі (create → drop → create знову) —
- * кожен `createTemp` завжди починає НОВИЙ lifetime, незалежно від того, чи
- * попередній був закритий дропом (це відповідає реальній 1С-семантиці:
- * ПОМЕСТИТЬ завжди створює таблицю заново).
- */
-interface TempTableLifetime {
-  name: string; // канонічне ім'я, як його написав create (case, як є)
-  createIndex: number;
-  appendIndices: number[];
-  dropIndex: number | null;
-  fields: MetaField[]; // колонки з CREATE-учасника (ДОБАВИТЬ не змінює структуру)
+/** Designer keeps its scalar-head schema until the A2 schema step. */
+interface TempTableLifetime extends LifetimePositions {
+  fields: MetaField[];
 }
 
-/**
- * UNION + temp-table lifecycle audit (2026-09-20): спільний внутрішній stateу
- * machine, яким тепер користуються І `availableTempTables`, І
- * `derivePackageTempTableContinuity` — щоб не мати дві subtly different
- * реалізації одного й того самого поняття "коли ВТ доступна". Виводить усі
- * lifetimes ПО ВСЬОМУ пакету за один прохід у порядку пакета:
- * - `createTemp X` --- ЗАВЖДИ відкриває НОВИЙ lifetime для X (навіть якщо
- *   попередній ще не закритий дропом --- це вже помилковий пакет із погляду
- *   1С (runtime error "ВТ вже існує"), ми не намагаємось вигадати для нього
- *   особливу семантику, лише не падаємо: новий lifetime просто затінює
- *   попередній для всіх позицій ПІСЛЯ другого create, що є найбезпечнішим
- *   "останній виграє" резолвом, а не крашем чи мовчазним ігноруванням);
- * - `appendTemp X` --- додається до lifetime X, що є ВІДКРИТИМ на цій
- *   позиції (за версією `openLifetimeAt` нижче); якщо жодного відкритого
- *   lifetime немає (`ДОБАВИТЬ` без попереднього `ПОМЕСТИТЬ` в цьому пакеті)
- *   --- запис про сам append-член все одно повертається викликачами (це факт
- *   про сам член), але без прив'язки до жодного lifetime;
- * - `dropTemp X` --- закриває ВІДКРИТИЙ на цій позиції lifetime X; якщо
- *   такого немає (`УНИЧТОЖИТЬ` без існуючої ВТ) --- так само, немає
- *   прив'язки, але сам факт "цей член дропає X" не губиться.
- * Ці два "no active lifetime" випадки НЕ отримали вигаданої семантики
- * (свідомо, за прямою вказівкою) --- лише не крашать і не тихо ігнорують сам
- * факт ролі члена.
- */
 function deriveTempTableLifetimes(members: QueryDocument[]): Map<string, TempTableLifetime[]> {
   const byName = new Map<string, TempTableLifetime[]>();
-
-  function openLifetimeAt(upper: string, atIndex: number): TempTableLifetime | undefined {
-    const list = byName.get(upper);
-    if (!list) return undefined;
-    // Останній (найновіший) lifetime, що вже відкрився ДО atIndex і ще не
-    // закритий ДО atIndex (dropIndex null, або dropIndex >= atIndex --- дроп
-    // ще не "стався" з точки зору позиції atIndex).
-    for (let k = list.length - 1; k >= 0; k--) {
-      const lt = list[k];
-      if (lt.createIndex < atIndex && (lt.dropIndex === null || lt.dropIndex >= atIndex)) return lt;
-    }
-    return undefined;
-  }
-
-  for (let i = 0; i < members.length; i++) {
-    const carrier = compoundCarrierOf(members[i]);
-    if (!carrier.tempTableName) continue;
-    const upper = carrier.tempTableName.toUpperCase();
-
-    if (carrier.queryType === 'createTemp') {
-      const model = members[i].members[0]?.model;
+  for (const [name, positions] of deriveTempTableLifetimePositions(members)) {
+    byName.set(name, positions.map(lifetime => {
+      const model = members[lifetime.createIndex].members[0]?.model;
       const cols: string[] = [];
       const seenCols = new Set<string>();
       const colAliases = selectColumnAliases(model?.fields ?? [], model);
@@ -266,22 +214,9 @@ function deriveTempTableLifetimes(members: QueryDocument[]): Map<string, TempTab
         seenCols.add(alias.toUpperCase());
         cols.push(alias);
       }
-      const lifetime: TempTableLifetime = {
-        name: carrier.tempTableName,
-        createIndex: i,
-        appendIndices: [],
-        dropIndex: null,
-        fields: cols.map(c => ({ name: c, kind: 'attribute', types: [] })),
-      };
-      (byName.get(upper) ?? byName.set(upper, []).get(upper)!).push(lifetime);
-    } else if (carrier.queryType === 'appendTemp') {
-      openLifetimeAt(upper, i)?.appendIndices.push(i);
-    } else if (carrier.queryType === 'dropTemp') {
-      const lt = openLifetimeAt(upper, i);
-      if (lt) lt.dropIndex = i;
-    }
+      return { ...lifetime, fields: cols.map(c => ({ name: c, kind: 'attribute' as const, types: [] })) };
+    }));
   }
-
   return byName;
 }
 
@@ -298,13 +233,8 @@ export function availableTempTables(state: QueryState): MetaTable[] {
   const lifetimes = deriveTempTableLifetimes(batch.members);
   const out: MetaTable[] = [];
   for (const list of lifetimes.values()) {
-    for (let k = list.length - 1; k >= 0; k--) {
-      const lt = list[k];
-      if (lt.createIndex < state.activeBatch && (lt.dropIndex === null || lt.dropIndex >= state.activeBatch)) {
-        out.push({ kind: 'ВременнаяТаблица', name: lt.name, fullName: lt.name, fields: lt.fields });
-        break; // лише найновіший відкритий lifetime для цього імені.
-      }
-    }
+    const lt = newestLifetimeAt(list, state.activeBatch);
+    if (lt) out.push({ kind: 'ВременнаяТаблица', name: lt.name, fullName: lt.name, fields: lt.fields });
   }
   return out;
 }
@@ -322,13 +252,8 @@ export function availableTempTablesWithOrigin(state: QueryState): { table: MetaT
   const lifetimes = deriveTempTableLifetimes(batch.members);
   const out: { table: MetaTable; createdAt: number }[] = [];
   for (const list of lifetimes.values()) {
-    for (let k = list.length - 1; k >= 0; k--) {
-      const lt = list[k];
-      if (lt.createIndex < state.activeBatch && (lt.dropIndex === null || lt.dropIndex >= state.activeBatch)) {
-        out.push({ table: { kind: 'ВременнаяТаблица', name: lt.name, fullName: lt.name, fields: lt.fields }, createdAt: lt.createIndex });
-        break;
-      }
-    }
+    const lt = newestLifetimeAt(list, state.activeBatch);
+    if (lt) out.push({ table: { kind: 'ВременнаяТаблица', name: lt.name, fullName: lt.name, fields: lt.fields }, createdAt: lt.createIndex });
   }
   return out;
 }
@@ -435,11 +360,7 @@ export function derivePackageTempTableContinuity(state: QueryState): Map<number,
         if (seenForThisMember.has(upper)) continue;
         const list = lifetimes.get(upper);
         if (!list) continue;
-        let openLt: TempTableLifetime | undefined;
-        for (let k = list.length - 1; k >= 0; k--) {
-          const lt = list[k];
-          if (lt.createIndex < i && (lt.dropIndex === null || lt.dropIndex >= i)) { openLt = lt; break; }
-        }
+        const openLt = newestLifetimeAt(list, i);
         if (!openLt) continue;
         seenForThisMember.add(upper);
         // `deriveTempTableLifetimes` будує lifetime цілком (з УСІМА appends,
