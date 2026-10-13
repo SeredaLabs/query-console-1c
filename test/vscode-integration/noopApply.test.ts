@@ -22,15 +22,24 @@ function inject(panel: vscode.WebviewPanel, script: string): void {
   panel.webview.html = html.replace('</body>', `<script nonce="${nonce}">${script}</script></body>`);
 }
 
-/** Classic: wait for the loaded query, then run `action` (has `ok` = the OK button). */
+/**
+ * Classic: run `action` (has `ok` = the OK button) at the first DOM update that shows
+ * the loaded query with OK enabled — from a MutationObserver, i.e. as early as any
+ * click could happen, before React's passive effects.
+ */
 const classicReady = (action: string): string => `
-  const timer = setInterval(() => {
-    if (document.querySelector('[data-testid="loading-overlay"]')) return;
+  let done = false;
+  const tryRun = () => {
+    if (done || document.querySelector('[data-testid="loading-overlay"]')) return;
     const ok = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'ОК' || b.textContent.trim() === 'OK');
     if (!ok || ok.disabled) return;
-    clearInterval(timer);
+    done = true;
+    observer.disconnect();
     ${action}
-  }, 50);`;
+  };
+  const observer = new MutationObserver(tryRun);
+  observer.observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true });
+  tryRun();`;
 
 const CLICK_OK = 'ok.click();';
 const SWITCH_TO_CANVAS = 'document.querySelector(\'[data-testid="designer-mode-canvas"]\').click();';

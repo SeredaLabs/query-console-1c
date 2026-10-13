@@ -9,10 +9,14 @@ import type { BatchTextResult } from '../computeBatchText';
  * The host keeps the first report for the source query and closes an Apply with
  * an equal text without writing. A generation error reports nothing: no baseline,
  * so Apply keeps its current path.
+ *
+ * A layout effect: it runs in the same commit that shows the loaded query (and
+ * enables OK / Save), so the report always precedes any Apply. A passive effect runs
+ * after paint — an Apply in between found no baseline and rewrote the query.
  */
 export function useBaselineReport(loadedId: number | undefined, batch: BatchTextResult): void {
   const reportedRef = React.useRef<number | undefined>(undefined);
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (loadedId === undefined || reportedRef.current === loadedId) return;
     reportedRef.current = loadedId;
     if (batch.error === null) postToHost({ type: 'baseline', loadId: loadedId, text: batch.text });
