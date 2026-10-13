@@ -25,6 +25,10 @@ export interface DesignerSession {
   confirmCommentLoss: () => void;
   /** Resolver over the received metadata, or `undefined` (fail-open) when none. */
   buildResolver: () => MetadataResolver | undefined;
+  /** C32: the host `loadId` of the query now in the state, set in the same update
+   * as its `LOAD_BATCH` (after a confirmed comment loss too); `undefined` until then
+   * or when the host sent no id. */
+  loadedId: number | undefined;
 }
 
 /**
@@ -45,6 +49,8 @@ export function useDesignerSession(
   const [lostComments, setLostComments] = React.useState<string[]>([]);
   const commentLossPending = lostComments.length > 0;
   const pendingCommentLossRef = React.useRef<BatchDocument | null>(null);
+  const pendingLoadIdRef = React.useRef<number | undefined>(undefined);
+  const [loadedId, setLoadedId] = React.useState<number | undefined>(undefined);
   const expectModelRef = React.useRef(false);
   const metaTablesRef = React.useRef<MetaTable[]>([]);
   const onMessageRef = React.useRef(onMessage);
@@ -60,6 +66,7 @@ export function useDesignerSession(
     if (!doc) return;
     pendingCommentLossRef.current = null;
     dispatch({ type: 'LOAD_BATCH', doc });
+    setLoadedId(pendingLoadIdRef.current);
     setLostComments([]);
     setLoadError(null);
   }, [dispatch]);
@@ -78,8 +85,9 @@ export function useDesignerSession(
         // A new host load supersedes any candidate still awaiting confirmation.
         pendingCommentLossRef.current = null;
         setLostComments([]);
+        pendingLoadIdRef.current = msg.loadId;
         const r = tryOpenDesignerBatch(msg.text, buildResolver());
-        if (r.ok) { dispatch({ type: 'LOAD_BATCH', doc: r.doc }); setLoadError(null); }
+        if (r.ok) { dispatch({ type: 'LOAD_BATCH', doc: r.doc }); setLoadedId(msg.loadId); setLoadError(null); }
         else if ('commentLossDoc' in r) {
           pendingCommentLossRef.current = r.commentLossDoc;
           setLostComments(r.lost);
@@ -93,5 +101,5 @@ export function useDesignerSession(
     return unsub;
   }, [dispatch, buildResolver]);
 
-  return { loading, metadataLoaded, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss };
+  return { loading, metadataLoaded, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss, loadedId };
 }

@@ -13,6 +13,7 @@ import type { MetadataModel } from '../core/metadata/types';
 import { normalizeLocale } from '../shared/locale';
 import { moveDesignerToCompactWindow } from './designerWindow';
 import { isCanvasPreviewEnabled } from './canvasPreview';
+import { ApplyBaseline, sourceQueryOf } from './applyBaseline';
 
 function nonce(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -116,6 +117,8 @@ export function createDesignerPanel(
   // and message bridge stay the same, so Save keeps its stale-document guards.
   let current = kind;
   let queryText = initialQueryText;
+  // C32: what an unchanged Apply would write, for this panel and its source query.
+  const baseline = new ApplyBaseline(sourceQueryOf(savedEditor, initialQueryText));
   const showKind = (): void => {
     panel.title = current.title;
     // Canvas already renders this identity mark inside its document bar. VS Code
@@ -163,7 +166,7 @@ export function createDesignerPanel(
       const reply: HostMsg = { type: 'metadataTree', tables: [...repository.getTables()] };
       panel.webview.postMessage(reply);
       if (queryText) {
-        const loadMsg: HostMsg = { type: 'loadModel', text: queryText };
+        const loadMsg: HostMsg = { type: 'loadModel', text: queryText, loadId: baseline.load(queryText) };
         panel.webview.postMessage(loadMsg);
       }
       if (repository.getTables().length === 0 && !cfPath) {
@@ -178,13 +181,17 @@ export function createDesignerPanel(
       const table = repository.findTable(ref.kind, ref.name);
       const reply: HostMsg = { type: 'refFields', ref, fields: table?.fields ?? [] };
       panel.webview.postMessage(reply);
+    } else if (msg.type === 'baseline') {
+      baseline.report(msg.loadId, msg.text);
     } else if (msg.type === 'insertText') {
-      await insertResult(msg.text, savedEditor);
+      // C32: nothing changed — keep the document as it is (no write, no clipboard).
+      if (!baseline.isUnchanged(msg.text)) await insertResult(msg.text, savedEditor);
       panel.dispose();
     } else if (msg.type === 'cancel') {
       panel.dispose();
     } else if (msg.type === 'switchDesigner') {
       if (msg.target === current.mode || (msg.target === 'canvas' && !isCanvasAvailable(context))) return;
+      baseline.switchDesigner();
       queryText = msg.text || undefined;
       current = designerKind(msg.target);
       showKind();
