@@ -8,6 +8,7 @@ import { postToHost } from '../webview/bridge';
 import { CommentLossDialog } from '../webview/components/CommentLossDialog';
 import { prepareDesignerSwitch } from '../webview/designerSwitch';
 import { useDesignerSession } from '../webview/hooks/useDesignerSession';
+import { useBaselineReport } from '../webview/hooks/useBaselineReport';
 import { DocumentBar } from './components/DocumentBar';
 import { PackageNav } from './components/PackageNav';
 import { SdblDock } from './components/SdblDock';
@@ -71,7 +72,7 @@ export function App(): React.ReactElement {
   // перезапише LOAD_BATCH) і `loadError` (блокуючий overlay нижче, лише Close —
   // жодного `insertText` поверх оригінального тексту, який Canvas не відкрив).
   // Тут лише Canvas-специфічне: локаль.
-  const { loading, metadataLoaded, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss } = useDesignerSession(dispatch, msg => {
+  const { loading, metadataLoaded, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss, loadedId } = useDesignerSession(dispatch, msg => {
     if (msg.type === 'init' && msg.locale) {
       setLocale(msg.locale);
       // Texts Canvas reuses from Classic instead of duplicating (core diagnostics
@@ -80,6 +81,7 @@ export function App(): React.ReactElement {
       setClassicLocale(msg.locale);
     }
   });
+  useBaselineReport(loadedId, batchText);
 
   /**
    * Apply gate — ТОЙ САМИЙ, що й Classic «ОК» (`webview/applyGate.ts`, спільний

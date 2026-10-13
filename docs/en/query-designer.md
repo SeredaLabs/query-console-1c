@@ -34,7 +34,8 @@ the prior model.
 ## ✅ Finish
 
 Select **OK** to send the generated source to the active editor. Select **Cancel**
-to discard designer changes. A metadata-cache refresh changes the available
+to discard designer changes. If you opened an existing query and changed nothing,
+**OK** (and **Save** in Canvas) leaves the BSL string exactly as it was. A metadata-cache refresh changes the available
 metadata but does not edit the current BSL file.
 
 ## 🧪 Canvas Preview

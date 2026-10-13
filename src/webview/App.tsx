@@ -4,6 +4,7 @@ import { CommentLossDialog } from './components/CommentLossDialog';
 import { ConstructorView } from './components/ConstructorView';
 import { postToHost } from './bridge';
 import { useDesignerSession } from './hooks/useDesignerSession';
+import { useBaselineReport } from './hooks/useBaselineReport';
 import { initialState, reducer } from './state/queryStore';
 import { computeBatchTextSafe } from './computeBatchText';
 import { findStaticApplyBlocker, decideApply } from './applyGate';
@@ -30,7 +31,7 @@ export function App(): React.ReactElement {
   const [, setLocaleRevision] = useState(0);
   // Сессия с хостом (ready → metadataTree → loadModel, загрузка/ошибка открытия) —
   // общая с Canvas (`hooks/useDesignerSession.ts`); здесь только Classic-сообщения.
-  const { loading, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss } = useDesignerSession(dispatch, msg => {
+  const { loading, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss, loadedId } = useDesignerSession(dispatch, msg => {
     if (msg.type === 'init') {
       // `locale` was added to a versionless host/WebView contract. A restored
       // panel or older harness may still send the previous shape; keep the
@@ -69,10 +70,12 @@ export function App(): React.ReactElement {
   // PR-05 (ТЗ §28/§30): `computeBatchTextSafe` ловит исключение сборки/генерации
   // вместо того, чтобы дать ему улететь из тела useMemo — раньше это падение
   // сносило весь webview (нет Error Boundary), теперь — controlled `generationError`.
-  const { text: batchText, error: generationError } = useMemo(
+  const batch = useMemo(
     () => computeBatchTextSafe(state, preserveComments),
     [state, preserveComments]
   );
+  const { text: batchText, error: generationError } = batch;
+  useBaselineReport(loadedId, batch);
 
   // PR-05/PR-14 (ТЗ §27/28/54 P0.5): capability/preservation gate ПЕРЕД записью в
   // редактор — небезпечна віртуальна таблиця або синтаксично зламаний custom-вираз

@@ -12,12 +12,17 @@ export type HostMsg =
   | { type: 'metadataTree'; tables: MetaTable[] }
   | { type: 'refFields'; ref: RefId; fields: MetaField[] }
   | { type: 'refreshResult'; ok: boolean; message: string }
-  | { type: 'loadModel'; text: string };
+  /** `loadId` names this load in the webview's `baseline` report (C32). */
+  | { type: 'loadModel'; text: string; loadId?: number };
 
 export type WebviewMsg =
   | { type: 'ready' }
   | { type: 'expandRef'; ref: RefId }
   | { type: 'insertText'; text: string }
+  /** C32: the text Apply would write right after load `loadId` was opened — the
+   * host keeps the first one for the source query and closes an unchanged Apply
+   * without writing. */
+  | { type: 'baseline'; loadId: number; text: string }
   | { type: 'cancel' }
   | { type: 'refreshCache' }
   /** Reload the same panel with the other designer UI, opening `text` (the
