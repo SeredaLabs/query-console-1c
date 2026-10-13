@@ -9,7 +9,10 @@ expressions can remain opaque strings. There is no shared arbitrary-expression A
 ## Representation boundaries
 
 Scalar fields, tabular projections and trailing fields are distinct ordered select
-elements. Generator/semantic schemas use `orderedSelectElements`; scalar UNION
+elements. `deriveProjectionFacts` combines their print order with C30 output names;
+`selectElementNames` adapts these facts for existing consumers. A named projection
+is not proof of schema completeness; unknown stars have no output name.
+Generator/semantic schemas use `orderedSelectElements`; scalar UNION
 mapping and parser/designer temp schemas do not yet share that full derivation.
 [A2](technical-debt.md#architecture) owns the remaining lifetime/schema work.
 Opaque HAVING, characteristics, grouping/report blocks and optional flags must

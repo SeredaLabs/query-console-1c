@@ -1,0 +1,83 @@
+{
+ "source": "СхемаЗапроса (validate_query) and execute_query, SL_kza, 2026-10-13 (A2): a tabular-section projection or field cannot go into ПОМЕСТИТЬ; Справочник.Контрагенты.ВидыСервиса. Only column names are kept, no data.",
+ "cases": [
+  {
+   "name": "P0_projection_plain",
+   "query": "ВЫБРАТЬ ПЕРВЫЕ 3 Т.Ссылка КАК ID, Т.ВидыСервиса.(ВидСервиса, УидДоговора) КАК Строки, 1 КАК Хвост ИЗ Справочник.Контрагенты КАК Т ГДЕ Т.ВидыСервиса.ВидСервиса ЕСТЬ НЕ NULL",
+   "valid": true,
+   "executeColumns": [
+    "ID",
+    "Строки",
+    "Хвост"
+   ]
+  },
+  {
+   "name": "P1_into_temp",
+   "query": "ВЫБРАТЬ ПЕРВЫЕ 3 Т.Ссылка КАК ID, Т.ВидыСервиса.(ВидСервиса, УидДоговора) КАК Строки, 1 КАК Хвост ПОМЕСТИТЬ ВТ ИЗ Справочник.Контрагенты КАК Т ГДЕ Т.ВидыСервиса.ВидСервиса ЕСТЬ НЕ NULL",
+   "valid": false,
+   "error": {
+    "line": 1,
+    "col": 35,
+    "message": "Query that forms temporary table cannot select nested tables"
+   }
+  },
+  {
+   "name": "P6_default_name",
+   "query": "ВЫБРАТЬ ПЕРВЫЕ 3 Т.Ссылка КАК ID, Т.ВидыСервиса.(ВидСервиса) ПОМЕСТИТЬ ВТ ИЗ Справочник.Контрагенты КАК Т;\nВЫБРАТЬ * ИЗ ВТ КАК Вт",
+   "valid": false,
+   "error": {
+    "line": 1,
+    "col": 35,
+    "message": "Query that forms temporary table cannot select nested tables"
+   }
+  },
+  {
+   "name": "P7_projection_only",
+   "query": "ВЫБРАТЬ ПЕРВЫЕ 3 Т.ВидыСервиса.(ВидСервиса) КАК Строки ПОМЕСТИТЬ ВТ ИЗ Справочник.Контрагенты КАК Т;\nВЫБРАТЬ * ИЗ ВТ КАК Вт",
+   "valid": false,
+   "error": {
+    "line": 1,
+    "col": 18,
+    "message": "Query that forms temporary table cannot select nested tables"
+   }
+  },
+  {
+   "name": "P9_tabular_field_into_temp",
+   "query": "ВЫБРАТЬ ПЕРВЫЕ 3 Т.Ссылка КАК ID, Т.ВидыСервиса.ВидСервиса КАК Вид ПОМЕСТИТЬ ВТ ИЗ Справочник.Контрагенты КАК Т;\nВЫБРАТЬ * ИЗ ВТ КАК Вт",
+   "valid": false,
+   "error": {
+    "line": 1,
+    "col": 35,
+    "message": "Query that forms temporary table cannot select nested tables"
+   }
+  },
+  {
+   "name": "P10_union_member_into_temp",
+   "query": "ВЫБРАТЬ ПЕРВЫЕ 1 Т.Ссылка КАК ID, Т.ВидыСервиса.(ВидСервиса) КАК Строки ПОМЕСТИТЬ ВТ ИЗ Справочник.Контрагенты КАК Т ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ ПЕРВЫЕ 1 Т.Ссылка, Т.ВидыСервиса.(ВидСервиса) ИЗ Справочник.Контрагенты КАК Т",
+   "valid": false,
+   "error": {
+    "line": 1,
+    "col": 35,
+    "message": "Query that forms temporary table cannot select nested tables"
+   }
+  },
+  {
+   "name": "P8_nested_in_subquery_into_temp",
+   "query": "ВЫБРАТЬ П.ID ПОМЕСТИТЬ ВТ ИЗ (ВЫБРАТЬ ПЕРВЫЕ 3 Т.Ссылка КАК ID, Т.ВидыСервиса.(ВидСервиса) КАК Строки ИЗ Справочник.Контрагенты КАК Т) КАК П;\nВЫБРАТЬ * ИЗ ВТ КАК Вт",
+   "valid": true,
+   "executeColumns": [
+    "ID"
+   ]
+  },
+  {
+   "name": "P3_named_columns",
+   "query": "ВЫБРАТЬ ПЕРВЫЕ 3 Т.Ссылка КАК ID, Т.ВидыСервиса.(ВидСервиса, УидДоговора) КАК Строки, 1 КАК Хвост ПОМЕСТИТЬ ВТ ИЗ Справочник.Контрагенты КАК Т ГДЕ Т.ВидыСервиса.ВидСервиса ЕСТЬ НЕ NULL;\nВЫБРАТЬ Вт.ID, Вт.Строки, Вт.Хвост ИЗ ВТ КАК Вт",
+   "valid": false,
+   "error": {
+    "line": 1,
+    "col": 35,
+    "message": "Query that forms temporary table cannot select nested tables"
+   }
+  }
+ ]
+}

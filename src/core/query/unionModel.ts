@@ -24,6 +24,24 @@ export type SelectElement =
   | { kind: 'field'; field: SelectedField }
   | { kind: 'ts'; tsf: SelectedTabSectionField };
 
+/** One outer projection position; a tabular element retains its nested model. */
+export interface ProjectionColumnFact {
+  element: SelectElement;
+  /** C30 result name; undefined for an unresolved wildcard, never a matching key. */
+  outputName: string | undefined;
+}
+
+/**
+ * Shared, non-persisted projection facts in print order. This is not a producer
+ * schema: a known name does not prove expression validity or schema completeness.
+ * Consumers retain their existing scalar-head/all-elements boundaries (A2).
+ */
+export function deriveProjectionFacts(model: QueryModel): ProjectionColumnFact[] {
+  const elements = orderedSelectElements(model);
+  const names = columnNames(model, elements);
+  return elements.map((element, i) => ({ element, outputName: names[i] }));
+}
+
 /** Колонка объединения: общий псевдоним и выражение каждого участника (или null). */
 export interface UnionColumn {
   alias: string;
@@ -72,13 +90,10 @@ export function fieldAlias(field: SelectedField, model?: QueryModel): string {
  * platform rule). A wildcard kept as written has no entry.
  */
 export function selectElementNames(model: QueryModel): Map<SelectedField | SelectedTabSectionField, string> {
-  const elements = orderedSelectElements(model);
-  const names = columnNames(model, elements);
   const out = new Map<SelectedField | SelectedTabSectionField, string>();
-  elements.forEach((el, i) => {
-    const name = names[i];
-    if (name !== undefined) out.set(el.kind === 'field' ? el.field : el.tsf, name);
-  });
+  for (const { element: el, outputName } of deriveProjectionFacts(model)) {
+    if (outputName !== undefined) out.set(el.kind === 'field' ? el.field : el.tsf, outputName);
+  }
   return out;
 }
 

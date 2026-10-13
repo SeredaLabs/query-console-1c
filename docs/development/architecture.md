@@ -107,6 +107,8 @@ The semantic snapshot builder also uses this parser, with advisory recovery;
 source-map ranges/depth and `symbolsById` serve on-demand alias resolution.
 No scope/reference index or `partial` completeness state is produced.
 
+Shared projection facts (`deriveProjectionFacts` in `unionModel.ts`) combine print
+order and C30 names over the existing model without switching schema boundaries.
 Temporary-table facts still have three owners: parser registry, designer store
 and semantic lifetime/schema derivation. Scalar-head versus all-projection schema
 alignment is unfinished. The shared lexer owns Query Core lexical facts (A1,
