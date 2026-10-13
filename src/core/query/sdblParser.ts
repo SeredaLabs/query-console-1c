@@ -54,6 +54,7 @@ import { tokenize, tryTokenize, isWordToken, replaceInCodeRanges, codeRanges, is
 import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
 import { bareParamName } from './exprAutoAlias';
+import { deriveProducerColumns } from './producerColumns';
 import { selectColumnAliases, selectElementNames } from './unionModel';
 import { extractComments, rememberConditionComments, rememberNestedConditionComments } from './commentBinder';
 import type { QueryDocument, UnionMember } from './unionModel';
@@ -5959,15 +5960,7 @@ function registerTempTables(doc: QueryDocument, tempTables: Map<string, MetaTabl
     return;
   }
   if (m0.queryType !== 'createTemp') return;
-  const cols: { alias: string; scalar: boolean }[] = [];
-  // C30: the column names every consumer uses (`columnNames`). A wildcard kept as
-  // written (its source not resolved) has no name and is not registered.
-  const names = selectElementNames(m0);
-  for (const f of m0.fields) {
-    const alias = names.get(f);
-    if (alias === undefined) continue;
-    cols.push({ alias, scalar: isScalarLiteralExpr(f.expression) });
-  }
+  const cols = deriveProducerColumns(m0, 'parser-registry').columns;
   if (cols.length === 0) {
     // C24: a redefinition without registrable columns leaves the old entry for the
     // constructor path, but its columns are no longer proven.
@@ -5979,10 +5972,11 @@ function registerTempTables(doc: QueryDocument, tempTables: Map<string, MetaTabl
   // даём ей примитивный тип, чтобы `resolveBuilderStar` снял `.*` (`Товары.Ссылка.*`
   // на ВТ, где `Ссылка` — строковый литерал, → `Товары.Ссылка`). Прочие колонки
   // остаются с `types: []` (состав неизвестен — `.*` консервативно сохраняется).
-  const fields: MetaField[] = cols.map(({ alias, scalar }) => ({
-    name: alias,
+  const fields: MetaField[] = cols.map(({ name, element }) => ({
+    name,
     kind: 'attribute',
-    types: scalar ? [{ primitive: 'Строка' as const }] : [],
+    types: element.kind === 'field' && isScalarLiteralExpr(element.field.expression)
+      ? [{ primitive: 'Строка' as const }] : [],
   }));
   const table: MetaTable = {
     kind: 'Справочник', // вид не используется развёрткой ВТ (нет ТЧ/виртуальных полей)

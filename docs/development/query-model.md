@@ -12,8 +12,10 @@ Scalar fields, tabular projections and trailing fields are distinct ordered sele
 elements. `deriveProjectionFacts` combines their print order with C30 output names;
 `selectElementNames` adapts these facts for existing consumers. A named projection
 is not proof of schema completeness; unknown stars have no output name.
-Generator/semantic schemas use `orderedSelectElements`; scalar UNION
-mapping and parser/designer temp schemas do not yet share that full derivation.
+Temp producer columns use `deriveProducerColumns` over these facts. Its named
+compatibility policies preserve the parser/Designer scalar-head boundary and the
+semantic full projection, including their existing duplicate/star handling.
+Scalar UNION mapping remains separate; this step does not switch schema behavior.
 Designer and semantics share lifecycle positions through `tempTableLifetimes.ts`.
 [A2](technical-debt.md#architecture) owns the remaining parser-lifecycle/schema work.
 Opaque HAVING, characteristics, grouping/report blocks and optional flags must

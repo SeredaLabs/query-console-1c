@@ -1,3 +1,4 @@
+import { deriveProducerColumns } from '../../../core/query/producerColumns';
 import { tryTokenize } from '../../../core/query/sdblLexer';
 import type { MetaField, MetaTable } from '../../../core/metadata/types';
 import type { Condition, Grouping, Indexing, Order, QueryModel, QueryType, ReportBuilder, Totals } from '../../../core/query/queryModel';
@@ -193,7 +194,7 @@ export function compoundTempTableName(state: QueryState): string {
   return state.savedQueries[0]?.tempTableName ?? '';
 }
 
-/** Designer keeps its scalar-head schema until the A2 schema step. */
+/** Designer metadata adapter; column compatibility rules live in producerColumns. */
 interface TempTableLifetime extends LifetimePositions {
   fields: MetaField[];
 }
@@ -203,18 +204,8 @@ function deriveTempTableLifetimes(members: QueryDocument[]): Map<string, TempTab
   for (const [name, positions] of deriveTempTableLifetimePositions(members)) {
     byName.set(name, positions.map(lifetime => {
       const model = members[lifetime.createIndex].members[0]?.model;
-      const cols: string[] = [];
-      const seenCols = new Set<string>();
-      const colAliases = selectColumnAliases(model?.fields ?? [], model);
-      for (const a of colAliases) {
-        if (!a || a === '*') continue;
-        let alias = a;
-        let n = 0;
-        while (seenCols.has(alias.toUpperCase())) alias = `${a}${++n}`;
-        seenCols.add(alias.toUpperCase());
-        cols.push(alias);
-      }
-      return { ...lifetime, fields: cols.map(c => ({ name: c, kind: 'attribute' as const, types: [] })) };
+      const columns = model ? deriveProducerColumns(model, 'designer').columns : [];
+      return { ...lifetime, fields: columns.map(c => ({ name: c.name, kind: 'attribute' as const, types: [] })) };
     }));
   }
   return byName;

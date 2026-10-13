@@ -11,14 +11,12 @@
  * invalid column expression makes the schema incomplete; negative validation
  * is safe only when `complete === true`.
  */
-import type { MetaField, MetaTable } from '../metadata/types';
+import type { MetaTable } from '../metadata/types';
 import type { BatchDocument } from './batchModel';
 import { deriveTempTableLifetimePositions, newestLifetimeAt, type TempTableLifetime as LifetimePositions } from './tempTableLifetimes';
-import { isStructurallyValidExpression } from './expressionSyntaxCheck';
+import { deriveProducerColumns } from './producerColumns';
 import {
   compoundCarrierOf,
-  elementAlias,
-  orderedSelectElements,
   type QueryDocument,
 } from './unionModel';
 
@@ -42,45 +40,7 @@ export function inferCreatedTempTableSchema(doc: QueryDocument): TempTableSchema
   // UNION result names are defined by its first member.
   const head = doc.members[0]?.model;
   if (!head) return undefined;
-  const elements = orderedSelectElements(head);
-  const fields: MetaField[] = [];
-  const seen = new Set<string>();
-  let complete = elements.length > 0;
-
-  for (const element of elements) {
-    const unresolvedStar = element.kind === 'field' && (
-      element.field.path === '*' ||
-      /(?:^|\.)\*$/u.test(element.field.expression?.trim() ?? '')
-    );
-    if (unresolvedStar) {
-      complete = false;
-      continue;
-    }
-    const baseAlias = elementAlias(element, head);
-    // An unexpanded star proves that the parser did not know the complete
-    // producer shape. Keep any positive columns we do know, but never use this
-    // schema to report a missing-field diagnostic or a complete suggestion set.
-    if (!baseAlias || baseAlias === '*') {
-      complete = false;
-      continue;
-    }
-    // The tolerant parser keeps unfinished text (`ВЫБОР КОГДА Т.Код`) as a raw
-    // expression with an auto alias; it may even have swallowed later columns.
-    // Keep the column name (the parser and designer derive the same one), but
-    // the schema no longer proves which columns are missing.
-    if (
-      element.kind === 'field' &&
-      element.field.expression !== undefined &&
-      !isStructurallyValidExpression(element.field.expression)
-    ) {
-      complete = false;
-    }
-    let alias = baseAlias;
-    let suffix = 0;
-    while (seen.has(alias.toUpperCase())) alias = `${baseAlias}${++suffix}`;
-    seen.add(alias.toUpperCase());
-    fields.push({ name: alias, kind: 'attribute', types: [] });
-  }
+  const { columns, complete } = deriveProducerColumns(head, 'semantic');
 
   return {
     complete,
@@ -88,7 +48,7 @@ export function inferCreatedTempTableSchema(doc: QueryDocument): TempTableSchema
       kind: 'ВременнаяТаблица',
       name: carrier.tempTableName,
       fullName: carrier.tempTableName,
-      fields,
+      fields: columns.map(c => ({ name: c.name, kind: 'attribute', types: [] })),
     },
   };
 }
