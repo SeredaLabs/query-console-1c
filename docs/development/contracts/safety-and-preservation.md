@@ -208,6 +208,17 @@ recovery text is an Apply source. Invalid input may be rejected on open or
 opened for inspection with Apply blocked; it must not be silently rewritten
 by an unchecked Save.
 
+An unchanged Apply writes nothing (C32). The host keeps, per Designer panel, the
+text Apply would write right after the first successful open of the source query
+(the webview reports it once per `loadModel.loadId`; the first report for a load
+of the source query before any Classic ↔ Canvas switch wins). OK/Save with exactly
+that text closes the panel without touching the document — no re-encoded
+literal, no clipboard fallback, also on a stale document. Without a source query
+(a new query, result-processing code, no editor) or without an accepted report,
+Apply keeps the path above. [Host baseline](../../../src/extension/applyBaseline.ts),
+[host](../../../test/vscode-integration/noopApply.test.ts) and
+[webview](../../../test/e2e/noopApply.c32.spec.ts) checks.
+
 The malformed walker covers custom fields/JOIN/conditions, VT expression slots,
 ПЕРИОДАМИ date operands, tabular castPrefix and non-custom comparison operands.
 It deliberately excludes DCS wrappers/aliases, VT order/limit/lists/periodicity/
