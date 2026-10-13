@@ -249,9 +249,16 @@ function keyOf(tableId: string, path: string): string {
 /**
  * Ключ выражения для сравнения «уже в группировке»: его токены через пробел —
  * раскладка и комментарии не важны, литералы сравниваются байт-в-байт.
+ * `undefined`, если лексер выражение не читает: такое выражение ни с чем не сравнимо.
  */
-function normExpr(s: string): string {
-  return (codeTokens(s) ?? []).map(t => t.text).join(' ');
+function normExpr(s: string): string | undefined {
+  return codeTokens(s)?.map(t => t.text).join(' ');
+}
+
+/** `expr` is not grouped yet; one the lexer cannot read never qualifies. */
+function isNewGroupExpr(expr: string, grouped: ReadonlySet<string>): boolean {
+  const key = normExpr(expr);
+  return key !== undefined && !grouped.has(key);
 }
 
 /** `expr` содержит ссылку `rendered` (`Алиас.Путь`) как ЦЕЛУЮ токен-цепочку. */
@@ -310,11 +317,15 @@ export function substituteGroupFieldWithSelectExpr(model: QueryModel, resolver?:
   }
   if (exprCols.length === 0) return;
 
-  // A grouped expression the lexer cannot read could not be compared: no substitution.
-  if (fields.some(g => g.expression !== undefined && !codeTokens(g.expression))) return;
   // Выражения, УЖЕ присутствующие в группировке (нормализованные) — лист не заменяем.
+  // A grouped expression the lexer cannot read could not be compared: no substitution.
   const groupedExprNorm = new Set<string>();
-  for (const g of fields) if (g.expression !== undefined) groupedExprNorm.add(normExpr(g.expression));
+  for (const g of fields) {
+    if (g.expression === undefined) continue;
+    const key = normExpr(g.expression);
+    if (key === undefined) return;
+    groupedExprNorm.add(key);
+  }
 
   const anchorBefore: boolean[] = [];
   let seenAnchor = false;
@@ -338,7 +349,7 @@ export function substituteGroupFieldWithSelectExpr(model: QueryModel, resolver?:
     const expr = exprCols.find(
       e => e.alias.toUpperCase() === nameUp &&
         containsFieldRef(e.expression, rendered) &&
-        !groupedExprNorm.has(normExpr(e.expression))
+        isNewGroupExpr(e.expression, groupedExprNorm)
     );
     if (!expr) continue;
     const explicit = fields.slice(0, explicitCount);

@@ -19,6 +19,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { generateBatch } from '../../src/core/query/sdblGenerator';
+import { substituteGroupFieldWithSelectExpr } from '../../src/core/query/dropRedundantGroupDerefs';
 import { buildYamlResolver } from '../../src/core/metadata/buildYamlResolver';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
 import type { MetaTable } from '../../src/core/metadata/types';
@@ -99,6 +100,31 @@ describe('R11 step 2: a string literal does not steer a GROUP BY rewrite', () =>
     // The same expression laid out differently is still "already grouped".
     const same = `ВЫБРАТЬ П.Код ИЗ (ВЫБРАТЬ Т.Код КАК Код, ВЫБОР КОГДА Т.Наименование = "a  b" ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Наименование, КОЛИЧЕСТВО(*) КАК К ${F} СГРУППИРОВАТЬ ПО Т.Код, Т.Наименование, ВЫБОР КОГДА Т.Наименование = "a  b"\n\tТОГДА 1 ИНАЧЕ 0 КОНЕЦ) КАК П`;
     expect(groupItems(constructor(same, corpus))[0]).toContain('Т . Наименование');
+  });
+
+  it('normExpr: an expression the lexer cannot read is never "the same" and never substituted', () => {
+    // Parsed without the rewrites (preserve), then the rule is applied directly.
+    const model = () => parseBatch(`ВЫБРАТЬ Т.Код КАК Код, ВЫБОР КОГДА Т.Наименование = "x" ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Наименование, КОЛИЧЕСТВО(*) КАК К ${F} СГРУППИРОВАТЬ ПО Т.Код, Т.Наименование`)
+      .members[0].members[0].model;
+    const groupTexts = (m: ReturnType<typeof model>) => m.grouping!.groupFields.map(g => g.expression ?? `${g.tableId}:${g.path}`);
+    // Control: a readable model gets the substitution.
+    const control = model();
+    substituteGroupFieldWithSelectExpr(control, corpus, true);
+    expect(groupTexts(control).some(t => t.startsWith('ВЫБОР'))).toBe(true);
+    // An unreadable grouped expression (unterminated literal): nothing changes.
+    const grouped = model();
+    grouped.grouping!.groupFields.push({ tableId: '', path: '', expression: '"не закрыт' });
+    grouped.grouping!.explicitGroupCount = grouped.grouping!.groupFields.length;
+    const before = groupTexts(grouped);
+    substituteGroupFieldWithSelectExpr(grouped, corpus, true);
+    expect(groupTexts(grouped)).toEqual(before);
+    // An unreadable select CASE: not substituted either.
+    const selected = model();
+    const field = selected.fields.find(f => f.alias === 'Наименование')!;
+    field.expression = 'ВЫБОР КОГДА Т.Наименование = "x ТОГДА 1 ИНАЧЕ 0 КОНЕЦ';
+    const selectedBefore = groupTexts(selected);
+    substituteGroupFieldWithSelectExpr(selected, corpus, true);
+    expect(groupTexts(selected)).toEqual(selectedBefore);
   });
 
   it('field names still match case-sensitively (unchanged)', () => {
