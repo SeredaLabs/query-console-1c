@@ -17,6 +17,8 @@ compatibility policies preserve the parser/Designer scalar-head boundary and the
 semantic full projection, including their existing duplicate/star handling.
 Scalar UNION mapping remains separate; this step does not switch schema behavior.
 Designer and semantics share lifecycle positions through `tempTableLifetimes.ts`.
+The newest preceding create shadows older lifetimes even after its drop; invalid
+repeated creation must not revive an older schema in hover, table lists or package links.
 [A2](technical-debt.md#architecture) owns the remaining parser-lifecycle/schema work.
 Opaque HAVING, characteristics, grouping/report blocks and optional flags must
 survive unrelated edits; preservation and unsafe-input rules are specified in the

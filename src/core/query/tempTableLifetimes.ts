@@ -8,7 +8,10 @@ export interface TempTableLifetime {
   dropIndex: number | null;
 }
 
-/** A creator is invisible to itself; a drop still sees the table it removes. */
+/**
+ * A creator is invisible to itself; a drop still sees the table it removes.
+ * The latest preceding create shadows older schemas even after it is dropped.
+ */
 export function newestLifetimeAt<T extends TempTableLifetime>(
   list: readonly T[] | undefined,
   statementIndex: number,
@@ -16,8 +19,8 @@ export function newestLifetimeAt<T extends TempTableLifetime>(
   if (!list) return undefined;
   for (let i = list.length - 1; i >= 0; i--) {
     const lifetime = list[i];
-    if (lifetime.createIndex < statementIndex &&
-        (lifetime.dropIndex === null || lifetime.dropIndex >= statementIndex)) return lifetime;
+    if (lifetime.createIndex >= statementIndex) continue;
+    return lifetime.dropIndex === null || lifetime.dropIndex >= statementIndex ? lifetime : undefined;
   }
   return undefined;
 }
@@ -25,8 +28,8 @@ export function newestLifetimeAt<T extends TempTableLifetime>(
 /**
  * Shared Designer/semantic lifecycle. Each create owns its schema; append does
  * not replace it. Orphan append/drop creates no lifetime. Repeated create without
- * drop is platform-invalid: preserve the existing newest-visible lookup, including
- * its fallback to an older still-open lifetime after the newer one is dropped.
+ * drop is platform-invalid: for editor recovery, the new create shadows the older
+ * lifetime permanently. Dropping it must not revive an earlier schema.
  */
 export function deriveTempTableLifetimePositions(members: readonly QueryDocument[]): Map<string, TempTableLifetime[]> {
   const byName = new Map<string, TempTableLifetime[]>();

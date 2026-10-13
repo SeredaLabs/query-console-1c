@@ -25,23 +25,48 @@ describe('A2 shared temp-table lifetimes', () => {
     expect(newestLifetimeAt(undefined, 0)).toBeUndefined();
   });
 
-  it('preserves the existing fallback after an invalid repeated create', () => {
+  it('does not revive a shadowed schema after an invalid repeated create and drop', () => {
     const batch = parseBatch('ВЫБРАТЬ 1 КАК Старое ПОМЕСТИТЬ ВТ; '
       + 'ВЫБРАТЬ 2 КАК Новое ПОМЕСТИТЬ ВТ; УНИЧТОЖИТЬ ВТ; ВЫБРАТЬ * ИЗ ВТ');
     const list = deriveTempTableLifetimePositions(batch.members).get('ВТ')!;
     expect(list.map(l => l.dropIndex)).toEqual([null, 2]);
+    expect(newestLifetimeAt(list, 1)?.createIndex).toBe(0);
     expect(newestLifetimeAt(list, 2)?.createIndex).toBe(1);
-    expect(newestLifetimeAt(list, 3)?.createIndex).toBe(0);
-    // Compatibility of the two migrated consumers, not platform-valid semantics.
-    expect(visibleTempTableAt(deriveTempTableLifetimes(batch), 3, 'ВТ')?.table.fields.map(f => f.name))
-      .toEqual(['Старое']);
+    expect(newestLifetimeAt(list, 3)).toBeUndefined();
+    // Recovery from invalid input must not invent a surviving older table.
+    expect(visibleTempTableAt(deriveTempTableLifetimes(batch), 3, 'ВТ')).toBeUndefined();
     const state = reducer(reducer(initialState(), { type: 'LOAD_BATCH', doc: batch }), { type: 'SET_ACTIVE_BATCH', index: 3 });
-    expect(availableTempTables(state)[0].fields.map(f => f.name)).toEqual(['Старое']);
-    // Parser integration is a later boundary: its registry deletes the latest
-    // entry without reviving the old one, so this wildcard remains unresolved.
+    expect(availableTempTables(state)).toEqual([]);
+    expect(availableTempTablesWithOrigin(state)).toEqual([]);
+    expect(derivePackageTempTableContinuity(state).get(3)).toBeUndefined();
+    // Match the existing parser registry: the wildcard stays unresolved.
     expect(batch.members[3].members[0].model.fields).toEqual([
       { tableId: '', path: '', expression: '*' },
     ]);
+  });
+
+  it('does not attach later orphan append/drop to a shadowed lifetime', () => {
+    const batch = parseBatch([
+      'ВЫБРАТЬ 1 КАК Старое ПОМЕСТИТЬ ВТ',
+      'ВЫБРАТЬ 2 КАК Новое ПОМЕСТИТЬ вт',
+      'УНИЧТОЖИТЬ ВТ',
+      'ВЫБРАТЬ 3 КАК Код ДОБАВИТЬ Вт',
+      'УНИЧТОЖИТЬ вт',
+      'ВЫБРАТЬ 4 КАК Последнее ПОМЕСТИТЬ ВТ',
+      'ВЫБРАТЬ ВТ.Последнее ИЗ ВТ',
+    ].join('; '));
+    const list = deriveTempTableLifetimePositions(batch.members).get('ВТ')!;
+    expect(list.map(l => [l.createIndex, l.appendIndices, l.dropIndex])).toEqual([
+      [0, [], null], [1, [], 2], [5, [], null],
+    ]);
+    expect(newestLifetimeAt(list, 5)).toBeUndefined();
+    expect(newestLifetimeAt(list, 6)?.createIndex).toBe(5);
+    const state = reducer(initialState(), { type: 'LOAD_BATCH', doc: batch });
+    const relations = derivePackageTempTableContinuity(state);
+    expect(relations.get(0)).toMatchObject([{ role: 'creates', relatedMembers: [] }]);
+    expect(relations.get(3)).toBeUndefined();
+    expect(relations.get(4)).toBeUndefined();
+    expect(relations.get(6)).toContainEqual({ tempTableName: 'ВТ', role: 'consumes', relatedMembers: [5] });
   });
 
   it('gives Designer and semantics identical visibility and origin through a valid lifecycle', () => {
