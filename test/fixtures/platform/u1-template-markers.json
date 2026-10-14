@@ -1,0 +1,216 @@
+{
+ "source": "SL_kza, platform 8.3.15.1489, 2026-10-15, through the mcp_APIBackend server: \"platform\" = validate_query (СхемаЗапроса); nothing was executed, no table data read. \"designerApplied\" = this product's Designer open → Apply (preserve mode) at main 369ae5b+. U1: a `#Имя` template marker that BSL code replaces with text before running the query. The original and the Designer-applied template are compared after the same substitution.",
+ "corpusScan": {
+  "packagesWithMarkers": 85,
+  "markerContextChangedByDesigner": 5,
+  "files": [
+   "CommonModules-ДатыЗапретаИзмененияСлужебныйПовтИсп-Ext-Module.bsl_1.txt",
+   "CommonModules-ОбменДаннымиСервер-Ext-Module.bsl_41.txt",
+   "CommonModules-ПоискИУдалениеДублей-Ext-Module.bsl_4.txt",
+   "DataProcessors-ПоискИУдалениеДублей-Ext-ObjectModule.bsl_1.txt",
+   "InformationRegisters-НастройкиОчисткиФайлов-Forms-ФормаЗаписи-Ext-Form-Module.bsl_1.txt"
+  ],
+  "change": "an unaliased `#…` source gets `КАК <marker name>`"
+ },
+ "validatorNote": "validate_query now accepts templates with `#` markers as written (e.g. `ВЫБРАТЬ * ИЗ #Таблица` → no columns); on 2026-09-29 (RP22) it answered `Table not found`. A golden `valid` flag for marker packages is validator behavior, not a platform verdict.",
+ "cases": [
+  {
+   "name": "U1a_star_name_only",
+   "template": "ВЫБРАТЬ * ИЗ #Таблица",
+   "substitution": {
+    "#Таблица": "Справочник.Валюты"
+   },
+   "designerApplied": "ВЫБРАТЬ\n\t*\nИЗ\n\t#Таблица КАК Таблица",
+   "platform": {
+    "template": {
+     "accepted": true,
+     "columns": [
+      []
+     ]
+    },
+    "originalSubstituted": {
+     "accepted": true,
+     "columns": [
+      [
+       "Ссылка",
+       "ВерсияДанных",
+       "ПометкаУдаления",
+       "Код",
+       "Наименование",
+       "НаименованиеПолное",
+       "ПараметрыПрописиНаАнглийском",
+       "ПараметрыПрописиНаРусском",
+       "ПараметрыПрописиНаУкраинском",
+       "Символ",
+       "ЗагружатьИзИнтернета",
+       "Картинка",
+       "GUID_BPM",
+       "Предопределенный",
+       "ИмяПредопределенныхДанных"
+      ]
+     ]
+    },
+    "designerAppliedSubstituted": {
+     "accepted": true,
+     "columns": [
+      [
+       "Ссылка",
+       "ВерсияДанных",
+       "ПометкаУдаления",
+       "Код",
+       "Наименование",
+       "НаименованиеПолное",
+       "ПараметрыПрописиНаАнглийском",
+       "ПараметрыПрописиНаРусском",
+       "ПараметрыПрописиНаУкраинском",
+       "Символ",
+       "ЗагружатьИзИнтернета",
+       "Картинка",
+       "GUID_BPM",
+       "Предопределенный",
+       "ИмяПредопределенныхДанных"
+      ]
+     ]
+    }
+   }
+  },
+  {
+   "name": "U1b_full_name_field",
+   "template": "ВЫБРАТЬ &Поля ИЗ #Таблица",
+   "substitution": {
+    "#Таблица": "Справочник.Валюты",
+    "&Поля": "Справочник.Валюты.Код"
+   },
+   "designerApplied": "ВЫБРАТЬ\n\t&Поля\nИЗ\n\t#Таблица КАК Таблица",
+   "platform": {
+    "template": {
+     "accepted": true,
+     "columns": [
+      [
+       "Поля"
+      ]
+     ]
+    },
+    "originalSubstituted": {
+     "accepted": true,
+     "columns": [
+      [
+       "Код"
+      ]
+     ]
+    },
+    "designerAppliedSubstituted": {
+     "accepted": false,
+     "error": {
+      "line": 2,
+      "col": 2,
+      "message": "Field not found \"Справочник.Валюты.Код\""
+     }
+    }
+   }
+  },
+  {
+   "name": "U1e_short_alias_field",
+   "template": "ВЫБРАТЬ &Поля ИЗ #Таблица",
+   "substitution": {
+    "#Таблица": "Справочник.Валюты КАК Валюты",
+    "&Поля": "Валюты.Код"
+   },
+   "designerApplied": "ВЫБРАТЬ\n\t&Поля\nИЗ\n\t#Таблица КАК Таблица",
+   "platform": {
+    "template": {
+     "accepted": true,
+     "columns": [
+      [
+       "Поля"
+      ]
+     ]
+    },
+    "originalSubstituted": {
+     "accepted": true,
+     "columns": [
+      [
+       "Код"
+      ]
+     ]
+    },
+    "designerAppliedSubstituted": {
+     "accepted": false,
+     "error": {
+      "line": 4,
+      "col": 31,
+      "message": "Syntax error \"КАК\""
+     }
+    }
+   }
+  },
+  {
+   "name": "U1c_marker_with_own_alias",
+   "template": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ЛЕВОЕ СОЕДИНЕНИЕ #Соединение ПО ИСТИНА",
+   "substitution": {
+    "#Соединение": "Справочник.Валюты КАК Замена"
+   },
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\n\t\tЛЕВОЕ СОЕДИНЕНИЕ #Соединение КАК Соединение\n\t\tПО (ИСТИНА)",
+   "platform": {
+    "template": {
+     "accepted": true,
+     "columns": [
+      [
+       "Код"
+      ]
+     ]
+    },
+    "originalSubstituted": {
+     "accepted": true,
+     "columns": [
+      [
+       "Код"
+      ]
+     ]
+    },
+    "designerAppliedSubstituted": {
+     "accepted": false,
+     "error": {
+      "line": 5,
+      "col": 49,
+      "message": "Table name expected"
+     }
+    }
+   }
+  },
+  {
+   "name": "U1d_marker_aliased_kept",
+   "template": "ВЫБРАТЬ Т.Код ИЗ #Таблица КАК Т",
+   "substitution": {
+    "#Таблица": "Справочник.Валюты"
+   },
+   "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\t#Таблица КАК Т",
+   "platform": {
+    "template": {
+     "accepted": true,
+     "columns": [
+      [
+       "Код"
+      ]
+     ]
+    },
+    "originalSubstituted": {
+     "accepted": true,
+     "columns": [
+      [
+       "Код"
+      ]
+     ]
+    },
+    "designerAppliedSubstituted": {
+     "accepted": true,
+     "columns": [
+      [
+       "Код"
+      ]
+     ]
+    }
+   }
+  }
+ ]
+}

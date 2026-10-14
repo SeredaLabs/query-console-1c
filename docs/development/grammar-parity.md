@@ -47,7 +47,7 @@ Core v1 is ordinary SDBL as opened by the 1C Query Designer.
 |---|---|
 | Platform version | Not tied to one 8.3.x build. Every new probe records the exact build. A construct confirmed on a supported modern 8.3, with no evidence that it is version-specific, is SDBL. Version differences are separate compatibility facts, never a reason to narrow the grammar. |
 | DCS braces `{…}` | Out of scope for Core v1 grammar parity: a data-composition extension over the query model. A future DCS layer gets its own coverage contract. |
-| Template markers `#Имя` (U1) | Syntax in scope: ours must not fail only because of `#Имя`. Syntax/preservation confirmed locally (open → stable round trip → Apply); substitution semantics UNKNOWN; nothing is interpreted or transformed; current Apply behavior retained pending platform evidence. U1 must answer whether Query Core editing/generation can change the value or scope of `#Имя`: if yes, a safety gate is required; if it stays opaque preserved syntax, no Apply block is needed. |
+| Template markers `#Имя` (U1) | Syntax in scope: ours must not fail only because of `#Имя`. Syntax/preservation confirmed locally (open → stable round trip → Apply); substitution semantics checked on the platform (2026-10-15): the Designer's synthesized `КАК` on an unaliased marker source breaks substituted templates (U1 defect); nothing is interpreted or transformed; current Apply behavior retained pending platform evidence. U1 must answer whether Query Core editing/generation can change the value or scope of `#Имя`: if yes, a safety gate is required; if it stays opaque preserved syntax, no Apply block is needed. |
 | Reference gaps | Absence from the 8.3.20 reference is not evidence of invalidity or exclusion. A construct is in scope if the ordinary 1C Query Designer accepts and preserves it as part of the query, whatever its origin; it is out of scope only if it exists solely in the DCS query layer, like `{…}`. Until probed, such areas stay pending with a concrete question. |
 | English SDBL (C2) | In scope, P1. Core v1 does not ship with this known gap. It is implemented after or together with A1, not as more contextual-keyword special cases. |
 
@@ -360,4 +360,5 @@ date not recorded).
   no recorded text.
 
 `source.template-marker` (U1) opens with a stable round trip and Apply allowed;
-that behavior is retained pending platform evidence (see Scope).
+platform evidence (2026-10-15) shows that the Designer's added `КАК` on an unaliased
+marker source breaks substituted templates — a ledger defect (U1).

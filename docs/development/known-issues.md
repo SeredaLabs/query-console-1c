@@ -78,6 +78,7 @@ Fallback to the saved nonempty model occurs only after normal loading fails.
 distinguish repository regression checks, recorded platform canonical output and
 optional live/independent grammar workflows. Missing grammar WASM means the
 optional external grammar oracle did not run; oracle-only tests then report
-*skipped*. External grammars are differential signals, not platform verdicts. U1–U3 remain evidence gaps,
-not platform-invalid verdicts. Historical scope/provenance claims and complete
+*skipped*. External grammars are differential signals, not platform verdicts. U2 remains an evidence gap,
+not a platform-invalid verdict. U1 (a Designer-added `КАК` on an unaliased `#…` template
+source) and U3 (comma-root join visibility in hover/constructor mode) are confirmed defects. Historical scope/provenance claims and complete
 former narratives are retained in the [checkpoint](audits/archive/known-issues-e3b36a5.md).
