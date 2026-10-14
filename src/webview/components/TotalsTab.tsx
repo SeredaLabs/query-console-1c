@@ -4,6 +4,7 @@ import type { SelectedTable, SelectedField, Totals, TotalGroupField, TotalField,
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { findMetaField, isRefField } from './GroupingTab';
+import { SelectedFieldsTree } from './SelectedFieldsTree';
 import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
 import { RowRemoveButton } from './RowRemoveButton';
 import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
@@ -11,6 +12,8 @@ import { SECTION_HEADER, ROW, INPUT, EMPTY_HINT, panelBox, ROW_PADDING_Y, TREE_R
 import { t, type MessageKey } from '../i18n';
 
 interface Props {
+  /** Classic groups source fields; Canvas retains its existing compact list. */
+  groupSourceByTable?: boolean;
   selectedTables: SelectedTable[];
   selectedFields: SelectedField[];
   metaTables: MetaTable[];
@@ -84,7 +87,8 @@ export function TotalsTab(props: Props): React.ReactElement {
       <div style={{ ...panelBox, width: leftWidth, flexShrink: 0 }}>
         <div style={SECTION_HEADER}>{t('common.fields')}</div>
         <div style={dropZone} data-field-source="totals-source">
-          {sourceFields.map((f, i) => (
+          {props.groupSourceByTable ? (<SelectedFieldsTree fields={sourceFields} tables={selectedTables} metadata={metaTables}
+            onDragStart={(e, f) => dragStart(e, f.tableId, f.path)} />) : (sourceFields.map((f, i) => (
             <div
               key={`${f.tableId}:${f.path}:${i}`}
               data-field-item
@@ -96,7 +100,7 @@ export function TotalsTab(props: Props): React.ReactElement {
               <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
               <span>{labelFor(f.tableId, f.path!)}</span>
             </div>
-          ))}
+          )))}
           {sourceFields.length === 0 && (
             <div style={EMPTY_HINT}>
               {t('empty.noFieldsAdd')}

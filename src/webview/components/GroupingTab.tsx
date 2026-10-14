@@ -3,6 +3,7 @@ import type { MetaTable, MetaField } from '../../core/metadata/types';
 import type { SelectedTable, SelectedField, Grouping, AggregateFunction, FieldRef, SummableField } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
+import { SelectedFieldsTree } from './SelectedFieldsTree';
 import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
 import { RowRemoveButton } from './RowRemoveButton';
 import { IconButton } from './IconButton';
@@ -87,19 +88,8 @@ export function GroupingTab(props: Props): React.ReactElement {
       <div style={{ ...panelBox, width: leftWidth, flexShrink: 0 }}>
         <div style={SECTION_HEADER}>{t('common.fields')}</div>
         <div style={dropZone} data-field-source="grouping-source">
-          {sourceFields.map((f, i) => (
-            <div
-              key={`${f.tableId}:${f.path}:${i}`}
-              data-field-item
-              draggable
-              onDragStart={e => dragStart(e, f.tableId, f.path!)}
-              className="qc-row"
-              style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start', gap: TREE_ROW_GAP }}
-            >
-              <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
-              <span>{labelFor(f.tableId, f.path!)}</span>
-            </div>
-          ))}
+          <SelectedFieldsTree fields={sourceFields} tables={selectedTables} metadata={metaTables}
+            onDragStart={(e, f) => dragStart(e, f.tableId, f.path)} />
           {sourceFields.length === 0 && (
             <div style={EMPTY_HINT}>
               {t('empty.noFieldsAdd')}

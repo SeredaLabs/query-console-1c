@@ -531,6 +531,9 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
       {activeTab === 'Индексы' && (
         <IndexTab
+          groupSourceByTable
+          selectedTables={tailSections.first.tables}
+          metaTables={tables}
           selectedFields={tailSections.first.fields}
           indexing={tailSections.last.indexing ?? { indexes: [] }}
           onAddIndex={() => dispatchTail({ type: 'ADD_INDEX' })}
@@ -563,6 +566,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
       {activeTab === 'Порядок' && (
         <OrderTab
+          metaTables={tables}
           selectedTables={tailSections.first.tables}
           selectedFields={tailSections.first.fields}
           order={tailSections.last.order ?? { fields: [], auto: false }}
@@ -575,6 +579,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
       {activeTab === 'Итоги' && (
         <TotalsTab
+          groupSourceByTable
           selectedTables={tailSections.first.tables}
           selectedFields={tailSections.first.fields}
           metaTables={tables}

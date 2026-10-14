@@ -2,7 +2,7 @@ import * as React from 'react';
 import type { MetaField } from '../../core/metadata/types';
 import type { RefId } from '../../shared/messages';
 import { Chevron } from './Chevron';
-import { ROW_PADDING_Y, TREE_ROW_GAP } from '../sharedStyles';
+import { FieldSourceRow } from './FieldSourceRow';
 
 interface Props {
   field: MetaField;
@@ -12,6 +12,7 @@ interface Props {
   onDragStart: (e: React.DragEvent, path: string) => void;
   /** Путь родительского поля — для составных путей ссылочных полей (Поле.Подполе). */
   pathPrefix?: string;
+  titlePrefix?: string;
 }
 
 /**
@@ -19,7 +20,7 @@ interface Props {
  * полей в дерево — общий вид для панелей «Поля» на разных вкладках
  * («Таблицы и поля», «Условия», ...).
  */
-export function FieldTreeRow({ field, depth, expandedRefs, onExpandRef, onDragStart, pathPrefix }: Props): React.ReactElement {
+export function FieldTreeRow({ field, depth, expandedRefs, onExpandRef, onDragStart, pathPrefix, titlePrefix }: Props): React.ReactElement {
   const [localExpanded, setLocalExpanded] = React.useState(false);
   const ref = field.types.find(t => t.ref)?.ref ?? null;
   const refKey = ref ? `${ref.kind}.${ref.name}` : null;
@@ -36,29 +37,9 @@ export function FieldTreeRow({ field, depth, expandedRefs, onExpandRef, onDragSt
 
   return (
     <>
-      <div
-        data-field-item
-        draggable
+      <FieldSourceRow label={field.name} title={titlePrefix ? `${titlePrefix}.${path}` : path} depth={depth} isReference={!!ref}
         onDragStart={e => onDragStart(e, path)}
-        className="qc-row"
-        title={path}
-        style={{
-          paddingLeft: 8 + depth * 16,
-          paddingRight: 8,
-          paddingTop: ROW_PADDING_Y,
-          paddingBottom: ROW_PADDING_Y,
-          userSelect: 'none',
-          cursor: 'grab',
-          display: 'flex',
-          alignItems: 'center',
-          gap: TREE_ROW_GAP,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {ref ? <Chevron expanded={expanded} onClick={handleToggle} /> : <span style={{ width: 14, flexShrink: 0 }} />}
-        <span className={`codicon codicon-${ref ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
-        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{field.name}</span>
-      </div>
+        leading={ref ? <Chevron expanded={expanded} onClick={handleToggle} /> : undefined} />
       {expanded && refKey && expandedRefs.get(refKey)?.map(subField => (
         <FieldTreeRow
           key={`${path}.${subField.name}`}
@@ -68,6 +49,7 @@ export function FieldTreeRow({ field, depth, expandedRefs, onExpandRef, onDragSt
           onExpandRef={onExpandRef}
           onDragStart={onDragStart}
           pathPrefix={path}
+          titlePrefix={titlePrefix}
         />
       ))}
     </>
