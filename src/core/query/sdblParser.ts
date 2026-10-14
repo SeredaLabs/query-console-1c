@@ -5718,7 +5718,7 @@ function parseBatchInner(
   // end up being the actual returned result (see the undefined-temp-table
   // re-parse below — whichever pass produces the FINAL model is the one whose
   // events get forwarded, so a caller never sees ranges for a discarded parse).
-  const tempTables = new Map<string, MetaTable>();
+  const tempTables = new Map<string, RegisteredTempTable>();
   const pass1Events: AbsoluteSourceMapEvent[] = [];
   const members = chunks.map((c, i) => {
     const chunkSink = spansAligned ? new RecordingSourceMapSink() : undefined;
@@ -5759,7 +5759,7 @@ function parseBatchInner(
     return { members };
   }
 
-  const tempTables2 = new Map<string, MetaTable>();
+  const tempTables2 = new Map<string, RegisteredTempTable>();
   const pass2Events: AbsoluteSourceMapEvent[] = [];
   const members2 = chunks.map((c, i) => {
     // Выведенная ВТ доступна оператору ТОЛЬКО если на неё была ссылка в ПРЕДЫДУЩЕМ
@@ -5949,7 +5949,13 @@ function isScalarLiteralExpr(expr: string | undefined): boolean {
   return false;
 }
 
-function registerTempTables(doc: QueryDocument, tempTables: Map<string, MetaTable>): void {
+/** A definition can shadow older metadata even when its own columns are unknown. */
+interface RegisteredTempTable {
+  name: string;
+  schema: MetaTable | undefined;
+}
+
+function registerTempTables(doc: QueryDocument, tempTables: Map<string, RegisteredTempTable>): void {
   const m0 = doc.members[0]?.model;
   if (!m0 || !m0.tempTableName) return;
   // `УНИЧТОЖИТЬ` closes the package lifetime. Leaving the old entry here made
@@ -5962,10 +5968,9 @@ function registerTempTables(doc: QueryDocument, tempTables: Map<string, MetaTabl
   if (m0.queryType !== 'createTemp') return;
   const cols = deriveProducerColumns(m0, 'parser-registry').columns;
   if (cols.length === 0) {
-    // C24: a redefinition without registrable columns leaves the old entry for the
-    // constructor path, but its columns are no longer proven.
-    const old = tempTables.get(m0.tempTableName.toUpperCase());
-    if (old) markProvenTempTable(old, undefined);
+    // Unknown is not an empty schema. Keep the definition to shadow both a
+    // previous package schema and external metadata, without proving any columns.
+    tempTables.set(m0.tempTableName.toUpperCase(), { name: m0.tempTableName, schema: undefined });
     return;
   }
   // Колонка из ЧИСТОГО литерала (`"строка"`/число/булево) — ДОКАЗУЕМО нессылочная:
@@ -5984,7 +5989,7 @@ function registerTempTables(doc: QueryDocument, tempTables: Map<string, MetaTabl
     fullName: m0.tempTableName,
     fields,
   };
-  tempTables.set(m0.tempTableName.toUpperCase(), table);
+  tempTables.set(m0.tempTableName.toUpperCase(), { name: m0.tempTableName, schema: table });
   // C24 step 1a: columns a wildcard may expand to — only when all are proven.
   markProvenTempTable(table, provenColumnNames(m0));
 }
@@ -5998,7 +6003,7 @@ function registerTempTables(doc: QueryDocument, tempTables: Map<string, MetaTabl
  */
 function augmentResolverWithTempTables(
   base: MetadataResolver | undefined,
-  tempTables: Map<string, MetaTable>,
+  tempTables: Map<string, RegisteredTempTable>,
   // Выведенные метаданные НЕОПРЕДЕЛённых ВТ пакета (фаза 6.19): резолвятся ниже
   // реальных метаданных и ПОМЕСТИТЬ-реестра — только для имён, не определённых иначе.
   inferred?: Map<string, MetaTable>,
@@ -6006,9 +6011,8 @@ function augmentResolverWithTempTables(
   if (tempTables.size === 0 && (!inferred || inferred.size === 0)) return base;
   const lookup = (fullName: string): MetaTable | undefined => {
     const up = fullName.toUpperCase();
-    return (
-      tempTables.get(up) ?? base?.tableByFullName(fullName) ?? inferred?.get(up)
-    );
+    const defined = tempTables.get(up);
+    return defined ? defined.schema : (base?.tableByFullName(fullName) ?? inferred?.get(up));
   };
   return {
     tableByFullName: lookup,

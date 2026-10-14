@@ -19,6 +19,9 @@ Scalar UNION mapping remains separate; this step does not switch schema behavior
 Designer and semantics share lifecycle positions through `tempTableLifetimes.ts`.
 The newest preceding create shadows older lifetimes even after its drop; invalid
 repeated creation must not revive an older schema in hover, table lists or package links.
+Parser registry entries distinguish a defined name with unknown columns from an
+absent definition; an unknown new schema shadows older/external/inferred metadata
+without claiming an empty table or reusing old literal type markers.
 [A2](technical-debt.md#architecture) owns the remaining parser-lifecycle/schema work.
 Opaque HAVING, characteristics, grouping/report blocks and optional flags must
 survive unrelated edits; preservation and unsafe-input rules are specified in the
