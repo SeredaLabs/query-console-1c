@@ -13,9 +13,10 @@ export interface ProducerColumn {
 /**
  * The model is the first UNION member, which owns the producer's result names.
  * These named compatibility policies retain the existing differences:
- * - registry: scalar output (head only for nested output), named columns, duplicates unchanged;
- * - Designer: same scalar scope, no unnamed stars, unique names;
- * - semantics: all outer elements, no unresolved stars, unique names.
+ * - registry: scalar output (head only for nested output), named columns;
+ * - Designer: same scalar scope, no unnamed stars;
+ * - semantics: all outer elements, no unresolved stars.
+ * All three make repeated names unique the same way (case-insensitive suffix).
  * Nested projections stay nested. Types and temp-table lifetimes are not inferred.
  */
 export function deriveProducerColumns(model: QueryModel, policy: ProducerColumnPolicy): {
@@ -57,12 +58,12 @@ export function deriveProducerColumns(model: QueryModel, policy: ProducerColumnP
     // That name is useful, but it does not prove which columns are missing.
     if (policy === 'semantic' && element.kind === 'field' && element.field.expression !== undefined &&
         !isStructurallyValidExpression(element.field.expression)) complete = false;
+    // Repeated names (only in platform-invalid producers: `Duplicate alias`, fixture
+    // a2-duplicate-temp-columns.json) get one recovery rule for every consumer.
     let name = baseName;
-    if (policy !== 'parser-registry') {
-      let suffix = 0;
-      while (seen.has(name.toUpperCase())) name = `${baseName}${++suffix}`;
-      seen.add(name.toUpperCase());
-    }
+    let suffix = 0;
+    while (seen.has(name.toUpperCase())) name = `${baseName}${++suffix}`;
+    seen.add(name.toUpperCase());
     columns.push({ element, name });
   }
   return { columns, complete };
