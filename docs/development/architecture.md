@@ -111,8 +111,8 @@ Shared projection facts (`deriveProjectionFacts` in `unionModel.ts`) combine pri
 order and C30 names over the existing model without switching schema boundaries.
 Designer and semantics share temporary-table lifetime positions and visibility in
 `tempTableLifetimes.ts`. `producerColumns.ts` owns column derivation for all three
-consumers, with explicit compatibility policies preserving scalar-head/full-projection,
-duplicate-name and unresolved-star differences. Metadata types remain adapter-owned.
+consumers, with explicit compatibility policies preserving scalar-head/full-projection
+and unresolved-star differences; repeated names get one suffix rule for all three. Metadata types remain adapter-owned.
 The parser still owns its sequential registry; schema-policy alignment is unfinished. The shared lexer owns Query Core lexical facts (A1,
 closed 2026-10-11); the local scanners that remain are named exceptions in the
 [A1 closure check](audits/a1-closure-2026-10-10.md). [A2/A3](technical-debt.md#architecture)

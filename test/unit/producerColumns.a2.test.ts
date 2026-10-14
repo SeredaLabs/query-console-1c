@@ -7,10 +7,11 @@ import { deriveProducerColumns } from '../../src/core/query/producerColumns';
 const field = (alias: string): SelectedField => ({ tableId: '', path: '', expression: '1', alias });
 
 describe('A2 shared producer columns: existing compatibility boundaries', () => {
-  it('keeps registry duplicates but deduplicates Designer and semantic names case-insensitively', () => {
+  it('makes repeated names unique the same way for every consumer (case-insensitive)', () => {
+    // Platform-invalid input (`Duplicate alias`, a2-duplicate-temp-columns.json):
+    // one recovery rule instead of the former registry exception.
     const model: QueryModel = { tables: [], fields: [field('Код'), field('код'), field('код1')] };
-    expect(deriveProducerColumns(model, 'parser-registry').columns.map(c => c.name)).toEqual(['Код', 'код', 'код1']);
-    for (const policy of ['designer', 'semantic'] as const) {
+    for (const policy of ['parser-registry', 'designer', 'semantic'] as const) {
       expect(deriveProducerColumns(model, policy).columns.map(c => c.name)).toEqual(['Код', 'код1', 'код11']);
     }
   });
@@ -62,7 +63,7 @@ describe('A2 shared producer columns: existing compatibility boundaries', () => 
     const shared: SelectedField = { tableId: '', path: '', expression: '1' };
     const model: QueryModel = { tables: [], fields: [shared, shared] };
     const registry = deriveProducerColumns(model, 'parser-registry');
-    expect(registry.columns.map(c => c.name)).toEqual(['Поле2', 'Поле2']);
+    expect(registry.columns.map(c => c.name)).toEqual(['Поле2', 'Поле21']);
     expect(registry.columns[0].element.kind === 'field' && registry.columns[0].element.field).toBe(shared);
     expect(deriveProducerColumns(model, 'semantic').columns.map(c => c.name)).toEqual(['Поле2', 'Поле21']);
   });
