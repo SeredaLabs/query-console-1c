@@ -13,8 +13,8 @@ export interface ProducerColumn {
 /**
  * The model is the first UNION member, which owns the producer's result names.
  * These named compatibility policies retain the existing differences:
- * - registry: scalar head, named columns only, duplicate names unchanged;
- * - Designer: scalar head, legacy matching-key fallback, unique names;
+ * - registry: scalar output (head only for nested output), named columns, duplicates unchanged;
+ * - Designer: same scalar scope, no unnamed stars, unique names;
  * - semantics: all outer elements, no unresolved stars, unique names.
  * Nested projections stay nested. Types and temp-table lifetimes are not inferred.
  */
@@ -30,21 +30,23 @@ export function deriveProducerColumns(model: QueryModel, policy: ProducerColumnP
   for (const { element, outputName } of facts) {
     if (outputName !== undefined) names.set(element.kind === 'field' ? element.field : element.tsf, outputName);
   }
-  const elements: SelectElement[] = policy === 'semantic'
+  // Wildcard expansion also uses trailingFields for scalar-only suffixes and
+  // later sources. Only actual nested output retains the legacy head boundary.
+  const elements: SelectElement[] = policy === 'semantic' || !model.tabSectionFields?.length
     ? facts.map(f => f.element)
     : model.fields.map(field => ({ kind: 'field', field }));
   const columns: ProducerColumn[] = [];
   const seen = new Set<string>();
   let complete = policy === 'semantic' && elements.length > 0;
   for (const element of elements) {
-    if (policy === 'semantic' && element.kind === 'field' && (
+    const key = element.kind === 'field' ? element.field : element.tsf;
+    const outputName = names.get(key);
+    if ((policy === 'semantic' || (policy === 'designer' && outputName === undefined)) && element.kind === 'field' && (
       element.field.path === '*' || /(?:^|\.)\*$/u.test(element.field.expression?.trim() ?? '')
     )) {
       complete = false;
       continue;
     }
-    const key = element.kind === 'field' ? element.field : element.tsf;
-    const outputName = names.get(key);
     const baseName = outputName ?? (policy === 'parser-registry' ? undefined
       : element.kind === 'field' ? fieldAlias(element.field, model) : (element.tsf.alias ?? element.tsf.tsName));
     if (baseName === undefined || (policy !== 'parser-registry' && (!baseName || baseName === '*'))) {

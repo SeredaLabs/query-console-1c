@@ -17,21 +17,34 @@ const resolver: MetadataResolver = {
 const producer = 'ВЫБРАТЬ Н.*, 1 КАК Маркер ПОМЕСТИТЬ ВТ ИЗ Справочник.Источник КАК Н';
 const consumer = 'ВЫБРАТЬ * ИЗ ВТ КАК Б';
 
-// Known defects are characterized, not endorsed: change the loss assertions when
-// fixing A2, while keeping the production Designer preservation controls.
+// Exercise actual parser/IDE and Designer paths, not just schema adapters.
 describe('A2 audit: production reach of column-policy differences', () => {
-  it.each(['analysis', 'constructor'] as const)('%s loses the scalar suffix in a downstream star', wildcardPolicy => {
+  it.each(['analysis', 'constructor'] as const)('%s keeps the scalar suffix in a downstream star', wildcardPolicy => {
     const batch = parseBatch(producer + '; ' + consumer, resolver, { wildcardPolicy });
     expect(batch.members[0].members[0].model.trailingFields?.map(f => f.alias)).toEqual(['Маркер']);
-    expect(batch.members[1].members[0].model.fields.map(f => f.path)).toEqual(['Код']);
+    expect(batch.members[1].members[0].model.fields.map(f => f.path)).toEqual(['Код', 'Маркер']);
     const output = generateBatch({ members: [batch.members[1]] }, { wildcardPolicy });
     expect(output).toContain('Б.Код');
-    expect(output).not.toContain('Маркер');
+    expect(output).toContain('Б.Маркер');
   });
 
-  it('exposes the same downstream loss in the actual semantic snapshot', () => {
+  it.each(['analysis', 'constructor'] as const)('%s retains columns from later expanded scalar sources and UNION head', wildcardPolicy => {
+    const multiple = 'ВЫБРАТЬ Н.*, М.*, 1 КАК Маркер ПОМЕСТИТЬ ВТ '
+      + 'ИЗ Справочник.Источник КАК Н, Справочник.Источник КАК М';
+    const batch = parseBatch(multiple + '; ' + consumer, resolver, { wildcardPolicy });
+    expect(batch.members[0].members[0].model.tabSectionFields ?? []).toEqual([]);
+    const fields = batch.members[1].members[0].model.fields;
+    expect(fields).toHaveLength(3);
+    expect(fields.map(f => f.path)).toContain('Маркер');
+
+    const union = parseBatch(producer + ' ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ 2, 3; ' + consumer,
+      resolver, { wildcardPolicy });
+    expect(union.members[1].members[0].model.fields.map(f => f.path)).toEqual(['Код', 'Маркер']);
+  });
+
+  it('keeps the downstream suffix in the actual semantic snapshot', () => {
     const snapshot = buildSemanticSnapshotFromText(1, producer + '; ' + consumer, resolver);
-    expect(snapshot.model?.members[1].members[0].model.fields.map(f => f.path)).toEqual(['Код']);
+    expect(snapshot.model?.members[1].members[0].model.fields.map(f => f.path)).toEqual(['Код', 'Маркер']);
   });
 
   it.each([
@@ -56,14 +69,17 @@ describe('A2 audit: production reach of column-policy differences', () => {
     }
   });
 
-  it('offers the unresolved catalog star as a fake column in the production Designer table list', () => {
+  it('omits the unresolved catalog star as a column in the production Designer table list', () => {
     const open = tryOpenDesignerBatch(producer + '; ' + consumer, resolver);
     expect(open.ok).toBe(true);
     if (!open.ok) throw new Error(open.error);
     const state = reducer(reducer(initialState(), { type: 'LOAD_BATCH', doc: open.doc }),
       { type: 'SET_ACTIVE_BATCH', index: 1 });
     expect(availableTempTables(state).find(t => t.fullName === 'ВТ')?.fields.map(f => f.name))
-      .toEqual(['Н.*', 'Маркер']);
-    expect(computeBatchTextSafe(state, true).text).toContain('Н.*');
+      .toEqual(['Маркер']);
+    const output = computeBatchTextSafe(state, true);
+    expect(output.text).toContain('Н.*');
+    expect(decideApply(output.text, output.error, findStaticApplyBlocker(state), resolver)).toEqual({ ok: true });
+    expect(tryOpenDesignerBatch(output.text, resolver).ok).toBe(true);
   });
 });

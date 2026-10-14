@@ -15,12 +15,12 @@ describe('A2 shared producer columns: existing compatibility boundaries', () => 
     }
   });
 
-  it('retains the Designer matching-key fallback for an unresolved qualified star', () => {
+  it('does not invent a Designer column for an unresolved qualified star', () => {
     const model: QueryModel = {
       tables: [], fields: [{ tableId: '', path: '', expression: 'Н.*' }, field('Код')],
     };
     expect(deriveProducerColumns(model, 'parser-registry').columns.map(c => c.name)).toEqual(['Код']);
-    expect(deriveProducerColumns(model, 'designer').columns.map(c => c.name)).toEqual(['Н.*', 'Код']);
+    expect(deriveProducerColumns(model, 'designer').columns.map(c => c.name)).toEqual(['Код']);
     const semantic = deriveProducerColumns(model, 'semantic');
     expect(semantic.columns.map(c => c.name)).toEqual(['Код']);
     expect(semantic.complete).toBe(false);
@@ -81,22 +81,20 @@ describe('A2 producer policy boundary with and without source metadata', () => {
 
   it.each(['preserve', 'constructor'] as const)('%s distinguishes unknown shape from resolved columns', wildcardPolicy => {
     const unknown = parseBatch(query, undefined, { wildcardPolicy }).members[0].members[0].model;
-    // Characterization of the remaining A2 debt, not a valid column-name contract.
+    // Unknown source columns are not individually selectable output columns.
     expect(policies.map(p => deriveProducerColumns(unknown, p).columns.map(c => c.name)))
-      .toEqual([['Маркер'], ['Н.*', 'Маркер'], ['Маркер']]);
+      .toEqual([['Маркер'], ['Маркер'], ['Маркер']]);
     expect(deriveProducerColumns(unknown, 'semantic').complete).toBe(false);
 
     const known = parseBatch(query, resolver, { wildcardPolicy }).members[0].members[0].model;
-    // Existing A2 defect: star expansion puts even scalar-only suffixes into
-    // trailingFields. The registry/Designer head-only policy then loses them.
-    // Keep this characterization explicit until the separate schema fix.
+    // Scalar suffixes may be stored outside fields even without nested output.
     if (wildcardPolicy === 'constructor') {
       expect(known.tabSectionFields ?? []).toEqual([]);
       expect(known.trailingFields?.map(f => f.alias)).toEqual(['Маркер']);
     }
     const expected = wildcardPolicy === 'constructor'
-      ? [['Код'], ['Код'], ['Код', 'Маркер']]
-      : [['Маркер'], ['Н.*', 'Маркер'], ['Маркер']];
+      ? [['Код', 'Маркер'], ['Код', 'Маркер'], ['Код', 'Маркер']]
+      : [['Маркер'], ['Маркер'], ['Маркер']];
     expect(policies.map(p => deriveProducerColumns(known, p).columns.map(c => c.name))).toEqual(expected);
   });
 });

@@ -1,7 +1,25 @@
 # A2 producer-column policy audit — 2026-10-14
 
 Audited base: `99546ad`. A2 remains **PARTIAL**. This audit changes no production
-behavior and does not certify queries against a live platform.
+behavior and does not certify queries against a live platform. Findings below
+record that base, not the behavior after the follow-up fix.
+
+## Follow-up implementation — 2026-10-14
+
+The two same-priority defects below are fixed in `deriveProducerColumns`:
+registry/Designer include scalar trailing columns when no outer nested projection
+exists, and Designer no longer exposes unnamed stars as columns. Original
+wildcard text and nested-output recovery remain unchanged. The characterization
+tests are now regression assertions for retained downstream columns and absence
+of fake fields; seven assertions failed before the change. Added analysis and
+constructor controls cover multiple expanded sources and UNION creators.
+Production Designer Apply/reopen preservation controls remain in place.
+
+Duplicate explicit-name behavior is still unresolved. No fixture supplies the
+needed platform verdict. Live verification could not start: the earlier SL_kza
+browser tab was absent and opening a new tab timed out. The user will check this
+in a separate session. A2 is not CLOSED on that
+basis; do not infer duplicate-alias validity or normalize user names speculatively.
 
 ## What is shared now
 
@@ -91,7 +109,7 @@ All 7,904 parses succeeded; all 2,244 producer comparisons matched. The new
 synthetic case demonstrates why this is insufficient to close A2: the corpus
 does not expose the policy divergence. No golden or platform fixture was changed.
 
-## Next safe boundary
+## Planned boundaries at audited base
 
 Treat the fake Designer column and analysis/constructor scalar-tail loss as two
 same-priority A2 defects. The fake field is directly offered by the UI; scalar-tail
