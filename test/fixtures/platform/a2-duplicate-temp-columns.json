@@ -1,5 +1,5 @@
 {
- "source": "SL_kza via the mcp_APIBackend server (\"SmartLogistic MCP Server\" 1.0.0), 2026-10-14 (A2 duplicate explicit column names). \"constructor\" = validate_query: the text loaded into СхемаЗапроса (the query-constructor object model) and its query_text/columns; the interactive constructor UI was not opened. \"execute\" = execute_query of the original text (limit 1). Platform build: unknown (not exposed by the server). Constants only; column names kept, no row values.",
+ "source": "SL_kza via the mcp_APIBackend server (\"SmartLogistic MCP Server\" 1.0.0), 2026-10-14 (A2 duplicate explicit column names). \"constructor\" = validate_query: the text loaded into СхемаЗапроса (the query-constructor object model) and its query_text/columns; the interactive constructor UI was not opened. \"execute\" = execute_query of the original text (limit 1). Platform 8.3.15.1489 (reported by the maintainer; not exposed by the server). Constants only; column names kept, no row values.",
  "cases": [
   {
    "name": "A_control__select",

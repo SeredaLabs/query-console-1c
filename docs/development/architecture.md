@@ -113,10 +113,10 @@ Designer and semantics share temporary-table lifetime positions and visibility i
 `tempTableLifetimes.ts`. `producerColumns.ts` owns column derivation for all three
 consumers, with explicit compatibility policies preserving scalar-head/full-projection
 and unresolved-star differences; repeated names get one suffix rule for all three. Metadata types remain adapter-owned.
-The parser still owns its sequential registry; schema-policy alignment is unfinished. The shared lexer owns Query Core lexical facts (A1,
+The parser still owns its sequential registry; schema policies are aligned (A2, closed 2026-10-14). The shared lexer owns Query Core lexical facts (A1,
 closed 2026-10-11); the local scanners that remain are named exceptions in the
-[A1 closure check](audits/a1-closure-2026-10-10.md). [A2/A3](technical-debt.md#architecture)
-own the remaining debts and their dependencies; the existing cycle/hooks/resolver above
+[A1 closure check](audits/a1-closure-2026-10-10.md). [A3](technical-debt.md#architecture)
+owns the remaining architecture debt and their dependencies; the existing cycle/hooks/resolver above
 constrain decomposition.
 
 ## Stable contracts and scope

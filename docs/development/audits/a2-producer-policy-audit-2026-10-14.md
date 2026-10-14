@@ -16,7 +16,7 @@ constructor controls cover multiple expanded sources and UNION creators.
 Production Designer Apply/reopen preservation controls remain in place.
 
 Duplicate explicit names (2026-10-14 follow-up, [fixture](../../../test/fixtures/platform/a2-duplicate-temp-columns.json),
-SL_kza via validate_query/execute_query, platform build unknown): СхемаЗапроса and
+SL_kza via validate_query/execute_query, platform 8.3.15.1489): СхемаЗапроса and
 execution reject `Код, Код`, `Код, код` and `Код, код, код1` with `Duplicate alias`
 at the second element — in a plain SELECT, in a `ПОМЕСТИТЬ` producer (so no temp
 table exists) and in either UNION member. Case does not matter; nothing renames.
@@ -93,8 +93,8 @@ modes. [Production-path tests](../../../test/unit/producerColumnsScope.a2.test.t
 cover downstream stars in analysis/constructor, the semantic snapshot, Designer
 preservation controls, and the fake field in the real Designer table list.
 [Platform evidence](../../../test/fixtures/platform/a2-nested-projection-temp.json)
-contains six rejected and two accepted cases from SL_kza; its platform build is
-unknown and it does not test this scalar-only suffix.
+contains six rejected and two accepted cases from SL_kza (platform 8.3.15.1489); the
+scalar-only suffix was confirmed later (S1–S3, `Код, Маркер`).
 
 ## Corpus coverage and limits
 
@@ -132,3 +132,9 @@ text and production Designer behavior before/after without blind baseline update
 Duplicate-name policy: resolved — one suffix rule for every consumer. Keep the current A2 ledger as the
 status source; this document is evidence, not a replacement roadmap. No new
 monolithic specification or architecture is proposed.
+
+## Closure (2026-10-14)
+
+A2 is CLOSED (PR #51–53, see the ledger). The downstream `*` over an incomplete
+producer schema in `analysis`/`constructor` mode was found during closure; it is
+pre-existing and is tracked under C24. The production Designer keeps such a `*`.

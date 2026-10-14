@@ -11,7 +11,7 @@ Canvas phase numbers. The ledger owns status/priority and exit boundaries;
    not a CI gate and not a prerequisite for Query Core v1: 1C Platform / Query
    Designer is authoritative for platform acceptance and canonicalization.
 2. **Incremental architecture:** A1 (lexical ownership) is closed
-   (2026-10-11); obtain A2 producer/projection evidence, then unify lifetime/column facts.
+   (2026-10-11); A2 (producer columns and temp-table lifetimes) is closed (2026-10-14).
    Retain accepted cycle/hooks/synchronous resolver discipline. A3 inference uses
    shared representation and attested types; no independent walker.
 3. **Grammar parity and verification (Query Core v1 gate, V5):** run the

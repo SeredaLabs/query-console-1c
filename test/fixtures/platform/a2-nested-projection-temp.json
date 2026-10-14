@@ -1,5 +1,5 @@
 {
- "source": "СхемаЗапроса (validate_query) and execute_query, SL_kza, 2026-10-13 (A2): a tabular-section projection or field cannot go into ПОМЕСТИТЬ; Справочник.Контрагенты.ВидыСервиса. Only column names are kept, no data.",
+ "source": "СхемаЗапроса (validate_query) and execute_query, SL_kza, platform 8.3.15.1489, 2026-10-13 (A2): a tabular-section projection or field cannot go into ПОМЕСТИТЬ; Справочник.Контрагенты.ВидыСервиса. Only column names are kept, no data. S1–S3 (2026-10-14): a scalar column after `*` in a temp-table producer is a column of the temp table, after the star columns (`Код, Маркер`); S1/S2 executed on constants, S3 only through СхемаЗапроса.",
  "cases": [
   {
    "name": "P0_projection_plain",
@@ -78,6 +78,93 @@
     "col": 35,
     "message": "Query that forms temporary table cannot select nested tables"
    }
+  },
+  {
+   "name": "S1_scalar_after_temp_star",
+   "query": "ВЫБРАТЬ 1 КАК Код ПОМЕСТИТЬ ВТ_A2а;\n\nВЫБРАТЬ А.*, 2 КАК Маркер ПОМЕСТИТЬ ВТ_A2б ИЗ ВТ_A2а КАК А;\n\nВЫБРАТЬ * ИЗ ВТ_A2б КАК Б",
+   "valid": true,
+   "executeColumns": [
+    "Код",
+    "Маркер"
+   ],
+   "constructorColumns": [
+    [
+     "Код"
+    ],
+    [
+     "Код",
+     "Маркер"
+    ],
+    [
+     "Код",
+     "Маркер"
+    ]
+   ]
+  },
+  {
+   "name": "S2_scalar_after_nested_star",
+   "query": "ВЫБРАТЬ П.*, 2 КАК Маркер ПОМЕСТИТЬ ВТ_A2б ИЗ (ВЫБРАТЬ 1 КАК Код) КАК П;\n\nВЫБРАТЬ * ИЗ ВТ_A2б КАК Б",
+   "valid": true,
+   "executeColumns": [
+    "Код",
+    "Маркер"
+   ],
+   "constructorColumns": [
+    [
+     "Код",
+     "Маркер"
+    ],
+    [
+     "Код",
+     "Маркер"
+    ]
+   ]
+  }
+ ],
+ "constructorOnlyCases": [
+  {
+   "name": "S3_scalar_after_catalog_star",
+   "query": "ВЫБРАТЬ Н.*, 2 КАК Маркер ПОМЕСТИТЬ ВТ_A2б ИЗ Справочник.Валюты КАК Н;\n\nВЫБРАТЬ * ИЗ ВТ_A2б КАК Б",
+   "valid": true,
+   "constructorColumns": [
+    [
+     "Ссылка",
+     "ВерсияДанных",
+     "ПометкаУдаления",
+     "Код",
+     "Наименование",
+     "НаименованиеПолное",
+     "ПараметрыПрописиНаАнглийском",
+     "ПараметрыПрописиНаРусском",
+     "ПараметрыПрописиНаУкраинском",
+     "Символ",
+     "ЗагружатьИзИнтернета",
+     "Картинка",
+     "GUID_BPM",
+     "Предопределенный",
+     "ИмяПредопределенныхДанных",
+     "Маркер"
+    ],
+    [
+     "Ссылка",
+     "ВерсияДанных",
+     "ПометкаУдаления",
+     "Код",
+     "Наименование",
+     "НаименованиеПолное",
+     "ПараметрыПрописиНаАнглийском",
+     "ПараметрыПрописиНаРусском",
+     "ПараметрыПрописиНаУкраинском",
+     "Символ",
+     "ЗагружатьИзИнтернета",
+     "Картинка",
+     "GUID_BPM",
+     "Предопределенный",
+     "ИмяПредопределенныхДанных",
+     "Маркер"
+    ]
+   ],
+   "note": "validate_query only (СхемаЗапроса); not executed, so no table data was read"
   }
  ]
 }
