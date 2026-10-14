@@ -3,6 +3,28 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## 0.1.99 - 2026-10-14
+
+### Fixed
+
+- Pressing **OK** (or **Save** in Canvas) without changing an existing query no
+  longer rewrites its BSL string: the document is left exactly as it was. A query
+  that was changed is written as before.
+- Query templates whose parameters BSL code replaces with query text keep working
+  after the designer: a bare `&ВыбираемыеКолонки` in the select list gets no added
+  `КАК`, `СГРУППИРОВАТЬ ПО &ПоляГруппировки` is kept, and the parentheses of
+  `(&Условие)` stay in conditions, joins, `ВЫБОР` and select expressions.
+- The designer no longer changes `СГРУППИРОВАТЬ ПО` of a nested query when the
+  package also creates a temp table (the result could lose rows).
+- A query that repeats a column name (`1 КАК Код, 2 КАК код`) in any part of a
+  UNION is rejected on open, as the platform rejects it; before, a repeat in a
+  later part was silently replaced by valid names on **OK**.
+- Temp-table columns are consistent between the designer, hover and completion:
+  a column written after `*` in the query that creates the temp table is no
+  longer lost, an unresolved `Н.*` is no longer offered as a column, and a temp
+  table created again in the same package no longer shows the columns of its
+  earlier definition.
+
 ## 0.1.98 - 2026-10-12
 
 ### Fixed
