@@ -11,13 +11,12 @@
  * invalid column expression makes the schema incomplete; negative validation
  * is safe only when `complete === true`.
  */
-import type { MetaField, MetaTable } from '../metadata/types';
+import type { MetaTable } from '../metadata/types';
 import type { BatchDocument } from './batchModel';
-import { isStructurallyValidExpression } from './expressionSyntaxCheck';
+import { deriveTempTableLifetimePositions, newestLifetimeAt, type TempTableLifetime as LifetimePositions } from './tempTableLifetimes';
+import { deriveProducerColumns } from './producerColumns';
 import {
   compoundCarrierOf,
-  elementAlias,
-  orderedSelectElements,
   type QueryDocument,
 } from './unionModel';
 
@@ -27,11 +26,7 @@ export interface TempTableSchema {
   complete: boolean;
 }
 
-export interface TempTableLifetime {
-  name: string;
-  createIndex: number;
-  appendIndices: number[];
-  dropIndex: number | null;
+export interface TempTableLifetime extends LifetimePositions {
   schema: TempTableSchema;
 }
 
@@ -45,45 +40,7 @@ export function inferCreatedTempTableSchema(doc: QueryDocument): TempTableSchema
   // UNION result names are defined by its first member.
   const head = doc.members[0]?.model;
   if (!head) return undefined;
-  const elements = orderedSelectElements(head);
-  const fields: MetaField[] = [];
-  const seen = new Set<string>();
-  let complete = elements.length > 0;
-
-  for (const element of elements) {
-    const unresolvedStar = element.kind === 'field' && (
-      element.field.path === '*' ||
-      /(?:^|\.)\*$/u.test(element.field.expression?.trim() ?? '')
-    );
-    if (unresolvedStar) {
-      complete = false;
-      continue;
-    }
-    const baseAlias = elementAlias(element, head);
-    // An unexpanded star proves that the parser did not know the complete
-    // producer shape. Keep any positive columns we do know, but never use this
-    // schema to report a missing-field diagnostic or a complete suggestion set.
-    if (!baseAlias || baseAlias === '*') {
-      complete = false;
-      continue;
-    }
-    // The tolerant parser keeps unfinished text (`ВЫБОР КОГДА Т.Код`) as a raw
-    // expression with an auto alias; it may even have swallowed later columns.
-    // Keep the column name (the parser and designer derive the same one), but
-    // the schema no longer proves which columns are missing.
-    if (
-      element.kind === 'field' &&
-      element.field.expression !== undefined &&
-      !isStructurallyValidExpression(element.field.expression)
-    ) {
-      complete = false;
-    }
-    let alias = baseAlias;
-    let suffix = 0;
-    while (seen.has(alias.toUpperCase())) alias = `${baseAlias}${++suffix}`;
-    seen.add(alias.toUpperCase());
-    fields.push({ name: alias, kind: 'attribute', types: [] });
-  }
+  const { columns, complete } = deriveProducerColumns(head, 'semantic');
 
   return {
     complete,
@@ -91,7 +48,7 @@ export function inferCreatedTempTableSchema(doc: QueryDocument): TempTableSchema
       kind: 'ВременнаяТаблица',
       name: carrier.tempTableName,
       fullName: carrier.tempTableName,
-      fields,
+      fields: columns.map(c => ({ name: c.name, kind: 'attribute', types: [] })),
     },
   };
 }
@@ -99,37 +56,14 @@ export function inferCreatedTempTableSchema(doc: QueryDocument): TempTableSchema
 /** Build every create/append/drop lifetime in package order. */
 export function deriveTempTableLifetimes(batch: BatchDocument): TempTableLifetimes {
   const byName = new Map<string, TempTableLifetime[]>();
-
-  const openAt = (upperName: string, statementIndex: number): TempTableLifetime | undefined =>
-    newestLifetimeAt(byName.get(upperName), statementIndex);
-
-  for (let statementIndex = 0; statementIndex < batch.members.length; statementIndex++) {
-    const doc = batch.members[statementIndex];
-    const carrier = compoundCarrierOf(doc);
-    if (!carrier.tempTableName) continue;
-    const upperName = carrier.tempTableName.toUpperCase();
-
-    if (carrier.queryType === 'createTemp') {
-      const schema = inferCreatedTempTableSchema(doc);
-      if (!schema) continue;
-      const lifetime: TempTableLifetime = {
-        name: carrier.tempTableName,
-        createIndex: statementIndex,
-        appendIndices: [],
-        dropIndex: null,
-        schema,
-      };
-      const list = byName.get(upperName);
-      if (list) list.push(lifetime);
-      else byName.set(upperName, [lifetime]);
-    } else if (carrier.queryType === 'appendTemp') {
-      openAt(upperName, statementIndex)?.appendIndices.push(statementIndex);
-    } else if (carrier.queryType === 'dropTemp') {
-      const lifetime = openAt(upperName, statementIndex);
-      if (lifetime) lifetime.dropIndex = statementIndex;
+  for (const [name, positions] of deriveTempTableLifetimePositions(batch.members)) {
+    const lifetimes: TempTableLifetime[] = [];
+    for (const lifetime of positions) {
+      const schema = inferCreatedTempTableSchema(batch.members[lifetime.createIndex]);
+      if (schema) lifetimes.push({ ...lifetime, schema });
     }
+    if (lifetimes.length) byName.set(name, lifetimes);
   }
-
   return byName;
 }
 
@@ -140,22 +74,4 @@ export function visibleTempTableAt(
   fullName: string,
 ): TempTableSchema | undefined {
   return newestLifetimeAt(lifetimes.get(fullName.toUpperCase()), statementIndex)?.schema;
-}
-
-/** The newest lifetime created before `statementIndex` and not yet dropped. */
-function newestLifetimeAt(
-  list: readonly TempTableLifetime[] | undefined,
-  statementIndex: number,
-): TempTableLifetime | undefined {
-  if (!list) return undefined;
-  for (let i = list.length - 1; i >= 0; i--) {
-    const lifetime = list[i];
-    if (
-      lifetime.createIndex < statementIndex &&
-      (lifetime.dropIndex === null || lifetime.dropIndex >= statementIndex)
-    ) {
-      return lifetime;
-    }
-  }
-  return undefined;
 }

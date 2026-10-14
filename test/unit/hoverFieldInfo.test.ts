@@ -268,6 +268,15 @@ describe('describeChain/resolveCompletionTarget: package temp-table semantics', 
     expect(describeChain(text, resolver, ['Т2', 'Старое'], headPosition).resolution?.stoppedReason).toBe('fieldNotFound');
   });
 
+  it('does not offer an older schema after a repeated create and drop', () => {
+    const text = 'ВЫБРАТЬ 1 КАК Старое ПОМЕСТИТЬ ВТ; '
+      + 'ВЫБРАТЬ 2 КАК Новое ПОМЕСТИТЬ ВТ; УНИЧТОЖИТЬ ВТ; '
+      + 'ВЫБРАТЬ Т.Старое ИЗ ВТ КАК Т';
+    const position = text.lastIndexOf('Т.Старое');
+    expect(describeChain(text, resolver, ['Т', 'Старое'], position).resolution).toBeUndefined();
+    expect(resolveCompletionTarget(text, resolver, ['Т'], position)).toBeUndefined();
+  });
+
   it('fails open after drop and for an incomplete star-derived schema', () => {
     const afterDrop =
       'ВЫБРАТЬ Т.Код КАК Код ПОМЕСТИТЬ ВТ_Товары ИЗ Справочник.Номенклатура КАК Т; ' +

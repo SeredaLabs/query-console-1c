@@ -9,9 +9,28 @@ expressions can remain opaque strings. There is no shared arbitrary-expression A
 ## Representation boundaries
 
 Scalar fields, tabular projections and trailing fields are distinct ordered select
-elements. Generator/semantic schemas use `orderedSelectElements`; scalar UNION
-mapping and parser/designer temp schemas do not yet share that full derivation.
-[A2](technical-debt.md#architecture) owns the remaining lifetime/schema work.
+elements. `deriveProjectionFacts` combines their print order with C30 output names;
+`selectElementNames` adapts these facts for existing consumers. A named projection
+is not proof of schema completeness; unknown stars have no output name.
+Temp producer columns use `deriveProducerColumns` over these facts. Its named
+policies include all ordered scalar columns when there is no outer tabular
+projection, including scalar trailing fields created by wildcard expansion.
+Registry/Designer retain the scalar-head recovery boundary for nested output;
+semantics retains the full projection. Unnamed stars are not Designer columns.
+Duplicate explicit names are platform-invalid ([platform fixture](../../test/fixtures/platform/a2-duplicate-temp-columns.json)), so the remaining duplicate-name difference is invalid-input recovery only.
+Scalar UNION mapping remains separate.
+Parser, Designer and semantics share create/append/drop transitions through
+`tempTableLifetimes.ts`; Designer and semantics also share its lifecycle positions.
+The newest preceding create shadows older lifetimes even after its drop; invalid
+repeated creation must not revive an older schema in hover, table lists or package links.
+Parser registry entries distinguish a defined name with unknown columns from an
+absent definition; an unknown new schema shadows older/external/inferred metadata
+without claiming an empty table or reusing old literal type markers.
+[A2](technical-debt.md#architecture) owns the remaining schema-policy work.
+The [policy audit](audits/a2-producer-policy-audit-2026-10-14.md) records the original
+scalar-tail loss and fake Designer column, now covered by regression tests.
+Trailing fields do not imply a nested projection. Duplicate explicit names never
+reach a valid producer schema: the platform rejects them in every member.
 Opaque HAVING, characteristics, grouping/report blocks and optional flags must
 survive unrelated edits; preservation and unsafe-input rules are specified in the
 [safety contract](contracts/safety-and-preservation.md).

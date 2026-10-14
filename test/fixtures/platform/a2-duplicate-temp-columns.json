@@ -1,0 +1,407 @@
+{
+ "source": "SL_kza via the mcp_APIBackend server (\"SmartLogistic MCP Server\" 1.0.0), 2026-10-14 (A2 duplicate explicit column names). \"constructor\" = validate_query: the text loaded into СхемаЗапроса (the query-constructor object model) and its query_text/columns; the interactive constructor UI was not opened. \"execute\" = execute_query of the original text (limit 1). Platform build: unknown (not exposed by the server). Constants only; column names kept, no row values.",
+ "cases": [
+  {
+   "name": "A_control__select",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК Другое",
+   "constructor": {
+    "accepted": true,
+    "columns": [
+     [
+      "Код",
+      "Другое"
+     ]
+    ],
+    "text": "ВЫБРАТЬ\n\t1 КАК Код,\n\t2 КАК Другое"
+   },
+   "execute": {
+    "ok": true,
+    "columns": [
+     "Код",
+     "Другое"
+    ]
+   },
+   "constructorRewriteExecuted": "not applicable: layout only, same tokens"
+  },
+  {
+   "name": "A_control__temp_star",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК Другое\nПОМЕСТИТЬ ВТ_A2;\n\nВЫБРАТЬ *\nИЗ ВТ_A2 КАК Б",
+   "constructor": {
+    "accepted": true,
+    "columns": [
+     [
+      "Код",
+      "Другое"
+     ],
+     [
+      "Код",
+      "Другое"
+     ]
+    ],
+    "text": "ВЫБРАТЬ\n\t1 КАК Код,\n\t2 КАК Другое\nПОМЕСТИТЬ ВТ_A2\n;\n\n////////////////////////////////////////////////////////////////////////////////\nВЫБРАТЬ\n\tБ.Код КАК Код,\n\tБ.Другое КАК Другое\nИЗ\n\tВТ_A2 КАК Б"
+   },
+   "execute": {
+    "ok": true,
+    "columns": [
+     "Код",
+     "Другое"
+    ]
+   },
+   "constructorRewriteExecuted": {
+    "ok": true,
+    "columns": [
+     "Код",
+     "Другое"
+    ]
+   }
+  },
+  {
+   "name": "A_control__temp_named",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК Другое\nПОМЕСТИТЬ ВТ_A2;\n\nВЫБРАТЬ Б.Код\nИЗ ВТ_A2 КАК Б",
+   "constructor": {
+    "accepted": true,
+    "columns": [
+     [
+      "Код",
+      "Другое"
+     ],
+     [
+      "Код"
+     ]
+    ],
+    "text": "ВЫБРАТЬ\n\t1 КАК Код,\n\t2 КАК Другое\nПОМЕСТИТЬ ВТ_A2\n;\n\n////////////////////////////////////////////////////////////////////////////////\nВЫБРАТЬ\n\tБ.Код КАК Код\nИЗ\n\tВТ_A2 КАК Б"
+   },
+   "execute": {
+    "ok": true,
+    "columns": [
+     "Код"
+    ]
+   },
+   "constructorRewriteExecuted": {
+    "ok": true,
+    "columns": [
+     "Код"
+    ]
+   }
+  },
+  {
+   "name": "B_exact__select",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК Код",
+   "constructor": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "execute": {
+    "ok": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "constructorRewriteExecuted": "not applicable: the constructor rejected the text"
+  },
+  {
+   "name": "B_exact__temp_star",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК Код\nПОМЕСТИТЬ ВТ_A2;\n\nВЫБРАТЬ *\nИЗ ВТ_A2 КАК Б",
+   "constructor": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "execute": {
+    "ok": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "constructorRewriteExecuted": "not applicable: the constructor rejected the text"
+  },
+  {
+   "name": "B_exact__temp_named",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК Код\nПОМЕСТИТЬ ВТ_A2;\n\nВЫБРАТЬ Б.Код\nИЗ ВТ_A2 КАК Б",
+   "constructor": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "execute": {
+    "ok": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "constructorRewriteExecuted": "not applicable: the constructor rejected the text"
+  },
+  {
+   "name": "C_case__select",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК код",
+   "constructor": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"код\""
+    }
+   },
+   "execute": {
+    "ok": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"код\""
+    }
+   },
+   "constructorRewriteExecuted": "not applicable: the constructor rejected the text"
+  },
+  {
+   "name": "C_case__temp_star",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК код\nПОМЕСТИТЬ ВТ_A2;\n\nВЫБРАТЬ *\nИЗ ВТ_A2 КАК Б",
+   "constructor": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"код\""
+    }
+   },
+   "execute": {
+    "ok": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"код\""
+    }
+   },
+   "constructorRewriteExecuted": "not applicable: the constructor rejected the text"
+  },
+  {
+   "name": "C_case__temp_named",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК код\nПОМЕСТИТЬ ВТ_A2;\n\nВЫБРАТЬ Б.Код\nИЗ ВТ_A2 КАК Б",
+   "constructor": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"код\""
+    }
+   },
+   "execute": {
+    "ok": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"код\""
+    }
+   },
+   "constructorRewriteExecuted": "not applicable: the constructor rejected the text"
+  },
+  {
+   "name": "D_suffix__select",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК код, 3 КАК код1",
+   "constructor": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"код\""
+    }
+   },
+   "execute": {
+    "ok": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"код\""
+    }
+   },
+   "constructorRewriteExecuted": "not applicable: the constructor rejected the text"
+  },
+  {
+   "name": "D_suffix__temp_star",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК код, 3 КАК код1\nПОМЕСТИТЬ ВТ_A2;\n\nВЫБРАТЬ *\nИЗ ВТ_A2 КАК Б",
+   "constructor": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"код\""
+    }
+   },
+   "execute": {
+    "ok": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"код\""
+    }
+   },
+   "constructorRewriteExecuted": "not applicable: the constructor rejected the text"
+  },
+  {
+   "name": "D_suffix__temp_named",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК код, 3 КАК код1\nПОМЕСТИТЬ ВТ_A2;\n\nВЫБРАТЬ Б.Код\nИЗ ВТ_A2 КАК Б",
+   "constructor": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"код\""
+    }
+   },
+   "execute": {
+    "ok": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"код\""
+    }
+   },
+   "constructorRewriteExecuted": "not applicable: the constructor rejected the text"
+  },
+  {
+   "name": "U1_dup_first__select",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК Код ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ 3 КАК Перв, 4 КАК Втор",
+   "constructor": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "execute": {
+    "ok": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "constructorRewriteExecuted": "not applicable: the constructor rejected the text"
+  },
+  {
+   "name": "U1_dup_first__temp_star",
+   "query": "ВЫБРАТЬ 1 КАК Код, 2 КАК Код\nПОМЕСТИТЬ ВТ_A2\nОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ 3 КАК Перв, 4 КАК Втор;\n\nВЫБРАТЬ *\nИЗ ВТ_A2 КАК Б",
+   "constructor": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "execute": {
+    "ok": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "constructorRewriteExecuted": "not applicable: the constructor rejected the text"
+  },
+  {
+   "name": "U2_dup_second__select",
+   "query": "ВЫБРАТЬ 1 КАК Перв, 2 КАК Втор ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ 3 КАК Код, 4 КАК Код",
+   "constructor": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 66,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "execute": {
+    "ok": false,
+    "error": {
+     "line": 1,
+     "col": 66,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "constructorRewriteExecuted": "not applicable: the constructor rejected the text"
+  },
+  {
+   "name": "U2_dup_second__temp_star",
+   "query": "ВЫБРАТЬ 1 КАК Перв, 2 КАК Втор\nПОМЕСТИТЬ ВТ_A2\nОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ 3 КАК Код, 4 КАК Код;\n\nВЫБРАТЬ *\nИЗ ВТ_A2 КАК Б",
+   "constructor": {
+    "accepted": false,
+    "error": {
+     "line": 3,
+     "col": 35,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "execute": {
+    "ok": false,
+    "error": {
+     "line": 3,
+     "col": 35,
+     "message": "Duplicate alias \"Код\""
+    }
+   },
+   "constructorRewriteExecuted": "not applicable: the constructor rejected the text"
+  },
+  {
+   "name": "U2_dup_second__product_applied_select",
+   "origin": "Text written by this product's Designer Apply for U2_dup_second__select (not by the 1C constructor)",
+   "query": "ВЫБРАТЬ\n\t1 КАК Перв,\n\t2 КАК Втор\n\nОБЪЕДИНИТЬ ВСЕ\n\nВЫБРАТЬ\n\t3,\n\t4",
+   "constructor": {
+    "accepted": true,
+    "columns": [
+     [
+      "Перв",
+      "Втор"
+     ]
+    ]
+   },
+   "execute": {
+    "ok": true,
+    "columns": [
+     "Перв",
+     "Втор"
+    ]
+   }
+  },
+  {
+   "name": "U2_dup_second__product_applied_temp_star",
+   "origin": "Text written by this product's Designer Apply for U2_dup_second__temp_star (not by the 1C constructor)",
+   "query": "ВЫБРАТЬ\n\t1 КАК Перв,\n\t2 КАК Втор\nПОМЕСТИТЬ ВТ_A2\n\nОБЪЕДИНИТЬ ВСЕ\n\nВЫБРАТЬ\n\t3,\n\t4\n;\n\n////////////////////////////////////////////////////////////////////////////////\nВЫБРАТЬ\n\tБ.Перв КАК Перв,\n\tБ.Втор КАК Втор\nИЗ\n\tВТ_A2 КАК Б",
+   "constructor": {
+    "accepted": true,
+    "columns": [
+     [
+      "Перв",
+      "Втор"
+     ],
+     [
+      "Перв",
+      "Втор"
+     ]
+    ]
+   },
+   "execute": {
+    "ok": true,
+    "columns": [
+     "Перв",
+     "Втор"
+    ]
+   }
+  }
+ ]
+}
