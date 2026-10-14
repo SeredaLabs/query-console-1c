@@ -15,11 +15,15 @@ of fake fields; seven assertions failed before the change. Added analysis and
 constructor controls cover multiple expanded sources and UNION creators.
 Production Designer Apply/reopen preservation controls remain in place.
 
-Duplicate explicit-name behavior is still unresolved. No fixture supplies the
-needed platform verdict. Live verification could not start: the earlier SL_kza
-browser tab was absent and opening a new tab timed out. The user will check this
-in a separate session. A2 is not CLOSED on that
-basis; do not infer duplicate-alias validity or normalize user names speculatively.
+Duplicate explicit names (2026-10-14 follow-up, [fixture](../../../test/fixtures/platform/a2-duplicate-temp-columns.json),
+SL_kza via validate_query/execute_query, platform build unknown): СхемаЗапроса and
+execution reject `Код, Код`, `Код, код` and `Код, код, код1` with `Duplicate alias`
+at the second element — in a plain SELECT, in a `ПОМЕСТИТЬ` producer (so no temp
+table exists) and in either UNION member. Case does not matter; nothing renames.
+The registry/Designer/semantic suffix difference is therefore invalid-input recovery
+only, with no platform schema to match. One product gap found: a duplicate in a
+later UNION member opens in the Designer and Apply drops that member's aliases,
+writing a valid query (fixed separately).
 
 ## What is shared now
 
@@ -39,7 +43,7 @@ correct. The remaining differences need separate decisions.
 | Scalar fields after an expanded star | In **analysis/constructor** modes, `expandStarFields` puts scalar suffixes into `trailingFields`. The parser registry omits them, so a downstream `*` also omits them. The actual semantic snapshot reproduces this. | **A2 defect, same priority as the fake Designer column.** Affects IDE model and constructor parity; production Designer preserve-mode controls retain the suffix. |
 | Unresolved qualified star | Registry/semantics omit `Н.*` from known columns; Designer's `fieldAlias` fallback exposes a field named `Н.*`. Reproduced with absent metadata and with preserve-mode metadata. | **A2 user-visible defect, at least the same priority as scalar-tail loss.** The production Designer table list offers this fake field. Unknown source shape is not proof of invalid input. Decide how Designer represents unknown shape without offering a fabricated column. |
 | Nested outer projection | Registry/Designer use scalar head; semantics includes the nested element and scalar suffix. The recorded platform fixture rejects six nested-INTO variants. | Preserve invalid-input recovery for now. No need to invent a platform temp schema for rejected producers. This evidence does not cover scalar-only trailing fields. |
-| Duplicate explicit names | Registry keeps duplicates; Designer/semantics generate unique names (`Код`, `код1`, `код11` in the test). | **A2 unresolved behavior.** Existing tests pin compatibility; they are not platform evidence for duplicate explicit aliases in INTO. Do not silently declare either result correct. |
+| Duplicate explicit names | Registry keeps duplicates; Designer/semantics generate unique names (`Код`, `код1`, `код11` in the test). | **Resolved by evidence (2026-10-14):** the platform rejects duplicate explicit aliases everywhere; the policies differ only when recovering invalid text. No column-policy change needed. |
 | Empty aliases / aliased path star / repeated object identity | Hand-built model tests capture different fallback, exclusion and identity behavior. | Internal compatibility cases, not proof of valid textual producer schemas. Keep scoped apart from normal parsed producers. |
 | Completeness and primitive types | Only semantics asserts completeness; parser literal `Строка` markers mean non-reference, not actual expression types. | Intentional adapter responsibilities. Do not merge these into inferred result types (A3). |
 

@@ -17,7 +17,7 @@ policies include all ordered scalar columns when there is no outer tabular
 projection, including scalar trailing fields created by wildcard expansion.
 Registry/Designer retain the scalar-head recovery boundary for nested output;
 semantics retains the full projection. Unnamed stars are not Designer columns.
-Duplicate-name handling still differs and remains an A2 evidence gap.
+Duplicate explicit names are platform-invalid ([platform fixture](../../test/fixtures/platform/a2-duplicate-temp-columns.json)), so the remaining duplicate-name difference is invalid-input recovery only.
 Scalar UNION mapping remains separate.
 Parser, Designer and semantics share create/append/drop transitions through
 `tempTableLifetimes.ts`; Designer and semantics also share its lifecycle positions.
@@ -29,8 +29,8 @@ without claiming an empty table or reusing old literal type markers.
 [A2](technical-debt.md#architecture) owns the remaining schema-policy work.
 The [policy audit](audits/a2-producer-policy-audit-2026-10-14.md) records the original
 scalar-tail loss and fake Designer column, now covered by regression tests.
-Trailing fields do not imply a nested projection. Duplicate explicit-name policy
-remains open pending platform evidence.
+Trailing fields do not imply a nested projection. Duplicate explicit names never
+reach a valid producer schema: the platform rejects them in every member.
 Opaque HAVING, characteristics, grouping/report blocks and optional flags must
 survive unrelated edits; preservation and unsafe-input rules are specified in the
 [safety contract](contracts/safety-and-preservation.md).
