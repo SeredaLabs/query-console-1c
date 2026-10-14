@@ -18,8 +18,9 @@ this is distinct from an input-text fixed point or semantic-equivalence proof.
 
 Golden acceptance selection is positive-only and contains template markers;
 build/metadata/substitution attestation is incomplete. Negative unit tests are
-useful regressions, not an attested negative platform corpus. V1–V3 and U1 in the
-[ledger](technical-debt.md) own these remaining evidence gaps. Historical measured
+useful regressions, not an attested negative platform corpus. V1–V3 in the
+[ledger](technical-debt.md) own these remaining evidence gaps (U1: marker packages are
+accepted by the validator as written, not attested by the platform). Historical measured
 sizes/verdicts remain in [Stage 0](audits/stage-0.md) and later audit reports.
 
 ## Gates and optional tooling

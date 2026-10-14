@@ -1,0 +1,81 @@
+{
+ "source": "SL_kza, platform 8.3.15.1489, 2026-10-15, through the mcp_APIBackend server: \"platform\" = validate_query (СхемаЗапроса); nothing was executed, no table data read. \"designerApplied\" = this product's Designer open → Apply (preserve mode) at main 369ae5b+. U3: which FROM sources a join condition (`ПО`) sees when the FROM list has several roots separated by commas.",
+ "verdict": "A join condition sees only its own join chain: a qualified or bare reference to another comma root is `Field not found`, whether that root is listed before or after the chain; a bare name present in the own chain and in another root binds to the own chain.",
+ "cases": [
+  {
+   "name": "U3a_on_refs_other_root_before",
+   "query": "ВЫБРАТЬ Т1.Код ИЗ Справочник.Валюты КАК Т1, Справочник.Контрагенты КАК Т2 ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Т3 ПО Т3.Ссылка = Т1.Ссылка",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 132,
+     "message": "Field not found \"Т1.Ссылка\""
+    }
+   }
+  },
+  {
+   "name": "U3b_on_refs_other_root_after",
+   "query": "ВЫБРАТЬ Т1.Код ИЗ Справочник.Контрагенты КАК Т2 ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Т3 ПО Т3.Ссылка = Т1.Ссылка, Справочник.Валюты КАК Т1",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 106,
+     "message": "Field not found \"Т1.Ссылка\""
+    }
+   }
+  },
+  {
+   "name": "U3c_on_refs_own_chain",
+   "query": "ВЫБРАТЬ Т1.Код ИЗ Справочник.Валюты КАК Т1, Справочник.Контрагенты КАК Т2 ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Т3 ПО Т3.Ссылка = Т2.ВалютаКонтрагента",
+   "platform": {
+    "accepted": true,
+    "on": "(Т3.Ссылка = Т2.ВалютаКонтрагента)"
+   }
+  },
+  {
+   "name": "U3d_bare_field_only_in_other_root",
+   "query": "ВЫБРАТЬ Т2.Код ИЗ Справочник.Валюты КАК Т1, Справочник.Контрагенты КАК Т2 ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Контрагенты КАК Т3 ПО Т3.Ссылка = Т2.Ссылка И Символ = \"x\"",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 149,
+     "message": "Field not found \"Символ\""
+    }
+   },
+   "product": {
+    "preserve": "(Т3.Ссылка = Т2.Ссылка) И (Т1.Символ = \"x\")",
+    "analysis": "(Т3.Ссылка = Т2.Ссылка) И (Т1.Символ = \"x\")",
+    "constructor": "(Т3.Ссылка = Т2.Ссылка) И (Т1.Символ = \"x\")"
+   }
+  },
+  {
+   "name": "U3e_bare_field_only_in_later_root",
+   "query": "ВЫБРАТЬ Т2.Код ИЗ Справочник.Контрагенты КАК Т2 ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Контрагенты КАК Т3 ПО Т3.Ссылка = Т2.Ссылка И Символ = \"x\", Справочник.Валюты КАК Т1",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 123,
+     "message": "Field not found \"Символ\""
+    }
+   }
+  },
+  {
+   "name": "U3f_bare_field_in_chain_and_other_root",
+   "query": "ВЫБРАТЬ Т2.Код ИЗ Справочник.Валюты КАК Т1, Справочник.Контрагенты КАК Т2 ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Т3 ПО Т3.Ссылка = Т2.ВалютаКонтрагента И Символ = \"x\"",
+   "platform": {
+    "accepted": true,
+    "on": "(Т3.Ссылка = Т2.ВалютаКонтрагента) И (Т3.Символ = \"x\")"
+   },
+   "product": {
+    "preserve": "(Т3.Ссылка = Т2.ВалютаКонтрагента) И (Символ = \"x\")",
+    "analysis": "(Т3.Ссылка = Т2.ВалютаКонтрагента) И (Символ = \"x\")",
+    "constructor": "(Т3.Ссылка = Т2.ВалютаКонтрагента) И (Символ = \"x\")"
+   }
+  }
+ ],
+ "productNote": "\"product\" = the `ПО` this product generates after parseBatch with the same metadata, per wildcard policy (preserve/analysis/constructor). The Designer opens a query without metadata, so it leaves bare names as written; the qualification applies to hover/completion (analysis) and the constructor-parity path."
+}
