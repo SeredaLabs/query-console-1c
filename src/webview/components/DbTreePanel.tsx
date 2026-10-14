@@ -32,13 +32,13 @@ function highlightText(text: string, tokens: string[]): React.ReactNode {
   return highlightMatches(text, tokens, 'var(--vscode-editor-findMatchHighlightBackground, rgba(234,92,0,0.33))');
 }
 
-function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRefs, onToggleCollapse, focusedTableFullName, focusedFieldPath, onFocusField, onExpandRef, onAddField, depth, tokens }: {
+function FieldNode({ tableFullName, fieldPath, field, expandedRefs, expandedRefPaths, onToggleRef, focusedTableFullName, focusedFieldPath, onFocusField, onExpandRef, onAddField, depth, tokens }: {
   tableFullName: string;
   fieldPath: string;
   field: MetaField;
   expandedRefs: Map<string, MetaField[]>;
-  collapsedRefs: Set<string>;
-  onToggleCollapse: (key: string) => void;
+  expandedRefPaths: Set<string>;
+  onToggleRef: (key: string) => void;
   focusedTableFullName: string | null;
   focusedFieldPath: string | null;
   onFocusField: (t: string, p: string) => void;
@@ -50,18 +50,18 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
   const ref = field.types.find(t => t.ref)?.ref ?? null;
   const refKey = ref ? `${ref.kind}.${ref.name}` : null;
   const fetched = refKey ? expandedRefs.has(refKey) : false;
-  const expanded = fetched && refKey ? !collapsedRefs.has(refKey) : false;
+  // Cached fields belong to a type; expansion belongs to this tree occurrence.
+  // Expanding by type recursively opens self-references such as Ссылка.Ссылка… .
+  const nodeKey = JSON.stringify([tableFullName, fieldPath]);
+  const expanded = fetched && expandedRefPaths.has(nodeKey);
   const isFocused = focusedTableFullName === tableFullName && focusedFieldPath === fieldPath;
   const typeText = describeFieldTypes(field);
 
   function handleExpandToggle(e: React.MouseEvent) {
     e.stopPropagation();
     if (!ref || !refKey) return;
-    if (!fetched) {
-      onExpandRef(ref);
-    } else {
-      onToggleCollapse(refKey);
-    }
+    if (!fetched) onExpandRef(ref);
+    onToggleRef(nodeKey);
   }
 
   function handleDragStart(e: React.DragEvent) {
@@ -105,8 +105,8 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
           fieldPath={`${fieldPath}.${subField.name}`}
           field={subField}
           expandedRefs={expandedRefs}
-          collapsedRefs={collapsedRefs}
-          onToggleCollapse={onToggleCollapse}
+          expandedRefPaths={expandedRefPaths}
+          onToggleRef={onToggleRef}
           focusedTableFullName={focusedTableFullName}
           focusedFieldPath={focusedFieldPath}
           onFocusField={onFocusField}
@@ -120,12 +120,12 @@ function FieldNode({ tableFullName, fieldPath, field, expandedRefs, collapsedRef
   );
 }
 
-function TabularSectionNode({ ts, fields, expandedRefs, collapsedRefs, onToggleCollapse, focusedTableFullName, focusedFieldPath, onFocusField, onExpandRef, onAddField, depth, tokens, expanded, onToggle }: {
+function TabularSectionNode({ ts, fields, expandedRefs, expandedRefPaths, onToggleRef, focusedTableFullName, focusedFieldPath, onFocusField, onExpandRef, onAddField, depth, tokens, expanded, onToggle }: {
   ts: MetaTable;
   fields: RenderField[];
   expandedRefs: Map<string, MetaField[]>;
-  collapsedRefs: Set<string>;
-  onToggleCollapse: (key: string) => void;
+  expandedRefPaths: Set<string>;
+  onToggleRef: (key: string) => void;
   focusedTableFullName: string | null;
   focusedFieldPath: string | null;
   onFocusField: (t: string, p: string) => void;
@@ -178,8 +178,8 @@ function TabularSectionNode({ ts, fields, expandedRefs, collapsedRefs, onToggleC
           fieldPath={rf.field.name}
           field={rf.field}
           expandedRefs={expandedRefs}
-          collapsedRefs={collapsedRefs}
-          onToggleCollapse={onToggleCollapse}
+          expandedRefPaths={expandedRefPaths}
+          onToggleRef={onToggleRef}
           focusedTableFullName={focusedTableFullName}
           focusedFieldPath={focusedFieldPath}
           onFocusField={onFocusField}
@@ -197,7 +197,7 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
   const [expandedGroups, setExpandedGroups] = React.useState<Set<TableKind>>(new Set());
   const [expandedTables, setExpandedTables] = React.useState<Set<string>>(new Set());
   const [expandedTsSections, setExpandedTsSections] = React.useState<Set<string>>(new Set());
-  const [collapsedRefs, setCollapsedRefs] = React.useState<Set<string>>(new Set());
+  const [expandedRefPaths, setExpandedRefPaths] = React.useState<Set<string>>(new Set());
   const [query, setQuery] = React.useState('');
   const [debouncedQuery, setDebouncedQuery] = React.useState('');
   const [activeMatchIdx, setActiveMatchIdx] = React.useState(0);
@@ -238,27 +238,13 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
     });
   }
 
-  function toggleCollapsedRef(key: string) {
-    setCollapsedRefs(prev => {
+  function toggleRefPath(key: string) {
+    setExpandedRefPaths(prev => {
       const next = new Set(prev);
       next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
   }
-
-  React.useEffect(() => {
-    setCollapsedRefs(prev => {
-      let changed = false;
-      const next = new Set(prev);
-      for (const key of Array.from(prev)) {
-        if (!expandedRefs.has(key)) {
-          next.delete(key);
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [expandedRefs]);
 
   React.useEffect(() => {
     setActiveMatchIdx(0);
@@ -441,8 +427,8 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                       fieldPath={rf.field.name}
                       field={rf.field}
                       expandedRefs={expandedRefs}
-                      collapsedRefs={collapsedRefs}
-                      onToggleCollapse={toggleCollapsedRef}
+                      expandedRefPaths={expandedRefPaths}
+                      onToggleRef={toggleRefPath}
                       focusedTableFullName={focusedTableFullName}
                       focusedFieldPath={focusedFieldPath}
                       onFocusField={onFocusField}
@@ -458,8 +444,8 @@ export function DbTreePanel({ tables, expandedRefs, focusedTableFullName, focuse
                       ts={rts.ts}
                       fields={rts.fields}
                       expandedRefs={expandedRefs}
-                      collapsedRefs={collapsedRefs}
-                      onToggleCollapse={toggleCollapsedRef}
+                      expandedRefPaths={expandedRefPaths}
+                      onToggleRef={toggleRefPath}
                       focusedTableFullName={focusedTableFullName}
                       focusedFieldPath={focusedFieldPath}
                       onFocusField={onFocusField}

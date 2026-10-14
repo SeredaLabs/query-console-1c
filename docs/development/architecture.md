@@ -135,6 +135,11 @@ payloads. Builder/index result aliases remain visible with source paths in toolt
 The shared Totals/Index editors enable this grouping for Classic only; Canvas
 retains its compact source lists.
 
+Reference-field caches store type definitions, not expansion state. Recursive
+field trees expand only explicitly opened occurrences (source plus field path,
+or local row state), so self-references and mutual reference cycles remain lazy.
+This also applies to database-tree tabular sections and nested constructors.
+
 Metadata filesystem I/O stays in the Node adapter/importer path; browser bundles
 consume metadata values/resolvers, not filesystem loaders. The extension edits
 static BSL query literals and offers advisory IDE assistance. It has no query
