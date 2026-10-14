@@ -105,7 +105,8 @@ platform truth; canonical output changes still require platform evidence.
 
 The import cycle, module-load hooks and synchronous resolver stack are accepted
 [decomposition constraints](architecture.md#known-internal-coupling), not extra
-urgent refactor tickets. A2 remains required engineering work; A1 closed on 2026-10-11.
+urgent refactor tickets. A1 closed on 2026-10-11 and A2 on 2026-10-14; A3 remains
+partial, as recorded in the architecture table above.
 
 ## Verification
 
