@@ -6,10 +6,10 @@ import { accumPeriodFields } from '../../core/query/accumVirtualFields';
 import type { RefId } from '../../shared/messages';
 import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
 import { RowRemoveButton } from './RowRemoveButton';
-import { MetaKindIcon } from './MetaKindIcon';
+import { FieldSourceGroup } from './FieldSourceGroup';
 import { FieldTreeRow } from './FieldTreeRow';
 import { IconButton } from './IconButton';
-import { SECTION_HEADER, COLUMN_HEADER, EMPTY_HINT, GRID_ROW_BORDER, ROW, INPUT, panelBox, TREE_ROW_GAP } from '../sharedStyles';
+import { SECTION_HEADER, COLUMN_HEADER, EMPTY_HINT, GRID_ROW_BORDER, ROW, INPUT, panelBox } from '../sharedStyles';
 import { t } from '../i18n';
 import { CONDITION_OPERATORS } from '../conditionOperators';
 
@@ -102,20 +102,19 @@ export function ConditionsTab(props: Props): React.ReactElement {
             const alias = defaultTableAlias(sel);
             return (
               <div key={sel.id} data-field-source={`conditions-source:${alias}`}>
-                <div style={{ ...ROW, justifyContent: 'flex-start', gap: TREE_ROW_GAP, whiteSpace: 'nowrap' }} title={sel.fullName}>
-                  <MetaKindIcon kind={meta.kind} />
-                  <span>{alias}</span>
-                </div>
+                <FieldSourceGroup label={alias} title={sel.fullName} kind={meta.kind}>
                 {tableFields(meta, sel).map((f: MetaField) => (
                   <FieldTreeRow
                     key={`${sel.id}:${f.name}`}
                     field={f}
+                    titlePrefix={alias}
                     depth={1}
                     expandedRefs={expandedRefs}
                     onExpandRef={onExpandRef}
                     onDragStart={(e, path) => dragStart(e, sel.id, path)}
                   />
                 ))}
+                </FieldSourceGroup>
               </div>
             );
           })}

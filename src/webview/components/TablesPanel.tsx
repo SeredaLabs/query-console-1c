@@ -205,6 +205,7 @@ export function TablesPanel({ metaTables, selectedTables, focusedSelectedTableId
                     <FieldTreeRow
                       key={field.name}
                       field={field}
+                      titlePrefix={defaultTableAlias(t)}
                       depth={1}
                       expandedRefs={expandedRefs}
                       onExpandRef={onExpandRef}

@@ -1,16 +1,19 @@
 import * as React from 'react';
+import type { MetaTable } from '../../core/metadata/types';
 import type { SelectedTable, SelectedField, Order, OrderField, SortDirection } from '../../core/query/queryModel';
 import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
+import { SelectedFieldsTree } from './SelectedFieldsTree';
 import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
 import { RowRemoveButton } from './RowRemoveButton';
 import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
-import { SECTION_HEADER, ROW, INPUT, EMPTY_HINT, panelBox, ROW_PADDING_Y, TREE_ROW_GAP } from '../sharedStyles';
+import { SECTION_HEADER, INPUT, EMPTY_HINT, panelBox, ROW_PADDING_Y, TREE_ROW_GAP } from '../sharedStyles';
 import { t } from '../i18n';
 
 interface Props {
   selectedTables: SelectedTable[];
   selectedFields: SelectedField[];
+  metaTables: MetaTable[];
   order: Order;
   onAddOrderField: (tableId: string, path: string) => void;
   onRemoveOrderField: (tableId: string, path: string) => void;
@@ -20,7 +23,7 @@ interface Props {
 
 export function OrderTab(props: Props): React.ReactElement {
   const {
-    selectedTables, selectedFields, order,
+    selectedTables, selectedFields, metaTables, order,
     onAddOrderField, onRemoveOrderField, onSetOrderDirection, onSetOrderAuto,
   } = props;
 
@@ -43,19 +46,8 @@ export function OrderTab(props: Props): React.ReactElement {
         <div style={{ ...panelBox, width: leftWidth, flexShrink: 0 }}>
           <div style={SECTION_HEADER}>{t('common.fields')}</div>
           <div style={dropZone} data-field-source="order-source">
-            {sourceFields.map((f, i) => (
-              <div
-                key={`${f.tableId}:${f.path}:${i}`}
-                data-field-item
-                draggable
-                onDragStart={e => dragStart(e, f.tableId, f.path!)}
-                className="qc-row"
-                style={{ ...ROW, cursor: 'grab', justifyContent: 'flex-start', gap: TREE_ROW_GAP }}
-              >
-                <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
-                <span>{labelFor(f.tableId, f.path!)}</span>
-              </div>
-            ))}
+          <SelectedFieldsTree fields={sourceFields} tables={selectedTables} metadata={metaTables}
+            onDragStart={(e, f) => dragStart(e, f.tableId, f.path)} />
             {sourceFields.length === 0 && (
               <div style={EMPTY_HINT}>
                 {t('empty.noFieldsAdd')}

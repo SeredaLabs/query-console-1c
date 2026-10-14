@@ -1,5 +1,7 @@
 import * as React from 'react';
-import type { SelectedField, Indexing, FieldRef } from '../../core/query/queryModel';
+import type { MetaTable } from '../../core/metadata/types';
+import { SelectedFieldsTree } from './SelectedFieldsTree';
+import type { SelectedField, SelectedTable, Indexing, FieldRef } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
 import { PanelHeader } from './PanelHeader';
@@ -9,7 +11,11 @@ import { SECTION_HEADER, COLUMN_HEADER, EMPTY_HINT, panelBox, ROW } from '../sha
 import { t } from '../i18n';
 
 interface Props {
+  /** Classic groups source fields; Canvas retains its existing compact list. */
+  groupSourceByTable?: boolean;
   selectedFields: SelectedField[];
+  selectedTables?: SelectedTable[];
+  metaTables?: MetaTable[];
   indexing: Indexing;
   onAddIndex: () => void;
   onCopyIndex: (index: number) => void;
@@ -29,7 +35,7 @@ function keyOf(tableId: string, path: string): string {
 
 export function IndexTab(props: Props): React.ReactElement {
   const {
-    selectedFields, indexing,
+    selectedFields, selectedTables = [], metaTables = [], indexing,
     onAddIndex, onCopyIndex, onRemoveIndex, onMoveIndex, onSetUnique,
     onAddField, onAddAllFields, onRemoveField, onClearFields, onMoveField,
   } = props;
@@ -133,7 +139,12 @@ export function IndexTab(props: Props): React.ReactElement {
         <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
           <div style={SECTION_HEADER}>{t('common.fields')}</div>
           <div style={dropZone} data-field-source="index-source" className="qc-list" tabIndex={-1}>
-            {currentIndex && availableFields.map(f => {
+            {props.groupSourceByTable ? (currentIndex && <SelectedFieldsTree fields={availableFields} tables={selectedTables} metadata={metaTables}
+              labelFor={f => labelFor(f.tableId, f.path)}
+              onDragStart={(e, f) => dragStart(e, f.tableId, f.path)}
+              onSelect={f => setMiddleSel(keyOf(f.tableId, f.path))}
+              isSelected={f => keyOf(f.tableId, f.path) === middleSel} />) : (
+              currentIndex && availableFields.map(f => {
               const k = keyOf(f.tableId, f.path);
               return (
                 <div
@@ -149,7 +160,7 @@ export function IndexTab(props: Props): React.ReactElement {
                   <span>{labelFor(f.tableId, f.path)}</span>
                 </div>
               );
-            })}
+            }))}
             {currentIndex && availableFields.length === 0 && (
               <div style={emptyHint}>{t('indexes.allFieldsAdded')}</div>
             )}

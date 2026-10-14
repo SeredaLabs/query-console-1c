@@ -128,6 +128,13 @@ invariants. Classic and Canvas share state/session/generation/Apply infrastructu
 the host sends source text and inserts only accepted text through the shared
 bridge. Canvas keeps presentation state and recursive drafts local.
 
+Classic field-source panels group eligible fields by table/alias. Shared
+`FieldSourceRow`, `FieldSourceGroup` and `SelectedFieldsTree` components own their
+presentation; each tab retains its eligibility rules, field identities and drag
+payloads. Builder/index result aliases remain visible with source paths in tooltips.
+The shared Totals/Index editors enable this grouping for Classic only; Canvas
+retains its compact source lists.
+
 Metadata filesystem I/O stays in the Node adapter/importer path; browser bundles
 consume metadata values/resolvers, not filesystem loaders. The extension edits
 static BSL query literals and offers advisory IDE assistance. It has no query

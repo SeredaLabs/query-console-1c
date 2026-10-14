@@ -6,7 +6,9 @@ import { isRefField } from './GroupingTab';
 import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
 import { RowRemoveButton } from './RowRemoveButton';
 import { Chevron } from './Chevron';
-import { MetaKindIcon } from './MetaKindIcon';
+import { FieldSourceGroup } from './FieldSourceGroup';
+import { FieldSourceRow } from './FieldSourceRow';
+import { SelectedFieldsTree } from './SelectedFieldsTree';
 import { IconButton } from './IconButton';
 import { SECTION_HEADER, ROW, INPUT, EMPTY_HINT, panelBox, ROW_PADDING_Y, TREE_ROW_GAP } from '../sharedStyles';
 import { t as i18nT, type MessageKey } from '../i18n';
@@ -51,7 +53,6 @@ export function BuilderTab(props: Props): React.ReactElement {
 
   const [active, setActive] = React.useState<Section>('fields');
   const [expandAll, setExpandAll] = React.useState(false);
-  const [expandedTables, setExpandedTables] = React.useState<Record<string, boolean>>({});
   // 8.3.7: перетаскиваемая граница ширины левого списка «Поля».
   const [leftWidth, setLeftWidth] = React.useState(260);
 
@@ -70,14 +71,6 @@ export function BuilderTab(props: Props): React.ReactElement {
     if (!meta) return undefined;
     const top = path.split('.')[0];
     return meta.fields.find(f => f.name === top);
-  }
-
-  /** Подпись поля выборки слева в зависимости от режима адресации под-вкладки. */
-  function selectFieldLabel(t: SelectedTable, f: SelectedField): string {
-    if (active === 'conditions') {
-      return `${defaultTableAlias(t)}.${f.path}`;
-    }
-    return f.alias || lastSegment(f.path);
   }
 
   /** ref поля выборки в зависимости от режима адресации. */
@@ -197,27 +190,16 @@ export function BuilderTab(props: Props): React.ReactElement {
           <div style={SECTION_HEADER}>{i18nT('common.fields')}</div>
           <div style={dropZone}>
             {/* Группа 1: текущие поля выборки */}
-            {sourceFields.map((f, i) => {
-              const t = selectedTables.find(s => s.id === f.tableId);
-              if (!t) return null;
-              const ref = selectFieldRef(t, f);
-              const isRef = isRefField(metaFieldFor(t, f.path));
-              return (
-                <div
-                  key={`sel:${f.tableId}:${f.path}:${i}`}
-                  draggable
-                  onDragStart={e => dragStart(e, { ref, isRef })}
-                  className="qc-row"
-                  style={{ ...ROW, cursor: 'grab', paddingRight: 4 }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP }}>
-                    <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
-                    {selectFieldLabel(t, f)}
-                  </span>
-                  <IconButton icon="chevron-right" tone="add" title={i18nT('actions.add')} onClick={() => addSelectField(f)} />
-                </div>
-              );
-            })}
+            <div data-field-source="builder-source">
+              <SelectedFieldsTree fields={sourceFields.filter(f => selectedTables.some(t => t.id === f.tableId))}
+                tables={selectedTables} metadata={metaTables}
+                labelFor={f => active === 'conditions' ? f.path : (f.alias || lastSegment(f.path))}
+                onDragStart={(e, f) => {
+                  const table = selectedTables.find(t => t.id === f.tableId)!;
+                  dragStart(e, { ref: selectFieldRef(table, f), isRef: isRefField(metaFieldFor(table, f.path)) });
+                }}
+                actionFor={f => <IconButton icon="chevron-right" tone="add" title={i18nT('actions.add')} onClick={() => addSelectField(f)} />} />
+            </div>
 
             {/* Группа 2: Все поля */}
             <div
@@ -231,38 +213,17 @@ export function BuilderTab(props: Props): React.ReactElement {
             {expandAll && selectedTables.map(t => {
               const meta = metaForTable(t);
               const alias = defaultTableAlias(t);
-              const open = !!expandedTables[t.id];
               return (
-                <div key={`all:${t.id}`}>
-                  <div
-                    className="qc-row"
-                    style={{ ...ROW, cursor: 'pointer', paddingLeft: 24, gap: TREE_ROW_GAP, justifyContent: 'flex-start' }}
-                    onClick={() => setExpandedTables(s => ({ ...s, [t.id]: !s[t.id] }))}
-                  >
-                    <Chevron expanded={open} />
-                    <MetaKindIcon kind={meta?.kind ?? null} />
-                    <span>{alias}</span>
-                  </div>
-                  {open && (meta?.fields ?? []).map(mf => {
+                <FieldSourceGroup key={`all:${t.id}`} label={alias} title={t.fullName}
+                  kind={meta?.kind ?? null} depth={1} defaultExpanded={false}>
+                  {(meta?.fields ?? []).map(mf => {
                     const ref = `${alias}.${mf.name}`;
                     const isRef = isRefField(mf);
-                    return (
-                      <div
-                        key={`all:${t.id}:${mf.name}`}
-                        draggable
-                        onDragStart={e => dragStart(e, { ref, isRef })}
-                        className="qc-row"
-                        style={{ ...ROW, cursor: 'grab', paddingLeft: 40, paddingRight: 4 }}
-                      >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP }}>
-                          <span className={`codicon codicon-${isRef ? 'references' : 'symbol-field'}`} style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
-                          {ref}
-                        </span>
-                        <IconButton icon="chevron-right" tone="add" title={i18nT('actions.add')} onClick={() => addAllField(t, mf.name)} />
-                      </div>
-                    );
+                    return <FieldSourceRow key={mf.name} label={mf.name} title={ref} depth={2}
+                      isReference={isRef} onDragStart={e => dragStart(e, { ref, isRef })}
+                      action={<IconButton icon="chevron-right" tone="add" title={i18nT('actions.add')} onClick={() => addAllField(t, mf.name)} />} />;
                   })}
-                </div>
+                </FieldSourceGroup>
               );
             })}
 
