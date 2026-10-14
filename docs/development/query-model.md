@@ -17,7 +17,7 @@ policies include all ordered scalar columns when there is no outer tabular
 projection, including scalar trailing fields created by wildcard expansion.
 Registry/Designer retain the scalar-head recovery boundary for nested output;
 semantics retains the full projection. Unnamed stars are not Designer columns.
-Duplicate explicit names are platform-invalid ([platform fixture](../../test/fixtures/platform/a2-duplicate-temp-columns.json)), so the remaining duplicate-name difference is invalid-input recovery only.
+Duplicate explicit names are platform-invalid ([platform fixture](../../test/fixtures/platform/a2-duplicate-temp-columns.json)), so their recovery is one rule for every consumer: a case-insensitive suffix (`Код, код` → `Код, код1`).
 Scalar UNION mapping remains separate.
 Parser, Designer and semantics share create/append/drop transitions through
 `tempTableLifetimes.ts`; Designer and semantics also share its lifecycle positions.

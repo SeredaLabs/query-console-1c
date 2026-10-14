@@ -20,8 +20,9 @@ SL_kza via validate_query/execute_query, platform build unknown): СхемаЗа
 execution reject `Код, Код`, `Код, код` and `Код, код, код1` with `Duplicate alias`
 at the second element — in a plain SELECT, in a `ПОМЕСТИТЬ` producer (so no temp
 table exists) and in either UNION member. Case does not matter; nothing renames.
-The registry/Designer/semantic suffix difference is therefore invalid-input recovery
-only, with no platform schema to match. One product gap found: a duplicate in a
+The registry/Designer/semantic suffix difference was therefore invalid-input recovery
+only, with no platform schema to match; it was then unified (one suffix rule for all
+three consumers). One product gap found: a duplicate in a
 later UNION member opens in the Designer and Apply drops that member's aliases,
 writing a valid query (fixed separately).
 
@@ -128,6 +129,6 @@ verify the real Designer field list and preserve the original wildcard text.
 Preserve nested-projection recovery while fixing these boundaries. Compare corpus
 text and production Designer behavior before/after without blind baseline updates.
 
-Then resolve duplicate-name policy explicitly. Keep the current A2 ledger as the
+Duplicate-name policy: resolved — one suffix rule for every consumer. Keep the current A2 ledger as the
 status source; this document is evidence, not a replacement roadmap. No new
 monolithic specification or architecture is proposed.
