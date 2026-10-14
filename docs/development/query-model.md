@@ -23,7 +23,13 @@ repeated creation must not revive an older schema in hover, table lists or packa
 Parser registry entries distinguish a defined name with unknown columns from an
 absent definition; an unknown new schema shadows older/external/inferred metadata
 without claiming an empty table or reusing old literal type markers.
-[A2](technical-debt.md#architecture) owns the remaining parser-lifecycle/schema work.
+[A2](technical-debt.md#architecture) owns the remaining schema-policy work.
+The [policy audit](audits/a2-producer-policy-audit-2026-10-14.md) records scalar-only
+trailing-column loss in downstream stars in analysis/constructor modes; production
+Designer preserve-mode controls retain those columns. A fake unresolved-star
+column does reach the Designer field list and has at least equal priority.
+Trailing fields do not imply a nested projection. Duplicate-name policy also
+remains open.
 Opaque HAVING, characteristics, grouping/report blocks and optional flags must
 survive unrelated edits; preservation and unsafe-input rules are specified in the
 [safety contract](contracts/safety-and-preservation.md).

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { QueryModel, SelectedField } from '../../src/core/query/queryModel';
+import { parseBatch } from '../../src/core/query/sdblParser';
+import type { MetadataResolver } from '../../src/core/query/metadataResolver';
 import { deriveProducerColumns } from '../../src/core/query/producerColumns';
 
 const field = (alias: string): SelectedField => ({ tableId: '', path: '', expression: '1', alias });
@@ -63,5 +65,38 @@ describe('A2 shared producer columns: existing compatibility boundaries', () => 
     expect(registry.columns.map(c => c.name)).toEqual(['Поле2', 'Поле2']);
     expect(registry.columns[0].element.kind === 'field' && registry.columns[0].element.field).toBe(shared);
     expect(deriveProducerColumns(model, 'semantic').columns.map(c => c.name)).toEqual(['Поле2', 'Поле21']);
+  });
+});
+
+
+describe('A2 producer policy boundary with and without source metadata', () => {
+  const query = 'ВЫБРАТЬ Н.*, 1 КАК Маркер ПОМЕСТИТЬ ВТ ИЗ Справочник.Источник КАК Н';
+  const resolver: MetadataResolver = {
+    tableByFullName: name => name === 'Справочник.Источник' ? {
+      kind: 'Справочник', name: 'Источник', fullName: name,
+      fields: [{ name: 'Код', kind: 'attribute', types: [] }],
+    } : undefined,
+  };
+  const policies = ['parser-registry', 'designer', 'semantic'] as const;
+
+  it.each(['preserve', 'constructor'] as const)('%s distinguishes unknown shape from resolved columns', wildcardPolicy => {
+    const unknown = parseBatch(query, undefined, { wildcardPolicy }).members[0].members[0].model;
+    // Characterization of the remaining A2 debt, not a valid column-name contract.
+    expect(policies.map(p => deriveProducerColumns(unknown, p).columns.map(c => c.name)))
+      .toEqual([['Маркер'], ['Н.*', 'Маркер'], ['Маркер']]);
+    expect(deriveProducerColumns(unknown, 'semantic').complete).toBe(false);
+
+    const known = parseBatch(query, resolver, { wildcardPolicy }).members[0].members[0].model;
+    // Existing A2 defect: star expansion puts even scalar-only suffixes into
+    // trailingFields. The registry/Designer head-only policy then loses them.
+    // Keep this characterization explicit until the separate schema fix.
+    if (wildcardPolicy === 'constructor') {
+      expect(known.tabSectionFields ?? []).toEqual([]);
+      expect(known.trailingFields?.map(f => f.alias)).toEqual(['Маркер']);
+    }
+    const expected = wildcardPolicy === 'constructor'
+      ? [['Код'], ['Код'], ['Код', 'Маркер']]
+      : [['Маркер'], ['Н.*', 'Маркер'], ['Маркер']];
+    expect(policies.map(p => deriveProducerColumns(known, p).columns.map(c => c.name))).toEqual(expected);
   });
 });
