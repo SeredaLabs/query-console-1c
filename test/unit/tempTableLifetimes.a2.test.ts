@@ -1,10 +1,56 @@
 import { describe, expect, it } from 'vitest';
 import { parseBatch } from '../../src/core/query/sdblParser';
-import { deriveTempTableLifetimePositions, newestLifetimeAt } from '../../src/core/query/tempTableLifetimes';
+import { advanceTempTableRegistry, deriveTempTableLifetimePositions, newestLifetimeAt } from '../../src/core/query/tempTableLifetimes';
 import { deriveTempTableLifetimes, visibleTempTableAt } from '../../src/core/query/tempTableSemantics';
 import { availableTempTables, availableTempTablesWithOrigin, initialState, reducer, derivePackageTempTableContinuity } from '../../src/webview/state/queryStore';
 
 describe('A2 shared temp-table lifetimes', () => {
+  it('matches sequential visibility to package positions, including unknown definitions and orphan operations', () => {
+    const batch = parseBatch([
+      'УНИЧТОЖИТЬ ВТ',
+      'ВЫБРАТЬ 0 КАК Код ДОБАВИТЬ ВТ',
+      'ВЫБРАТЬ 1 КАК Код ПОМЕСТИТЬ Вт',
+      'ВЫБРАТЬ Н.* ПОМЕСТИТЬ вт ИЗ Неизвестная КАК Н',
+      'ВЫБРАТЬ 2 КАК Код ДОБАВИТЬ ВТ',
+      'УНИЧТОЖИТЬ ВТ',
+      'УНИЧТОЖИТЬ ВТ',
+      'ВЫБРАТЬ 3 КАК Код ДОБАВИТЬ ВТ',
+      'ВЫБРАТЬ 4 КАК Новое ПОМЕСТИТЬ вТ',
+      'ВЫБРАТЬ ВТ.* ИЗ ВТ',
+    ].join('; '));
+    const positions = deriveTempTableLifetimePositions(batch.members).get('ВТ');
+    const active = new Map<string, { name: string; createIndex: number; schema: string[] | undefined }>();
+    const expected = [undefined, undefined, undefined, 2, 3, 3, undefined, undefined, undefined, 8];
+    const created: number[] = [];
+    batch.members.forEach((doc, index) => {
+      expect(active.get('ВТ')?.createIndex).toBe(expected[index]);
+      expect(newestLifetimeAt(positions, index)?.createIndex).toBe(expected[index]);
+      advanceTempTableRegistry(active, doc, name => {
+        created.push(index);
+        return { name, createIndex: index, schema: index === 3 ? undefined : ['Код'] };
+      });
+      if (index === 3 || index === 4) expect(active.get('ВТ')).toEqual({ name: 'вт', createIndex: 3, schema: undefined });
+    });
+    expect(created).toEqual([2, 3, 8]);
+  });
+
+  it('parses a creator against the preceding schema before replacing it', () => {
+    const batch = parseBatch('ВЫБРАТЬ 1 КАК Код ПОМЕСТИТЬ ВТ; '
+      + 'ВЫБРАТЬ ВТ.* ПОМЕСТИТЬ вт ИЗ ВТ; ВЫБРАТЬ ВТ.* ИЗ ВТ');
+    expect(batch.members[1].members[0].model.fields.map(f => f.path)).toEqual(['Код']);
+    expect(batch.members[2].members[0].model.fields.map(f => f.path)).toEqual(['Код']);
+    expect(deriveTempTableLifetimePositions(batch.members).get('ВТ')?.map(l => l.createIndex)).toEqual([0, 1]);
+  });
+
+  it('registers a UNION producer once using the compound carrier', () => {
+    const batch = parseBatch('ВЫБРАТЬ 1 КАК Код ПОМЕСТИТЬ ВТ ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ 2 КАК Другое; '
+      + 'ВЫБРАТЬ ВТ.* ИЗ ВТ');
+    expect(batch.members[1].members[0].model.fields.map(f => f.path)).toEqual(['Код']);
+    expect(deriveTempTableLifetimePositions(batch.members).get('ВТ')).toEqual([
+      { name: 'ВТ', createIndex: 0, appendIndices: [], dropIndex: null },
+    ]);
+  });
+
   it('keeps orphan operations separate, matches names case-insensitively and tracks independent creates', () => {
     const batch = parseBatch([
       'УНИЧТОЖИТЬ ВТ',

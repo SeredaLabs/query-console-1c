@@ -55,6 +55,7 @@ import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
 import { bareParamName } from './exprAutoAlias';
 import { deriveProducerColumns } from './producerColumns';
+import { advanceTempTableRegistry } from './tempTableLifetimes';
 import { selectColumnAliases, selectElementNames } from './unionModel';
 import { extractComments, rememberConditionComments, rememberNestedConditionComments } from './commentBinder';
 import type { QueryDocument, UnionMember } from './unionModel';
@@ -5956,22 +5957,15 @@ interface RegisteredTempTable {
 }
 
 function registerTempTables(doc: QueryDocument, tempTables: Map<string, RegisteredTempTable>): void {
-  const m0 = doc.members[0]?.model;
-  if (!m0 || !m0.tempTableName) return;
-  // `УНИЧТОЖИТЬ` closes the package lifetime. Leaving the old entry here made
-  // a later statement expand `ВТ.*` using columns of a table that no longer
-  // exists (and could also leak them into a later recreate with the same name).
-  if (m0.queryType === 'dropTemp') {
-    tempTables.delete(m0.tempTableName.toUpperCase());
-    return;
-  }
-  if (m0.queryType !== 'createTemp') return;
+  advanceTempTableRegistry(tempTables, doc, name => deriveRegisteredTempTable(doc.members[0].model, name));
+}
+
+function deriveRegisteredTempTable(m0: QueryModel, name: string): RegisteredTempTable {
   const cols = deriveProducerColumns(m0, 'parser-registry').columns;
   if (cols.length === 0) {
     // Unknown is not an empty schema. Keep the definition to shadow both a
     // previous package schema and external metadata, without proving any columns.
-    tempTables.set(m0.tempTableName.toUpperCase(), { name: m0.tempTableName, schema: undefined });
-    return;
+    return { name, schema: undefined };
   }
   // Колонка из ЧИСТОГО литерала (`"строка"`/число/булево) — ДОКАЗУЕМО нессылочная:
   // даём ей примитивный тип, чтобы `resolveBuilderStar` снял `.*` (`Товары.Ссылка.*`
@@ -5985,13 +5979,13 @@ function registerTempTables(doc: QueryDocument, tempTables: Map<string, Register
   }));
   const table: MetaTable = {
     kind: 'Справочник', // вид не используется развёрткой ВТ (нет ТЧ/виртуальных полей)
-    name: m0.tempTableName,
-    fullName: m0.tempTableName,
+    name,
+    fullName: name,
     fields,
   };
-  tempTables.set(m0.tempTableName.toUpperCase(), { name: m0.tempTableName, schema: table });
   // C24 step 1a: columns a wildcard may expand to — only when all are proven.
   markProvenTempTable(table, provenColumnNames(m0));
+  return { name, schema: table };
 }
 
 /**

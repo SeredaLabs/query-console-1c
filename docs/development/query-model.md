@@ -16,7 +16,8 @@ Temp producer columns use `deriveProducerColumns` over these facts. Its named
 compatibility policies preserve the parser/Designer scalar-head boundary and the
 semantic full projection, including their existing duplicate/star handling.
 Scalar UNION mapping remains separate; this step does not switch schema behavior.
-Designer and semantics share lifecycle positions through `tempTableLifetimes.ts`.
+Parser, Designer and semantics share create/append/drop transitions through
+`tempTableLifetimes.ts`; Designer and semantics also share its lifecycle positions.
 The newest preceding create shadows older lifetimes even after its drop; invalid
 repeated creation must not revive an older schema in hover, table lists or package links.
 Parser registry entries distinguish a defined name with unknown columns from an
