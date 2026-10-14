@@ -26,7 +26,8 @@ repeated creation must not revive an older schema in hover, table lists or packa
 Parser registry entries distinguish a defined name with unknown columns from an
 absent definition; an unknown new schema shadows older/external/inferred metadata
 without claiming an empty table or reusing old literal type markers.
-[A2](technical-debt.md#architecture) owns the remaining schema-policy work.
+A2 is closed (2026-10-14): the remaining differences are documented policies for
+platform-invalid input or an unknown source shape.
 The [policy audit](audits/a2-producer-policy-audit-2026-10-14.md) records the original
 scalar-tail loss and fake Designer column, now covered by regression tests.
 Trailing fields do not imply a nested projection. Duplicate explicit names never

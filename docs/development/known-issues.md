@@ -30,8 +30,9 @@ Ukrainian/Russian. Historical platform observations are indexed in [audits](audi
   existing inner-source binding even when intended as outer correlation. With
   known metadata they use the verified nearest enclosing owner. The validator
   skips subquery-condition field checks to avoid false negatives.
-- Temp producers with tabular/trailing projections can expose different column
-  sets in star expansion/designer versus semantic schema (A2). A complete inferred
+- A temp-table producer whose columns are not fully known (a `*` the parser could
+  not expand) makes hover/completion expand a later `*` over that temp table to the
+  known columns only (C24); the Designer keeps such a `*` as written. A complete inferred
   scalar temp schema supports position-aware field validation/assistance; inferred
   columns do not provide reference types for deeper navigation.
 
