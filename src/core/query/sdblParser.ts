@@ -55,6 +55,7 @@ import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
 import { bareParamName } from './exprAutoAlias';
 import { selectColumnAliases, selectElementNames } from './unionModel';
+import { isSynthesizedAlias } from './columnNames';
 import { extractComments, rememberConditionComments, rememberNestedConditionComments } from './commentBinder';
 import type { QueryDocument, UnionMember } from './unionModel';
 import type { BatchDocument } from './batchModel';
@@ -5361,7 +5362,10 @@ function parseDocumentInner(
   const columnAliases = models.length > 0 ? selectColumnAliases(models[0].fields, models[0]) : [];
 
   const members: UnionMember[] = models.map((model, i) => {
-    if (i > 0) rewriteMemberAliases(model, columnAliases);
+    // A member with a repeated explicit name is platform-invalid (`Duplicate alias`,
+    // any member): keep its names so the validator rejects it, as for member 0,
+    // instead of replacing them with valid column names (A2 platform fixture).
+    if (i > 0 && !hasDuplicateExplicitAlias(model)) rewriteMemberAliases(model, columnAliases);
     return { name: `Запрос ${i + 1}`, distinct: raw[i].distinct, model };
   });
 
@@ -5461,6 +5465,18 @@ function applyAccountingMeta(model: QueryModel, resolver: MetadataResolver): voi
     if (corr) v.correspondence = true;
     delete v.accountingArgs;
   }
+}
+
+/** Two explicit (not synthesized) select names equal case-insensitively. */
+function hasDuplicateExplicitAlias(model: QueryModel): boolean {
+  const seen = new Set<string>();
+  return model.fields.some(f => {
+    if (f.alias === undefined || isSynthesizedAlias(f)) return false;
+    const key = f.alias.toUpperCase();
+    if (seen.has(key)) return true;
+    seen.add(key);
+    return false;
+  });
 }
 
 /** Признак поля-заглушки `NULL` (ячейка отсутствующей колонки участника). */
