@@ -208,6 +208,11 @@ recovery text is an Apply source. Invalid input may be rejected on open or
 opened for inspection with Apply blocked; it must not be silently rewritten
 by an unchecked Save.
 
+A `#Имя` template marker is opaque text that BSL replaces before execution (U1):
+`decideApply` compares the written text with the query as opened from the document
+and refuses Apply when any marker gains or loses a neighbouring code token
+(`findChangedTemplateMarker`). [Template-marker checks](../../../test/unit/templateMarkers.u1.test.ts).
+
 An unchanged Apply writes nothing (C32). The host keeps, per Designer panel, the
 text Apply would write right after the first successful open of the source query
 (the webview reports it once per `loadModel.loadId`; the first report for a load
