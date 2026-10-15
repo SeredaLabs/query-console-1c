@@ -49,6 +49,8 @@ export function localizeDiagnostic(message: string): string {
   match = message.match(/^Поле "(.*)" не найдено в "(.*)"$/s);
   if (match) return t('diagnostic.fieldNotFound', { field: match[1], table: match[2] });
   if (message === 'Конструктор не может сохранить все комментарии этого запроса. При сохранении часть комментариев будет потеряна. Продолжить?') return t('diagnostic.commentLoss');
+  match = message.match(/^Конструктор изменил текст вокруг шаблонного маркера "(.*)"; применение заблокировано$/s);
+  if (match) return t('diagnostic.templateMarkerChanged', { marker: match[1] });
   if (message === 'Сгенерированный текст запроса содержит некорректное выражение; применение заблокировано') {
     return t('diagnostic.generatedMalformed');
   }

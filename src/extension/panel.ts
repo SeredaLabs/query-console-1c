@@ -166,7 +166,7 @@ export function createDesignerPanel(
       const reply: HostMsg = { type: 'metadataTree', tables: [...repository.getTables()] };
       panel.webview.postMessage(reply);
       if (queryText) {
-        const loadMsg: HostMsg = { type: 'loadModel', text: queryText, loadId: baseline.load(queryText) };
+        const loadMsg: HostMsg = { type: 'loadModel', text: queryText, loadId: baseline.load(queryText), sourceText: initialQueryText };
         panel.webview.postMessage(loadMsg);
       }
       if (repository.getTables().length === 0 && !cfPath) {

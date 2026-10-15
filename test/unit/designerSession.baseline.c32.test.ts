@@ -88,3 +88,21 @@ it('comment loss: a newer warning carries its own id', () => {
   controller.confirmCommentLoss();
   expect(loadedIds()).toEqual([2]);
 });
+
+// U1: the template-marker check at Apply compares with the query as opened from
+// the document — the host sends it as `sourceText`, also after a Classic ↔ Canvas
+// switch, when `text` is the other UI's generated text.
+it('sourceText: the host value wins; without it the first load is the source', () => {
+  const { controller } = start();
+  expect(controller.sourceText()).toBeUndefined();
+  session.receive!({ type: 'loadModel', text: 'ВЫБРАТЬ 1 КАК А', loadId: 1 });
+  expect(controller.sourceText()).toBe('ВЫБРАТЬ 1 КАК А');
+  session.receive!({ type: 'loadModel', text: 'ВЫБРАТЬ\n\t1 КАК А', loadId: 2 });
+  expect(controller.sourceText()).toBe('ВЫБРАТЬ 1 КАК А');
+});
+
+it('sourceText: after a switch the document query is kept, not the switched text', () => {
+  const { controller } = start();
+  session.receive!({ type: 'loadModel', text: 'ВЫБРАТЬ\n\t* ИЗ #Таблица КАК Таблица', loadId: 1, sourceText: 'ВЫБРАТЬ * ИЗ #Таблица' });
+  expect(controller.sourceText()).toBe('ВЫБРАТЬ * ИЗ #Таблица');
+});

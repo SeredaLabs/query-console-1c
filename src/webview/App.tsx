@@ -31,7 +31,7 @@ export function App(): React.ReactElement {
   const [, setLocaleRevision] = useState(0);
   // Сессия с хостом (ready → metadataTree → loadModel, загрузка/ошибка открытия) —
   // общая с Canvas (`hooks/useDesignerSession.ts`); здесь только Classic-сообщения.
-  const { loading, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss, loadedId } = useDesignerSession(dispatch, msg => {
+  const { loading, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss, loadedId, sourceText } = useDesignerSession(dispatch, msg => {
     if (msg.type === 'init') {
       // `locale` was added to a versionless host/WebView contract. A restored
       // panel or older harness may still send the previous shape; keep the
@@ -105,7 +105,7 @@ export function App(): React.ReactElement {
           // эта проверка на случай прямого вызова/будущей развязки условий, чтобы
           // «ОК» никогда не мог отправить insertText при известной ошибке генерации
           // ИЛИ известной потере данных виртуальной таблицы (ТЗ §27/§28).
-          const decision = decideApply(batchText, generationError, applyBlocker, buildResolver());
+          const decision = decideApply(batchText, generationError, applyBlocker, buildResolver(), sourceText());
           if (!decision.ok) {
             if (decision.kind === 'invalid') setOkError(decision.error);
             return;

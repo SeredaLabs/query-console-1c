@@ -12,8 +12,10 @@ export type HostMsg =
   | { type: 'metadataTree'; tables: MetaTable[] }
   | { type: 'refFields'; ref: RefId; fields: MetaField[] }
   | { type: 'refreshResult'; ok: boolean; message: string }
-  /** `loadId` names this load in the webview's `baseline` report (C32). */
-  | { type: 'loadModel'; text: string; loadId?: number };
+  /** `loadId` names this load in the webview's `baseline` report (C32).
+   * `sourceText` is the query as opened from the document — also after a
+   * Classic ↔ Canvas switch, when `text` is the other UI's generated text (U1). */
+  | { type: 'loadModel'; text: string; loadId?: number; sourceText?: string };
 
 export type WebviewMsg =
   | { type: 'ready' }
