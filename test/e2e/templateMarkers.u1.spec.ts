@@ -20,8 +20,9 @@ const inserts = (page: Page) => page.evaluate(() =>
 for (const surface of ['classic', 'canvas'] as const) {
   const button = surface === 'canvas' ? 'Сохранить' : 'ОК';
 
-  test(`${surface}: an unaliased marker source is not rewritten`, async ({ page }) => {
-    await open(page, surface, 'ВЫБРАТЬ * ИЗ #Таблица');
+  test(`${surface}: a marker whose surroundings would change is not rewritten`, async ({ page }) => {
+    // The bare field gets the marker's synthesized alias (`Таблица.Код`), so `КАК Таблица` stays.
+    await open(page, surface, 'ВЫБРАТЬ Код ИЗ #Таблица');
     await page.getByRole('button', { name: button, exact: true }).click();
     await expect(page.getByText(/шаблонного маркера "#Таблица"/u)).toBeVisible();
     expect(await inserts(page)).toEqual([]);
@@ -30,6 +31,13 @@ for (const surface of ['classic', 'canvas'] as const) {
       (window as unknown as { __webviewMessages: { type: string; text?: string }[] }).__webviewMessages);
     expect(requests.filter(m => m.type === 'closeIfUnchanged').map(m => m.text))
       .toEqual(requests.filter(m => m.type === 'baseline').map(m => m.text));
+  });
+
+  test(`${surface}: an unaliased marker source nothing refers to is applied as written (C33)`, async ({ page }) => {
+    await open(page, surface, 'ВЫБРАТЬ &Поля ИЗ #Таблица');
+    await page.getByRole('button', { name: button, exact: true }).click();
+    await expect.poll(async () => (await inserts(page)).length).toBe(1);
+    expect((await inserts(page))[0]).toMatch(/#Таблица\s*$/u);
   });
 
   test(`${surface}: a marker that keeps its surroundings is applied`, async ({ page }) => {

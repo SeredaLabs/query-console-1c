@@ -1,5 +1,5 @@
 {
- "source": "SL_kza, platform 8.3.15.1489, 2026-10-15, through the mcp_APIBackend server: \"platform\" = validate_query (СхемаЗапроса); nothing was executed, no table data read. \"designerApplied\" = this product's Designer open → Apply (preserve mode) at main 369ae5b+. U1: a `#Имя` template marker that BSL code replaces with text before running the query. The original and the Designer-applied template are compared after the same substitution.",
+ "source": "SL_kza, platform 8.3.15.1489, 2026-10-15, through the mcp_APIBackend server: \"platform\" = validate_query (СхемаЗапроса); nothing was executed, no table data read. \"designerApplied\" = this product's Designer open → Apply (preserve mode) at main 369ae5b+. U1: a `#Имя` template marker that BSL code replaces with text before running the query. The original and the Designer-applied template are compared after the same substitution. afterC33 (2026-10-18): the Designer text after the C33 change, substituted and validated the same way.",
  "corpusScan": {
   "packagesWithMarkers": 85,
   "markerContextChangedByDesigner": 5,
@@ -10,7 +10,11 @@
    "DataProcessors-ПоискИУдалениеДублей-Ext-ObjectModule.bsl_1.txt",
    "InformationRegisters-НастройкиОчисткиФайлов-Forms-ФормаЗаписи-Ext-Form-Module.bsl_1.txt"
   ],
-  "change": "an unaliased `#…` source gets `КАК <marker name>`"
+  "change": "an unaliased `#…` source gets `КАК <marker name>`",
+  "afterC33": {
+   "refused": [],
+   "note": "C33 (2026-10-18): the Designer no longer prints the synthesized alias of an unaliased marker source nothing refers to; the 5 packages are applied unchanged around their markers."
+  }
  },
  "validatorNote": "validate_query now accepts templates with `#` markers as written (e.g. `ВЫБРАТЬ * ИЗ #Таблица` → no columns); on 2026-09-29 (RP22) it answered `Table not found`. A golden `valid` flag for marker packages is validator behavior, not a platform verdict.",
  "cases": [
@@ -72,6 +76,14 @@
       ]
      ]
     }
+   },
+   "afterC33": {
+    "designerApplied": "ВЫБРАТЬ\n\t*\nИЗ\n\t#Таблица",
+    "substituted": "ВЫБРАТЬ\n\t*\nИЗ\n\tСправочник.Валюты",
+    "platformSubstituted": {
+     "accepted": true,
+     "sameColumnsAsOriginal": true
+    }
    }
   },
   {
@@ -106,6 +118,14 @@
       "col": 2,
       "message": "Field not found \"Справочник.Валюты.Код\""
      }
+    }
+   },
+   "afterC33": {
+    "designerApplied": "ВЫБРАТЬ\n\t&Поля\nИЗ\n\t#Таблица",
+    "substituted": "ВЫБРАТЬ\n\tСправочник.Валюты.Код\nИЗ\n\tСправочник.Валюты",
+    "platformSubstituted": {
+     "accepted": true,
+     "sameColumnsAsOriginal": true
     }
    }
   },
@@ -142,6 +162,14 @@
       "message": "Syntax error \"КАК\""
      }
     }
+   },
+   "afterC33": {
+    "designerApplied": "ВЫБРАТЬ\n\t&Поля\nИЗ\n\t#Таблица",
+    "substituted": "ВЫБРАТЬ\n\tВалюты.Код\nИЗ\n\tСправочник.Валюты КАК Валюты",
+    "platformSubstituted": {
+     "accepted": true,
+     "sameColumnsAsOriginal": true
+    }
    }
   },
   {
@@ -176,6 +204,14 @@
       "message": "Table name expected"
      }
     }
+   },
+   "afterC33": {
+    "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\n\t\tЛЕВОЕ СОЕДИНЕНИЕ #Соединение\n\t\tПО (ИСТИНА)",
+    "substituted": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Замена\n\t\tПО (ИСТИНА)",
+    "platformSubstituted": {
+     "accepted": true,
+     "sameColumnsAsOriginal": true
+    }
    }
   },
   {
@@ -209,6 +245,14 @@
        "Код"
       ]
      ]
+    }
+   },
+   "afterC33": {
+    "designerApplied": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\t#Таблица КАК Т",
+    "substituted": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т",
+    "platformSubstituted": {
+     "accepted": true,
+     "sameColumnsAsOriginal": true
     }
    }
   }

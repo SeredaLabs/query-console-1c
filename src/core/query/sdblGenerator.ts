@@ -2709,6 +2709,34 @@ export function generateDocument(doc: QueryDocument, opts: GenerateOptions = {})
 }
 
 function generateDocumentMembers(doc: QueryDocument): string {
+  return dropUnusedMarkerAliases(generateDocumentMembersText(doc), doc);
+}
+
+/**
+ * C33: a `#Имя` template marker used as a source without `КАК` gets a synthesized
+ * alias (`#Таблица КАК Таблица`); BSL replaces the marker with arbitrary text, so the
+ * added `КАК` breaks the substituted query (U1 platform evidence). In `preserve` (the
+ * Designer) the alias is not printed when nothing in the query is qualified by it —
+ * the source is kept as written. A marker whose alias qualifies a field keeps it
+ * (and the U1 Apply rule refuses that change).
+ */
+function dropUnusedMarkerAliases(text: string, doc: QueryDocument): string {
+  if (generationPolicy !== 'preserve') return text;
+  for (const member of doc.members) {
+    for (const t of member.model.tables) {
+      if (!t.aliasSynthesized || t.subquery || !t.fullName.startsWith('#')) continue;
+      const source = new RegExp(`${escapeRegExp(t.fullName)} КАК ([\\p{L}\\p{N}_]+)(?![\\p{L}\\p{N}_])`, 'u').exec(text);
+      const ranges = codeRanges(text);
+      if (!source || !ranges || !isCodeAt(ranges, source.index)) continue;
+      const qualifier = new RegExp(`(?:^|[^\\p{L}\\p{N}_.#&])${escapeRegExp(source[1])}\\.`, 'gu');
+      if ([...text.matchAll(qualifier)].some(m => isCodeAt(ranges, m.index + m[0].length - 1))) continue;
+      text = text.slice(0, source.index) + t.fullName + text.slice(source.index + source[0].length);
+    }
+  }
+  return text;
+}
+
+function generateDocumentMembersText(doc: QueryDocument): string {
   const members = doc.members;
   if (members.length === 0) return '';
   if (members.length === 1) return generateModel(members[0].model);

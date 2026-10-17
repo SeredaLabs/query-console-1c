@@ -85,6 +85,7 @@ optional external grammar oracle did not run; oracle-only tests then report
 *skipped*. External grammars are differential signals, not platform verdicts. U2 remains an evidence gap,
 not a platform-invalid verdict.
 - A `#Имя` template marker is opaque text: Apply is refused when the designer would
-  change the tokens around any marker (for example an added `КАК` after an unaliased
-  `#Таблица` source); edit such a query in the module text (C33). Historical scope/provenance claims and complete
+  change the tokens around any marker. An unaliased `#Таблица` source is written as
+  is unless a field is qualified by its synthesized alias (`Код` → `Таблица.Код`);
+  such a query is still refused — edit it in the module text. Historical scope/provenance claims and complete
 former narratives are retained in the [checkpoint](audits/archive/known-issues-e3b36a5.md).
