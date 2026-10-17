@@ -12,13 +12,18 @@ export type HostMsg =
   | { type: 'metadataTree'; tables: MetaTable[] }
   | { type: 'refFields'; ref: RefId; fields: MetaField[] }
   | { type: 'refreshResult'; ok: boolean; message: string }
-  /** `loadId` names this load in the webview's `baseline` report (C32). */
-  | { type: 'loadModel'; text: string; loadId?: number };
+  /** `loadId` names this load in the webview's `baseline` report (C32).
+   * `sourceText` is the query as opened from the document — also after a
+   * Classic ↔ Canvas switch, when `text` is the other UI's generated text (U1). */
+  | { type: 'loadModel'; text: string; loadId?: number; sourceText?: string };
 
 export type WebviewMsg =
   | { type: 'ready' }
   | { type: 'expandRef'; ref: RefId }
   | { type: 'insertText'; text: string }
+  /** U1/C32: request only a no-write close against the host's accepted baseline.
+   * A changed text or missing baseline must never fall through to insertion. */
+  | { type: 'closeIfUnchanged'; text: string }
   /** C32: the text Apply would write right after load `loadId` was opened — the
    * host keeps the first one for the source query and closes an unchanged Apply
    * without writing. */

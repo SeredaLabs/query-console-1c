@@ -2,6 +2,7 @@ import { validateBatchText } from '../core/query/validateBatch';
 import { parseBatch } from '../core/query/sdblParser';
 import { findUnsafeVirtualTables, findMalformedCustomExpressions } from '../core/query/semanticValidator';
 import type { MetadataResolver } from '../core/query/metadataResolver';
+import { findChangedTemplateMarker, templateMarkerChangedMessage } from '../core/query/templateMarkers';
 import { assembleBatch, type QueryState } from './state/queryStore';
 
 /**
@@ -38,8 +39,8 @@ export type ApplyDecision =
   | { ok: true }
   /** Empty text, a generation error or a static blocker — the UI already shows why. */
   | { ok: false; kind: 'blocked' }
-  /** The generated text failed the same check as opening from text (`validateBatchText`). */
-  | { ok: false; kind: 'invalid'; error: string };
+  /** Generated text is unsafe to write. A marker refusal may still request a host-only no-write close. */
+  | { ok: false; kind: 'invalid'; error: string; templateMarker?: string };
 
 /**
  * Final check at the moment of applying. Re-validates the generated text with
@@ -54,14 +55,22 @@ export type ApplyDecision =
  * comment); the tolerant parser then reparses it by swallowing the following
  * sections into that expression, so validation alone passes. The same
  * malformed-expression check therefore also runs on the reparsed output.
+ *
+ * U1: `originalText` is the query as opened from the document. Every `#Имя`
+ * template marker must keep its neighbouring tokens (`findChangedTemplateMarker`):
+ * BSL replaces the marker with arbitrary text, so a changed surrounding would
+ * change the substituted query.
  */
 export function decideApply(
   text: string,
   generationError: string | null,
   blocker: StaticApplyBlocker | null,
   resolver: MetadataResolver | undefined,
+  originalText?: string,
 ): ApplyDecision {
   if (!text.trim() || generationError !== null || blocker !== null) return { ok: false, kind: 'blocked' };
+  const marker = originalText === undefined ? undefined : findChangedTemplateMarker(originalText, text);
+  if (marker !== undefined) return { ok: false, kind: 'invalid', error: templateMarkerChangedMessage(marker), templateMarker: marker };
   const v = validateBatchText(text, resolver);
   if (!v.ok) return { ok: false, kind: 'invalid', error: v.error };
   if (findMalformedCustomExpressions(parseBatch(text, resolver)).length > 0) {

@@ -367,6 +367,7 @@
   "diagnostic.unclosedDate": "unclosed date literal",
   "diagnostic.unsupportedSyntax": "syntax near this position is incomplete or unsupported",
   "diagnostic.generatedMalformed": "The generated query text contains a malformed expression; applying is blocked",
+  "diagnostic.templateMarkerChanged": "The designer changed the text around template marker \"{marker}\"; applying is blocked. The code that substitutes text for the marker could break. Edit this query in the module text.",
   "diagnostic.unknownCoreError": "Query analysis failed with an unsupported diagnostic",
   "warning.likeLeadingWildcard": "A LIKE pattern starts with \"%\" and cannot use an index",
   "warning.fullJoin": "A full join can be inefficient because it scans both tables",

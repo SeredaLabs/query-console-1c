@@ -72,7 +72,7 @@ export function App(): React.ReactElement {
   // перезапише LOAD_BATCH) і `loadError` (блокуючий overlay нижче, лише Close —
   // жодного `insertText` поверх оригінального тексту, який Canvas не відкрив).
   // Тут лише Canvas-специфічне: локаль.
-  const { loading, metadataLoaded, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss, loadedId } = useDesignerSession(dispatch, msg => {
+  const { loading, metadataLoaded, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss, loadedId, sourceText } = useDesignerSession(dispatch, msg => {
     if (msg.type === 'init' && msg.locale) {
       setLocale(msg.locale);
       // Texts Canvas reuses from Classic instead of duplicating (core diagnostics
@@ -105,9 +105,12 @@ export function App(): React.ReactElement {
    */
   const handleSave = React.useCallback(() => {
     if (commentLossPending) return;
-    const decision = decideApply(batchText.text, batchText.error, applyBlocker, buildResolver());
+    const decision = decideApply(batchText.text, batchText.error, applyBlocker, buildResolver(), sourceText());
     if (!decision.ok) {
-      if (decision.kind === 'invalid') setSaveError(localizeDiagnostic(decision.error));
+      if (decision.kind === 'invalid') {
+        setSaveError(localizeDiagnostic(decision.error));
+        if (decision.templateMarker !== undefined) postToHost({ type: 'closeIfUnchanged', text: batchText.text });
+      }
       return;
     }
     setSaveError(null);

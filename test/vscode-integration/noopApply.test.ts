@@ -78,7 +78,7 @@ describe('Extension Host: C32 an unchanged Apply does not write', () => {
     fs.rmSync(storage, { recursive: true, force: true });
   });
 
-  async function openClassic(literal = LITERAL, query = QUERY) {
+  async function openClassic(literal = LITERAL, query = QUERY, hasSource = true) {
     const original = `${PREFIX}${literal}${SUFFIX}`;
     const doc = await vscode.workspace.openTextDocument({ language: 'plaintext', content: original });
     const editor = await vscode.window.showTextDocument(doc);
@@ -89,7 +89,7 @@ describe('Extension Host: C32 an unchanged Apply does not write', () => {
     } as vscode.ExtensionContext;
     panel = createPanel(context, FIXTURE_CF, channel, {
       document: doc, selection: editor.selection, documentVersion: doc.version,
-      queryRange: { start: PREFIX.length, end: PREFIX.length + literal.length },
+      queryRange: { start: PREFIX.length, end: PREFIX.length + (hasSource ? literal.length : 0) },
       wrapAsBslString: true,
     }, query);
     let disposed = false;
@@ -123,6 +123,62 @@ describe('Extension Host: C32 an unchanged Apply does not write', () => {
     assert.strictEqual(doc.getText(), original);
     assert.strictEqual(await vscode.env.clipboard.readText(), SENTINEL);
   });
+
+  for (const surface of ['classic', 'canvas']) {
+    it(`U1 ${surface}: unchanged marker template closes without writing`, async function () {
+      this.timeout(40000);
+      const query = 'ВЫБРАТЬ * ИЗ #Таблица';
+      const { doc, original, messages, isDisposed } = await openClassic(`"${query}"`, query);
+      if (surface === 'canvas') {
+        await switchToCanvas(panel!, doc, original);
+        canvasSave(panel!);
+      } else inject(panel!, classicReady(CLICK_OK));
+      assert.ok(await waitUntil(isDisposed, 15000), `unchanged marker Apply did not close the Designer: ${JSON.stringify(messages)}`);
+      assert.strictEqual(doc.getText(), original);
+      assert.strictEqual(await vscode.env.clipboard.readText(), SENTINEL);
+    });
+  }
+
+  it('U1 without a source baseline: the close-only request cannot write or close', async function () {
+    this.timeout(30000);
+    const query = 'ВЫБРАТЬ * ИЗ #Таблица';
+    const { doc, original, messages, isDisposed } = await openClassic(`"${query}"`, query, false);
+    inject(panel!, classicReady(CLICK_OK));
+    assert.ok(await waitUntil(() => messages.some(m => m.type === 'closeIfUnchanged'), 15000));
+    assert.strictEqual(isDisposed(), false);
+    assert.ok(!messages.some(m => m.type === 'insertText'));
+    assert.strictEqual(doc.getText(), original);
+    assert.strictEqual(await vscode.env.clipboard.readText(), SENTINEL);
+  });
+
+  for (const switchAfterEdit of [false, true]) {
+    it(`U1 edited marker stays blocked (switch=${switchAfterEdit})`, async function () {
+      this.timeout(40000);
+      const query = 'ВЫБРАТЬ * ИЗ #Таблица';
+      const { doc, original, messages, isDisposed } = await openClassic(`"${query}"`, query);
+      const distinct = JSON.stringify(['ru', 'en', 'uk'].map(l =>
+        JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'src/webview/i18n', `${l}.json`), 'utf8'))['additional.distinct']));
+      inject(panel!, classicReady(`
+        document.querySelector('[data-tab="Дополнительно"]').click();
+        const edit = setInterval(() => {
+          const label = [...document.querySelectorAll('label')].find(l => ${distinct}.includes(l.textContent.trim()));
+          const box = label && label.querySelector('input[type="checkbox"]');
+          if (!box) return;
+          clearInterval(edit);
+          box.click();
+          setTimeout(() => { ${switchAfterEdit ? SWITCH_TO_CANVAS : CLICK_OK} }, 200);
+        }, 50);`));
+      if (switchAfterEdit) {
+        assert.ok(await waitUntil(() => panel!.webview.html.includes('canvasApp.js'), 15000));
+        canvasSave(panel!);
+      }
+      assert.ok(await waitUntil(() => messages.some(m => m.type === 'closeIfUnchanged'), 15000));
+      assert.strictEqual(isDisposed(), false, 'an edit must not be discarded as unchanged');
+      assert.ok(!messages.some(m => m.type === 'insertText'));
+      assert.strictEqual(doc.getText(), original);
+      assert.strictEqual(await vscode.env.clipboard.readText(), SENTINEL);
+    });
+  }
 
   it('a batch with UNION: OK without a change does not write', async function () {
     this.timeout(30000);

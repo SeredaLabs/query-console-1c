@@ -29,6 +29,9 @@ export interface DesignerSession {
    * as its `LOAD_BATCH` (after a confirmed comment loss too); `undefined` until then
    * or when the host sent no id. */
   loadedId: number | undefined;
+  /** U1: the query as opened from the document, for the template-marker check at
+   * Apply (`decideApply`); `undefined` for a new query. */
+  sourceText: () => string | undefined;
 }
 
 /**
@@ -50,6 +53,8 @@ export function useDesignerSession(
   const commentLossPending = lostComments.length > 0;
   const pendingCommentLossRef = React.useRef<BatchDocument | null>(null);
   const pendingLoadIdRef = React.useRef<number | undefined>(undefined);
+  const sourceTextRef = React.useRef<string | undefined>(undefined);
+  const sourceText = React.useCallback(() => sourceTextRef.current, []);
   const [loadedId, setLoadedId] = React.useState<number | undefined>(undefined);
   const expectModelRef = React.useRef(false);
   const metaTablesRef = React.useRef<MetaTable[]>([]);
@@ -86,6 +91,9 @@ export function useDesignerSession(
         pendingCommentLossRef.current = null;
         setLostComments([]);
         pendingLoadIdRef.current = msg.loadId;
+        // The host names the document's query; without it the first load is it.
+        if (msg.sourceText !== undefined) sourceTextRef.current = msg.sourceText;
+        else if (sourceTextRef.current === undefined) sourceTextRef.current = msg.text;
         const r = tryOpenDesignerBatch(msg.text, buildResolver());
         if (r.ok) { dispatch({ type: 'LOAD_BATCH', doc: r.doc }); setLoadedId(msg.loadId); setLoadError(null); }
         else if ('commentLossDoc' in r) {
@@ -101,5 +109,5 @@ export function useDesignerSession(
     return unsub;
   }, [dispatch, buildResolver]);
 
-  return { loading, metadataLoaded, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss, loadedId };
+  return { loading, metadataLoaded, loadError, buildResolver, commentLossPending, lostComments, confirmCommentLoss, loadedId, sourceText };
 }

@@ -360,5 +360,6 @@ date not recorded).
   no recorded text.
 
 `source.template-marker` (U1) opens with a stable round trip and Apply allowed;
-platform evidence (2026-10-15) shows that the Designer's added `КАК` on an unaliased
-marker source breaks substituted templates — a ledger defect (U1).
+platform evidence (2026-10-15) showed that the Designer's added `КАК` on an unaliased
+marker source breaks substituted templates; Apply is now refused whenever the tokens
+around any marker would change (U1, closed; editing such sources is C33).
