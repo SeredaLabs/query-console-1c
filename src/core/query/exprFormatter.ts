@@ -1297,7 +1297,12 @@ function stripRedundantCallWrapParens(text: string): string {
   positions.sort((a, b) => b - a);
   let out = text;
   for (const p of positions) {
-    out = out.slice(0, p) + ' ' + out.slice(p + 1);
+    // A removed parenthesis becomes a space only where it separated two tokens;
+    // next to existing whitespace it is just removed (C28: `(МАКСИМУМ(Код)) + …`
+    // left `МАКСИМУМ(Код)  + …` until a second open collapsed it).
+    const outer = out[p] === '(' ? out[p - 1] : out[p + 1];
+    const sep = outer === undefined || /\s/u.test(outer) ? '' : ' ';
+    out = out.slice(0, p) + sep + out.slice(p + 1);
   }
   // Подчистка прилегающих к снятым скобкам пробелов — только горизонтальных (не \n).
   // Снятая ВЕДУЩАЯ/ХВОСТОВАЯ скобка целиком-охватывающей пары оставляет пробел на
