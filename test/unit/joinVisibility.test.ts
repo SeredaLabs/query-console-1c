@@ -77,14 +77,38 @@ describe('computeJoinVisibility', () => {
     expect(visibility.get(outer)).toEqual(new Set(['t0', 't1', 't2']));
   });
 
-  it('falls back to "every table visible" for disconnected (comma-separated) FROM sources — matches the existing flat behavior, not yet improved', () => {
+  it('comma-separated roots: a join sees only its own chain (U3, platform: another root is "Field not found")', () => {
     const model = parseQuery(
       'ВЫБРАТЬ Т1.Код ИЗ Справочник.Номенклатура КАК Т1, Справочник.Номенклатура КАК Т2 ' +
         'ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Номенклатура КАК Т3 ПО Т2.Код = Т3.Код',
     );
     const visibility = computeJoinVisibility(model);
     const [join] = model.joins!;
-    expect(visibility.get(join)).toEqual(new Set(['t0', 't1', 't2']));
+    expect(visibility.get(join)).toEqual(new Set(['t1', 't2']));
+  });
+
+  it('comma-separated roots: each root keeps its own accumulating chain, whichever comes first', () => {
+    const model = parseQuery(
+      'ВЫБРАТЬ 1 ИЗ Справочник.А КАК Т1 ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Г КАК Т4 ПО Т4.К = Т1.К, ' +
+        'Справочник.Б КАК Т2 ЛЕВОЕ СОЕДИНЕНИЕ Справочник.В КАК Т3 ПО Т3.К = Т2.К ' +
+        'ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Д КАК Т5 ПО Т5.К = Т3.К',
+    );
+    const visibility = computeJoinVisibility(model);
+    const [first, second, third] = model.joins!;
+    expect(visibility.get(first)).toEqual(new Set(['t0', 't1']));
+    expect(visibility.get(second)).toEqual(new Set(['t2', 't3']));
+    expect(visibility.get(third)).toEqual(new Set(['t2', 't3', 't4']));
+  });
+
+  it('comma-separated roots: a right-nested sub-chain still follows rules 2–3 inside its root', () => {
+    const model = parseQuery(
+      'ВЫБРАТЬ 1 ИЗ Справочник.А КАК Т1, Справочник.Б КАК Т2 ЛЕВОЕ СОЕДИНЕНИЕ Справочник.В КАК Т3 ' +
+        'ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Д КАК Т5 ПО Т5.К = Т3.К ПО Т3.К = Т2.К',
+    );
+    const visibility = computeJoinVisibility(model);
+    const [outer, inner] = model.joins!;
+    expect(visibility.get(inner)).toEqual(new Set(['t2', 't3']));
+    expect(visibility.get(outer)).toEqual(new Set(['t1', 't2', 't3']));
   });
 
   it('a self-join (same metadata table, two aliases) still tracks each table instance by its own distinct id', () => {

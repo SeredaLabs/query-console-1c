@@ -28,13 +28,16 @@
  *    accumulated chain so far, plus the entire nested sub-chain (which has
  *    already "closed" from its own perspective by the time c_ab is resolved).
  *
- * Falls back to treating every table in `model.tables` as visible to every
- * join when the `ИЗ` clause has more than one disconnected root (comma-
- * separated sources, each starting its own chain) — real 1C's behavior for
- * that combination has not been verified yet, and this fallback exactly
- * matches this project's existing, corpus-proven `qualifyBareFields.ts`
- * assumption, so it can never regress below today's behavior, only sometimes
- * not yet improve on it.
+ * 4. Comma-separated roots (U3, СхемаЗапроса on SL_kza 8.3.15.1489,
+ *    2026-10-15, `test/fixtures/platform/u3-comma-join-visibility.json`): a
+ *    join condition sees only its OWN chain — a qualified or bare reference to
+ *    another comma root is `Field not found`, whether that root is listed
+ *    before or after the chain, and a bare name present in the own chain and
+ *    in another root binds to the own chain. Each root's chain is resolved by
+ *    rules 1–3 from that root.
+ *
+ * Joins without chain positions (`seedTableId`/`joinedTableId`, joins created
+ * in the UI) keep the previous fallback for several roots: every table visible.
  */
 import type { QueryModel, Join, SelectedTable } from './queryModel';
 
@@ -106,6 +109,31 @@ function resolveChain(
 }
 
 /**
+ * Rule 4: splits the top-level joins into one chain per comma root. A top-level
+ * join continues a chain when its seed is a table that chain already contains
+ * (the chain's root or any table it joined, nested ones included); otherwise its
+ * seed starts a new chain.
+ */
+function resolveCommaRoots(roots: readonly JoinTreeNode[], result: Map<Join, ReadonlySet<string>>): void {
+  const chains: Array<{ seed: string; tables: Set<string>; nodes: JoinTreeNode[] }> = [];
+  const collect = (node: JoinTreeNode, into: Set<string>): void => {
+    if (node.join.joinedTableId !== undefined) into.add(node.join.joinedTableId);
+    for (const child of node.children) collect(child, into);
+  };
+  for (const node of roots) {
+    const seed = node.join.seedTableId!;
+    let chain = chains.find(c => c.tables.has(seed));
+    if (!chain) {
+      chain = { seed, tables: new Set([seed]), nodes: [] };
+      chains.push(chain);
+    }
+    chain.nodes.push(node);
+    collect(node, chain.tables);
+  }
+  for (const chain of chains) resolveChain(chain.nodes, chain.seed, result);
+}
+
+/**
  * For each join in `model.joins`, the set of table ids that are valid
  * bare-field-ownership candidates for that join's own `ПО` condition. Empty
  * map if the model has no joins.
@@ -116,6 +144,10 @@ export function computeJoinVisibility(model: QueryModel): ReadonlyMap<Join, Read
   if (joins.length === 0) return result;
 
   if (!isSingleConnectedChain(model.tables, joins)) {
+    if (joins.every(j => j.seedTableId !== undefined && j.joinedTableId !== undefined)) {
+      resolveCommaRoots(buildJoinTree(joins), result);
+      return result;
+    }
     const all = new Set(model.tables.map((t) => t.id));
     for (const j of joins) result.set(j, all);
     return result;
