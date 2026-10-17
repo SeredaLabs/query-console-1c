@@ -184,3 +184,19 @@ describe('corpusFileName', () => {
     expect(corpusFileName(rel, 1).endsWith('_2.txt')).toBe(true);
   });
 });
+
+describe('C34: the extractor uses the editor dialect decision', () => {
+  it('extracts English 1C queries and skips native SQL', () => {
+    const bsl = [
+      'А = "SELECT C.Code AS Code FROM Catalog.Валюты AS C";',
+      'Б = "SELECT TOP 10 * FROM [dbo].[Orders]";',
+      'В = "DROP TT";',
+    ].join('\n');
+    expect(extractQueryStrings(bsl).map(q => q.text)).toEqual(['SELECT C.Code AS Code FROM Catalog.Валюты AS C', 'DROP TT']);
+  });
+
+  it('the same in DCS XML templates', () => {
+    const xml = '<query>SELECT 1 AS A</query>\n<query>SELECT * FROM t WHERE id = @id</query>';
+    expect(extractQueriesFromXml(xml).map(q => q.text)).toEqual(['SELECT 1 AS A']);
+  });
+});

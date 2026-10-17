@@ -9,6 +9,8 @@
  * реально наблюдалось при первой версии этого разделения. Здесь такого guard'а
  * нет вообще, так что импортировать эти функции в другой bundle безопасно.
  */
+import { detectQueryDialect } from './queryDialect';
+
 const NAMED_XML_ENTITIES: Record<string, string> = {
   amp: '&',
   lt: '<',
@@ -42,17 +44,14 @@ export interface ExtractedQuery {
   lineStart: number;
 }
 
-const QUERY_KEYWORDS = ['ВЫБРАТЬ', 'УНИЧТОЖИТЬ'];
-
-function startsWithQueryKeyword(text: string): boolean {
-  const trimmed = text.replace(/^[\s﻿]+/, '');
-  const upper = trimmed.toUpperCase();
-  return QUERY_KEYWORDS.some((kw) => {
-    if (!upper.startsWith(kw)) return false;
-    // Граница: после ключевого слова либо конец, либо не буква/цифра.
-    const next = trimmed.charAt(kw.length);
-    return next === '' || !/[\p{L}\p{N}_]/u.test(next);
-  });
+/**
+ * A query literal, by the same dialect decision as the editor (`queryDialect.ts`,
+ * C2): a 1C query (`sdbl`) or an English start that does not parse (`unknown`);
+ * native SQL is not extracted.
+ */
+function isQueryLiteral(text: string): boolean {
+  const dialect = detectQueryDialect(text.replace(/^[\s\uFEFF]+/, ''), text);
+  return dialect !== undefined && dialect !== 'nativeSql';
 }
 
 /**
@@ -74,7 +73,7 @@ function unpipe(rawBody: string): string {
 /**
  * Сканирует исходник BSL, находит все строковые литералы в двойных кавычках
  * (с учётом экранирования `""` и продолжений `|`), восстанавливает их текст
- * и оставляет только те, что начинаются с ВЫБРАТЬ/УНИЧТОЖИТЬ.
+ * и оставляет только запросы 1С (`isQueryLiteral`).
  */
 export function extractQueryStrings(bslSource: string): ExtractedQuery[] {
   const result: ExtractedQuery[] = [];
@@ -128,7 +127,7 @@ export function extractQueryStrings(bslSource: string): ExtractedQuery[] {
         i++;
       }
       const text = unpipe(raw);
-      if (startsWithQueryKeyword(text)) {
+      if (isQueryLiteral(text)) {
         result.push({ text, lineStart });
       }
       continue;
@@ -145,7 +144,7 @@ export function extractQueryStrings(bslSource: string): ExtractedQuery[] {
  * Безопасно регэкспом — внутри текста запроса любой `<` экранирован как
  * `&lt;`, поэтому `</query>` в теле встретиться не может. Тело декодируется
  * из XML-сущностей и фильтруется по тому же критерию, что и BSL-литералы
- * (начинается с ВЫБРАТЬ/УНИЧТОЖИТЬ). Тело отдаётся дословно (без trim).
+ * (`isQueryLiteral`). Тело отдаётся дословно (без trim).
  */
 export function extractQueriesFromXml(xmlSource: string): ExtractedQuery[] {
   const result: ExtractedQuery[] = [];
@@ -154,7 +153,7 @@ export function extractQueriesFromXml(xmlSource: string): ExtractedQuery[] {
   while ((m = re.exec(xmlSource)) !== null) {
     const lineStart = xmlSource.slice(0, m.index).split('\n').length;
     const text = unescapeXmlEntities(m[1]);
-    if (startsWithQueryKeyword(text)) {
+    if (isQueryLiteral(text)) {
       result.push({ text, lineStart });
     }
   }
