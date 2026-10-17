@@ -13,7 +13,7 @@ reasoning and phases; the [ledger](technical-debt.md) (V5) owns status.
 The gate is a Query Core v1 blocker (ledger V5, P1): Core v1 cannot be
 declared until it holds with sufficient coverage confidence. It is not a claim
 that the current product is unsafe; concrete known gaps are separate C items
-(C2).
+(currently C24; C2 was fixed on 2026-10-17).
 
 The claim is bounded: it never says the whole 1C grammar is proven, and it is
 always reported with coverage confidence:
