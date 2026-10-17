@@ -127,7 +127,7 @@ describe('Extension Host: C32 an unchanged Apply does not write', () => {
   for (const surface of ['classic', 'canvas']) {
     it(`U1 ${surface}: unchanged marker template closes without writing`, async function () {
       this.timeout(40000);
-      const query = 'ВЫБРАТЬ * ИЗ #Таблица';
+      const query = 'ВЫБРАТЬ Код ИЗ #Таблица';
       const { doc, original, messages, isDisposed } = await openClassic(`"${query}"`, query);
       if (surface === 'canvas') {
         await switchToCanvas(panel!, doc, original);
@@ -141,7 +141,7 @@ describe('Extension Host: C32 an unchanged Apply does not write', () => {
 
   it('U1 without a source baseline: the close-only request cannot write or close', async function () {
     this.timeout(30000);
-    const query = 'ВЫБРАТЬ * ИЗ #Таблица';
+    const query = 'ВЫБРАТЬ Код ИЗ #Таблица';
     const { doc, original, messages, isDisposed } = await openClassic(`"${query}"`, query, false);
     inject(panel!, classicReady(CLICK_OK));
     assert.ok(await waitUntil(() => messages.some(m => m.type === 'closeIfUnchanged'), 15000));
@@ -154,7 +154,7 @@ describe('Extension Host: C32 an unchanged Apply does not write', () => {
   for (const switchAfterEdit of [false, true]) {
     it(`U1 edited marker stays blocked (switch=${switchAfterEdit})`, async function () {
       this.timeout(40000);
-      const query = 'ВЫБРАТЬ * ИЗ #Таблица';
+      const query = 'ВЫБРАТЬ Код ИЗ #Таблица';
       const { doc, original, messages, isDisposed } = await openClassic(`"${query}"`, query);
       const distinct = JSON.stringify(['ru', 'en', 'uk'].map(l =>
         JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'src/webview/i18n', `${l}.json`), 'utf8'))['additional.distinct']));

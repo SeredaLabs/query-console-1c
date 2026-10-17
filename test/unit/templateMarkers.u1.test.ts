@@ -44,15 +44,21 @@ describe('U1: the text around a template marker must stay as written', () => {
   });
 });
 
-describe('U1: platform fixture — a template the Designer would break is refused', () => {
+describe('U1/C33: platform fixture — the Designer keeps every template working', () => {
   const evidence = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'platform', 'u1-template-markers.json'), 'utf8'));
   it.each(evidence.cases.map((c: { name: string }) => [c.name, c]))('%s', (_name, c: any) => {
-    const { decision } = designerApply(c.template);
-    const brokenByApply = c.platform.originalSubstituted.accepted && !c.platform.designerAppliedSubstituted.accepted;
-    // Every template the platform shows broken by Apply is refused; a marker that
-    // already has its alias is written as before.
-    if (brokenByApply) expect(decision).toMatchObject({ ok: false, kind: 'invalid' });
-    if (c.name === 'U1d_marker_aliased_kept') expect(decision).toEqual({ ok: true });
+    const { generated, decision } = designerApply(c.template);
+    // C33: the unaliased marker source is written as is, so Apply is allowed, and the
+    // substituted text works on the platform with the columns of the original.
+    expect(generated).toBe(c.afterC33.designerApplied);
+    expect(decision).toEqual({ ok: true });
+    expect(c.afterC33.platformSubstituted).toEqual({ accepted: true, sameColumnsAsOriginal: true });
+  });
+
+  it('a marker whose synthesized alias qualifies a field keeps it, and Apply is refused', () => {
+    const { generated, decision } = designerApply('ВЫБРАТЬ Код ИЗ #Таблица');
+    expect(generated).toContain('#Таблица КАК Таблица');
+    expect(decision).toMatchObject({ ok: false, templateMarker: '#Таблица' });
   });
 });
 
@@ -62,13 +68,14 @@ describe('U1: corpus packages with template markers', () => {
     .filter(g => /#[\p{L}_]/u.test(g.input));
   const evidence = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'platform', 'u1-template-markers.json'), 'utf8'));
 
-  it('only the packages whose marker surroundings the Designer changes are refused', () => {
+  it('no corpus marker package is refused after C33 (5 were before)', () => {
     expect(gold).toHaveLength(evidence.corpusScan.packagesWithMarkers);
     const refused = gold.filter(g => {
       const open = tryOpenDesignerBatch(g.input);
       if (!open.ok) return false;
       return !designerApply(g.input).decision.ok;
     }).map(g => g.file).sort();
-    expect(refused).toEqual([...evidence.corpusScan.files].sort());
+    expect(evidence.corpusScan.files).toHaveLength(5);
+    expect(refused).toEqual(evidence.corpusScan.afterC33.refused);
   });
 });

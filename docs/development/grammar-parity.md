@@ -362,4 +362,5 @@ date not recorded).
 `source.template-marker` (U1) opens with a stable round trip and Apply allowed;
 platform evidence (2026-10-15) showed that the Designer's added `КАК` on an unaliased
 marker source breaks substituted templates; Apply is now refused whenever the tokens
-around any marker would change (U1, closed; editing such sources is C33).
+around any marker would change (U1, closed); an unaliased marker source nothing
+refers to is written without the added `КАК` (C33, closed 2026-10-18).
