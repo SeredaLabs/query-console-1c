@@ -40,6 +40,9 @@ export interface QueryParseProblem {
 export function computeQueryParseProblems(source: string): QueryParseProblem[] {
   const problems: QueryParseProblem[] = [];
   for (const hit of findAllQueryLiterals(source)) {
+    // C2: only a literal known to be a 1C query is checked; an English start that
+    // does not parse may be native SQL or an unfinished query (`queryDialect.ts`).
+    if (hit.dialect !== 'sdbl') continue;
     const attempt = tryParseBatch(hit.text);
     if (attempt.ok && findMalformedCustomExpressions(attempt.doc).length === 0) continue;
     const range = findQueryKeywordRange(source, hit);

@@ -6,21 +6,26 @@
  * экранирование `""`, продолжения `|`, пропуск комментариев `//` и литералов дат
  * `'…'`. В отличие от него, здесь дополнительно отслеживаются символьные смещения
  * открывающей/закрывающей кавычек, чтобы команда могла заменить литерал при сохранении.
+ * Запросом считается литерал, чей диалект (`core/query/queryDialect.ts`) — `sdbl` или
+ * `unknown`: здесь распознаются и английские `SELECT`/`DROP` (C2), а нативный SQL — нет.
  *
  * Модуль ДОЛЖЕН оставаться чистым (без `import vscode`/`fs`) — он юнит-тестируется.
  * Привязка к команде vscode — отдельная задача (6.6.B).
  */
 
+import { detectQueryDialect, QUERY_START_WORDS, type QueryDialect } from '../core/query/queryDialect';
+
 export interface QueryHit {
   /** Восстановленный (de-piped) текст запроса — то, что передаётся в `parseBatch`. */
   text: string;
+  /** C2: `sdbl` or `unknown` (an English start that does not parse); native SQL is not a hit. */
+  dialect: Exclude<QueryDialect, 'nativeSql'>;
   /** Смещение открывающей кавычки. */
   start: number;
   /** Смещение за закрывающей кавычкой: `[start, end)` охватывает кавычки литерала. */
   end: number;
 }
 
-const QUERY_KEYWORDS = ['ВЫБРАТЬ', 'УНИЧТОЖИТЬ'];
 
 /**
  * Снимает ведущую «тривию» — пробелы (включая BOM) И строки-комментарии `//…` — до
@@ -42,15 +47,6 @@ function stripLeadingTrivia(text: string): string {
   return s;
 }
 
-function startsWithQueryKeyword(text: string): boolean {
-  const trimmed = stripLeadingTrivia(text);
-  const upper = trimmed.toUpperCase();
-  return QUERY_KEYWORDS.some((kw) => {
-    if (!upper.startsWith(kw)) return false;
-    const next = trimmed.charAt(kw.length);
-    return next === '' || !/[\p{L}\p{N}_]/u.test(next);
-  });
-}
 
 /**
  * Восстанавливает текст запроса из тела BSL-литерала: убирает ведущие пробелы и
@@ -115,10 +111,11 @@ export function findAllQueryLiterals(source: string): QueryHit[] {
         i++;
       }
       const text = unpipe(raw);
-      if (startsWithQueryKeyword(text)) {
+      const dialect = detectQueryDialect(stripLeadingTrivia(text), text);
+      if (dialect !== undefined && dialect !== 'nativeSql') {
         // Конец диапазона — за закрывающей кавычкой (или за концом строки, если её нет).
         const endExclusive = closePos === -1 ? n : closePos + 1;
-        hits.push({ text, start: openPos, end: endExclusive });
+        hits.push({ text, dialect, start: openPos, end: endExclusive });
       }
       continue;
     }
@@ -136,7 +133,7 @@ export function findAllQueryLiterals(source: string): QueryHit[] {
  * для `document.positionAt` без пересчёта.
  *
  * Сначала находим индекс ключевого слова В `hit.text` — тем же критерием
- * (`stripLeadingTrivia`/`startsWithQueryKeyword`), которым уже отобран этот hit,
+ * (`stripLeadingTrivia`/`detectQueryDialect`), которым уже отобран этот hit,
  * так что совпадение гарантировано. Затем переводим этот индекс в (номер строки,
  * колонка) — ключевое слово не может пересекать перевод строки — и находим сырое
  * смещение начала ЭТОЙ ЖЕ строки в исходном документе: `unpipe` не добавляет и не
@@ -168,7 +165,7 @@ export function findQueryKeywordRange(source: string, hit: QueryHit): { start: n
     if (rest === before) break;
   }
   const upper = rest.toUpperCase();
-  const kw = QUERY_KEYWORDS.find((k) => {
+  const kw = QUERY_START_WORDS.find((k) => {
     if (!upper.startsWith(k)) return false;
     const next = rest.charAt(k.length);
     return next === '' || !/[\p{L}\p{N}_]/u.test(next);
