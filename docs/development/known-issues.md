@@ -79,7 +79,7 @@ distinguish repository regression checks, recorded platform canonical output and
 optional live/independent grammar workflows. Missing grammar WASM means the
 optional external grammar oracle did not run; oracle-only tests then report
 *skipped*. External grammars are differential signals, not platform verdicts. U2 remains an evidence gap,
-not a platform-invalid verdict. U3 (comma-root join visibility in hover/constructor mode) is a confirmed defect.
+not a platform-invalid verdict.
 - A `#Имя` template marker is opaque text: Apply is refused when the designer would
   change the tokens around any marker (for example an added `КАК` after an unaliased
   `#Таблица` source); edit such a query in the module text (C33). Historical scope/provenance claims and complete

@@ -19,8 +19,8 @@ Canvas phase numbers. The ledger owns status/priority and exit boundaries;
    consistency gate, then the catalog from independent sources, fuzz, a
    deduplicated live 1C batch and bounded per-construct fixes. Start C2 (P1)
    from a bounded token-identity spike and attested RU/EN pairs (A1 is closed). Improve V1 provenance/negative coverage and add bounded V3
-   transformation checks. U1/U3 platform evidence was acquired (2026-10-15; now
-   ledger defects); U2 still needs a base with sequences. Do not treat
+   transformation checks. U1 and U3 were settled on the platform and fixed
+   (2026-10-15/17); U2 still needs a base with sequences. Do not treat
    local tests as platform verdicts. The first phases need no live 1C and can
    accompany architecture slices.
 4. **Product UX:** prioritize concrete UX-C1–3/7–9 workflows from the current
