@@ -6,6 +6,7 @@
  * комментарии), чтобы последующие подзадачи могли извлекать сырые срезы
  * исходного текста (произвольные выражения, параметры виртуальных таблиц).
  */
+import { ENGLISH_KEYWORDS, ENGLISH_WORDS } from './sdblEnglish';
 
 export type TokenType =
   | 'keyword'
@@ -117,6 +118,12 @@ function isIdentStart(ch: string): boolean {
 
 function isIdentPart(ch: string): boolean {
   return ch === '_' || /[\p{L}\p{N}]/u.test(ch);
+}
+
+/** Whether the last token is a `.` that ends right at `pos`. */
+function adjacentAfterDot(tokens: readonly Token[], pos: number): boolean {
+  const last = tokens[tokens.length - 1];
+  return last !== undefined && last.type === 'punct' && last.value === '.' && last.pos + 1 === pos;
 }
 
 function isDigit(ch: string): boolean {
@@ -274,10 +281,15 @@ export function tokenize(text: string, opts?: { comments?: boolean }): Token[] {
         advance();
       }
       const upper = value.toUpperCase();
-      if (KEYWORDS.has(upper)) {
+      // C2: an English keyword is its Russian pair (`sdblEnglish.ts`). A word written
+      // right after `.` is a path segment — a name in either language (platform:
+      // `E.Order`, `ВТ.Упорядочить`). Only directly adjacent: `К.` followed by a
+      // keyword on the next line is an unfinished path while typing.
+      const keyword = adjacentAfterDot(tokens, startPos) ? undefined : KEYWORDS.has(upper) ? upper : ENGLISH_KEYWORDS.get(upper);
+      if (keyword) {
         // value — канонический верхний регистр (для логики парсера),
         // text — исходное написание (для восстановления имени).
-        push('keyword', upper, startPos, startLine, startCol, value);
+        push('keyword', keyword, startPos, startLine, startCol, value);
       } else {
         push('ident', value, startPos, startLine, startCol);
       }
@@ -358,10 +370,29 @@ export function codeRanges(text: string): Array<[number, number]> | undefined {
  * Whether `t` is one of `words` (given in canonical upper case) in any spelling:
  * an ident or keyword whose canonical value, upper-cased, is in `words`. Keywords
  * already carry the canonical upper-case value; idents compare case-insensitively.
+ * An English spelling counts as its Russian pair (C2, `sdblEnglish.ts`).
  * Literals, comments, numbers, parameters and punctuation are never words.
  */
 export function isWordToken(t: Token | undefined, ...words: string[]): boolean {
-  return !!t && (t.type === 'ident' || t.type === 'keyword') && words.includes(t.value.toUpperCase());
+  if (!t || (t.type !== 'ident' && t.type !== 'keyword')) return false;
+  if (words.includes(t.value.toUpperCase())) return true;
+  return ENGLISH_WORDS.get(t.text.toUpperCase())?.some(w => words.includes(w)) ?? false;
+}
+
+/**
+ * The canonical (Russian, upper-case) word of an ident or keyword token, for
+ * comparing with word lists: a keyword's value, the Russian pair of an English
+ * contextual word (its first one, C2), otherwise the upper-cased text. Not a name:
+ * names keep the token's own text.
+ */
+export function wordOf(t: Token): string {
+  return t.type === 'keyword' ? t.value : canonicalWord(t.text);
+}
+
+/** `wordOf` for a name spelled as text (a path segment): upper-cased, English → Russian. */
+export function canonicalWord(text: string): string {
+  const upper = text.toUpperCase();
+  return ENGLISH_WORDS.get(upper)?.[0] ?? upper;
 }
 
 /**

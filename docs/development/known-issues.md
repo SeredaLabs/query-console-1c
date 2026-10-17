@@ -8,7 +8,8 @@ Ukrainian/Russian. Historical platform observations are indexed in [audits](audi
 ## Query editing and IDE assistance
 
 - Detection recognizes static BSL strings beginning with `ВЫБРАТЬ`/`УНИЧТОЖИТЬ`.
-  English SDBL is unsupported despite recorded platform acceptance (C2). Dynamic
+  English SDBL parses, but English queries are not yet detected in BSL and English
+  metadata names are not resolved (C2, in progress). Dynamic
   string composition cannot be evaluated; the extension does not execute queries.
 - Parsing/Apply checks supported structure and selected metadata semantics, not
   full grammar, arbitrary-expression validity or input/output equivalence. Unknown
