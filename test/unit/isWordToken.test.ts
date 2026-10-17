@@ -1,6 +1,7 @@
 /**
  * `isWordToken` — the lexer's word-role primitive (A1-1): an ident or keyword
- * whose canonical value, upper-cased, is one of the given words. Literals,
+ * whose canonical value, upper-cased, is one of the given words (an English
+ * spelling counts as its Russian word, C2). Literals,
  * comments, numbers, parameters and punctuation are never words.
  */
 import { describe, it, expect } from 'vitest';
@@ -28,9 +29,10 @@ describe('isWordToken', () => {
     expect(isWordToken(tok('ИНАЧЕ'), 'КОГДА', 'ТОГДА')).toBe(false);
   });
 
-  it('English word only when passed as an argument', () => {
-    expect(isWordToken(tok('when'), 'КОГДА')).toBe(false);
+  it('an English spelling counts as its Russian word (C2)', () => {
+    expect(isWordToken(tok('when'), 'КОГДА')).toBe(true);
     expect(isWordToken(tok('when'), 'КОГДА', 'WHEN')).toBe(true);
+    expect(isWordToken(tok('when'), 'ТОГДА')).toBe(false);
   });
 
   it('a word not among the arguments', () => {

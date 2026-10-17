@@ -24,7 +24,7 @@
  * квалифицированные ссылки (`Алиас.Поле`, где голова — псевдоним источника) и
  * псевдонимы после `КАК`.
  */
-import { tokenize, type Token } from './sdblLexer';
+import { tokenize, wordOf, type Token } from './sdblLexer';
 import type { QueryModel, SelectedField, SelectedTable, Condition, FieldRef } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import type { QueryDocument } from './unionModel';
@@ -402,17 +402,20 @@ function qualifyExpression(raw: string, ctx: OwnerContext): string {
         continue;
       }
     }
-    if (STRUCTURAL.has(word) || LITERALS.has(word) || PERIOD_WORDS.has(word)) continue;
+    // Word roles compare the canonical word (an English spelling is its Russian
+    // pair, C2); `word` stays the name for alias and column lookups.
+    const canon = wordOf(t);
+    if (STRUCTURAL.has(canon) || LITERALS.has(canon) || PERIOD_WORDS.has(canon)) continue;
 
     const prev = sig[i - 1];
     const next = sig[i + 1];
-    const prevV = prev ? up(prev.text ?? prev.value) : '';
+    const prevV = prev ? wordOf(prev) : '';
     const nextV = next ? (next.text ?? next.value) : '';
 
     // Оператор проверки типа `<expr> ССЫЛКА <Тип>`: слово ССЫЛКА перед префиксом типа
     // метаданных — это оператор, а не поле (поле `Ссылка` стоит как значение, без типа
     // следом). Пропускаем.
-    if (word === 'ССЫЛКА' && next && (next.type === 'ident' || next.type === 'keyword')
+    if (canon === 'ССЫЛКА' && next && (next.type === 'ident' || next.type === 'keyword')
         && TYPE_PREFIXES.has(up(next.text ?? next.value))) continue;
 
     // Голова пути после `.` — это сегмент уже-квалифицированной ссылки/типа; пропускаем.
@@ -424,7 +427,7 @@ function qualifyExpression(raw: string, ctx: OwnerContext): string {
     // временные таблицы `#Имя` и односегментные имена, не попавшие в `aliases`.
     if (prevV === 'ИЗ' || prevV === 'СОЕДИНЕНИЕ' || prevV === 'ПОМЕСТИТЬ') continue;
     // Имя примитивного типа после `КАК` уже отсечено; в ТИП(СТРОКА) — пропускаем тип.
-    if (PRIMITIVE_TYPE_WORDS.has(word) && (prevV === 'КАК' || prevV === '(')) continue;
+    if (PRIMITIVE_TYPE_WORDS.has(canon) && (prevV === 'КАК' || prevV === '(')) continue;
     // Вызов функции — имя перед `(`.
     if (nextV === '(') continue;
 

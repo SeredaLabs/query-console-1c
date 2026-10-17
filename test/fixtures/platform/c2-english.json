@@ -1,0 +1,1448 @@
+{
+ "source": "SL_kza, platform 8.3.15.1489, 2026-10-17, through the mcp_APIBackend server: \"platform\" = validate_query (СхемаЗапроса); nothing was executed. \"designerApplied\" = this product's Designer open → Apply (preserve mode, no metadata) on branch feat/c2-bilingual-tokens, each generated text then validated on the platform.",
+ "verdict": "C2: the platform reads one bilingual word table. English keywords, functions, period words and metadata names are accepted, mixed freely with Russian; the canonical text (СхемаЗапроса) is Russian, aliases and names inside ЗНАЧЕНИЕ()/ТИП() are kept as written. Words reserved as an alias are the same in both languages (`КАК From` is rejected like `AS ИЗ`). A word written right after `.` is a name in either language (`E.Order`, `ВТ.Упорядочить`).",
+ "notes": "Failures in the metadataNames and russianControls groups come from objects or attributes absent in SL_kza (the Russian controls fail the same way), not from the language. GROUPING SETS / ГРУППИРУЮЩИМ НАБОРАМ and the newer string functions are rejected in both languages on 8.3.15.",
+ "cases": [
+  {
+   "name": "select_from_as",
+   "group": "keywords",
+   "query": "SELECT Cur.Code AS Code FROM Catalog.Валюты AS Cur",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur"
+   }
+  },
+  {
+   "name": "top_distinct_allowed",
+   "group": "keywords",
+   "query": "SELECT ALLOWED DISTINCT TOP 5 Cur.Code AS Code FROM Catalog.Валюты AS Cur",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ РАЗРЕШЕННЫЕ РАЗЛИЧНЫЕ ПЕРВЫЕ 5\n\tCur.Код КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur"
+   }
+  },
+  {
+   "name": "where_not_and_or",
+   "group": "keywords",
+   "query": "SELECT Cur.Code FROM Catalog.Валюты AS Cur WHERE NOT Cur.DeletionMark AND (Cur.Code = \"1\" OR Cur.Code = \"2\")",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tНЕ Cur.ПометкаУдаления\n\tИ (Cur.Код = \"1\"\n\t\t\tИЛИ Cur.Код = \"2\")"
+   }
+  },
+  {
+   "name": "like_escape",
+   "group": "keywords",
+   "query": "SELECT Cur.Code FROM Catalog.Валюты AS Cur WHERE Cur.Code LIKE \"%1%\" ESCAPE \"~\"",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Код ПОДОБНО \"%1%\" СПЕЦСИМВОЛ \"~\""
+   }
+  },
+  {
+   "name": "in_between",
+   "group": "keywords",
+   "query": "SELECT Cur.Code FROM Catalog.Валюты AS Cur WHERE Cur.Code IN (\"1\",\"2\") OR Cur.Code BETWEEN \"0\" AND \"9\"",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\t(Cur.Код В (\"1\", \"2\")\n\t\t\tИЛИ Cur.Код МЕЖДУ \"0\" И \"9\")"
+   }
+  },
+  {
+   "name": "in_hierarchy",
+   "group": "keywords",
+   "query": "SELECT Cur.Code FROM Catalog.Валюты AS Cur WHERE Cur.Ref IN HIERARCHY (&P)",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ссылка В ИЕРАРХИИ(&P)"
+   }
+  },
+  {
+   "name": "is_null",
+   "group": "keywords",
+   "query": "SELECT Cur.Code FROM Catalog.Валюты AS Cur WHERE Cur.Description IS NOT NULL",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Наименование ЕСТЬ НЕ NULL "
+   }
+  },
+  {
+   "name": "refs",
+   "group": "keywords",
+   "query": "SELECT Cur.Code FROM Catalog.Валюты AS Cur WHERE Cur.Ref REFS Catalog.Валюты",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ссылка ССЫЛКА Справочник.Валюты"
+   }
+  },
+  {
+   "name": "value_emptyref",
+   "group": "keywords",
+   "query": "SELECT Cur.Code FROM Catalog.Валюты AS Cur WHERE Cur.Ref <> VALUE(Catalog.Валюты.EmptyRef)",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ссылка <> ЗНАЧЕНИЕ(Catalog.Валюты.EmptyRef)"
+   }
+  },
+  {
+   "name": "value_ru_pustaya",
+   "group": "keywords",
+   "query": "SELECT Cur.Code FROM Catalog.Валюты AS Cur WHERE Cur.Ref <> VALUE(Catalog.Валюты.ПустаяСсылка)",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ссылка <> ЗНАЧЕНИЕ(Catalog.Валюты.ПустаяСсылка)"
+   }
+  },
+  {
+   "name": "type_valuetype",
+   "group": "keywords",
+   "query": "SELECT Cur.Code FROM Catalog.Валюты AS Cur WHERE VALUETYPE(Cur.Ref) = TYPE(Catalog.Валюты)",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tТИПЗНАЧЕНИЯ(Cur.Ссылка) = ТИП(Catalog.Валюты)"
+   }
+  },
+  {
+   "name": "undefined_true_false",
+   "group": "keywords",
+   "query": "SELECT TRUE AS A, FALSE AS B, UNDEFINED AS C, NULL AS D",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tИСТИНА КАК A,\n\tЛОЖЬ КАК B,\n\tНЕОПРЕДЕЛЕНО КАК C,\n\tNULL КАК D"
+   }
+  },
+  {
+   "name": "case",
+   "group": "keywords",
+   "query": "SELECT CASE WHEN Cur.DeletionMark THEN 1 ELSE 0 END AS M FROM Catalog.Валюты AS Cur",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tВЫБОР\n\t\tКОГДА Cur.ПометкаУдаления\n\t\t\tТОГДА 1\n\t\tИНАЧЕ 0\n\tКОНЕЦ КАК M\nИЗ\n\tСправочник.Валюты КАК Cur"
+   }
+  },
+  {
+   "name": "cast_string",
+   "group": "keywords",
+   "query": "SELECT CAST(Cur.Code AS STRING(10)) AS S FROM Catalog.Валюты AS Cur",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tВЫРАЗИТЬ(Cur.Код КАК СТРОКА(10)) КАК S\nИЗ\n\tСправочник.Валюты КАК Cur"
+   }
+  },
+  {
+   "name": "cast_number_bool_date",
+   "group": "keywords",
+   "query": "SELECT CAST(1 AS NUMBER(10,2)) AS N, CAST(TRUE AS BOOLEAN) AS L, CAST(DATETIME(2020,1,1) AS DATE) AS D",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tВЫРАЗИТЬ(1 КАК ЧИСЛО(10, 2)) КАК N,\n\tВЫРАЗИТЬ(ИСТИНА КАК БУЛЕВО) КАК L,\n\tВЫРАЗИТЬ(ДАТАВРЕМЯ(2020, 1, 1) КАК ДАТА) КАК D"
+   }
+  },
+  {
+   "name": "cast_catalog",
+   "group": "keywords",
+   "query": "SELECT CAST(Cur.Ref AS Catalog.Валюты) AS R FROM Catalog.Валюты AS Cur",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tВЫРАЗИТЬ(Cur.Ссылка КАК Справочник.Валюты) КАК R\nИЗ\n\tСправочник.Валюты КАК Cur"
+   }
+  },
+  {
+   "name": "funcs_str",
+   "group": "keywords",
+   "query": "SELECT ISNULL(Cur.Description, \"\") AS A, SUBSTRING(Cur.Description, 1, 3) AS B, PRESENTATION(Cur.Ref) AS C, REFPRESENTATION(Cur.Ref) AS D FROM Catalog.Валюты AS Cur",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tЕСТЬNULL(Cur.Наименование, \"\") КАК A,\n\tПОДСТРОКА(Cur.Наименование, 1, 3) КАК B,\n\tПРЕДСТАВЛЕНИЕ(Cur.Ссылка) КАК C,\n\tПРЕДСТАВЛЕНИЕССЫЛКИ(Cur.Ссылка) КАК D\nИЗ\n\tСправочник.Валюты КАК Cur"
+   }
+  },
+  {
+   "name": "funcs_date",
+   "group": "keywords",
+   "query": "SELECT DATEADD(DATETIME(2020,1,1), DAY, 1) AS A, DATEDIFF(DATETIME(2020,1,1), DATETIME(2020,2,1), DAY) AS B, BEGINOFPERIOD(DATETIME(2020,1,1), MONTH) AS C, ENDOFPERIOD(DATETIME(2020,1,1), YEAR) AS D",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tДОБАВИТЬКДАТЕ(ДАТАВРЕМЯ(2020, 1, 1), ДЕНЬ, 1) КАК A,\n\tРАЗНОСТЬДАТ(ДАТАВРЕМЯ(2020, 1, 1), ДАТАВРЕМЯ(2020, 2, 1), ДЕНЬ) КАК B,\n\tНАЧАЛОПЕРИОДА(ДАТАВРЕМЯ(2020, 1, 1), МЕСЯЦ) КАК C,\n\tКОНЕЦПЕРИОДА(ДАТАВРЕМЯ(2020, 1, 1), ГОД) КАК D"
+   }
+  },
+  {
+   "name": "funcs_parts",
+   "group": "keywords",
+   "query": "SELECT YEAR(DATETIME(2020,1,1)) AS A, QUARTER(DATETIME(2020,1,1)) AS B, MONTH(DATETIME(2020,1,1)) AS C, DAYOFYEAR(DATETIME(2020,1,1)) AS D, DAY(DATETIME(2020,1,1)) AS E, WEEK(DATETIME(2020,1,1)) AS F, WEEKDAY(DATETIME(2020,1,1)) AS G, HOUR(DATETIME(2020,1,1)) AS H, MINUTE(DATETIME(2020,1,1)) AS I, SECOND(DATETIME(2020,1,1)) AS J",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tГОД(ДАТАВРЕМЯ(2020, 1, 1)) КАК A,\n\tКВАРТАЛ(ДАТАВРЕМЯ(2020, 1, 1)) КАК B,\n\tМЕСЯЦ(ДАТАВРЕМЯ(2020, 1, 1)) КАК C,\n\tДЕНЬГОДА(ДАТАВРЕМЯ(2020, 1, 1)) КАК D,\n\tДЕНЬ(ДАТАВРЕМЯ(2020, 1, 1)) КАК E,\n\tНЕДЕЛЯ(ДАТАВРЕМЯ(2020, 1, 1)) КАК F,\n\tДЕНЬНЕДЕЛИ(ДАТАВРЕМЯ(2020, 1, 1)) КАК G,\n\tЧАС(ДАТАВРЕМЯ(2020, 1, 1)) КАК H,\n\tМИНУТА(ДАТАВРЕМЯ(2020, 1, 1)) КАК I,\n\tСЕКУНДА(ДАТАВРЕМЯ(2020, 1, 1)) КАК J"
+   }
+  },
+  {
+   "name": "aggregates",
+   "group": "keywords",
+   "query": "SELECT COUNT(DISTINCT Cur.Ref) AS A, SUM(1) AS B, MAX(Cur.Code) AS C, MIN(Cur.Code) AS D, AVG(1) AS E FROM Catalog.Валюты AS Cur",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tКОЛИЧЕСТВО(РАЗЛИЧНЫЕ Cur.Ссылка) КАК A,\n\tСУММА(1) КАК B,\n\tМАКСИМУМ(Cur.Код) КАК C,\n\tМИНИМУМ(Cur.Код) КАК D,\n\tСРЕДНЕЕ(1) КАК E\nИЗ\n\tСправочник.Валюты КАК Cur"
+   }
+  },
+  {
+   "name": "joins",
+   "group": "keywords",
+   "query": "SELECT C1.Code FROM Catalog.Валюты AS C1 LEFT OUTER JOIN Catalog.Валюты AS C2 ON C1.Ref = C2.Ref INNER JOIN Catalog.Валюты AS C3 ON C1.Ref = C3.Ref RIGHT JOIN Catalog.Валюты AS C4 ON C1.Ref = C4.Ref FULL OUTER JOIN Catalog.Валюты AS C5 ON C1.Ref = C5.Ref",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tC1.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК C4\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК C1\n\t\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК C2\n\t\t\tПО C1.Ссылка = C2.Ссылка\n\t\t\tВНУТРЕННЕЕ СОЕДИНЕНИЕ Справочник.Валюты КАК C3\n\t\t\tПО C1.Ссылка = C3.Ссылка\n\t\t\tПОЛНОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК C5\n\t\t\tПО C1.Ссылка = C5.Ссылка\n\t\tПО C1.Ссылка = C4.Ссылка"
+   }
+  },
+  {
+   "name": "join_plain",
+   "group": "keywords",
+   "query": "SELECT C1.Code FROM Catalog.Валюты AS C1 JOIN Catalog.Валюты AS C2 ON C1.Ref = C2.Ref",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tC1.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК C1\n\t\tВНУТРЕННЕЕ СОЕДИНЕНИЕ Справочник.Валюты КАК C2\n\t\tПО C1.Ссылка = C2.Ссылка"
+   }
+  },
+  {
+   "name": "group_having_order",
+   "group": "keywords",
+   "query": "SELECT Cur.Code AS Code, COUNT(*) AS N FROM Catalog.Валюты AS Cur GROUP BY Cur.Code HAVING COUNT(*) > 0 ORDER BY Code DESC, N ASC AUTOORDER",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Code,\n\tКОЛИЧЕСТВО(*) КАК N\nИЗ\n\tСправочник.Валюты КАК Cur\n\nСГРУППИРОВАТЬ ПО\n\tCur.Код\n\nИМЕЮЩИЕ\n\tКОЛИЧЕСТВО(*) > 0\n\nУПОРЯДОЧИТЬ ПО\n\tCode УБЫВ,\n\tN\nАВТОУПОРЯДОЧИВАНИЕ"
+   }
+  },
+  {
+   "name": "grouping_sets",
+   "group": "keywords",
+   "query": "SELECT Cur.Code AS Code, COUNT(*) AS N FROM Catalog.Валюты AS Cur GROUP BY GROUPING SETS ((Cur.Code), ())",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 85,
+     "message": "Syntax error \"SETS\""
+    }
+   }
+  },
+  {
+   "name": "union_all",
+   "group": "keywords",
+   "query": "SELECT 1 AS A UNION ALL SELECT 2 UNION SELECT 3",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\t1 КАК A\n\nОБЪЕДИНИТЬ ВСЕ\n\nВЫБРАТЬ\n\t2\n\nОБЪЕДИНИТЬ\n\nВЫБРАТЬ\n\t3"
+   }
+  },
+  {
+   "name": "into_index_drop",
+   "group": "keywords",
+   "query": "SELECT Cur.Code AS Code INTO TT FROM Catalog.Валюты AS Cur INDEX BY Code; SELECT * FROM TT; DROP TT",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Code\nПОМЕСТИТЬ TT\nИЗ\n\tСправочник.Валюты КАК Cur\n\nИНДЕКСИРОВАТЬ ПО\n\tCode\n;\n\n////////////////////////////////////////////////////////////////////////////////\nВЫБРАТЬ\n\tTT.Code КАК Code\nИЗ\n\tTT КАК TT\n;\n\n////////////////////////////////////////////////////////////////////////////////\nУНИЧТОЖИТЬ TT"
+   }
+  },
+  {
+   "name": "for_update",
+   "group": "keywords",
+   "query": "SELECT Cur.Code FROM Catalog.Валюты AS Cur FOR UPDATE",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Cur\n\nДЛЯ ИЗМЕНЕНИЯ"
+   }
+  },
+  {
+   "name": "for_update_table",
+   "group": "keywords",
+   "query": "SELECT Cur.Code FROM Catalog.Валюты AS Cur FOR UPDATE Catalog.Валюты",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Cur\n\nДЛЯ ИЗМЕНЕНИЯ\n\tСправочник.Валюты"
+   }
+  },
+  {
+   "name": "totals",
+   "group": "keywords",
+   "query": "SELECT Cur.Code AS Code, 1 AS N FROM Catalog.Валюты AS Cur TOTALS SUM(N) BY OVERALL, Code",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Code,\n\t1 КАК N\nИЗ\n\tСправочник.Валюты КАК Cur\nИТОГИ\n\tСУММА(N)\nПО\n\tОБЩИЕ,\n\tCode"
+   }
+  },
+  {
+   "name": "totals_only_hierarchy",
+   "group": "keywords",
+   "query": "SELECT Cur.Ref AS Ref, 1 AS N FROM Catalog.Валюты AS Cur TOTALS SUM(N) BY Ref ONLY HIERARCHY",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Ссылка КАК Ref,\n\t1 КАК N\nИЗ\n\tСправочник.Валюты КАК Cur\nИТОГИ\n\tСУММА(N)\nПО\n\tRef ТОЛЬКО ИЕРАРХИЯ"
+   }
+  },
+  {
+   "name": "totals_periods",
+   "group": "keywords",
+   "query": "SELECT DATETIME(2020,1,1) AS P, 1 AS N TOTALS SUM(N) BY P PERIODS(DAY, DATETIME(2020,1,1), DATETIME(2020,1,3))",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tДАТАВРЕМЯ(2020, 1, 1) КАК P,\n\t1 КАК N\nИТОГИ\n\tСУММА(N)\nПО\n\tP ПЕРИОДАМИ(ДЕНЬ, ДАТАВРЕМЯ(2020, 1, 1), ДАТАВРЕМЯ(2020, 1, 3))"
+   }
+  },
+  {
+   "name": "mixed_ru_en",
+   "group": "keywords",
+   "query": "ВЫБРАТЬ Cur.Code AS Code FROM Справочник.Валюты КАК Cur WHERE НЕ Cur.ПометкаУдаления",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tНЕ Cur.ПометкаУдаления"
+   }
+  },
+  {
+   "name": "ru_fields_en_keywords",
+   "group": "keywords",
+   "query": "SELECT Вал.Код AS Код FROM Справочник.Валюты AS Вал",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал"
+   }
+  },
+  {
+   "name": "en_lowercase",
+   "group": "keywords",
+   "query": "select cur.code as code from catalog.Валюты as cur where not cur.deletionmark",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tcur.Код КАК code\nИЗ\n\tСправочник.Валюты КАК cur\nГДЕ\n\tНЕ cur.ПометкаУдаления"
+   }
+  },
+  {
+   "name": "en_name_conflict_alias",
+   "group": "keywords",
+   "query": "SELECT Cur.Code AS Select FROM Catalog.Валюты AS Cur",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Select\nИЗ\n\tСправочник.Валюты КАК Cur"
+   }
+  },
+  {
+   "name": "ru_keyword_alias_in_en",
+   "group": "keywords",
+   "query": "SELECT Cur.Code AS Выбрать FROM Catalog.Валюты AS Cur",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Выбрать\nИЗ\n\tСправочник.Валюты КАК Cur"
+   }
+  },
+  {
+   "name": "en_keyword_as_ru_alias",
+   "group": "keywords",
+   "query": "ВЫБРАТЬ Вал.Код КАК From ИЗ Справочник.Валюты КАК Вал",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 21,
+     "message": "Name expected"
+    }
+   }
+  },
+  {
+   "name": "en_word_as_ru_alias_Ref",
+   "group": "keywords",
+   "query": "ВЫБРАТЬ Вал.Код КАК Ref ИЗ Справочник.Валюты КАК Вал",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tВал.Код КАК Ref\nИЗ\n\tСправочник.Валюты КАК Вал"
+   }
+  },
+  {
+   "name": "en_by_alias_in_ru",
+   "group": "keywords",
+   "query": "ВЫБРАТЬ Вал.Код КАК By ИЗ Справочник.Валюты КАК Вал",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 21,
+     "message": "Name expected"
+    }
+   }
+  },
+  {
+   "name": "ru_alias_named_in",
+   "group": "keywords",
+   "query": "SELECT Cur.Code AS In FROM Catalog.Валюты AS Cur",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 20,
+     "message": "Name expected"
+    }
+   }
+  },
+  {
+   "name": "ru_kw_en_names",
+   "group": "mixed",
+   "query": "ВЫБРАТЬ Cur.Code КАК Code, ВЫБОР КОГДА Cur.DeletionMark ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК M ИЗ Catalog.Валюты КАК Cur ГДЕ Cur.Ref <> ЗНАЧЕНИЕ(Catalog.Валюты.EmptyRef) И ТИПЗНАЧЕНИЯ(Cur.Ref) = ТИП(Catalog.Валюты)",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tCur.Код КАК Code,\n\tВЫБОР\n\t\tКОГДА Cur.ПометкаУдаления\n\t\t\tТОГДА 1\n\t\tИНАЧЕ 0\n\tКОНЕЦ КАК M\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ссылка <> ЗНАЧЕНИЕ(Catalog.Валюты.EmptyRef)\n\tИ ТИПЗНАЧЕНИЯ(Cur.Ссылка) = ТИП(Catalog.Валюты)"
+   }
+  },
+  {
+   "name": "ru_kw_en_vt",
+   "group": "mixed",
+   "query": "ВЫБРАТЬ T.* ИЗ AccumulationRegister.АктивированныеПромокоды.Turnovers(, , Month, ) КАК T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Промокод КАК Промокод,\n\tT.Контрагент КАК Контрагент,\n\tT.Посылка КАК Посылка,\n\tT.Период КАК Период,\n\tT.КоличествоОборот КАК КоличествоОборот,\n\tT.НоминалОборот КАК НоминалОборот\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды.Обороты(, , Month, ) КАК T"
+   }
+  },
+  {
+   "name": "ru_kw_en_period_word",
+   "group": "mixed",
+   "query": "ВЫБРАТЬ НАЧАЛОПЕРИОДА(&D, MONTH) КАК A",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tНАЧАЛОПЕРИОДА(&D, МЕСЯЦ) КАК A"
+   }
+  },
+  {
+   "name": "en_doc_date_field",
+   "group": "mixed",
+   "query": "SELECT D.Date AS Date, D.Number AS Number FROM Document.ЗаказКлиента AS D ORDER BY Date",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tD.Дата КАК Date,\n\tD.Номер КАК Number\nИЗ\n\tДокумент.ЗаказКлиента КАК D\n\nУПОРЯДОЧИТЬ ПО\n\tDate"
+   }
+  },
+  {
+   "name": "ru_doc_date_alias",
+   "group": "mixed",
+   "query": "ВЫБРАТЬ Д.Дата КАК Дата ИЗ Документ.ЗаказКлиента КАК Д УПОРЯДОЧИТЬ ПО Дата",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tД.Дата КАК Дата\nИЗ\n\tДокумент.ЗаказКлиента КАК Д\n\nУПОРЯДОЧИТЬ ПО\n\tДата"
+   }
+  },
+  {
+   "name": "ru_dot_uporyad",
+   "group": "afterDot",
+   "query": "ВЫБРАТЬ 1 КАК Упорядочить ПОМЕСТИТЬ ВТ; ВЫБРАТЬ ВТ.Упорядочить КАК А ИЗ ВТ КАК ВТ",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\t1 КАК Упорядочить\nПОМЕСТИТЬ ВТ\n;\n\n////////////////////////////////////////////////////////////////////////////////\nВЫБРАТЬ\n\tВТ.Упорядочить КАК А\nИЗ\n\tВТ КАК ВТ"
+   }
+  },
+  {
+   "name": "ru_dot_itogi_iz",
+   "group": "afterDot",
+   "query": "ВЫБРАТЬ 1 КАК Итоги, 2 КАК Выбрать ПОМЕСТИТЬ ВТ; ВЫБРАТЬ ВТ.Итоги КАК А, ВТ.Выбрать КАК Б ИЗ ВТ КАК ВТ",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\t1 КАК Итоги,\n\t2 КАК Выбрать\nПОМЕСТИТЬ ВТ\n;\n\n////////////////////////////////////////////////////////////////////////////////\nВЫБРАТЬ\n\tВТ.Итоги КАК А,\n\tВТ.Выбрать КАК Б\nИЗ\n\tВТ КАК ВТ"
+   }
+  },
+  {
+   "name": "en_dot_order_where",
+   "group": "afterDot",
+   "query": "SELECT E.Ref FROM Enum.CC_ShippingType AS E WHERE E.Order > 0 ORDER BY E.Order",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tE.Ссылка КАК Ссылка\nИЗ\n\tПеречисление.CC_ShippingType КАК E\nГДЕ\n\tE.Порядок > 0\n\nУПОРЯДОЧИТЬ ПО\n\tE.Порядок"
+   }
+  },
+  {
+   "name": "en_dot_group",
+   "group": "afterDot",
+   "query": "SELECT 1 AS Group, 2 AS Total INTO TT; SELECT TT.Group AS A FROM TT AS TT GROUP BY TT.Group",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 13,
+     "message": "Name expected"
+    }
+   }
+  },
+  {
+   "name": "en_dot_reserved_from",
+   "group": "afterDot",
+   "query": "SELECT 1 AS A INTO TT; SELECT TT.From AS A FROM TT AS TT",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 34,
+     "message": "Field not found \"TT.From\""
+    }
+   }
+  },
+  {
+   "name": "ru_dot_reserved_iz",
+   "group": "afterDot",
+   "query": "ВЫБРАТЬ 1 КАК А ПОМЕСТИТЬ ВТ; ВЫБРАТЬ ВТ.Из КАК А ИЗ ВТ КАК ВТ",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 42,
+     "message": "Field not found \"ВТ.Из\""
+    }
+   }
+  },
+  {
+   "name": "grouping_set",
+   "group": "metadataNames",
+   "query": "SELECT Cur.Code AS Code, COUNT(*) AS N FROM Catalog.Валюты AS Cur GROUP BY GROUPING SET ((Cur.Code), ())",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 85,
+     "message": "Syntax error \"SET\""
+    }
+   }
+  },
+  {
+   "name": "grouping_sets_ru",
+   "group": "metadataNames",
+   "query": "ВЫБРАТЬ Вал.Код КАК Код, КОЛИЧЕСТВО(*) КАК N ИЗ Справочник.Валюты КАК Вал СГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ ((Вал.Код), ())",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 105,
+     "message": "Syntax error \"НАБОРАМ\""
+    }
+   }
+  },
+  {
+   "name": "slicelast",
+   "group": "metadataNames",
+   "query": "SELECT R.Курс AS Rate FROM InformationRegister.КурсыВалют.SliceLast(&D, ) AS R",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tR.Курс КАК Rate\nИЗ\n\tРегистрСведений.КурсыВалют.СрезПоследних(&D, ) КАК R"
+   }
+  },
+  {
+   "name": "balance",
+   "group": "metadataNames",
+   "query": "SELECT B.* FROM AccumulationRegister.РегистрНакопленияОст.Balance AS B",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.РегистрНакопленияОст.Balance\""
+    }
+   }
+  },
+  {
+   "name": "turnovers",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.РегистрНакопленияОбор.Turnovers(, , Month, ) AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.РегистрНакопленияОбор.Turnovers\""
+    }
+   }
+  },
+  {
+   "name": "balance_turnovers",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.РегистрНакопленияОст.BalanceAndTurnovers(, , Auto, , ) AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.РегистрНакопленияОст.BalanceAndTurnovers\""
+    }
+   }
+  },
+  {
+   "name": "acc_turnovers",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccountingRegister.Хозрасчетный.Turnovers(, , , , , , , ) AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Счет КАК Счет,\n\tT.Субконто1 КАК Субконто1,\n\tT.Субконто2 КАК Субконто2,\n\tT.Субконто3 КАК Субконто3,\n\tT.Организация КАК Организация,\n\tT.Валюта КАК Валюта,\n\tT.Подразделение КАК Подразделение,\n\tT.Проект КАК Проект,\n\tT.НаправлениеДеятельности КАК НаправлениеДеятельности,\n\tT.НалоговоеНазначение КАК НалоговоеНазначение,\n\tT.КорСчет КАК КорСчет,\n\tT.КорСубконто1 КАК КорСубконто1,\n\tT.КорСубконто2 КАК КорСубконто2,\n\tT.КорСубконто3 КАК КорСубконто3,\n\tT.ВалютаКор КАК ВалютаКор,\n\tT.ПодразделениеКор КАК ПодразделениеКор,\n\tT.ПроектКор КАК ПроектКор,\n\tT.НаправлениеДеятельностиКор КАК НаправлениеДеятельностиКор,\n\tT.НалоговоеНазначениеКор КАК НалоговоеНазначениеКор,\n\tT.СуммаОборот КАК СуммаОборот,\n\tT.СуммаОборотДт КАК СуммаОборотДт,\n\tT.СуммаОборотКт КАК СуммаОборотКт,\n\tT.ВалютнаяСуммаОборот КАК ВалютнаяСуммаОборот,\n\tT.ВалютнаяСуммаОборотДт КАК ВалютнаяСуммаОборотДт,\n\tT.ВалютнаяСуммаОборотКт КАК ВалютнаяСуммаОборотКт,\n\tT.ВалютнаяСуммаКорОборот КАК ВалютнаяСуммаКорОборот,\n\tT.ВалютнаяСуммаКорОборотДт КАК ВалютнаяСуммаКорОборотДт,\n\tT.ВалютнаяСуммаКорОборотКт КАК ВалютнаяСуммаКорОборотКт,\n\tT.КоличествоОборот КАК КоличествоОборот,\n\tT.КоличествоОборотДт КАК КоличествоОборотДт,\n\tT.КоличествоОборотКт КАК КоличествоОборотКт,\n\tT.КоличествоКорОборот КАК КоличествоКорОборот,\n\tT.КоличествоКорОборотДт КАК КоличествоКорОборотДт,\n\tT.КоличествоКорОборотКт КАК КоличествоКорОборотКт,\n\tT.СуммаНУОборот КАК СуммаНУОборот,\n\tT.СуммаНУОборотДт КАК СуммаНУОборотДт,\n\tT.СуммаНУОборотКт КАК СуммаНУОборотКт,\n\tT.СуммаНУКорОборот КАК СуммаНУКорОборот,\n\tT.СуммаНУКорОборотДт КАК СуммаНУКорОборотДт,\n\tT.СуммаНУКорОборотКт КАК СуммаНУКорОборотКт,\n\tT.СуммаПРОборот КАК СуммаПРОборот,\n\tT.СуммаПРОборотДт КАК СуммаПРОборотДт,\n\tT.СуммаПРОборотКт КАК СуммаПРОборотКт,\n\tT.СуммаПРКорОборот КАК СуммаПРКорОборот,\n\tT.СуммаПРКорОборотДт КАК СуммаПРКорОборотДт,\n\tT.СуммаПРКорОборотКт КАК СуммаПРКорОборотКт,\n\tT.СуммаВРОборот КАК СуммаВРОборот,\n\tT.СуммаВРОборотДт КАК СуммаВРОборотДт,\n\tT.СуммаВРОборотКт КАК СуммаВРОборотКт,\n\tT.СуммаВРКорОборот КАК СуммаВРКорОборот,\n\tT.СуммаВРКорОборотДт КАК СуммаВРКорОборотДт,\n\tT.СуммаВРКорОборотКт КАК СуммаВРКорОборотКт\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.Обороты(, , , , , , , ) КАК T"
+   }
+  },
+  {
+   "name": "document_tabular",
+   "group": "metadataNames",
+   "query": "SELECT D.Ref, D.Date, D.Number, D.Posted FROM Document.ЗаказКлиента AS D",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tD.Ссылка КАК Ссылка,\n\tD.Дата КАК Дата,\n\tD.Номер КАК Номер,\n\tD.Проведен КАК Проведен\nИЗ\n\tДокумент.ЗаказКлиента КАК D"
+   }
+  },
+  {
+   "name": "document_tabular_part",
+   "group": "metadataNames",
+   "query": "SELECT T.Ref, T.LineNumber FROM Document.ВозвратЗаказаКлиента.Услуги AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК Ссылка,\n\tT.НомерСтроки КАК НомерСтроки\nИЗ\n\tДокумент.ВозвратЗаказаКлиента.Услуги КАК T"
+   }
+  },
+  {
+   "name": "enum_value",
+   "group": "metadataNames",
+   "query": "SELECT VALUE(Enum.ВажностьПроблемыУчета.Ошибка) AS E",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 14,
+     "message": "Wrong parameters \"Enum.ВажностьПроблемыУчета.Ошибка\""
+    }
+   }
+  },
+  {
+   "name": "chart_char",
+   "group": "metadataNames",
+   "query": "SELECT VALUE(ChartOfCharacteristicTypes.ВидыСубконто.Контрагенты) AS E",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 14,
+     "message": "Wrong parameters \"ChartOfCharacteristicTypes.ВидыСубконто.Контрагенты\""
+    }
+   }
+  },
+  {
+   "name": "catalog_std_attrs",
+   "group": "metadataNames",
+   "query": "SELECT C.Ref, C.Code, C.Description, C.DeletionMark, C.Predefined, C.PredefinedDataName, C.DataVersion, C.Presentation FROM Catalog.Валюты AS C",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tC.Ссылка КАК Ссылка,\n\tC.Код КАК Код,\n\tC.Наименование КАК Наименование,\n\tC.ПометкаУдаления КАК ПометкаУдаления,\n\tC.Предопределенный КАК Предопределенный,\n\tC.ИмяПредопределенныхДанных КАК ИмяПредопределенныхДанных,\n\tC.ВерсияДанных КАК ВерсияДанных,\n\tC.Представление КАК Представление\nИЗ\n\tСправочник.Валюты КАК C"
+   }
+  },
+  {
+   "name": "catalog_parent_owner",
+   "group": "metadataNames",
+   "query": "SELECT C.Parent, C.IsFolder FROM Catalog.Валюты AS C",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 10,
+     "message": "Field not found \"C.Parent\""
+    }
+   }
+  },
+  {
+   "name": "mixed_attr_names",
+   "group": "metadataNames",
+   "query": "SELECT C.Ref, C.Код, C.Description FROM Справочник.Валюты AS C",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tC.Ссылка КАК Ссылка,\n\tC.Код КАК Код,\n\tC.Наименование КАК Наименование\nИЗ\n\tСправочник.Валюты КАК C"
+   }
+  },
+  {
+   "name": "deref_en",
+   "group": "metadataNames",
+   "query": "SELECT C.Ref.Code AS X FROM Catalog.Валюты AS C",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tC.Ссылка.Код КАК X\nИЗ\n\tСправочник.Валюты КАК C"
+   }
+  },
+  {
+   "name": "type_en_primitives",
+   "group": "metadataNames",
+   "query": "SELECT CAST(1 AS NUMBER) AS N, CAST(\"\" AS STRING) AS S",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tВЫРАЗИТЬ(1 КАК ЧИСЛО) КАК N,\n\tВЫРАЗИТЬ(\"\" КАК СТРОКА) КАК S"
+   }
+  },
+  {
+   "name": "valuetable_ext",
+   "group": "metadataNames",
+   "query": "SELECT * FROM &T AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": ""
+   }
+  },
+  {
+   "name": "substring_ru_in_en",
+   "group": "metadataNames",
+   "query": "SELECT ПОДСТРОКА(C.Description, 1, 2) AS S FROM Catalog.Валюты AS C",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tПОДСТРОКА(C.Наименование, 1, 2) КАК S\nИЗ\n\tСправочник.Валюты КАК C"
+   }
+  },
+  {
+   "name": "en_period_names",
+   "group": "metadataNames",
+   "query": "SELECT BEGINOFPERIOD(&D, TENDAYS) AS A, BEGINOFPERIOD(&D, HALFYEAR) AS B, BEGINOFPERIOD(&D, WEEK) AS C, BEGINOFPERIOD(&D, QUARTER) AS E, BEGINOFPERIOD(&D, HOUR) AS F, BEGINOFPERIOD(&D, MINUTE) AS G",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tНАЧАЛОПЕРИОДА(&D, ДЕКАДА) КАК A,\n\tНАЧАЛОПЕРИОДА(&D, ПОЛУГОДИЕ) КАК B,\n\tНАЧАЛОПЕРИОДА(&D, НЕДЕЛЯ) КАК C,\n\tНАЧАЛОПЕРИОДА(&D, КВАРТАЛ) КАК E,\n\tНАЧАЛОПЕРИОДА(&D, ЧАС) КАК F,\n\tНАЧАЛОПЕРИОДА(&D, МИНУТА) КАК G"
+   }
+  },
+  {
+   "name": "newer_funcs",
+   "group": "metadataNames",
+   "query": "SELECT UPPER(\"a\") AS A, LOWER(\"A\") AS B, STRINGLENGTH(\"a\") AS C, TRIMALL(\" a \") AS D, STRFIND(\"ab\",\"b\") AS E, STRREPLACE(\"ab\",\"b\",\"c\") AS F, ROUND(1.5, 0) AS G, ABS(-1) AS H",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 8,
+     "message": "Syntax error"
+    }
+   }
+  },
+  {
+   "name": "number_type_funcs",
+   "group": "metadataNames",
+   "query": "SELECT 1 AS A WHERE &X IN (SELECT 1) AND EXISTS(SELECT 1) ",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 49,
+     "message": "Syntax error \"SELECT\""
+    }
+   }
+  },
+  {
+   "name": "en_turnovers",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.АктивированныеПромокоды.Turnovers AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Промокод КАК Промокод,\n\tT.Контрагент КАК Контрагент,\n\tT.Посылка КАК Посылка,\n\tT.КоличествоОборот КАК КоличествоОборот,\n\tT.НоминалОборот КАК НоминалОборот\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды.Обороты КАК T"
+   }
+  },
+  {
+   "name": "ru_turnovers",
+   "group": "metadataNames",
+   "query": "ВЫБРАТЬ T.* ИЗ РегистрНакопления.АктивированныеПромокоды.Обороты КАК T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Промокод КАК Промокод,\n\tT.Контрагент КАК Контрагент,\n\tT.Посылка КАК Посылка,\n\tT.КоличествоОборот КАК КоличествоОборот,\n\tT.НоминалОборот КАК НоминалОборот\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды.Обороты КАК T"
+   }
+  },
+  {
+   "name": "en_balance",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.АктивированныеПромокоды.Balance AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.АктивированныеПромокоды.Balance\""
+    }
+   }
+  },
+  {
+   "name": "ru_balance",
+   "group": "metadataNames",
+   "query": "ВЫБРАТЬ T.* ИЗ РегистрНакопления.АктивированныеПромокоды.Остатки КАК T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 16,
+     "message": "Table not found \"РегистрНакопления.АктивированныеПромокоды.Остатки\""
+    }
+   }
+  },
+  {
+   "name": "en_reg_plain",
+   "group": "metadataNames",
+   "query": "SELECT T.Period, T.Recorder, T.LineNumber, T.Active FROM AccumulationRegister.АктивированныеПромокоды AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Период КАК Период,\n\tT.Регистратор КАК Регистратор,\n\tT.НомерСтроки КАК НомерСтроки,\n\tT.Активность КАК Активность\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды КАК T"
+   }
+  },
+  {
+   "name": "en_enum",
+   "group": "metadataNames",
+   "query": "SELECT E.Ref, E.Order FROM Enum.CC_ShippingType AS E",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tE.Ссылка КАК Ссылка,\n\tE.Порядок КАК Порядок\nИЗ\n\tПеречисление.CC_ShippingType КАК E"
+   }
+  },
+  {
+   "name": "en_enum_value_empty",
+   "group": "metadataNames",
+   "query": "SELECT VALUE(Enum.CC_ShippingType.EmptyRef) AS E",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tЗНАЧЕНИЕ(Enum.CC_ShippingType.EmptyRef) КАК E"
+   }
+  },
+  {
+   "name": "en_ccht",
+   "group": "metadataNames",
+   "query": "SELECT C.Ref, C.ValueType FROM ChartOfCharacteristicTypes.ВидыХарактеристик AS C",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tC.Ссылка КАК Ссылка,\n\tC.ТипЗначения КАК ТипЗначения\nИЗ\n\tПланВидовХарактеристик.ВидыХарактеристик КАК C"
+   }
+  },
+  {
+   "name": "en_catalog_hier",
+   "group": "metadataNames",
+   "query": "SELECT C.Parent, C.IsFolder, C.Owner FROM Catalog.Номенклатура AS C",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 10,
+     "message": "Field not found \"C.Parent\""
+    }
+   }
+  },
+  {
+   "name": "en_catalog_hier2",
+   "group": "metadataNames",
+   "query": "SELECT C.Parent, C.IsFolder FROM Catalog.Номенклатура AS C",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 10,
+     "message": "Field not found \"C.Parent\""
+    }
+   }
+  },
+  {
+   "name": "en_doc_std",
+   "group": "metadataNames",
+   "query": "SELECT D.Ref, D.Date, D.Number, D.Posted, D.DeletionMark FROM Document.ЗаказКлиента AS D",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tD.Ссылка КАК Ссылка,\n\tD.Дата КАК Дата,\n\tD.Номер КАК Номер,\n\tD.Проведен КАК Проведен,\n\tD.ПометкаУдаления КАК ПометкаУдаления\nИЗ\n\tДокумент.ЗаказКлиента КАК D"
+   }
+  },
+  {
+   "name": "ru_balance",
+   "group": "russianControls",
+   "query": "ВЫБРАТЬ Б.* ИЗ РегистрНакопления.РегистрНакопленияОст.Остатки КАК Б",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 16,
+     "message": "Table not found \"РегистрНакопления.РегистрНакопленияОст.Остатки\""
+    }
+   }
+  },
+  {
+   "name": "ru_enum",
+   "group": "russianControls",
+   "query": "ВЫБРАТЬ ЗНАЧЕНИЕ(Перечисление.ВажностьПроблемыУчета.Ошибка) КАК E",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 18,
+     "message": "Wrong parameters \"Перечисление.ВажностьПроблемыУчета.Ошибка\""
+    }
+   }
+  },
+  {
+   "name": "ru_parent",
+   "group": "russianControls",
+   "query": "ВЫБРАТЬ C.Родитель ИЗ Справочник.Валюты КАК C",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 11,
+     "message": "Field not found \"C.Родитель\""
+    }
+   }
+  },
+  {
+   "name": "ru_newer_funcs",
+   "group": "russianControls",
+   "query": "ВЫБРАТЬ ВРЕГ(\"a\") КАК A",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 9,
+     "message": "Syntax error"
+    }
+   }
+  },
+  {
+   "name": "ru_exists",
+   "group": "russianControls",
+   "query": "ВЫБРАТЬ 1 КАК A ГДЕ 1 В (ВЫБРАТЬ 1)",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\t1 КАК A\nГДЕ\n\t1 В\n\t\t\t(ВЫБРАТЬ\n\t\t\t\t1)"
+   }
+  },
+  {
+   "name": "en_in_subquery",
+   "group": "russianControls",
+   "query": "SELECT 1 AS A WHERE 1 IN (SELECT 1)",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\t1 КАК A\nГДЕ\n\t1 В\n\t\t\t(ВЫБРАТЬ\n\t\t\t\t1)"
+   }
+  },
+  {
+   "name": "en_balance_real",
+   "group": "russianControls",
+   "query": "SELECT B.* FROM AccumulationRegister.Продажи.Turnovers AS B",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.Продажи.Turnovers\""
+    }
+   }
+  },
+  {
+   "name": "ru_turn_real",
+   "group": "russianControls",
+   "query": "ВЫБРАТЬ B.* ИЗ РегистрНакопления.Продажи.Обороты КАК B",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 16,
+     "message": "Table not found \"РегистрНакопления.Продажи.Обороты\""
+    }
+   }
+  },
+  {
+   "name": "en_enum_real",
+   "group": "russianControls",
+   "query": "SELECT E.Ref FROM Enum.ВажностьПроблемыУчета AS E",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 19,
+     "message": "Table not found \"Enum.ВажностьПроблемыУчета\""
+    }
+   }
+  },
+  {
+   "name": "en_enum_value_ru_kind",
+   "group": "russianControls",
+   "query": "SELECT VALUE(Перечисление.ВажностьПроблемыУчета.Ошибка) AS E",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 14,
+     "message": "Wrong parameters \"Перечисление.ВажностьПроблемыУчета.Ошибка\""
+    }
+   }
+  },
+  {
+   "name": "en_pred",
+   "group": "russianControls",
+   "query": "SELECT VALUE(Справочник.Валюты.EmptyRef) AS E",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tЗНАЧЕНИЕ(Справочник.Валюты.EmptyRef) КАК E"
+   }
+  },
+  {
+   "name": "ru_pred_en",
+   "group": "russianControls",
+   "query": "ВЫБРАТЬ ЗНАЧЕНИЕ(Справочник.Валюты.ПустаяСсылка) КАК E",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tЗНАЧЕНИЕ(Справочник.Валюты.ПустаяСсылка) КАК E"
+   }
+  }
+ ],
+ "reservedAsAlias": {
+  "russianQueryEnglishAlias": {
+   "SELECT": true,
+   "ALLOWED": false,
+   "DISTINCT": false,
+   "TOP": false,
+   "FROM": false,
+   "AS": false,
+   "SUM": true,
+   "COUNT": true,
+   "MAX": true,
+   "MIN": true,
+   "AVG": true,
+   "WHERE": false,
+   "AND": false,
+   "OR": false,
+   "NOT": false,
+   "IN": false,
+   "BETWEEN": false,
+   "LIKE": false,
+   "ESCAPE": false,
+   "JOIN": true,
+   "INNER": false,
+   "LEFT": true,
+   "RIGHT": true,
+   "FULL": true,
+   "OUTER": true,
+   "ON": false,
+   "GROUP": false,
+   "BY": false,
+   "HAVING": false,
+   "INTO": false,
+   "DROP": true,
+   "ORDER": true,
+   "DESC": false,
+   "ASC": false,
+   "AUTOORDER": false,
+   "TOTALS": true,
+   "OVERALL": false,
+   "HIERARCHY": true,
+   "ONLY": false,
+   "INDEX": true,
+   "FOR": false,
+   "UPDATE": true,
+   "UNION": true,
+   "ALL": true,
+   "CASE": false,
+   "WHEN": false,
+   "THEN": false,
+   "ELSE": false,
+   "END": true,
+   "IS": false,
+   "NULL": false,
+   "TRUE": false,
+   "FALSE": false,
+   "UNDEFINED": false,
+   "VALUE": true,
+   "TYPE": true,
+   "REFS": true,
+   "CAST": false,
+   "ISNULL": true,
+   "SUBSTRING": true,
+   "PRESENTATION": true,
+   "REFPRESENTATION": true,
+   "VALUETYPE": true,
+   "DATETIME": true,
+   "DATEADD": true,
+   "DATEDIFF": true,
+   "BEGINOFPERIOD": true,
+   "ENDOFPERIOD": true,
+   "YEAR": true,
+   "MONTH": true,
+   "DAY": true,
+   "PERIODS": false,
+   "STRING": true,
+   "NUMBER": true,
+   "BOOLEAN": true,
+   "DATE": true,
+   "GROUPING": true,
+   "SETS": true,
+   "EMPTYTABLE": true,
+   "UNIQUE": true,
+   "ADD": true
+  },
+  "englishQueryRussianAlias": {
+   "ВЫБРАТЬ": true,
+   "РАЗРЕШЕННЫЕ": false,
+   "РАЗЛИЧНЫЕ": false,
+   "ПЕРВЫЕ": false,
+   "ИЗ": false,
+   "КАК": false,
+   "СУММА": true,
+   "КОЛИЧЕСТВО": true,
+   "МАКСИМУМ": true,
+   "МИНИМУМ": true,
+   "СРЕДНЕЕ": true,
+   "ГДЕ": false,
+   "И": false,
+   "ИЛИ": false,
+   "НЕ": false,
+   "В": false,
+   "МЕЖДУ": false,
+   "ПОДОБНО": false,
+   "СПЕЦСИМВОЛ": false,
+   "СОЕДИНЕНИЕ": true,
+   "ВНУТРЕННЕЕ": false,
+   "ЛЕВОЕ": true,
+   "ПРАВОЕ": true,
+   "ПОЛНОЕ": true,
+   "ВНЕШНЕЕ": true,
+   "ПО": false,
+   "СГРУППИРОВАТЬ": false,
+   "ИМЕЮЩИЕ": false,
+   "ПОМЕСТИТЬ": false,
+   "УНИЧТОЖИТЬ": true,
+   "УПОРЯДОЧИТЬ": true,
+   "УБЫВ": false,
+   "ВОЗР": false,
+   "АВТОУПОРЯДОЧИВАНИЕ": false,
+   "ИТОГИ": true,
+   "ОБЩИЕ": false,
+   "ИЕРАРХИЯ": true,
+   "ИЕРАРХИИ": true,
+   "ТОЛЬКО": false,
+   "ИНДЕКСИРОВАТЬ": true,
+   "ДЛЯ": false,
+   "ИЗМЕНЕНИЯ": true,
+   "ОБЪЕДИНИТЬ": true,
+   "ВСЕ": true,
+   "ВЫБОР": false,
+   "КОГДА": false,
+   "ТОГДА": false,
+   "ИНАЧЕ": false,
+   "КОНЕЦ": true,
+   "ЕСТЬ": false,
+   "NULL": false,
+   "ИСТИНА": false,
+   "ЛОЖЬ": false,
+   "НЕОПРЕДЕЛЕНО": false,
+   "ЗНАЧЕНИЕ": true,
+   "ТИП": true,
+   "ССЫЛКА": true,
+   "ВЫРАЗИТЬ": false,
+   "ЕСТЬNULL": true,
+   "ПОДСТРОКА": true,
+   "ПРЕДСТАВЛЕНИЕ": true,
+   "ТИПЗНАЧЕНИЯ": true,
+   "ДАТАВРЕМЯ": true,
+   "ГОД": true,
+   "ПЕРИОДАМИ": false,
+   "СТРОКА": true,
+   "ЧИСЛО": true,
+   "БУЛЕВО": true,
+   "ДАТА": true,
+   "ДОБАВИТЬ": true,
+   "УНИКАЛЬНО": true
+  }
+ },
+ "designerApplied": [
+  {
+   "name": "select_from_as",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "platformAccepted": true
+  },
+  {
+   "name": "top_distinct_allowed",
+   "generated": "ВЫБРАТЬ РАЗРЕШЕННЫЕ РАЗЛИЧНЫЕ ПЕРВЫЕ 5\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "platformAccepted": true
+  },
+  {
+   "name": "where_not_and_or",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tNOT Cur.DeletionMark\n\tИ (Cur.Code = \"1\"\n\t\t\tИЛИ Cur.Code = \"2\")",
+   "platformAccepted": true
+  },
+  {
+   "name": "in_between",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\t(Cur.Code IN (\"1\", \"2\")\n\t\t\tИЛИ Cur.Code BETWEEN \"0\" AND \"9\")",
+   "platformAccepted": true
+  },
+  {
+   "name": "in_hierarchy",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tCur.Ref В HIERARCHY (&P)",
+   "platformAccepted": true
+  },
+  {
+   "name": "is_null",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tCur.Description IS NOT NULL",
+   "platformAccepted": true
+  },
+  {
+   "name": "value_emptyref",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tCur.Ref <> VALUE(Catalog.Валюты.EmptyRef)",
+   "platformAccepted": true
+  },
+  {
+   "name": "value_ru_pustaya",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tCur.Ref <> VALUE(Catalog.Валюты.ПустаяСсылка)",
+   "platformAccepted": true
+  },
+  {
+   "name": "type_valuetype",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tVALUETYPE(Cur.Ref) = TYPE(Catalog.Валюты)",
+   "platformAccepted": true
+  },
+  {
+   "name": "undefined_true_false",
+   "generated": "ВЫБРАТЬ\n\tTRUE КАК A,\n\tFALSE КАК B,\n\tUNDEFINED КАК C,\n\tNULL КАК D",
+   "platformAccepted": true
+  },
+  {
+   "name": "cast_string",
+   "generated": "ВЫБРАТЬ\n\tCAST(Cur.Code AS STRING(10)) КАК S\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "platformAccepted": true
+  },
+  {
+   "name": "cast_number_bool_date",
+   "generated": "ВЫБРАТЬ\n\tCAST(1 AS NUMBER(10, 2)) КАК N,\n\tCAST(TRUE AS BOOLEAN) КАК L,\n\tCAST(DATETIME(2020, 1, 1) AS DATE) КАК D",
+   "platformAccepted": true
+  },
+  {
+   "name": "cast_catalog",
+   "generated": "ВЫБРАТЬ\n\tCAST(Cur.Ref AS Catalog.Валюты) КАК R\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "platformAccepted": true
+  },
+  {
+   "name": "funcs_str",
+   "generated": "ВЫБРАТЬ\n\tЕСТЬNULL(Cur.Description, \"\") КАК A,\n\tSUBSTRING(Cur.Description, 1, 3) КАК B,\n\tPRESENTATION(Cur.Ref) КАК C,\n\tREFPRESENTATION(Cur.Ref) КАК D\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "platformAccepted": true
+  },
+  {
+   "name": "funcs_date",
+   "generated": "ВЫБРАТЬ\n\tDATEADD(DATETIME(2020, 1, 1), DAY, 1) КАК A,\n\tDATEDIFF(DATETIME(2020, 1, 1), DATETIME(2020, 2, 1), DAY) КАК B,\n\tBEGINOFPERIOD(DATETIME(2020, 1, 1), MONTH) КАК C,\n\tENDOFPERIOD(DATETIME(2020, 1, 1), YEAR) КАК D",
+   "platformAccepted": true
+  },
+  {
+   "name": "funcs_parts",
+   "generated": "ВЫБРАТЬ\n\tYEAR(DATETIME(2020, 1, 1)) КАК A,\n\tQUARTER(DATETIME(2020, 1, 1)) КАК B,\n\tMONTH(DATETIME(2020, 1, 1)) КАК C,\n\tDAYOFYEAR(DATETIME(2020, 1, 1)) КАК D,\n\tDAY(DATETIME(2020, 1, 1)) КАК E,\n\tWEEK(DATETIME(2020, 1, 1)) КАК F,\n\tWEEKDAY(DATETIME(2020, 1, 1)) КАК G,\n\tHOUR(DATETIME(2020, 1, 1)) КАК H,\n\tMINUTE(DATETIME(2020, 1, 1)) КАК I,\n\tSECOND(DATETIME(2020, 1, 1)) КАК J",
+   "platformAccepted": true
+  },
+  {
+   "name": "aggregates",
+   "generated": "ВЫБРАТЬ\n\tКОЛИЧЕСТВО(РАЗЛИЧНЫЕ Cur.Ref) КАК A,\n\tSUM(1) КАК B,\n\tМАКСИМУМ(Cur.Code) КАК C,\n\tМИНИМУМ(Cur.Code) КАК D,\n\tAVG(1) КАК E\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "platformAccepted": true
+  },
+  {
+   "name": "joins",
+   "generated": "ВЫБРАТЬ\n\tC1.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК C1\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Catalog.Валюты КАК C2\n\t\tПО C1.Ref = C2.Ref\n\t\tВНУТРЕННЕЕ СОЕДИНЕНИЕ Catalog.Валюты КАК C3\n\t\tПО C1.Ref = C3.Ref\n\t\tПРАВОЕ СОЕДИНЕНИЕ Catalog.Валюты КАК C4\n\t\tПО C1.Ref = C4.Ref\n\t\tПОЛНОЕ СОЕДИНЕНИЕ Catalog.Валюты КАК C5\n\t\tПО C1.Ref = C5.Ref",
+   "platformAccepted": true
+  },
+  {
+   "name": "join_plain",
+   "generated": "ВЫБРАТЬ\n\tC1.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК C1\n\t\tВНУТРЕННЕЕ СОЕДИНЕНИЕ Catalog.Валюты КАК C2\n\t\tПО C1.Ref = C2.Ref",
+   "platformAccepted": true
+  },
+  {
+   "name": "group_having_order",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code,\n\tCOUNT(*) КАК N\nИЗ\n\tCatalog.Валюты КАК Cur\n\nСГРУППИРОВАТЬ ПО\n\tCur.Code\n\nИМЕЮЩИЕ\n\tCOUNT(*) > 0\n\nУПОРЯДОЧИТЬ ПО\n\tCode УБЫВ,\n\tN\nАВТОУПОРЯДОЧИВАНИЕ",
+   "platformAccepted": true
+  },
+  {
+   "name": "union_all",
+   "generated": "ВЫБРАТЬ\n\t1 КАК A\n\nОБЪЕДИНИТЬ ВСЕ\n\nВЫБРАТЬ\n\t2\n\nОБЪЕДИНИТЬ\n\nВЫБРАТЬ\n\t3",
+   "platformAccepted": true
+  },
+  {
+   "name": "into_index_drop",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nПОМЕСТИТЬ TT\nИЗ\n\tCatalog.Валюты КАК Cur\n\nИНДЕКСИРОВАТЬ ПО\n\tCode\n;\n\n////////////////////////////////////////////////////////////////////////////////\nВЫБРАТЬ\n\tTT.Code КАК Code\nИЗ\n\tTT КАК TT\n;\n\n////////////////////////////////////////////////////////////////////////////////\nУНИЧТОЖИТЬ TT",
+   "platformAccepted": true
+  },
+  {
+   "name": "for_update",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\n\nДЛЯ ИЗМЕНЕНИЯ",
+   "platformAccepted": true
+  },
+  {
+   "name": "for_update_table",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\n\nДЛЯ ИЗМЕНЕНИЯ\n\tCatalog.Валюты",
+   "platformAccepted": true
+  },
+  {
+   "name": "totals",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code,\n\t1 КАК N\nИЗ\n\tCatalog.Валюты КАК Cur\nИТОГИ\n\tСУММА(N)\nПО\n\tОБЩИЕ,\n\tCode",
+   "platformAccepted": true
+  },
+  {
+   "name": "totals_only_hierarchy",
+   "generated": "ВЫБРАТЬ\n\tCur.Ref КАК Ref,\n\t1 КАК N\nИЗ\n\tCatalog.Валюты КАК Cur\nИТОГИ\n\tСУММА(N)\nПО\n\tRef ТОЛЬКО ИЕРАРХИЯ",
+   "platformAccepted": true
+  },
+  {
+   "name": "totals_periods",
+   "generated": "ВЫБРАТЬ\n\tDATETIME(2020, 1, 1) КАК P,\n\t1 КАК N\nИТОГИ\n\tСУММА(N)\nПО\n\tP ПЕРИОДАМИ(DAY, DATETIME(2020,1,1), DATETIME(2020,1,3))",
+   "platformAccepted": true
+  },
+  {
+   "name": "mixed_ru_en",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tНЕ Cur.ПометкаУдаления",
+   "platformAccepted": true
+  },
+  {
+   "name": "ru_fields_en_keywords",
+   "generated": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_lowercase",
+   "generated": "ВЫБРАТЬ\n\tcur.code КАК code\nИЗ\n\tcatalog.Валюты КАК cur\nГДЕ\n\tnot cur.deletionmark",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_name_conflict_alias",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Select\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "platformAccepted": true
+  },
+  {
+   "name": "ru_keyword_alias_in_en",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Выбрать\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_word_as_ru_alias_Ref",
+   "generated": "ВЫБРАТЬ\n\tВал.Код КАК Ref\nИЗ\n\tСправочник.Валюты КАК Вал",
+   "platformAccepted": true
+  },
+  {
+   "name": "slicelast",
+   "generated": "ВЫБРАТЬ\n\tR.Курс КАК Rate\nИЗ\n\tInformationRegister.КурсыВалют.SliceLast(&D, ) КАК R",
+   "platformAccepted": true
+  },
+  {
+   "name": "acc_turnovers",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tAccountingRegister.Хозрасчетный.Turnovers(, ) КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "document_tabular",
+   "generated": "ВЫБРАТЬ\n\tD.Ref КАК Ref,\n\tD.Date КАК Date,\n\tD.Number КАК Number,\n\tD.Posted КАК Posted\nИЗ\n\tDocument.ЗаказКлиента КАК D",
+   "platformAccepted": true
+  },
+  {
+   "name": "document_tabular_part",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК Ref,\n\tT.LineNumber КАК LineNumber\nИЗ\n\tDocument.ВозвратЗаказаКлиента.Услуги КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "catalog_std_attrs",
+   "generated": "ВЫБРАТЬ\n\tC.Ref КАК Ref,\n\tC.Code КАК Code,\n\tC.Description КАК Description,\n\tC.DeletionMark КАК DeletionMark,\n\tC.Predefined КАК Predefined,\n\tC.PredefinedDataName КАК PredefinedDataName,\n\tC.DataVersion КАК DataVersion,\n\tC.Presentation КАК Presentation\nИЗ\n\tCatalog.Валюты КАК C",
+   "platformAccepted": true
+  },
+  {
+   "name": "mixed_attr_names",
+   "generated": "ВЫБРАТЬ\n\tC.Ref КАК Ref,\n\tC.Код КАК Код,\n\tC.Description КАК Description\nИЗ\n\tСправочник.Валюты КАК C",
+   "platformAccepted": true
+  },
+  {
+   "name": "deref_en",
+   "generated": "ВЫБРАТЬ\n\tC.Ref.Code КАК X\nИЗ\n\tCatalog.Валюты КАК C",
+   "platformAccepted": true
+  },
+  {
+   "name": "type_en_primitives",
+   "generated": "ВЫБРАТЬ\n\tCAST(1 AS NUMBER) КАК N,\n\tCAST(\"\" AS STRING) КАК S",
+   "platformAccepted": true
+  },
+  {
+   "name": "valuetable_ext",
+   "generated": "ВЫБРАТЬ\n\t*\nИЗ\n\t&T КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "substring_ru_in_en",
+   "generated": "ВЫБРАТЬ\n\tПОДСТРОКА(C.Description, 1, 2) КАК S\nИЗ\n\tCatalog.Валюты КАК C",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_period_names",
+   "generated": "ВЫБРАТЬ\n\tBEGINOFPERIOD(&D, TENDAYS) КАК A,\n\tBEGINOFPERIOD(&D, HALFYEAR) КАК B,\n\tBEGINOFPERIOD(&D, WEEK) КАК C,\n\tBEGINOFPERIOD(&D, QUARTER) КАК E,\n\tBEGINOFPERIOD(&D, HOUR) КАК F,\n\tBEGINOFPERIOD(&D, MINUTE) КАК G",
+   "platformAccepted": true
+  },
+  {
+   "name": "ru_exists",
+   "generated": "ВЫБРАТЬ\n\t1 КАК A\nГДЕ\n\t1 В (ВЫБРАТЬ 1)",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_in_subquery",
+   "generated": "ВЫБРАТЬ\n\t1 КАК A\nГДЕ\n\t1 IN (SELECT 1)",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_pred",
+   "generated": "ВЫБРАТЬ\n\tVALUE(Справочник.Валюты.EmptyRef) КАК E",
+   "platformAccepted": true
+  },
+  {
+   "name": "ru_pred_en",
+   "generated": "ВЫБРАТЬ\n\tЗНАЧЕНИЕ(Справочник.Валюты.ПустаяСсылка) КАК E",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_turnovers",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tAccumulationRegister.АктивированныеПромокоды.Turnovers КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ru_turnovers",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды.Обороты КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_reg_plain",
+   "generated": "ВЫБРАТЬ\n\tT.Period КАК Period,\n\tT.Recorder КАК Recorder,\n\tT.LineNumber КАК LineNumber,\n\tT.Active КАК Active\nИЗ\n\tAccumulationRegister.АктивированныеПромокоды КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_enum",
+   "generated": "ВЫБРАТЬ\n\tE.Ref КАК Ref,\n\tE.Order КАК Order\nИЗ\n\tEnum.CC_ShippingType КАК E",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_enum_value_empty",
+   "generated": "ВЫБРАТЬ\n\tVALUE(Enum.CC_ShippingType.EmptyRef) КАК E",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_ccht",
+   "generated": "ВЫБРАТЬ\n\tC.Ref КАК Ref,\n\tC.ValueType КАК ValueType\nИЗ\n\tChartOfCharacteristicTypes.ВидыХарактеристик КАК C",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_doc_std",
+   "generated": "ВЫБРАТЬ\n\tD.Ref КАК Ref,\n\tD.Date КАК Date,\n\tD.Number КАК Number,\n\tD.Posted КАК Posted,\n\tD.DeletionMark КАК DeletionMark\nИЗ\n\tDocument.ЗаказКлиента КАК D",
+   "platformAccepted": true
+  },
+  {
+   "name": "ru_kw_en_names",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code,\n\tВЫБОР\n\t\tКОГДА Cur.DeletionMark\n\t\t\tТОГДА 1\n\t\tИНАЧЕ 0\n\tКОНЕЦ КАК M\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tCur.Ref <> ЗНАЧЕНИЕ(Catalog.Валюты.EmptyRef)\n\tИ ТИПЗНАЧЕНИЯ(Cur.Ref) = ТИП(Catalog.Валюты)",
+   "platformAccepted": true
+  },
+  {
+   "name": "ru_kw_en_period_word",
+   "generated": "ВЫБРАТЬ\n\tНАЧАЛОПЕРИОДА(&D, MONTH) КАК A",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_doc_date_field",
+   "generated": "ВЫБРАТЬ\n\tD.Date КАК Date,\n\tD.Number КАК Number\nИЗ\n\tDocument.ЗаказКлиента КАК D\n\nУПОРЯДОЧИТЬ ПО\n\tDate",
+   "platformAccepted": true
+  },
+  {
+   "name": "ru_doc_date_alias",
+   "generated": "ВЫБРАТЬ\n\tД.Дата КАК Дата\nИЗ\n\tДокумент.ЗаказКлиента КАК Д\n\nУПОРЯДОЧИТЬ ПО\n\tДата",
+   "platformAccepted": true
+  },
+  {
+   "name": "ru_dot_uporyad",
+   "generated": "ВЫБРАТЬ\n\t1 КАК Упорядочить\nПОМЕСТИТЬ ВТ\n;\n\n////////////////////////////////////////////////////////////////////////////////\nВЫБРАТЬ\n\tВТ.Упорядочить КАК А\nИЗ\n\tВТ КАК ВТ",
+   "platformAccepted": true
+  },
+  {
+   "name": "ru_dot_itogi_iz",
+   "generated": "ВЫБРАТЬ\n\t1 КАК Итоги,\n\t2 КАК Выбрать\nПОМЕСТИТЬ ВТ\n;\n\n////////////////////////////////////////////////////////////////////////////////\nВЫБРАТЬ\n\tВТ.Итоги КАК А,\n\tВТ.Выбрать КАК Б\nИЗ\n\tВТ КАК ВТ",
+   "platformAccepted": true
+  },
+  {
+   "name": "en_dot_order_where",
+   "generated": "ВЫБРАТЬ\n\tE.Ref КАК Ref\nИЗ\n\tEnum.CC_ShippingType КАК E\nГДЕ\n\tE.Order > 0\n\nУПОРЯДОЧИТЬ ПО\n\tE.Order",
+   "platformAccepted": true
+  }
+ ]
+}

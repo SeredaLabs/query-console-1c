@@ -50,7 +50,7 @@ import type {
 
 import { defaultTableAlias, accountingPositionKeys } from './queryModel';
 import { renderOperatorRhs, needsFormatting, isRootNotGroup, normalizeLeafCase } from './exprFormatter';
-import { tokenize, tryTokenize, isWordToken, replaceInCodeRanges, codeRanges, isCodeAt, isNameToken as isLexerName } from './sdblLexer';
+import { tokenize, tryTokenize, isWordToken, wordOf, canonicalWord, replaceInCodeRanges, codeRanges, isCodeAt, isNameToken as isLexerName } from './sdblLexer';
 import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
 import { bareParamName } from './exprAutoAlias';
@@ -413,7 +413,7 @@ function isImplicitSourceHead(tokens: readonly Token[], i: number): boolean {
   if (prev && prev.type === 'punct' && prev.value === '.') return false;
   // Тип-цепочка после КАК/ССЫЛКА (уточнение типа в ВЫРАЗИТЬ/ЕСТЬ) — не источник.
   const prevUp = prev && (prev.type === 'ident' || prev.type === 'keyword')
-    ? prev.text.toUpperCase() : undefined;
+    ? wordOf(prev) : undefined;
   if (prevUp === 'КАК' || prevUp === 'ССЫЛКА') return false;
   // Форма `Тип.Объект.` + (имя поля | `*`).
   if (!(tokens[i + 1]?.type === 'punct' && tokens[i + 1].value === '.' && isNameToken(tokens[i + 2]) &&
@@ -484,9 +484,8 @@ function synthesizeImplicitFrom(cur: Cursor): Cursor {
     }
     if (skipUntilDepth !== undefined) continue;
     if (!isNameToken(t)) continue;
-    const up = t.text.toUpperCase();
     // ЗНАЧЕНИЕ(/ТИП( — путь-литерал метаданных, не источник.
-    if ((up === 'ЗНАЧЕНИЕ' || up === 'ТИП') &&
+    if (isWordToken(t, 'ЗНАЧЕНИЕ', 'ТИП') &&
         tokens[i + 1]?.type === 'punct' && tokens[i + 1].value === '(') {
       skipUntilDepth = depth + 1;
       continue;
@@ -531,8 +530,7 @@ function synthesizeImplicitFrom(cur: Cursor): Cursor {
     }
     if (skipUntilDepth !== undefined) continue;
     if (!isNameToken(t)) continue;
-    const up = t.text.toUpperCase();
-    if ((up === 'ЗНАЧЕНИЕ' || up === 'ТИП') &&
+    if (isWordToken(t, 'ЗНАЧЕНИЕ', 'ТИП') &&
         tokens[i + 1]?.type === 'punct' && tokens[i + 1].value === '(') {
       skipUntilDepth = depth + 1;
       continue;
@@ -629,8 +627,7 @@ function synthesizeTempTableFrom(cur: Cursor): Cursor {
     // дальше не сканируем (поля сортировки/группировки могут быть голыми).
     if (depth === 0 && t.type === 'keyword' && SECTION_AFTER_FIELDS.has(t.value)) break;
     if (!isNameToken(t)) continue;
-    const up = t.text.toUpperCase();
-    if ((up === 'ЗНАЧЕНИЕ' || up === 'ТИП') &&
+    if (isWordToken(t, 'ЗНАЧЕНИЕ', 'ТИП') &&
         tokens[i + 1]?.type === 'punct' && tokens[i + 1].value === '(') {
       skipUntilDepth = depth + 1;
       continue;
@@ -639,7 +636,7 @@ function synthesizeTempTableFrom(cur: Cursor): Cursor {
     // сортировки) — не головы путей. `КАК <псевдоним>`/`<поле> ССЫЛКА <тип>`
     // вводят имя, которое НЕ должно считаться головой; пропускаем и его, и
     // следующий токен (псевдоним/тип-голову).
-    if (t.type === 'keyword' && (up === 'КАК' || up === 'ССЫЛКА')) { i++; continue; }
+    if (t.type === 'keyword' && isWordToken(t, 'КАК', 'ССЫЛКА')) { i++; continue; }
     if (t.type === 'keyword') continue; // прочие ключевые слова (ВОЗР/УБЫВ/И/ИЛИ/…)
     // Голова цепочки только на верхнем уровне.
     if (depth !== 0) continue;
@@ -1249,7 +1246,7 @@ function parseFieldList(cur: Cursor): RawSelectItem[] {
 function tryParseCastTabSection(cur: Cursor): RawTabSection | undefined {
   const head = cur.peek(0);
   // `ВЫРАЗИТЬ` — идентификатор-функция (не ключевое слово), сравниваем регистронезависимо.
-  if (head.type !== 'ident' || head.text.toUpperCase() !== 'ВЫРАЗИТЬ') return undefined;
+  if (head.type !== 'ident' || !isWordToken(head, 'ВЫРАЗИТЬ')) return undefined;
   if (!cur.isPunct('(', 1)) return undefined;
   // Сканируем без сдвига: пропускаем сбалансированные скобки приведения, затем ждём
   // `.` имя ( `.` имя )* `.` `(`.
@@ -1534,7 +1531,7 @@ function parseOneField(cur: Cursor): RawField {
     const lastIsBareName =
       last.type === 'ident' &&
       !last.value.startsWith('#') &&
-      !EXPR_STOP_WORDS.has(last.value.toUpperCase());
+      !EXPR_STOP_WORDS.has(wordOf(last));
     // Предыдущий токен должен ЗАВЕРШАТЬ первичное выражение: не `.` (тогда last —
     // сегмент пути) и не оператор/открывающая скобка/запятая (тогда выражение
     // неполно и last — его часть). Допустимые завершители: `)`, строковый/числовой/
@@ -1563,8 +1560,8 @@ function parseOneField(cur: Cursor): RawField {
     const b = bodyTokens[i + 1];
     if (
       a.type === 'ident' && b.type === 'ident' &&
-      !EXPR_STOP_WORDS.has(a.value.toUpperCase()) &&
-      !EXPR_STOP_WORDS.has(b.value.toUpperCase())
+      !EXPR_STOP_WORDS.has(wordOf(a)) &&
+      !EXPR_STOP_WORDS.has(wordOf(b))
     ) {
       throw cur.error('два идентификатора подряд в элементе выборки (пропущены оператор или точка?)', b);
     }
@@ -1579,7 +1576,7 @@ function parseOneField(cur: Cursor): RawField {
   if (bodyTokens.length >= 2) {
     const last = bodyTokens[bodyTokens.length - 1];
     const prev = bodyTokens[bodyTokens.length - 2];
-    const lastUp = last.type === 'ident' ? last.value.toUpperCase() : '';
+    const lastUp = last.type === 'ident' ? wordOf(last) : '';
     const lastIsConnector =
       last.type === 'ident' && EXPR_STOP_WORDS.has(lastUp) && !EXPR_TERMINATOR_WORDS.has(lastUp);
     const prevEndsPrimary =
@@ -1695,7 +1692,7 @@ function requalifyTabSectionExpr(
     if (!isNameToken(t)) continue;
     const up = t.text.toUpperCase();
     // ЗНАЧЕНИЕ(/ТИП( — путь метаданных, не поле.
-    if ((up === 'ЗНАЧЕНИЕ' || up === 'ТИП') &&
+    if (isWordToken(t, 'ЗНАЧЕНИЕ', 'ТИП') &&
         tokens[i + 1]?.type === 'punct' && tokens[i + 1].value === '(') {
       skipUntilDepth = depth + 1;
       continue;
@@ -1704,8 +1701,8 @@ function requalifyTabSectionExpr(
     const prev = tokens[i - 1];
     if (prev && prev.type === 'punct' && prev.value === '.') continue; // продолжение пути
     const prevUp = prev && (prev.type === 'ident' || prev.type === 'keyword')
-      ? prev.text.toUpperCase() : undefined;
-    const skipChain = prevUp === 'КАК' || prevUp === 'ССЫЛКА' || EXPR_STOP_WORDS.has(up);
+      ? wordOf(prev) : undefined;
+    const skipChain = prevUp === 'КАК' || prevUp === 'ССЫЛКА' || EXPR_STOP_WORDS.has(wordOf(t));
     // Конец точечной цепочки.
     let j = i;
     while (tokens[j + 1]?.type === 'punct' && tokens[j + 1].value === '.' && isNameToken(tokens[j + 2])) {
@@ -2204,7 +2201,7 @@ function consumeJoinKind(cur: Cursor): RawJoin['kind'] {
     // `ВНЕШНЕЕ` лексится как идентификатор (не ключевое слово) — снимаем, если стоит
     // перед `СОЕДИНЕНИЕ`.
     const t = cur.peek();
-    if (t.type === 'ident' && t.value.toUpperCase() === 'ВНЕШНЕЕ') cur.next();
+    if (t.type === 'ident' && isWordToken(t, 'ВНЕШНЕЕ')) cur.next();
   }
   cur.expectKeyword('СОЕДИНЕНИЕ');
   return kind;
@@ -2767,7 +2764,7 @@ function tryBareField(
   // Уже квалифицировано псевдонимом известной таблицы — не голое.
   if (aliasToId.has(head.toUpperCase())) return undefined;
   // Литерал-значение из одного сегмента (НЕОПРЕДЕЛЕНО/ИСТИНА/ЛОЖЬ/NULL).
-  if (segs.length === 1 && LITERAL_VALUES.has(head.toUpperCase())) return undefined;
+  if (segs.length === 1 && LITERAL_VALUES.has(canonicalWord(head))) return undefined;
   return { path: segs.join('.'), head };
 }
 
@@ -2877,7 +2874,7 @@ function qualifyBareFieldsInExpression(
     if (!isNameToken(t)) continue;
     const up = t.text.toUpperCase();
     // ЗНАЧЕНИЕ(/ТИП( — внутри пути метаданных, не поля.
-    if ((up === 'ЗНАЧЕНИЕ' || up === 'ТИП') &&
+    if (isWordToken(t, 'ЗНАЧЕНИЕ', 'ТИП') &&
         tokens[i + 1]?.type === 'punct' && tokens[i + 1].value === '(') {
       skipUntilDepth = depth + 1;
       continue;
@@ -2888,9 +2885,9 @@ function qualifyBareFieldsInExpression(
     if (prev && prev.type === 'punct' && prev.value === '.') continue; // продолжение пути
     // Тип после КАК (ВЫРАЗИТЬ … КАК Справочник.X) или ССЫЛКА — пропустить цепочку.
     const prevUp = prev && (prev.type === 'ident' || prev.type === 'keyword')
-      ? prev.text.toUpperCase()
+      ? wordOf(prev)
       : undefined;
-    const skipChain = prevUp === 'КАК' || prevUp === 'ССЫЛКА' || EXPR_STOP_WORDS.has(up);
+    const skipChain = prevUp === 'КАК' || prevUp === 'ССЫЛКА' || EXPR_STOP_WORDS.has(wordOf(t));
     // Конец точечной цепочки от текущего имени.
     let j = i;
     while (tokens[j + 1]?.type === 'punct' && tokens[j + 1].value === '.' && isNameToken(tokens[j + 2])) {
@@ -3331,8 +3328,7 @@ function trySimpleCondition(
     let subTokens = paramTokens;
     let hierarchy = false;
     const head = subTokens[0];
-    if (head && (head.type === 'ident' || head.type === 'keyword') &&
-        head.text.toUpperCase() === 'ИЕРАРХИИ') {
+    if (head && isWordToken(head, 'ИЕРАРХИИ')) {
       subTokens = subTokens.slice(1);
       hierarchy = true;
     }
@@ -4054,7 +4050,7 @@ function sectionBareOwner(segs: string[], ctx: SectionResolveContext): string | 
   const headUp = segs[0].toUpperCase();
   if (ctx.aliasToId.has(headUp)) return undefined; // голова — псевдоним таблицы
   if (ctx.explicitAliases.has(headUp)) return undefined;
-  if (segs.length === 1 && LITERAL_VALUES.has(headUp)) return undefined;
+  if (segs.length === 1 && LITERAL_VALUES.has(canonicalWord(segs[0]))) return undefined;
   return ctx.resolveOwner(segs[0]);
 }
 
@@ -4552,7 +4548,7 @@ function resolveTotalsFieldRef(segs: string[], ctx: SectionResolveContext): Fiel
  */
 function matchPeriodBy(cur: Cursor): string | undefined {
   const head = cur.peek();
-  if (head.type !== 'ident' || head.text.toUpperCase() !== 'ПЕРИОДАМИ') return undefined;
+  if (head.type !== 'ident' || !isWordToken(head, 'ПЕРИОДАМИ')) return undefined;
   if (!cur.isPunct('(', 1)) return undefined;
   cur.next(); // ПЕРИОДАМИ
   cur.expectPunct('(');
