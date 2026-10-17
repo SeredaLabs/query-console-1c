@@ -31,8 +31,8 @@ Ukrainian/Russian. Historical platform observations are indexed in [audits](audi
   known metadata they use the verified nearest enclosing owner. The validator
   skips subquery-condition field checks to avoid false negatives.
 - A temp-table producer whose columns are not fully known (a `*` the parser could
-  not expand) makes hover/completion expand a later `*` over that temp table to the
-  known columns only (C24); the Designer keeps such a `*` as written. A complete inferred
+  not expand) leaves a later `*` over that temp table unexpanded everywhere, so hover
+  and completion do not list its columns (C24). A complete inferred
   scalar temp schema supports position-aware field validation/assistance; inferred
   columns do not provide reference types for deeper navigation.
 

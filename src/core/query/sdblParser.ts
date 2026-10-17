@@ -65,7 +65,7 @@ import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable, MetaField } from '../metadata/types';
 import type { SourceMapSink, SourceMapEvent, BatchSourceMapSink, AbsoluteSourceMapEvent, TextRange } from './sourceMap';
 import { RecordingSourceMapSink } from './sourceMap';
-import { expandStarFields, markProvenTempTable, provenColumnNames, type WildcardPolicy } from './expandStarFields';
+import { expandStarFields, markProvenTempTable, markIncompleteTempTable, hasUnexpandedWildcard, provenColumnNames, type WildcardPolicy } from './expandStarFields';
 import { expandTabSectionFields } from './expandTabSectionFields';
 import { wrapTabSectionAggregates } from './wrapTabSectionAggregates';
 import { dropUserIBConditions } from './dropUserIBConditions';
@@ -6001,6 +6001,8 @@ function deriveRegisteredTempTable(m0: QueryModel, name: string): RegisteredTemp
   };
   // C24 step 1a: columns a wildcard may expand to — only when all are proven.
   markProvenTempTable(table, provenColumnNames(m0));
+  // C24: a kept wildcard in the creator — the registered columns are only part of it.
+  markIncompleteTempTable(table, hasUnexpandedWildcard(m0));
   return { name, schema: table };
 }
 
