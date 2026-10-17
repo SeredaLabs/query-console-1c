@@ -25,6 +25,11 @@ for (const surface of ['classic', 'canvas'] as const) {
     await page.getByRole('button', { name: button, exact: true }).click();
     await expect(page.getByText(/шаблонного маркера "#Таблица"/u)).toBeVisible();
     expect(await inserts(page)).toEqual([]);
+    // A real host may close only if this equals its accepted C32 baseline.
+    const requests = await page.evaluate(() =>
+      (window as unknown as { __webviewMessages: { type: string; text?: string }[] }).__webviewMessages);
+    expect(requests.filter(m => m.type === 'closeIfUnchanged').map(m => m.text))
+      .toEqual(requests.filter(m => m.type === 'baseline').map(m => m.text));
   });
 
   test(`${surface}: a marker that keeps its surroundings is applied`, async ({ page }) => {

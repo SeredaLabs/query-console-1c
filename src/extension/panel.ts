@@ -183,6 +183,10 @@ export function createDesignerPanel(
       panel.webview.postMessage(reply);
     } else if (msg.type === 'baseline') {
       baseline.report(msg.loadId, msg.text);
+    } else if (msg.type === 'closeIfUnchanged') {
+      // U1 may forbid writing generated text even for an unchanged open.
+      // Only the host baseline can authorize closing; never insert on mismatch.
+      if (baseline.isUnchanged(msg.text)) panel.dispose();
     } else if (msg.type === 'insertText') {
       // C32: nothing changed — keep the document as it is (no write, no clipboard).
       if (!baseline.isUnchanged(msg.text)) await insertResult(msg.text, savedEditor);

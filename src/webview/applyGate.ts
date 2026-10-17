@@ -39,8 +39,8 @@ export type ApplyDecision =
   | { ok: true }
   /** Empty text, a generation error or a static blocker — the UI already shows why. */
   | { ok: false; kind: 'blocked' }
-  /** The generated text failed the same check as opening from text (`validateBatchText`). */
-  | { ok: false; kind: 'invalid'; error: string };
+  /** Generated text is unsafe to write. A marker refusal may still request a host-only no-write close. */
+  | { ok: false; kind: 'invalid'; error: string; templateMarker?: string };
 
 /**
  * Final check at the moment of applying. Re-validates the generated text with
@@ -70,7 +70,7 @@ export function decideApply(
 ): ApplyDecision {
   if (!text.trim() || generationError !== null || blocker !== null) return { ok: false, kind: 'blocked' };
   const marker = originalText === undefined ? undefined : findChangedTemplateMarker(originalText, text);
-  if (marker !== undefined) return { ok: false, kind: 'invalid', error: templateMarkerChangedMessage(marker) };
+  if (marker !== undefined) return { ok: false, kind: 'invalid', error: templateMarkerChangedMessage(marker), templateMarker: marker };
   const v = validateBatchText(text, resolver);
   if (!v.ok) return { ok: false, kind: 'invalid', error: v.error };
   if (findMalformedCustomExpressions(parseBatch(text, resolver)).length > 0) {

@@ -107,7 +107,10 @@ export function App(): React.ReactElement {
     if (commentLossPending) return;
     const decision = decideApply(batchText.text, batchText.error, applyBlocker, buildResolver(), sourceText());
     if (!decision.ok) {
-      if (decision.kind === 'invalid') setSaveError(localizeDiagnostic(decision.error));
+      if (decision.kind === 'invalid') {
+        setSaveError(localizeDiagnostic(decision.error));
+        if (decision.templateMarker !== undefined) postToHost({ type: 'closeIfUnchanged', text: batchText.text });
+      }
       return;
     }
     setSaveError(null);

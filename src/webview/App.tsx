@@ -107,7 +107,10 @@ export function App(): React.ReactElement {
           // ИЛИ известной потере данных виртуальной таблицы (ТЗ §27/§28).
           const decision = decideApply(batchText, generationError, applyBlocker, buildResolver(), sourceText());
           if (!decision.ok) {
-            if (decision.kind === 'invalid') setOkError(decision.error);
+            if (decision.kind === 'invalid') {
+              setOkError(decision.error);
+              if (decision.templateMarker !== undefined) postToHost({ type: 'closeIfUnchanged', text: batchText });
+            }
             return;
           }
           setOkError(null);
