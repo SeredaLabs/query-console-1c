@@ -16,7 +16,9 @@ current workspace and that VS Code is 1.90 or later.
 ## 🔍 The query is not detected
 
 Put the cursor inside the BSL string. The string must be static and its SDBL must
-begin with `ВЫБРАТЬ` or `УНИЧТОЖИТЬ` after comments and whitespace. Dynamic
+begin with `ВЫБРАТЬ`, `УНИЧТОЖИТЬ`, `SELECT` or `DROP` after comments and
+whitespace; a `SELECT` string with native SQL code (`--`, `/* */`, `@name`,
+`[name]`) is skipped. Dynamic
 concatenation is not supported; create a new query or simplify a copy.
 
 ## 🗂️ Tables or fields are missing

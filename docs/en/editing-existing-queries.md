@@ -10,8 +10,11 @@ translation_status: canonical
 ## 🔎 Query detection
 
 The extension searches around the cursor for a static BSL string whose SDBL text,
-after whitespace and comments, begins with `ВЫБРАТЬ` or `УНИЧТОЖИТЬ`. It does not
-evaluate concatenation, variables, functions, or other dynamic BSL expressions.
+after whitespace and comments, begins with `ВЫБРАТЬ` or `УНИЧТОЖИТЬ`, or with the
+English `SELECT` or `DROP`. A `SELECT` string with native SQL code (`--` or `/* */`
+comments, `@name` variables, `[name]` quoting) is not treated as a 1C query. It
+does not evaluate concatenation, variables, functions, or other dynamic BSL
+expressions. Apply writes an English query in Russian, as the 1C Designer does.
 
 If no supported string is found, the extension asks whether to create a new
 query at the cursor.
