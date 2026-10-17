@@ -1,7 +1,7 @@
 {
- "source": "SL_kza, platform 8.3.15.1489, 2026-10-17, through the mcp_APIBackend server: \"platform\" = validate_query (СхемаЗапроса); nothing was executed. \"designerApplied\" = this product's Designer open → Apply (preserve mode, no metadata) on branch feat/c2-bilingual-tokens, each generated text then validated on the platform.",
+ "source": "SL_kza, platform 8.3.15.1489, 2026-10-17, through the mcp_APIBackend server: \"platform\" = validate_query (СхемаЗапроса); nothing was executed. \"designerApplied\" = this product's Designer open → Apply (preserve mode, no metadata) on branch feat/c2-detection-metadata (C2 slices 1–3), each generated text then validated on the platform.",
  "verdict": "C2: the platform reads one bilingual word table. English keywords, functions, period words and metadata names are accepted, mixed freely with Russian; the canonical text (СхемаЗапроса) is Russian, aliases and names inside ЗНАЧЕНИЕ()/ТИП() are kept as written. Words reserved as an alias are the same in both languages (`КАК From` is rejected like `AS ИЗ`). A word written right after `.` is a name in either language (`E.Order`, `ВТ.Упорядочить`).",
- "notes": "Failures in the metadataNames and russianControls groups come from objects or attributes absent in SL_kza (the Russian controls fail the same way), not from the language. GROUPING SETS / ГРУППИРУЮЩИМ НАБОРАМ and the newer string functions are rejected in both languages on 8.3.15.",
+ "notes": "Failures in the metadataNames and russianControls groups come from objects or attributes absent in SL_kza (the Russian controls fail the same way), not from the language. GROUPING SETS / ГРУППИРУЮЩИМ НАБОРАМ and the newer string functions are rejected in both languages on 8.3.15. Kind / virtual table / standard attribute names were probed per kind on an object that has them (metadataNames group, 2026-10-17); РегистрРасчета, ПланВидовРасчета and Последовательность have no object in SL_kza.",
  "cases": [
   {
    "name": "select_from_as",
@@ -973,6 +973,1133 @@
     "accepted": true,
     "canonical": "ВЫБРАТЬ\n\tЗНАЧЕНИЕ(Справочник.Валюты.ПустаяСсылка) КАК E"
    }
+  },
+  {
+   "name": "Catalog.Ref",
+   "group": "metadataNames",
+   "query": "SELECT T.Ref AS X FROM Catalog.Валюты AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК X\nИЗ\n\tСправочник.Валюты КАК T"
+   }
+  },
+  {
+   "name": "Catalog.DataVersion",
+   "group": "metadataNames",
+   "query": "SELECT T.DataVersion AS X FROM Catalog.Валюты AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.ВерсияДанных КАК X\nИЗ\n\tСправочник.Валюты КАК T"
+   }
+  },
+  {
+   "name": "Catalog.DeletionMark",
+   "group": "metadataNames",
+   "query": "SELECT T.DeletionMark AS X FROM Catalog.Валюты AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.ПометкаУдаления КАК X\nИЗ\n\tСправочник.Валюты КАК T"
+   }
+  },
+  {
+   "name": "Catalog.Predefined",
+   "group": "metadataNames",
+   "query": "SELECT T.Predefined AS X FROM Catalog.Валюты AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Предопределенный КАК X\nИЗ\n\tСправочник.Валюты КАК T"
+   }
+  },
+  {
+   "name": "Catalog.PredefinedDataName",
+   "group": "metadataNames",
+   "query": "SELECT T.PredefinedDataName AS X FROM Catalog.Валюты AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.ИмяПредопределенныхДанных КАК X\nИЗ\n\tСправочник.Валюты КАК T"
+   }
+  },
+  {
+   "name": "Catalog.Code",
+   "group": "metadataNames",
+   "query": "SELECT T.Code AS X FROM Catalog.Валюты AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Код КАК X\nИЗ\n\tСправочник.Валюты КАК T"
+   }
+  },
+  {
+   "name": "Catalog.Description",
+   "group": "metadataNames",
+   "query": "SELECT T.Description AS X FROM Catalog.Валюты AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Наименование КАК X\nИЗ\n\tСправочник.Валюты КАК T"
+   }
+  },
+  {
+   "name": "Catalog.Presentation",
+   "group": "metadataNames",
+   "query": "SELECT T.Presentation AS X FROM Catalog.Валюты AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Представление КАК X\nИЗ\n\tСправочник.Валюты КАК T"
+   }
+  },
+  {
+   "name": "Catalog.Parent.Партнеры",
+   "group": "metadataNames",
+   "query": "SELECT T.Parent AS X, T.IsFolder AS Y FROM Catalog.Партнеры AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 44,
+     "message": "Table not found \"Catalog.Партнеры\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Owner.Партнеры",
+   "group": "metadataNames",
+   "query": "SELECT T.Owner AS X FROM Catalog.Партнеры AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 26,
+     "message": "Table not found \"Catalog.Партнеры\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Parent.ФизическиеЛица",
+   "group": "metadataNames",
+   "query": "SELECT T.Parent AS X, T.IsFolder AS Y FROM Catalog.ФизическиеЛица AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 44,
+     "message": "Table not found \"Catalog.ФизическиеЛица\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Owner.ФизическиеЛица",
+   "group": "metadataNames",
+   "query": "SELECT T.Owner AS X FROM Catalog.ФизическиеЛица AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 26,
+     "message": "Table not found \"Catalog.ФизическиеЛица\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Parent.Контрагенты",
+   "group": "metadataNames",
+   "query": "SELECT T.Parent AS X, T.IsFolder AS Y FROM Catalog.Контрагенты AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 10,
+     "message": "Field not found \"T.Parent\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Owner.Контрагенты",
+   "group": "metadataNames",
+   "query": "SELECT T.Owner AS X FROM Catalog.Контрагенты AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 10,
+     "message": "Field not found \"T.Owner\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Parent.СтатьиДвиженияДенежныхСредств",
+   "group": "metadataNames",
+   "query": "SELECT T.Parent AS X, T.IsFolder AS Y FROM Catalog.СтатьиДвиженияДенежныхСредств AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 10,
+     "message": "Field not found \"T.Parent\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Owner.СтатьиДвиженияДенежныхСредств",
+   "group": "metadataNames",
+   "query": "SELECT T.Owner AS X FROM Catalog.СтатьиДвиженияДенежныхСредств AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 10,
+     "message": "Field not found \"T.Owner\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Parent.Номенклатура",
+   "group": "metadataNames",
+   "query": "SELECT T.Parent AS X, T.IsFolder AS Y FROM Catalog.Номенклатура AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 10,
+     "message": "Field not found \"T.Parent\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Owner.Номенклатура",
+   "group": "metadataNames",
+   "query": "SELECT T.Owner AS X FROM Catalog.Номенклатура AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 10,
+     "message": "Field not found \"T.Owner\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Parent.ВидыНоменклатуры",
+   "group": "metadataNames",
+   "query": "SELECT T.Parent AS X, T.IsFolder AS Y FROM Catalog.ВидыНоменклатуры AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 44,
+     "message": "Table not found \"Catalog.ВидыНоменклатуры\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Owner.ВидыНоменклатуры",
+   "group": "metadataNames",
+   "query": "SELECT T.Owner AS X FROM Catalog.ВидыНоменклатуры AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 26,
+     "message": "Table not found \"Catalog.ВидыНоменклатуры\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Parent.Файлы",
+   "group": "metadataNames",
+   "query": "SELECT T.Parent AS X, T.IsFolder AS Y FROM Catalog.Файлы AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 10,
+     "message": "Field not found \"T.Parent\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Owner.Файлы",
+   "group": "metadataNames",
+   "query": "SELECT T.Owner AS X FROM Catalog.Файлы AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 10,
+     "message": "Field not found \"T.Owner\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Parent.ПапкиФайлов",
+   "group": "metadataNames",
+   "query": "SELECT T.Parent AS X, T.IsFolder AS Y FROM Catalog.ПапкиФайлов AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 25,
+     "message": "Field not found \"T.IsFolder\""
+    }
+   }
+  },
+  {
+   "name": "Catalog.Owner.ПапкиФайлов",
+   "group": "metadataNames",
+   "query": "SELECT T.Owner AS X FROM Catalog.ПапкиФайлов AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 10,
+     "message": "Field not found \"T.Owner\""
+    }
+   }
+  },
+  {
+   "name": "Document.Ref",
+   "group": "metadataNames",
+   "query": "SELECT T.Ref AS X FROM Document.ЗаказКлиента AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК X\nИЗ\n\tДокумент.ЗаказКлиента КАК T"
+   }
+  },
+  {
+   "name": "Document.DataVersion",
+   "group": "metadataNames",
+   "query": "SELECT T.DataVersion AS X FROM Document.ЗаказКлиента AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.ВерсияДанных КАК X\nИЗ\n\tДокумент.ЗаказКлиента КАК T"
+   }
+  },
+  {
+   "name": "Document.DeletionMark",
+   "group": "metadataNames",
+   "query": "SELECT T.DeletionMark AS X FROM Document.ЗаказКлиента AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.ПометкаУдаления КАК X\nИЗ\n\tДокумент.ЗаказКлиента КАК T"
+   }
+  },
+  {
+   "name": "Document.Date",
+   "group": "metadataNames",
+   "query": "SELECT T.Date AS X FROM Document.ЗаказКлиента AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Дата КАК X\nИЗ\n\tДокумент.ЗаказКлиента КАК T"
+   }
+  },
+  {
+   "name": "Document.Number",
+   "group": "metadataNames",
+   "query": "SELECT T.Number AS X FROM Document.ЗаказКлиента AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Номер КАК X\nИЗ\n\tДокумент.ЗаказКлиента КАК T"
+   }
+  },
+  {
+   "name": "Document.Posted",
+   "group": "metadataNames",
+   "query": "SELECT T.Posted AS X FROM Document.ЗаказКлиента AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Проведен КАК X\nИЗ\n\tДокумент.ЗаказКлиента КАК T"
+   }
+  },
+  {
+   "name": "Document.TS.LineNumber",
+   "group": "metadataNames",
+   "query": "SELECT T.Ref, T.LineNumber AS X FROM Document.ВозвратЗаказаКлиента.Услуги AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК Ссылка,\n\tT.НомерСтроки КАК X\nИЗ\n\tДокумент.ВозвратЗаказаКлиента.Услуги КАК T"
+   }
+  },
+  {
+   "name": "Enum.Ref",
+   "group": "metadataNames",
+   "query": "SELECT T.Ref AS X FROM Enum.CC_ShippingType AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК X\nИЗ\n\tПеречисление.CC_ShippingType КАК T"
+   }
+  },
+  {
+   "name": "Enum.Order",
+   "group": "metadataNames",
+   "query": "SELECT T.Order AS X FROM Enum.CC_ShippingType AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Порядок КАК X\nИЗ\n\tПеречисление.CC_ShippingType КАК T"
+   }
+  },
+  {
+   "name": "ChartOfCharacteristicTypes.Ref",
+   "group": "metadataNames",
+   "query": "SELECT T.Ref AS X FROM ChartOfCharacteristicTypes.ВидыХарактеристик AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК X\nИЗ\n\tПланВидовХарактеристик.ВидыХарактеристик КАК T"
+   }
+  },
+  {
+   "name": "ChartOfCharacteristicTypes.ValueType",
+   "group": "metadataNames",
+   "query": "SELECT T.ValueType AS X FROM ChartOfCharacteristicTypes.ВидыХарактеристик AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.ТипЗначения КАК X\nИЗ\n\tПланВидовХарактеристик.ВидыХарактеристик КАК T"
+   }
+  },
+  {
+   "name": "ChartOfCharacteristicTypes.Code",
+   "group": "metadataNames",
+   "query": "SELECT T.Code AS X FROM ChartOfCharacteristicTypes.ВидыХарактеристик AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Код КАК X\nИЗ\n\tПланВидовХарактеристик.ВидыХарактеристик КАК T"
+   }
+  },
+  {
+   "name": "ChartOfCharacteristicTypes.Description",
+   "group": "metadataNames",
+   "query": "SELECT T.Description AS X FROM ChartOfCharacteristicTypes.ВидыХарактеристик AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 10,
+     "message": "Field not found \"T.Description\""
+    }
+   }
+  },
+  {
+   "name": "ChartOfAccounts.Ref",
+   "group": "metadataNames",
+   "query": "SELECT T.Ref AS X FROM ChartOfAccounts.Хозрасчетный AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T"
+   }
+  },
+  {
+   "name": "ChartOfAccounts.Code",
+   "group": "metadataNames",
+   "query": "SELECT T.Code AS X FROM ChartOfAccounts.Хозрасчетный AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Код КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T"
+   }
+  },
+  {
+   "name": "ChartOfAccounts.Description",
+   "group": "metadataNames",
+   "query": "SELECT T.Description AS X FROM ChartOfAccounts.Хозрасчетный AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Наименование КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T"
+   }
+  },
+  {
+   "name": "ChartOfAccounts.Type",
+   "group": "metadataNames",
+   "query": "SELECT T.Type AS X FROM ChartOfAccounts.Хозрасчетный AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Вид КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T"
+   }
+  },
+  {
+   "name": "ChartOfAccounts.OffBalance",
+   "group": "metadataNames",
+   "query": "SELECT T.OffBalance AS X FROM ChartOfAccounts.Хозрасчетный AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Забалансовый КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T"
+   }
+  },
+  {
+   "name": "ChartOfAccounts.Order",
+   "group": "metadataNames",
+   "query": "SELECT T.Order AS X FROM ChartOfAccounts.Хозрасчетный AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Порядок КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T"
+   }
+  },
+  {
+   "name": "ChartOfAccounts.Parent",
+   "group": "metadataNames",
+   "query": "SELECT T.Parent AS X FROM ChartOfAccounts.Хозрасчетный AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Родитель КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T"
+   }
+  },
+  {
+   "name": "ChartOfAccounts.ExtDimensionTypes",
+   "group": "metadataNames",
+   "query": "SELECT T.Ref, T.ExtDimensionType AS X, T.LineNumber AS Y, T.TurnoversOnly AS Z FROM ChartOfAccounts.Хозрасчетный.ExtDimensionTypes AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК Ссылка,\n\tT.ВидСубконто КАК X,\n\tT.НомерСтроки КАК Y,\n\tT.ТолькоОбороты КАК Z\nИЗ\n\tПланСчетов.Хозрасчетный.ВидыСубконто КАК T"
+   }
+  },
+  {
+   "name": "AccountingRegister.Period",
+   "group": "metadataNames",
+   "query": "SELECT T.Period AS X FROM AccountingRegister.Хозрасчетный AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Период КАК X\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный КАК T"
+   }
+  },
+  {
+   "name": "AccountingRegister.Recorder",
+   "group": "metadataNames",
+   "query": "SELECT T.Recorder AS X FROM AccountingRegister.Хозрасчетный AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Регистратор КАК X\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный КАК T"
+   }
+  },
+  {
+   "name": "AccountingRegister.LineNumber",
+   "group": "metadataNames",
+   "query": "SELECT T.LineNumber AS X FROM AccountingRegister.Хозрасчетный AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.НомерСтроки КАК X\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный КАК T"
+   }
+  },
+  {
+   "name": "AccountingRegister.Active",
+   "group": "metadataNames",
+   "query": "SELECT T.Active AS X FROM AccountingRegister.Хозрасчетный AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Активность КАК X\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный КАК T"
+   }
+  },
+  {
+   "name": "AccountingRegister.AccountDr",
+   "group": "metadataNames",
+   "query": "SELECT T.AccountDr AS X FROM AccountingRegister.Хозрасчетный AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.СчетДт КАК X\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный КАК T"
+   }
+  },
+  {
+   "name": "AccountingRegister.AccountCr",
+   "group": "metadataNames",
+   "query": "SELECT T.AccountCr AS X FROM AccountingRegister.Хозрасчетный AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.СчетКт КАК X\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный КАК T"
+   }
+  },
+  {
+   "name": "AccumulationRegister.Period",
+   "group": "metadataNames",
+   "query": "SELECT T.Period AS X FROM AccumulationRegister.АктивированныеПромокоды AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Период КАК X\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды КАК T"
+   }
+  },
+  {
+   "name": "AccumulationRegister.Recorder",
+   "group": "metadataNames",
+   "query": "SELECT T.Recorder AS X FROM AccumulationRegister.АктивированныеПромокоды AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Регистратор КАК X\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды КАК T"
+   }
+  },
+  {
+   "name": "AccumulationRegister.LineNumber",
+   "group": "metadataNames",
+   "query": "SELECT T.LineNumber AS X FROM AccumulationRegister.АктивированныеПромокоды AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.НомерСтроки КАК X\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды КАК T"
+   }
+  },
+  {
+   "name": "AccumulationRegister.Active",
+   "group": "metadataNames",
+   "query": "SELECT T.Active AS X FROM AccumulationRegister.АктивированныеПромокоды AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Активность КАК X\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды КАК T"
+   }
+  },
+  {
+   "name": "AccumulationRegister.Balance.ТоварыНаСкладах",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.ТоварыНаСкладах.Balance AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.ТоварыНаСкладах.Balance\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.BalanceAndTurnovers.ТоварыНаСкладах",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.ТоварыНаСкладах.BalanceAndTurnovers AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.ТоварыНаСкладах.BalanceAndTurnovers\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.RecordType.ТоварыНаСкладах",
+   "group": "metadataNames",
+   "query": "SELECT T.RecordType AS X FROM AccumulationRegister.ТоварыНаСкладах AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 31,
+     "message": "Table not found \"AccumulationRegister.ТоварыНаСкладах\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.Balance.ДенежныеСредстваБезналичные",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.ДенежныеСредстваБезналичные.Balance AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.ДенежныеСредстваБезналичные.Balance\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.BalanceAndTurnovers.ДенежныеСредстваБезналичные",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.ДенежныеСредстваБезналичные.BalanceAndTurnovers AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.ДенежныеСредстваБезналичные.BalanceAndTurnovers\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.RecordType.ДенежныеСредстваБезналичные",
+   "group": "metadataNames",
+   "query": "SELECT T.RecordType AS X FROM AccumulationRegister.ДенежныеСредстваБезналичные AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 31,
+     "message": "Table not found \"AccumulationRegister.ДенежныеСредстваБезналичные\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.Balance.РасчетыСКлиентами",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.РасчетыСКлиентами.Balance AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.РасчетыСКлиентами.Balance\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.BalanceAndTurnovers.РасчетыСКлиентами",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.РасчетыСКлиентами.BalanceAndTurnovers AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.РасчетыСКлиентами.BalanceAndTurnovers\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.RecordType.РасчетыСКлиентами",
+   "group": "metadataNames",
+   "query": "SELECT T.RecordType AS X FROM AccumulationRegister.РасчетыСКлиентами AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 31,
+     "message": "Table not found \"AccumulationRegister.РасчетыСКлиентами\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.Balance.ЗаказыКлиентов",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.ЗаказыКлиентов.Balance AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.ЗаказыКлиентов.Balance\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.BalanceAndTurnovers.ЗаказыКлиентов",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.ЗаказыКлиентов.BalanceAndTurnovers AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.ЗаказыКлиентов.BalanceAndTurnovers\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.RecordType.ЗаказыКлиентов",
+   "group": "metadataNames",
+   "query": "SELECT T.RecordType AS X FROM AccumulationRegister.ЗаказыКлиентов AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 31,
+     "message": "Table not found \"AccumulationRegister.ЗаказыКлиентов\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.Balance.СвободныеОстатки",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.СвободныеОстатки.Balance AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.СвободныеОстатки.Balance\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.BalanceAndTurnovers.СвободныеОстатки",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.СвободныеОстатки.BalanceAndTurnovers AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 17,
+     "message": "Table not found \"AccumulationRegister.СвободныеОстатки.BalanceAndTurnovers\""
+    }
+   }
+  },
+  {
+   "name": "AccumulationRegister.RecordType.СвободныеОстатки",
+   "group": "metadataNames",
+   "query": "SELECT T.RecordType AS X FROM AccumulationRegister.СвободныеОстатки AS T",
+   "platform": {
+    "accepted": false,
+    "error": {
+     "line": 1,
+     "col": 31,
+     "message": "Table not found \"AccumulationRegister.СвободныеОстатки\""
+    }
+   }
+  },
+  {
+   "name": "InformationRegister.Period",
+   "group": "metadataNames",
+   "query": "SELECT T.Period AS X FROM InformationRegister.КурсыВалют AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Период КАК X\nИЗ\n\tРегистрСведений.КурсыВалют КАК T"
+   }
+  },
+  {
+   "name": "InformationRegister.Recorder",
+   "group": "metadataNames",
+   "query": "SELECT T.Recorder AS X FROM InformationRegister.КурсыВалют AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Регистратор КАК X\nИЗ\n\tРегистрСведений.КурсыВалют КАК T"
+   }
+  },
+  {
+   "name": "InformationRegister.Active",
+   "group": "metadataNames",
+   "query": "SELECT T.Active AS X FROM InformationRegister.КурсыВалют AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Активность КАК X\nИЗ\n\tРегистрСведений.КурсыВалют КАК T"
+   }
+  },
+  {
+   "name": "InformationRegister.LineNumber",
+   "group": "metadataNames",
+   "query": "SELECT T.LineNumber AS X FROM InformationRegister.КурсыВалют AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.НомерСтроки КАК X\nИЗ\n\tРегистрСведений.КурсыВалют КАК T"
+   }
+  },
+  {
+   "name": "InformationRegister.SliceFirst",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM InformationRegister.КурсыВалют.SliceFirst AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Период КАК Период,\n\tT.Регистратор КАК Регистратор,\n\tT.НомерСтроки КАК НомерСтроки,\n\tT.Активность КАК Активность,\n\tT.Валюта КАК Валюта,\n\tT.Курс КАК Курс,\n\tT.Кратность КАК Кратность\nИЗ\n\tРегистрСведений.КурсыВалют.СрезПервых КАК T"
+   }
+  },
+  {
+   "name": "AccountingRegister.Balance",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccountingRegister.Хозрасчетный.Balance AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Счет КАК Счет,\n\tT.Субконто1 КАК Субконто1,\n\tT.Субконто2 КАК Субконто2,\n\tT.Субконто3 КАК Субконто3,\n\tT.Организация КАК Организация,\n\tT.Валюта КАК Валюта,\n\tT.Подразделение КАК Подразделение,\n\tT.Проект КАК Проект,\n\tT.НаправлениеДеятельности КАК НаправлениеДеятельности,\n\tT.НалоговоеНазначение КАК НалоговоеНазначение,\n\tT.СуммаОстаток КАК СуммаОстаток,\n\tT.СуммаОстатокДт КАК СуммаОстатокДт,\n\tT.СуммаОстатокКт КАК СуммаОстатокКт,\n\tT.СуммаРазвернутыйОстатокДт КАК СуммаРазвернутыйОстатокДт,\n\tT.СуммаРазвернутыйОстатокКт КАК СуммаРазвернутыйОстатокКт,\n\tT.ВалютнаяСуммаОстаток КАК ВалютнаяСуммаОстаток,\n\tT.ВалютнаяСуммаОстатокДт КАК ВалютнаяСуммаОстатокДт,\n\tT.ВалютнаяСуммаОстатокКт КАК ВалютнаяСуммаОстатокКт,\n\tT.ВалютнаяСуммаРазвернутыйОстатокДт КАК ВалютнаяСуммаРазвернутыйОстатокДт,\n\tT.ВалютнаяСуммаРазвернутыйОстатокКт КАК ВалютнаяСуммаРазвернутыйОстатокКт,\n\tT.КоличествоОстаток КАК КоличествоОстаток,\n\tT.КоличествоОстатокДт КАК КоличествоОстатокДт,\n\tT.КоличествоОстатокКт КАК КоличествоОстатокКт,\n\tT.КоличествоРазвернутыйОстатокДт КАК КоличествоРазвернутыйОстатокДт,\n\tT.КоличествоРазвернутыйОстатокКт КАК КоличествоРазвернутыйОстатокКт,\n\tT.СуммаНУОстаток КАК СуммаНУОстаток,\n\tT.СуммаНУОстатокДт КАК СуммаНУОстатокДт,\n\tT.СуммаНУОстатокКт КАК СуммаНУОстатокКт,\n\tT.СуммаНУРазвернутыйОстатокДт КАК СуммаНУРазвернутыйОстатокДт,\n\tT.СуммаНУРазвернутыйОстатокКт КАК СуммаНУРазвернутыйОстатокКт,\n\tT.СуммаПРОстаток КАК СуммаПРОстаток,\n\tT.СуммаПРОстатокДт КАК СуммаПРОстатокДт,\n\tT.СуммаПРОстатокКт КАК СуммаПРОстатокКт,\n\tT.СуммаПРРазвернутыйОстатокДт КАК СуммаПРРазвернутыйОстатокДт,\n\tT.СуммаПРРазвернутыйОстатокКт КАК СуммаПРРазвернутыйОстатокКт,\n\tT.СуммаВРОстаток КАК СуммаВРОстаток,\n\tT.СуммаВРОстатокДт КАК СуммаВРОстатокДт,\n\tT.СуммаВРОстатокКт КАК СуммаВРОстатокКт,\n\tT.СуммаВРРазвернутыйОстатокДт КАК СуммаВРРазвернутыйОстатокДт,\n\tT.СуммаВРРазвернутыйОстатокКт КАК СуммаВРРазвернутыйОстатокКт\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.Остатки КАК T"
+   }
+  },
+  {
+   "name": "AccountingRegister.BalanceAndTurnovers",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccountingRegister.Хозрасчетный.BalanceAndTurnovers AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Счет КАК Счет,\n\tT.Субконто1 КАК Субконто1,\n\tT.Субконто2 КАК Субконто2,\n\tT.Субконто3 КАК Субконто3,\n\tT.Организация КАК Организация,\n\tT.Валюта КАК Валюта,\n\tT.Подразделение КАК Подразделение,\n\tT.Проект КАК Проект,\n\tT.НаправлениеДеятельности КАК НаправлениеДеятельности,\n\tT.НалоговоеНазначение КАК НалоговоеНазначение,\n\tT.СуммаНачальныйОстаток КАК СуммаНачальныйОстаток,\n\tT.СуммаНачальныйОстатокДт КАК СуммаНачальныйОстатокДт,\n\tT.СуммаНачальныйОстатокКт КАК СуммаНачальныйОстатокКт,\n\tT.СуммаНачальныйРазвернутыйОстатокДт КАК СуммаНачальныйРазвернутыйОстатокДт,\n\tT.СуммаНачальныйРазвернутыйОстатокКт КАК СуммаНачальныйРазвернутыйОстатокКт,\n\tT.СуммаОборот КАК СуммаОборот,\n\tT.СуммаОборотДт КАК СуммаОборотДт,\n\tT.СуммаОборотКт КАК СуммаОборотКт,\n\tT.СуммаКонечныйОстаток КАК СуммаКонечныйОстаток,\n\tT.СуммаКонечныйОстатокДт КАК СуммаКонечныйОстатокДт,\n\tT.СуммаКонечныйОстатокКт КАК СуммаКонечныйОстатокКт,\n\tT.СуммаКонечныйРазвернутыйОстатокДт КАК СуммаКонечныйРазвернутыйОстатокДт,\n\tT.СуммаКонечныйРазвернутыйОстатокКт КАК СуммаКонечныйРазвернутыйОстатокКт,\n\tT.ВалютнаяСуммаНачальныйОстаток КАК ВалютнаяСуммаНачальныйОстаток,\n\tT.ВалютнаяСуммаНачальныйОстатокДт КАК ВалютнаяСуммаНачальныйОстатокДт,\n\tT.ВалютнаяСуммаНачальныйОстатокКт КАК ВалютнаяСуммаНачальныйОстатокКт,\n\tT.ВалютнаяСуммаНачальныйРазвернутыйОстатокДт КАК ВалютнаяСуммаНачальныйРазвернутыйОстатокДт,\n\tT.ВалютнаяСуммаНачальныйРазвернутыйОстатокКт КАК ВалютнаяСуммаНачальныйРазвернутыйОстатокКт,\n\tT.ВалютнаяСуммаОборот КАК ВалютнаяСуммаОборот,\n\tT.ВалютнаяСуммаОборотДт КАК ВалютнаяСуммаОборотДт,\n\tT.ВалютнаяСуммаОборотКт КАК ВалютнаяСуммаОборотКт,\n\tT.ВалютнаяСуммаКонечныйОстаток КАК ВалютнаяСуммаКонечныйОстаток,\n\tT.ВалютнаяСуммаКонечныйОстатокДт КАК ВалютнаяСуммаКонечныйОстатокДт,\n\tT.ВалютнаяСуммаКонечныйОстатокКт КАК ВалютнаяСуммаКонечныйОстатокКт,\n\tT.ВалютнаяСуммаКонечныйРазвернутыйОстатокДт КАК ВалютнаяСуммаКонечныйРазвернутыйОстатокДт,\n\tT.ВалютнаяСуммаКонечныйРазвернутыйОстатокКт КАК ВалютнаяСуммаКонечныйРазвернутыйОстатокКт,\n\tT.КоличествоНачальныйОстаток КАК КоличествоНачальныйОстаток,\n\tT.КоличествоНачальныйОстатокДт КАК КоличествоНачальныйОстатокДт,\n\tT.КоличествоНачальныйОстатокКт КАК КоличествоНачальныйОстатокКт,\n\tT.КоличествоНачальныйРазвернутыйОстатокДт КАК КоличествоНачальныйРазвернутыйОстатокДт,\n\tT.КоличествоНачальныйРазвернутыйОстатокКт КАК КоличествоНачальныйРазвернутыйОстатокКт,\n\tT.КоличествоОборот КАК КоличествоОборот,\n\tT.КоличествоОборотДт КАК КоличествоОборотДт,\n\tT.КоличествоОборотКт КАК КоличествоОборотКт,\n\tT.КоличествоКонечныйОстаток КАК КоличествоКонечныйОстаток,\n\tT.КоличествоКонечныйОстатокДт КАК КоличествоКонечныйОстатокДт,\n\tT.КоличествоКонечныйОстатокКт КАК КоличествоКонечныйОстатокКт,\n\tT.КоличествоКонечныйРазвернутыйОстатокДт КАК КоличествоКонечныйРазвернутыйОстатокДт,\n\tT.КоличествоКонечныйРазвернутыйОстатокКт КАК КоличествоКонечныйРазвернутыйОстатокКт,\n\tT.СуммаНУНачальныйОстаток КАК СуммаНУНачальныйОстаток,\n\tT.СуммаНУНачальныйОстатокДт КАК СуммаНУНачальныйОстатокДт,\n\tT.СуммаНУНачальныйОстатокКт КАК СуммаНУНачальныйОстатокКт,\n\tT.СуммаНУНачальныйРазвернутыйОстатокДт КАК СуммаНУНачальныйРазвернутыйОстатокДт,\n\tT.СуммаНУНачальныйРазвернутыйОстатокКт КАК СуммаНУНачальныйРазвернутыйОстатокКт,\n\tT.СуммаНУОборот КАК СуммаНУОборот,\n\tT.СуммаНУОборотДт КАК СуммаНУОборотДт,\n\tT.СуммаНУОборотКт КАК СуммаНУОборотКт,\n\tT.СуммаНУКонечныйОстаток КАК СуммаНУКонечныйОстаток,\n\tT.СуммаНУКонечныйОстатокДт КАК СуммаНУКонечныйОстатокДт,\n\tT.СуммаНУКонечныйОстатокКт КАК СуммаНУКонечныйОстатокКт,\n\tT.СуммаНУКонечныйРазвернутыйОстатокДт КАК СуммаНУКонечныйРазвернутыйОстатокДт,\n\tT.СуммаНУКонечныйРазвернутыйОстатокКт КАК СуммаНУКонечныйРазвернутыйОстатокКт,\n\tT.СуммаПРНачальныйОстаток КАК СуммаПРНачальныйОстаток,\n\tT.СуммаПРНачальныйОстатокДт КАК СуммаПРНачальныйОстатокДт,\n\tT.СуммаПРНачальныйОстатокКт КАК СуммаПРНачальныйОстатокКт,\n\tT.СуммаПРНачальныйРазвернутыйОстатокДт КАК СуммаПРНачальныйРазвернутыйОстатокДт,\n\tT.СуммаПРНачальныйРазвернутыйОстатокКт КАК СуммаПРНачальныйРазвернутыйОстатокКт,\n\tT.СуммаПРОборот КАК СуммаПРОборот,\n\tT.СуммаПРОборотДт КАК СуммаПРОборотДт,\n\tT.СуммаПРОборотКт КАК СуммаПРОборотКт,\n\tT.СуммаПРКонечныйОстаток КАК СуммаПРКонечныйОстаток,\n\tT.СуммаПРКонечныйОстатокДт КАК СуммаПРКонечныйОстатокДт,\n\tT.СуммаПРКонечныйОстатокКт КАК СуммаПРКонечныйОстатокКт,\n\tT.СуммаПРКонечныйРазвернутыйОстатокДт КАК СуммаПРКонечныйРазвернутыйОстатокДт,\n\tT.СуммаПРКонечныйРазвернутыйОстатокКт КАК СуммаПРКонечныйРазвернутыйОстатокКт,\n\tT.СуммаВРНачальныйОстаток КАК СуммаВРНачальныйОстаток,\n\tT.СуммаВРНачальныйОстатокДт КАК СуммаВРНачальныйОстатокДт,\n\tT.СуммаВРНачальныйОстатокКт КАК СуммаВРНачальныйОстатокКт,\n\tT.СуммаВРНачальныйРазвернутыйОстатокДт КАК СуммаВРНачальныйРазвернутыйОстатокДт,\n\tT.СуммаВРНачальныйРазвернутыйОстатокКт КАК СуммаВРНачальныйРазвернутыйОстатокКт,\n\tT.СуммаВРОборот КАК СуммаВРОборот,\n\tT.СуммаВРОборотДт КАК СуммаВРОборотДт,\n\tT.СуммаВРОборотКт КАК СуммаВРОборотКт,\n\tT.СуммаВРКонечныйОстаток КАК СуммаВРКонечныйОстаток,\n\tT.СуммаВРКонечныйОстатокДт КАК СуммаВРКонечныйОстатокДт,\n\tT.СуммаВРКонечныйОстатокКт КАК СуммаВРКонечныйОстатокКт,\n\tT.СуммаВРКонечныйРазвернутыйОстатокДт КАК СуммаВРКонечныйРазвернутыйОстатокДт,\n\tT.СуммаВРКонечныйРазвернутыйОстатокКт КАК СуммаВРКонечныйРазвернутыйОстатокКт\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.ОстаткиИОбороты КАК T"
+   }
+  },
+  {
+   "name": "AccountingRegister.DrCrTurnovers",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccountingRegister.Хозрасчетный.DrCrTurnovers AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.СчетДт КАК СчетДт,\n\tT.СубконтоДт1 КАК СубконтоДт1,\n\tT.СубконтоДт2 КАК СубконтоДт2,\n\tT.СубконтоДт3 КАК СубконтоДт3,\n\tT.СчетКт КАК СчетКт,\n\tT.СубконтоКт1 КАК СубконтоКт1,\n\tT.СубконтоКт2 КАК СубконтоКт2,\n\tT.СубконтоКт3 КАК СубконтоКт3,\n\tT.Организация КАК Организация,\n\tT.ВалютаДт КАК ВалютаДт,\n\tT.ВалютаКт КАК ВалютаКт,\n\tT.ПодразделениеДт КАК ПодразделениеДт,\n\tT.ПодразделениеКт КАК ПодразделениеКт,\n\tT.ПроектДт КАК ПроектДт,\n\tT.ПроектКт КАК ПроектКт,\n\tT.НаправлениеДеятельностиДт КАК НаправлениеДеятельностиДт,\n\tT.НаправлениеДеятельностиКт КАК НаправлениеДеятельностиКт,\n\tT.НалоговоеНазначениеДт КАК НалоговоеНазначениеДт,\n\tT.НалоговоеНазначениеКт КАК НалоговоеНазначениеКт,\n\tT.СуммаОборот КАК СуммаОборот,\n\tT.ВалютнаяСуммаОборотДт КАК ВалютнаяСуммаОборотДт,\n\tT.ВалютнаяСуммаОборотКт КАК ВалютнаяСуммаОборотКт,\n\tT.КоличествоОборотДт КАК КоличествоОборотДт,\n\tT.КоличествоОборотКт КАК КоличествоОборотКт,\n\tT.СуммаНУОборотДт КАК СуммаНУОборотДт,\n\tT.СуммаНУОборотКт КАК СуммаНУОборотКт,\n\tT.СуммаПРОборотДт КАК СуммаПРОборотДт,\n\tT.СуммаПРОборотКт КАК СуммаПРОборотКт,\n\tT.СуммаВРОборотДт КАК СуммаВРОборотДт,\n\tT.СуммаВРОборотКт КАК СуммаВРОборотКт\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.ОборотыДтКт КАК T"
+   }
+  },
+  {
+   "name": "AccountingRegister.RecordsWithExtDimensions",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccountingRegister.Хозрасчетный.RecordsWithExtDimensions AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Период КАК Период,\n\tT.Регистратор КАК Регистратор,\n\tT.НомерСтроки КАК НомерСтроки,\n\tT.Активность КАК Активность,\n\tT.СчетДт КАК СчетДт,\n\tT.СубконтоДт1 КАК СубконтоДт1,\n\tT.ВидСубконтоДт1 КАК ВидСубконтоДт1,\n\tT.СубконтоДт2 КАК СубконтоДт2,\n\tT.ВидСубконтоДт2 КАК ВидСубконтоДт2,\n\tT.СубконтоДт3 КАК СубконтоДт3,\n\tT.ВидСубконтоДт3 КАК ВидСубконтоДт3,\n\tT.СчетКт КАК СчетКт,\n\tT.СубконтоКт1 КАК СубконтоКт1,\n\tT.ВидСубконтоКт1 КАК ВидСубконтоКт1,\n\tT.СубконтоКт2 КАК СубконтоКт2,\n\tT.ВидСубконтоКт2 КАК ВидСубконтоКт2,\n\tT.СубконтоКт3 КАК СубконтоКт3,\n\tT.ВидСубконтоКт3 КАК ВидСубконтоКт3,\n\tT.Организация КАК Организация,\n\tT.ВалютаДт КАК ВалютаДт,\n\tT.ВалютаКт КАК ВалютаКт,\n\tT.ПодразделениеДт КАК ПодразделениеДт,\n\tT.ПодразделениеКт КАК ПодразделениеКт,\n\tT.ПроектДт КАК ПроектДт,\n\tT.ПроектКт КАК ПроектКт,\n\tT.НаправлениеДеятельностиДт КАК НаправлениеДеятельностиДт,\n\tT.НаправлениеДеятельностиКт КАК НаправлениеДеятельностиКт,\n\tT.НалоговоеНазначениеДт КАК НалоговоеНазначениеДт,\n\tT.НалоговоеНазначениеКт КАК НалоговоеНазначениеКт,\n\tT.Сумма КАК Сумма,\n\tT.ВалютнаяСуммаДт КАК ВалютнаяСуммаДт,\n\tT.ВалютнаяСуммаКт КАК ВалютнаяСуммаКт,\n\tT.КоличествоДт КАК КоличествоДт,\n\tT.КоличествоКт КАК КоличествоКт,\n\tT.СуммаНУДт КАК СуммаНУДт,\n\tT.СуммаНУКт КАК СуммаНУКт,\n\tT.СуммаПРДт КАК СуммаПРДт,\n\tT.СуммаПРКт КАК СуммаПРКт,\n\tT.СуммаВРДт КАК СуммаВРДт,\n\tT.СуммаВРКт КАК СуммаВРКт,\n\tT.Содержание КАК Содержание,\n\tT.НеКорректироватьСтоимостьАвтоматически КАК НеКорректироватьСтоимостьАвтоматически\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.ДвиженияССубконто КАК T"
+   }
+  },
+  {
+   "name": "AccountingRegister.ExtDimensions",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccountingRegister.Хозрасчетный.ExtDimensions AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Период КАК Период,\n\tT.Регистратор КАК Регистратор,\n\tT.НомерСтроки КАК НомерСтроки,\n\tT.ВидДвижения КАК ВидДвижения,\n\tT.Вид КАК Вид,\n\tT.Значение КАК Значение\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.Субконто КАК T"
+   }
+  },
+  {
+   "name": "BusinessProcess.Ref",
+   "group": "metadataNames",
+   "query": "SELECT T.Ref AS X FROM BusinessProcess.Задание AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК X\nИЗ\n\tБизнесПроцесс.Задание КАК T"
+   }
+  },
+  {
+   "name": "BusinessProcess.Date",
+   "group": "metadataNames",
+   "query": "SELECT T.Date AS X FROM BusinessProcess.Задание AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Дата КАК X\nИЗ\n\tБизнесПроцесс.Задание КАК T"
+   }
+  },
+  {
+   "name": "BusinessProcess.Number",
+   "group": "metadataNames",
+   "query": "SELECT T.Number AS X FROM BusinessProcess.Задание AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Номер КАК X\nИЗ\n\tБизнесПроцесс.Задание КАК T"
+   }
+  },
+  {
+   "name": "BusinessProcess.Started",
+   "group": "metadataNames",
+   "query": "SELECT T.Started AS X FROM BusinessProcess.Задание AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Стартован КАК X\nИЗ\n\tБизнесПроцесс.Задание КАК T"
+   }
+  },
+  {
+   "name": "BusinessProcess.Completed",
+   "group": "metadataNames",
+   "query": "SELECT T.Completed AS X FROM BusinessProcess.Задание AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Завершен КАК X\nИЗ\n\tБизнесПроцесс.Задание КАК T"
+   }
+  },
+  {
+   "name": "BusinessProcess.HeadTask",
+   "group": "metadataNames",
+   "query": "SELECT T.HeadTask AS X FROM BusinessProcess.Задание AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.ВедущаяЗадача КАК X\nИЗ\n\tБизнесПроцесс.Задание КАК T"
+   }
+  },
+  {
+   "name": "Task.Ref",
+   "group": "metadataNames",
+   "query": "SELECT T.Ref AS X FROM Task.ЗадачаИсполнителя AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T"
+   }
+  },
+  {
+   "name": "Task.Date",
+   "group": "metadataNames",
+   "query": "SELECT T.Date AS X FROM Task.ЗадачаИсполнителя AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Дата КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T"
+   }
+  },
+  {
+   "name": "Task.Number",
+   "group": "metadataNames",
+   "query": "SELECT T.Number AS X FROM Task.ЗадачаИсполнителя AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Номер КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T"
+   }
+  },
+  {
+   "name": "Task.Executed",
+   "group": "metadataNames",
+   "query": "SELECT T.Executed AS X FROM Task.ЗадачаИсполнителя AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Выполнена КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T"
+   }
+  },
+  {
+   "name": "Task.BusinessProcess",
+   "group": "metadataNames",
+   "query": "SELECT T.BusinessProcess AS X FROM Task.ЗадачаИсполнителя AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.БизнесПроцесс КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T"
+   }
+  },
+  {
+   "name": "Task.RoutePoint",
+   "group": "metadataNames",
+   "query": "SELECT T.RoutePoint AS X FROM Task.ЗадачаИсполнителя AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.ТочкаМаршрута КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T"
+   }
+  },
+  {
+   "name": "Task.Description",
+   "group": "metadataNames",
+   "query": "SELECT T.Description AS X FROM Task.ЗадачаИсполнителя AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Наименование КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T"
+   }
+  },
+  {
+   "name": "ExchangePlan.Ref",
+   "group": "metadataNames",
+   "query": "SELECT T.Ref AS X FROM ExchangePlan.ОбменHualei AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК X\nИЗ\n\tПланОбмена.ОбменHualei КАК T"
+   }
+  },
+  {
+   "name": "ExchangePlan.Code",
+   "group": "metadataNames",
+   "query": "SELECT T.Code AS X FROM ExchangePlan.ОбменHualei AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Код КАК X\nИЗ\n\tПланОбмена.ОбменHualei КАК T"
+   }
+  },
+  {
+   "name": "ExchangePlan.Description",
+   "group": "metadataNames",
+   "query": "SELECT T.Description AS X FROM ExchangePlan.ОбменHualei AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Наименование КАК X\nИЗ\n\tПланОбмена.ОбменHualei КАК T"
+   }
+  },
+  {
+   "name": "ExchangePlan.SentNo",
+   "group": "metadataNames",
+   "query": "SELECT T.SentNo AS X FROM ExchangePlan.ОбменHualei AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.НомерОтправленного КАК X\nИЗ\n\tПланОбмена.ОбменHualei КАК T"
+   }
+  },
+  {
+   "name": "ExchangePlan.ReceivedNo",
+   "group": "metadataNames",
+   "query": "SELECT T.ReceivedNo AS X FROM ExchangePlan.ОбменHualei AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.НомерПринятого КАК X\nИЗ\n\tПланОбмена.ОбменHualei КАК T"
+   }
+  },
+  {
+   "name": "ExchangePlan.ThisNode",
+   "group": "metadataNames",
+   "query": "SELECT T.ThisNode AS X FROM ExchangePlan.ОбменHualei AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.ЭтотУзел КАК X\nИЗ\n\tПланОбмена.ОбменHualei КАК T"
+   }
+  },
+  {
+   "name": "Constant",
+   "group": "metadataNames",
+   "query": "SELECT T.Value AS X FROM Constant.DeleteFL_WorkerCount AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Значение КАК X\nИЗ\n\tКонстанта.DeleteFL_WorkerCount КАК T"
+   }
+  },
+  {
+   "name": "DocumentJournal",
+   "group": "metadataNames",
+   "query": "SELECT T.Ref, T.Date, T.Number, T.Type AS X, T.Posted AS Y FROM DocumentJournal.Взаимодействия AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК Ссылка,\n\tT.Дата КАК Дата,\n\tT.Номер КАК Номер,\n\tT.Тип КАК X,\n\tT.Проведен КАК Y\nИЗ\n\tЖурналДокументов.Взаимодействия КАК T"
+   }
+  },
+  {
+   "name": "FilterCriterion",
+   "group": "metadataNames",
+   "query": "SELECT T.Ref AS X FROM FilterCriterion.СвязанныеДокументы(&V) AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК X\nИЗ\n\tКритерийОтбора.СвязанныеДокументы(&V) КАК T"
+   }
+  },
+  {
+   "name": "ru_FilterCriterion",
+   "group": "metadataNames",
+   "query": "ВЫБРАТЬ T.Ссылка КАК X ИЗ КритерийОтбора.СвязанныеДокументы(&V) КАК T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Ссылка КАК X\nИЗ\n\tКритерийОтбора.СвязанныеДокументы(&V) КАК T"
+   }
+  },
+  {
+   "name": "Catalog.Parent.IsFolder",
+   "group": "metadataNames",
+   "query": "SELECT T.Parent AS X, T.IsFolder AS Y FROM Catalog.CC_ПравилаОтбораОбъектов AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Родитель КАК X,\n\tT.ЭтоГруппа КАК Y\nИЗ\n\tСправочник.CC_ПравилаОтбораОбъектов КАК T"
+   }
+  },
+  {
+   "name": "Catalog.Owner",
+   "group": "metadataNames",
+   "query": "SELECT T.Owner AS X FROM Catalog.CC_ПродавцыПлатформERP AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Владелец КАК X\nИЗ\n\tСправочник.CC_ПродавцыПлатформERP КАК T"
+   }
+  },
+  {
+   "name": "AccumulationRegister.Balance",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.ВзаиморасчетыВ2В.Balance AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Контрагент КАК Контрагент,\n\tT.ВалютаОперации КАК ВалютаОперации,\n\tT.Посылка КАК Посылка,\n\tT.СуммаПоПосылкеОстаток КАК СуммаПоПосылкеОстаток,\n\tT.СуммаКОплатеОстаток КАК СуммаКОплатеОстаток,\n\tT.ОплаченоОстаток КАК ОплаченоОстаток\nИЗ\n\tРегистрНакопления.ВзаиморасчетыВ2В.Остатки КАК T"
+   }
+  },
+  {
+   "name": "AccumulationRegister.BalanceAndTurnovers",
+   "group": "metadataNames",
+   "query": "SELECT T.* FROM AccumulationRegister.ВзаиморасчетыВ2В.BalanceAndTurnovers(, , Month, RegisterRecordsAndPeriodBoundaries, ) AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Контрагент КАК Контрагент,\n\tT.ВалютаОперации КАК ВалютаОперации,\n\tT.Посылка КАК Посылка,\n\tT.Период КАК Период,\n\tT.СуммаПоПосылкеНачальныйОстаток КАК СуммаПоПосылкеНачальныйОстаток,\n\tT.СуммаПоПосылкеОборот КАК СуммаПоПосылкеОборот,\n\tT.СуммаПоПосылкеПриход КАК СуммаПоПосылкеПриход,\n\tT.СуммаПоПосылкеРасход КАК СуммаПоПосылкеРасход,\n\tT.СуммаПоПосылкеКонечныйОстаток КАК СуммаПоПосылкеКонечныйОстаток,\n\tT.СуммаКОплатеНачальныйОстаток КАК СуммаКОплатеНачальныйОстаток,\n\tT.СуммаКОплатеОборот КАК СуммаКОплатеОборот,\n\tT.СуммаКОплатеПриход КАК СуммаКОплатеПриход,\n\tT.СуммаКОплатеРасход КАК СуммаКОплатеРасход,\n\tT.СуммаКОплатеКонечныйОстаток КАК СуммаКОплатеКонечныйОстаток,\n\tT.ОплаченоНачальныйОстаток КАК ОплаченоНачальныйОстаток,\n\tT.ОплаченоОборот КАК ОплаченоОборот,\n\tT.ОплаченоПриход КАК ОплаченоПриход,\n\tT.ОплаченоРасход КАК ОплаченоРасход,\n\tT.ОплаченоКонечныйОстаток КАК ОплаченоКонечныйОстаток\nИЗ\n\tРегистрНакопления.ВзаиморасчетыВ2В.ОстаткиИОбороты(, , Month, RegisterRecordsAndPeriodBoundaries, ) КАК T"
+   }
+  },
+  {
+   "name": "AccumulationRegister.RecordType",
+   "group": "metadataNames",
+   "query": "SELECT T.RecordType AS X FROM AccumulationRegister.ВзаиморасчетыВ2В AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.ВидДвижения КАК X\nИЗ\n\tРегистрНакопления.ВзаиморасчетыВ2В КАК T"
+   }
+  },
+  {
+   "name": "AccumulationRegister.RecordType.value",
+   "group": "metadataNames",
+   "query": "SELECT T.Period FROM AccumulationRegister.ВзаиморасчетыВ2В AS T WHERE T.RecordType = VALUE(AccumulationRecordType.Receipt)",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Период КАК Период\nИЗ\n\tРегистрНакопления.ВзаиморасчетыВ2В КАК T\nГДЕ\n\tT.ВидДвижения = ЗНАЧЕНИЕ(AccumulationRecordType.Receipt)"
+   }
+  },
+  {
+   "name": "ChartOfCharacteristicTypes.Description2",
+   "group": "metadataNames",
+   "query": "SELECT T.Description AS X FROM ChartOfCharacteristicTypes.ВидыСубконтоХозрасчетные AS T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Наименование КАК X\nИЗ\n\tПланВидовХарактеристик.ВидыСубконтоХозрасчетные КАК T"
+   }
+  },
+  {
+   "name": "ru_BalanceAndTurnovers",
+   "group": "metadataNames",
+   "query": "ВЫБРАТЬ T.* ИЗ РегистрНакопления.ВзаиморасчетыВ2В.ОстаткиИОбороты(, , Месяц, ДвиженияИГраницыПериода, ) КАК T",
+   "platform": {
+    "accepted": true,
+    "canonical": "ВЫБРАТЬ\n\tT.Контрагент КАК Контрагент,\n\tT.ВалютаОперации КАК ВалютаОперации,\n\tT.Посылка КАК Посылка,\n\tT.Период КАК Период,\n\tT.СуммаПоПосылкеНачальныйОстаток КАК СуммаПоПосылкеНачальныйОстаток,\n\tT.СуммаПоПосылкеОборот КАК СуммаПоПосылкеОборот,\n\tT.СуммаПоПосылкеПриход КАК СуммаПоПосылкеПриход,\n\tT.СуммаПоПосылкеРасход КАК СуммаПоПосылкеРасход,\n\tT.СуммаПоПосылкеКонечныйОстаток КАК СуммаПоПосылкеКонечныйОстаток,\n\tT.СуммаКОплатеНачальныйОстаток КАК СуммаКОплатеНачальныйОстаток,\n\tT.СуммаКОплатеОборот КАК СуммаКОплатеОборот,\n\tT.СуммаКОплатеПриход КАК СуммаКОплатеПриход,\n\tT.СуммаКОплатеРасход КАК СуммаКОплатеРасход,\n\tT.СуммаКОплатеКонечныйОстаток КАК СуммаКОплатеКонечныйОстаток,\n\tT.ОплаченоНачальныйОстаток КАК ОплаченоНачальныйОстаток,\n\tT.ОплаченоОборот КАК ОплаченоОборот,\n\tT.ОплаченоПриход КАК ОплаченоПриход,\n\tT.ОплаченоРасход КАК ОплаченоРасход,\n\tT.ОплаченоКонечныйОстаток КАК ОплаченоКонечныйОстаток\nИЗ\n\tРегистрНакопления.ВзаиморасчетыВ2В.ОстаткиИОбороты(, , Месяц, ДвиженияИГраницыПериода, ) КАК T"
+   }
   }
  ],
  "reservedAsAlias": {
@@ -1136,47 +2263,57 @@
  "designerApplied": [
   {
    "name": "select_from_as",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur",
    "platformAccepted": true
   },
   {
    "name": "top_distinct_allowed",
-   "generated": "ВЫБРАТЬ РАЗРЕШЕННЫЕ РАЗЛИЧНЫЕ ПЕРВЫЕ 5\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "generated": "ВЫБРАТЬ РАЗРЕШЕННЫЕ РАЗЛИЧНЫЕ ПЕРВЫЕ 5\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur",
    "platformAccepted": true
   },
   {
    "name": "where_not_and_or",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tNOT Cur.DeletionMark\n\tИ (Cur.Code = \"1\"\n\t\t\tИЛИ Cur.Code = \"2\")",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tNOT Cur.DeletionMark\n\tИ (Cur.Code = \"1\"\n\t\t\tИЛИ Cur.Code = \"2\")",
+   "platformAccepted": true
+  },
+  {
+   "name": "like_escape",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Code ПОДОБНО \"%1%\" ESCAPE \"~\"",
    "platformAccepted": true
   },
   {
    "name": "in_between",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\t(Cur.Code IN (\"1\", \"2\")\n\t\t\tИЛИ Cur.Code BETWEEN \"0\" AND \"9\")",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\t(Cur.Code IN (\"1\", \"2\")\n\t\t\tИЛИ Cur.Code BETWEEN \"0\" AND \"9\")",
    "platformAccepted": true
   },
   {
    "name": "in_hierarchy",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tCur.Ref В HIERARCHY (&P)",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ref В HIERARCHY (&P)",
    "platformAccepted": true
   },
   {
    "name": "is_null",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tCur.Description IS NOT NULL",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Description IS NOT NULL",
+   "platformAccepted": true
+  },
+  {
+   "name": "refs",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ref REFS Catalog.Валюты",
    "platformAccepted": true
   },
   {
    "name": "value_emptyref",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tCur.Ref <> VALUE(Catalog.Валюты.EmptyRef)",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ref <> VALUE(Catalog.Валюты.EmptyRef)",
    "platformAccepted": true
   },
   {
    "name": "value_ru_pustaya",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tCur.Ref <> VALUE(Catalog.Валюты.ПустаяСсылка)",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ref <> VALUE(Catalog.Валюты.ПустаяСсылка)",
    "platformAccepted": true
   },
   {
    "name": "type_valuetype",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tVALUETYPE(Cur.Ref) = TYPE(Catalog.Валюты)",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tVALUETYPE(Cur.Ref) = TYPE(Catalog.Валюты)",
    "platformAccepted": true
   },
   {
@@ -1185,8 +2322,13 @@
    "platformAccepted": true
   },
   {
+   "name": "case",
+   "generated": "ВЫБРАТЬ\n\tВЫБОР\n\t\tКОГДА Cur.DeletionMark\n\t\t\tТОГДА 1\n\t\tИНАЧЕ 0\n\tКОНЕЦ КАК M\nИЗ\n\tСправочник.Валюты КАК Cur",
+   "platformAccepted": true
+  },
+  {
    "name": "cast_string",
-   "generated": "ВЫБРАТЬ\n\tCAST(Cur.Code AS STRING(10)) КАК S\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "generated": "ВЫБРАТЬ\n\tCAST(Cur.Code AS STRING(10)) КАК S\nИЗ\n\tСправочник.Валюты КАК Cur",
    "platformAccepted": true
   },
   {
@@ -1196,12 +2338,12 @@
   },
   {
    "name": "cast_catalog",
-   "generated": "ВЫБРАТЬ\n\tCAST(Cur.Ref AS Catalog.Валюты) КАК R\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "generated": "ВЫБРАТЬ\n\tCAST(Cur.Ref AS Catalog.Валюты) КАК R\nИЗ\n\tСправочник.Валюты КАК Cur",
    "platformAccepted": true
   },
   {
    "name": "funcs_str",
-   "generated": "ВЫБРАТЬ\n\tЕСТЬNULL(Cur.Description, \"\") КАК A,\n\tSUBSTRING(Cur.Description, 1, 3) КАК B,\n\tPRESENTATION(Cur.Ref) КАК C,\n\tREFPRESENTATION(Cur.Ref) КАК D\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "generated": "ВЫБРАТЬ\n\tЕСТЬNULL(Cur.Description, \"\") КАК A,\n\tSUBSTRING(Cur.Description, 1, 3) КАК B,\n\tPRESENTATION(Cur.Ref) КАК C,\n\tREFPRESENTATION(Cur.Ref) КАК D\nИЗ\n\tСправочник.Валюты КАК Cur",
    "platformAccepted": true
   },
   {
@@ -1216,22 +2358,22 @@
   },
   {
    "name": "aggregates",
-   "generated": "ВЫБРАТЬ\n\tКОЛИЧЕСТВО(РАЗЛИЧНЫЕ Cur.Ref) КАК A,\n\tSUM(1) КАК B,\n\tМАКСИМУМ(Cur.Code) КАК C,\n\tМИНИМУМ(Cur.Code) КАК D,\n\tAVG(1) КАК E\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "generated": "ВЫБРАТЬ\n\tКОЛИЧЕСТВО(РАЗЛИЧНЫЕ Cur.Ref) КАК A,\n\tSUM(1) КАК B,\n\tМАКСИМУМ(Cur.Code) КАК C,\n\tМИНИМУМ(Cur.Code) КАК D,\n\tAVG(1) КАК E\nИЗ\n\tСправочник.Валюты КАК Cur",
    "platformAccepted": true
   },
   {
    "name": "joins",
-   "generated": "ВЫБРАТЬ\n\tC1.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК C1\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Catalog.Валюты КАК C2\n\t\tПО C1.Ref = C2.Ref\n\t\tВНУТРЕННЕЕ СОЕДИНЕНИЕ Catalog.Валюты КАК C3\n\t\tПО C1.Ref = C3.Ref\n\t\tПРАВОЕ СОЕДИНЕНИЕ Catalog.Валюты КАК C4\n\t\tПО C1.Ref = C4.Ref\n\t\tПОЛНОЕ СОЕДИНЕНИЕ Catalog.Валюты КАК C5\n\t\tПО C1.Ref = C5.Ref",
+   "generated": "ВЫБРАТЬ\n\tC1.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК C1\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК C2\n\t\tПО C1.Ref = C2.Ref\n\t\tВНУТРЕННЕЕ СОЕДИНЕНИЕ Справочник.Валюты КАК C3\n\t\tПО C1.Ref = C3.Ref\n\t\tПРАВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК C4\n\t\tПО C1.Ref = C4.Ref\n\t\tПОЛНОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК C5\n\t\tПО C1.Ref = C5.Ref",
    "platformAccepted": true
   },
   {
    "name": "join_plain",
-   "generated": "ВЫБРАТЬ\n\tC1.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК C1\n\t\tВНУТРЕННЕЕ СОЕДИНЕНИЕ Catalog.Валюты КАК C2\n\t\tПО C1.Ref = C2.Ref",
+   "generated": "ВЫБРАТЬ\n\tC1.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК C1\n\t\tВНУТРЕННЕЕ СОЕДИНЕНИЕ Справочник.Валюты КАК C2\n\t\tПО C1.Ref = C2.Ref",
    "platformAccepted": true
   },
   {
    "name": "group_having_order",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code,\n\tCOUNT(*) КАК N\nИЗ\n\tCatalog.Валюты КАК Cur\n\nСГРУППИРОВАТЬ ПО\n\tCur.Code\n\nИМЕЮЩИЕ\n\tCOUNT(*) > 0\n\nУПОРЯДОЧИТЬ ПО\n\tCode УБЫВ,\n\tN\nАВТОУПОРЯДОЧИВАНИЕ",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code,\n\tCOUNT(*) КАК N\nИЗ\n\tСправочник.Валюты КАК Cur\n\nСГРУППИРОВАТЬ ПО\n\tCur.Code\n\nИМЕЮЩИЕ\n\tCOUNT(*) > 0\n\nУПОРЯДОЧИТЬ ПО\n\tCode УБЫВ,\n\tN\nАВТОУПОРЯДОЧИВАНИЕ",
    "platformAccepted": true
   },
   {
@@ -1241,27 +2383,27 @@
   },
   {
    "name": "into_index_drop",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nПОМЕСТИТЬ TT\nИЗ\n\tCatalog.Валюты КАК Cur\n\nИНДЕКСИРОВАТЬ ПО\n\tCode\n;\n\n////////////////////////////////////////////////////////////////////////////////\nВЫБРАТЬ\n\tTT.Code КАК Code\nИЗ\n\tTT КАК TT\n;\n\n////////////////////////////////////////////////////////////////////////////////\nУНИЧТОЖИТЬ TT",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nПОМЕСТИТЬ TT\nИЗ\n\tСправочник.Валюты КАК Cur\n\nИНДЕКСИРОВАТЬ ПО\n\tCode\n;\n\n////////////////////////////////////////////////////////////////////////////////\nВЫБРАТЬ\n\tTT.Code КАК Code\nИЗ\n\tTT КАК TT\n;\n\n////////////////////////////////////////////////////////////////////////////////\nУНИЧТОЖИТЬ TT",
    "platformAccepted": true
   },
   {
    "name": "for_update",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\n\nДЛЯ ИЗМЕНЕНИЯ",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\n\nДЛЯ ИЗМЕНЕНИЯ",
    "platformAccepted": true
   },
   {
    "name": "for_update_table",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tCatalog.Валюты КАК Cur\n\nДЛЯ ИЗМЕНЕНИЯ\n\tCatalog.Валюты",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\n\nДЛЯ ИЗМЕНЕНИЯ\n\tСправочник.Валюты",
    "platformAccepted": true
   },
   {
    "name": "totals",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code,\n\t1 КАК N\nИЗ\n\tCatalog.Валюты КАК Cur\nИТОГИ\n\tСУММА(N)\nПО\n\tОБЩИЕ,\n\tCode",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code,\n\t1 КАК N\nИЗ\n\tСправочник.Валюты КАК Cur\nИТОГИ\n\tСУММА(N)\nПО\n\tОБЩИЕ,\n\tCode",
    "platformAccepted": true
   },
   {
    "name": "totals_only_hierarchy",
-   "generated": "ВЫБРАТЬ\n\tCur.Ref КАК Ref,\n\t1 КАК N\nИЗ\n\tCatalog.Валюты КАК Cur\nИТОГИ\n\tСУММА(N)\nПО\n\tRef ТОЛЬКО ИЕРАРХИЯ",
+   "generated": "ВЫБРАТЬ\n\tCur.Ref КАК Ref,\n\t1 КАК N\nИЗ\n\tСправочник.Валюты КАК Cur\nИТОГИ\n\tСУММА(N)\nПО\n\tRef ТОЛЬКО ИЕРАРХИЯ",
    "platformAccepted": true
   },
   {
@@ -1281,17 +2423,17 @@
   },
   {
    "name": "en_lowercase",
-   "generated": "ВЫБРАТЬ\n\tcur.code КАК code\nИЗ\n\tcatalog.Валюты КАК cur\nГДЕ\n\tnot cur.deletionmark",
+   "generated": "ВЫБРАТЬ\n\tcur.code КАК code\nИЗ\n\tСправочник.Валюты КАК cur\nГДЕ\n\tnot cur.deletionmark",
    "platformAccepted": true
   },
   {
    "name": "en_name_conflict_alias",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Select\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Select\nИЗ\n\tСправочник.Валюты КАК Cur",
    "platformAccepted": true
   },
   {
    "name": "ru_keyword_alias_in_en",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Выбрать\nИЗ\n\tCatalog.Валюты КАК Cur",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Выбрать\nИЗ\n\tСправочник.Валюты КАК Cur",
    "platformAccepted": true
   },
   {
@@ -1301,27 +2443,27 @@
   },
   {
    "name": "slicelast",
-   "generated": "ВЫБРАТЬ\n\tR.Курс КАК Rate\nИЗ\n\tInformationRegister.КурсыВалют.SliceLast(&D, ) КАК R",
+   "generated": "ВЫБРАТЬ\n\tR.Курс КАК Rate\nИЗ\n\tРегистрСведений.КурсыВалют.СрезПоследних(&D, ) КАК R",
    "platformAccepted": true
   },
   {
    "name": "acc_turnovers",
-   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tAccountingRegister.Хозрасчетный.Turnovers(, ) КАК T",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.Обороты(, , , , , , , ) КАК T",
    "platformAccepted": true
   },
   {
    "name": "document_tabular",
-   "generated": "ВЫБРАТЬ\n\tD.Ref КАК Ref,\n\tD.Date КАК Date,\n\tD.Number КАК Number,\n\tD.Posted КАК Posted\nИЗ\n\tDocument.ЗаказКлиента КАК D",
+   "generated": "ВЫБРАТЬ\n\tD.Ref КАК Ref,\n\tD.Date КАК Date,\n\tD.Number КАК Number,\n\tD.Posted КАК Posted\nИЗ\n\tДокумент.ЗаказКлиента КАК D",
    "platformAccepted": true
   },
   {
    "name": "document_tabular_part",
-   "generated": "ВЫБРАТЬ\n\tT.Ref КАК Ref,\n\tT.LineNumber КАК LineNumber\nИЗ\n\tDocument.ВозвратЗаказаКлиента.Услуги КАК T",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК Ref,\n\tT.LineNumber КАК LineNumber\nИЗ\n\tДокумент.ВозвратЗаказаКлиента.Услуги КАК T",
    "platformAccepted": true
   },
   {
    "name": "catalog_std_attrs",
-   "generated": "ВЫБРАТЬ\n\tC.Ref КАК Ref,\n\tC.Code КАК Code,\n\tC.Description КАК Description,\n\tC.DeletionMark КАК DeletionMark,\n\tC.Predefined КАК Predefined,\n\tC.PredefinedDataName КАК PredefinedDataName,\n\tC.DataVersion КАК DataVersion,\n\tC.Presentation КАК Presentation\nИЗ\n\tCatalog.Валюты КАК C",
+   "generated": "ВЫБРАТЬ\n\tC.Ref КАК Ref,\n\tC.Code КАК Code,\n\tC.Description КАК Description,\n\tC.DeletionMark КАК DeletionMark,\n\tC.Predefined КАК Predefined,\n\tC.PredefinedDataName КАК PredefinedDataName,\n\tC.DataVersion КАК DataVersion,\n\tC.Presentation КАК Presentation\nИЗ\n\tСправочник.Валюты КАК C",
    "platformAccepted": true
   },
   {
@@ -1331,7 +2473,7 @@
   },
   {
    "name": "deref_en",
-   "generated": "ВЫБРАТЬ\n\tC.Ref.Code КАК X\nИЗ\n\tCatalog.Валюты КАК C",
+   "generated": "ВЫБРАТЬ\n\tC.Ref.Code КАК X\nИЗ\n\tСправочник.Валюты КАК C",
    "platformAccepted": true
   },
   {
@@ -1346,7 +2488,7 @@
   },
   {
    "name": "substring_ru_in_en",
-   "generated": "ВЫБРАТЬ\n\tПОДСТРОКА(C.Description, 1, 2) КАК S\nИЗ\n\tCatalog.Валюты КАК C",
+   "generated": "ВЫБРАТЬ\n\tПОДСТРОКА(C.Description, 1, 2) КАК S\nИЗ\n\tСправочник.Валюты КАК C",
    "platformAccepted": true
   },
   {
@@ -1376,7 +2518,7 @@
   },
   {
    "name": "en_turnovers",
-   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tAccumulationRegister.АктивированныеПромокоды.Turnovers КАК T",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды.Обороты КАК T",
    "platformAccepted": true
   },
   {
@@ -1386,12 +2528,12 @@
   },
   {
    "name": "en_reg_plain",
-   "generated": "ВЫБРАТЬ\n\tT.Period КАК Period,\n\tT.Recorder КАК Recorder,\n\tT.LineNumber КАК LineNumber,\n\tT.Active КАК Active\nИЗ\n\tAccumulationRegister.АктивированныеПромокоды КАК T",
+   "generated": "ВЫБРАТЬ\n\tT.Period КАК Period,\n\tT.Recorder КАК Recorder,\n\tT.LineNumber КАК LineNumber,\n\tT.Active КАК Active\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды КАК T",
    "platformAccepted": true
   },
   {
    "name": "en_enum",
-   "generated": "ВЫБРАТЬ\n\tE.Ref КАК Ref,\n\tE.Order КАК Order\nИЗ\n\tEnum.CC_ShippingType КАК E",
+   "generated": "ВЫБРАТЬ\n\tE.Ref КАК Ref,\n\tE.Order КАК Order\nИЗ\n\tПеречисление.CC_ShippingType КАК E",
    "platformAccepted": true
   },
   {
@@ -1401,17 +2543,22 @@
   },
   {
    "name": "en_ccht",
-   "generated": "ВЫБРАТЬ\n\tC.Ref КАК Ref,\n\tC.ValueType КАК ValueType\nИЗ\n\tChartOfCharacteristicTypes.ВидыХарактеристик КАК C",
+   "generated": "ВЫБРАТЬ\n\tC.Ref КАК Ref,\n\tC.ValueType КАК ValueType\nИЗ\n\tПланВидовХарактеристик.ВидыХарактеристик КАК C",
    "platformAccepted": true
   },
   {
    "name": "en_doc_std",
-   "generated": "ВЫБРАТЬ\n\tD.Ref КАК Ref,\n\tD.Date КАК Date,\n\tD.Number КАК Number,\n\tD.Posted КАК Posted,\n\tD.DeletionMark КАК DeletionMark\nИЗ\n\tDocument.ЗаказКлиента КАК D",
+   "generated": "ВЫБРАТЬ\n\tD.Ref КАК Ref,\n\tD.Date КАК Date,\n\tD.Number КАК Number,\n\tD.Posted КАК Posted,\n\tD.DeletionMark КАК DeletionMark\nИЗ\n\tДокумент.ЗаказКлиента КАК D",
    "platformAccepted": true
   },
   {
    "name": "ru_kw_en_names",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code,\n\tВЫБОР\n\t\tКОГДА Cur.DeletionMark\n\t\t\tТОГДА 1\n\t\tИНАЧЕ 0\n\tКОНЕЦ КАК M\nИЗ\n\tCatalog.Валюты КАК Cur\nГДЕ\n\tCur.Ref <> ЗНАЧЕНИЕ(Catalog.Валюты.EmptyRef)\n\tИ ТИПЗНАЧЕНИЯ(Cur.Ref) = ТИП(Catalog.Валюты)",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code,\n\tВЫБОР\n\t\tКОГДА Cur.DeletionMark\n\t\t\tТОГДА 1\n\t\tИНАЧЕ 0\n\tКОНЕЦ КАК M\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ref <> ЗНАЧЕНИЕ(Catalog.Валюты.EmptyRef)\n\tИ ТИПЗНАЧЕНИЯ(Cur.Ref) = ТИП(Catalog.Валюты)",
+   "platformAccepted": true
+  },
+  {
+   "name": "ru_kw_en_vt",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды.Обороты(, , Month, ) КАК T",
    "platformAccepted": true
   },
   {
@@ -1421,7 +2568,7 @@
   },
   {
    "name": "en_doc_date_field",
-   "generated": "ВЫБРАТЬ\n\tD.Date КАК Date,\n\tD.Number КАК Number\nИЗ\n\tDocument.ЗаказКлиента КАК D\n\nУПОРЯДОЧИТЬ ПО\n\tDate",
+   "generated": "ВЫБРАТЬ\n\tD.Date КАК Date,\n\tD.Number КАК Number\nИЗ\n\tДокумент.ЗаказКлиента КАК D\n\nУПОРЯДОЧИТЬ ПО\n\tDate",
    "platformAccepted": true
   },
   {
@@ -1441,7 +2588,402 @@
   },
   {
    "name": "en_dot_order_where",
-   "generated": "ВЫБРАТЬ\n\tE.Ref КАК Ref\nИЗ\n\tEnum.CC_ShippingType КАК E\nГДЕ\n\tE.Order > 0\n\nУПОРЯДОЧИТЬ ПО\n\tE.Order",
+   "generated": "ВЫБРАТЬ\n\tE.Ref КАК Ref\nИЗ\n\tПеречисление.CC_ShippingType КАК E\nГДЕ\n\tE.Order > 0\n\nУПОРЯДОЧИТЬ ПО\n\tE.Order",
+   "platformAccepted": true
+  },
+  {
+   "name": "Catalog.Ref",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК X\nИЗ\n\tСправочник.Валюты КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Catalog.DataVersion",
+   "generated": "ВЫБРАТЬ\n\tT.DataVersion КАК X\nИЗ\n\tСправочник.Валюты КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Catalog.DeletionMark",
+   "generated": "ВЫБРАТЬ\n\tT.DeletionMark КАК X\nИЗ\n\tСправочник.Валюты КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Catalog.Predefined",
+   "generated": "ВЫБРАТЬ\n\tT.Predefined КАК X\nИЗ\n\tСправочник.Валюты КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Catalog.PredefinedDataName",
+   "generated": "ВЫБРАТЬ\n\tT.PredefinedDataName КАК X\nИЗ\n\tСправочник.Валюты КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Catalog.Code",
+   "generated": "ВЫБРАТЬ\n\tT.Code КАК X\nИЗ\n\tСправочник.Валюты КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Catalog.Description",
+   "generated": "ВЫБРАТЬ\n\tT.Description КАК X\nИЗ\n\tСправочник.Валюты КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Catalog.Presentation",
+   "generated": "ВЫБРАТЬ\n\tT.Presentation КАК X\nИЗ\n\tСправочник.Валюты КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Document.Ref",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК X\nИЗ\n\tДокумент.ЗаказКлиента КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Document.DataVersion",
+   "generated": "ВЫБРАТЬ\n\tT.DataVersion КАК X\nИЗ\n\tДокумент.ЗаказКлиента КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Document.DeletionMark",
+   "generated": "ВЫБРАТЬ\n\tT.DeletionMark КАК X\nИЗ\n\tДокумент.ЗаказКлиента КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Document.Date",
+   "generated": "ВЫБРАТЬ\n\tT.Date КАК X\nИЗ\n\tДокумент.ЗаказКлиента КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Document.Number",
+   "generated": "ВЫБРАТЬ\n\tT.Number КАК X\nИЗ\n\tДокумент.ЗаказКлиента КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Document.Posted",
+   "generated": "ВЫБРАТЬ\n\tT.Posted КАК X\nИЗ\n\tДокумент.ЗаказКлиента КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Document.TS.LineNumber",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК Ref,\n\tT.LineNumber КАК X\nИЗ\n\tДокумент.ВозвратЗаказаКлиента.Услуги КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Enum.Ref",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК X\nИЗ\n\tПеречисление.CC_ShippingType КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Enum.Order",
+   "generated": "ВЫБРАТЬ\n\tT.Order КАК X\nИЗ\n\tПеречисление.CC_ShippingType КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ChartOfCharacteristicTypes.Ref",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК X\nИЗ\n\tПланВидовХарактеристик.ВидыХарактеристик КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ChartOfCharacteristicTypes.ValueType",
+   "generated": "ВЫБРАТЬ\n\tT.ValueType КАК X\nИЗ\n\tПланВидовХарактеристик.ВидыХарактеристик КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ChartOfCharacteristicTypes.Code",
+   "generated": "ВЫБРАТЬ\n\tT.Code КАК X\nИЗ\n\tПланВидовХарактеристик.ВидыХарактеристик КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ChartOfAccounts.Ref",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ChartOfAccounts.Code",
+   "generated": "ВЫБРАТЬ\n\tT.Code КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ChartOfAccounts.Description",
+   "generated": "ВЫБРАТЬ\n\tT.Description КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ChartOfAccounts.Type",
+   "generated": "ВЫБРАТЬ\n\tT.Type КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ChartOfAccounts.OffBalance",
+   "generated": "ВЫБРАТЬ\n\tT.OffBalance КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ChartOfAccounts.Order",
+   "generated": "ВЫБРАТЬ\n\tT.Order КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ChartOfAccounts.Parent",
+   "generated": "ВЫБРАТЬ\n\tT.Parent КАК X\nИЗ\n\tПланСчетов.Хозрасчетный КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ChartOfAccounts.ExtDimensionTypes",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК Ref,\n\tT.ExtDimensionType КАК X,\n\tT.LineNumber КАК Y,\n\tT.TurnoversOnly КАК Z\nИЗ\n\tПланСчетов.Хозрасчетный.ВидыСубконто КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccountingRegister.Period",
+   "generated": "ВЫБРАТЬ\n\tT.Period КАК X\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccountingRegister.Recorder",
+   "generated": "ВЫБРАТЬ\n\tT.Recorder КАК X\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccountingRegister.LineNumber",
+   "generated": "ВЫБРАТЬ\n\tT.LineNumber КАК X\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccountingRegister.Active",
+   "generated": "ВЫБРАТЬ\n\tT.Active КАК X\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccountingRegister.AccountDr",
+   "generated": "ВЫБРАТЬ\n\tT.AccountDr КАК X\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccountingRegister.AccountCr",
+   "generated": "ВЫБРАТЬ\n\tT.AccountCr КАК X\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccumulationRegister.Period",
+   "generated": "ВЫБРАТЬ\n\tT.Period КАК X\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccumulationRegister.Recorder",
+   "generated": "ВЫБРАТЬ\n\tT.Recorder КАК X\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccumulationRegister.LineNumber",
+   "generated": "ВЫБРАТЬ\n\tT.LineNumber КАК X\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccumulationRegister.Active",
+   "generated": "ВЫБРАТЬ\n\tT.Active КАК X\nИЗ\n\tРегистрНакопления.АктивированныеПромокоды КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "InformationRegister.Period",
+   "generated": "ВЫБРАТЬ\n\tT.Period КАК X\nИЗ\n\tРегистрСведений.КурсыВалют КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "InformationRegister.Recorder",
+   "generated": "ВЫБРАТЬ\n\tT.Recorder КАК X\nИЗ\n\tРегистрСведений.КурсыВалют КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "InformationRegister.Active",
+   "generated": "ВЫБРАТЬ\n\tT.Active КАК X\nИЗ\n\tРегистрСведений.КурсыВалют КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "InformationRegister.LineNumber",
+   "generated": "ВЫБРАТЬ\n\tT.LineNumber КАК X\nИЗ\n\tРегистрСведений.КурсыВалют КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "InformationRegister.SliceFirst",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tРегистрСведений.КурсыВалют.СрезПервых КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccountingRegister.Balance",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.Остатки КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccountingRegister.BalanceAndTurnovers",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.ОстаткиИОбороты КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccountingRegister.DrCrTurnovers",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.ОборотыДтКт КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccountingRegister.RecordsWithExtDimensions",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.ДвиженияССубконто КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccountingRegister.ExtDimensions",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.Субконто КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "BusinessProcess.Ref",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК X\nИЗ\n\tБизнесПроцесс.Задание КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "BusinessProcess.Date",
+   "generated": "ВЫБРАТЬ\n\tT.Date КАК X\nИЗ\n\tБизнесПроцесс.Задание КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "BusinessProcess.Number",
+   "generated": "ВЫБРАТЬ\n\tT.Number КАК X\nИЗ\n\tБизнесПроцесс.Задание КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "BusinessProcess.Started",
+   "generated": "ВЫБРАТЬ\n\tT.Started КАК X\nИЗ\n\tБизнесПроцесс.Задание КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "BusinessProcess.Completed",
+   "generated": "ВЫБРАТЬ\n\tT.Completed КАК X\nИЗ\n\tБизнесПроцесс.Задание КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "BusinessProcess.HeadTask",
+   "generated": "ВЫБРАТЬ\n\tT.HeadTask КАК X\nИЗ\n\tБизнесПроцесс.Задание КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Task.Ref",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Task.Date",
+   "generated": "ВЫБРАТЬ\n\tT.Date КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Task.Number",
+   "generated": "ВЫБРАТЬ\n\tT.Number КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Task.Executed",
+   "generated": "ВЫБРАТЬ\n\tT.Executed КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Task.BusinessProcess",
+   "generated": "ВЫБРАТЬ\n\tT.BusinessProcess КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Task.RoutePoint",
+   "generated": "ВЫБРАТЬ\n\tT.RoutePoint КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Task.Description",
+   "generated": "ВЫБРАТЬ\n\tT.Description КАК X\nИЗ\n\tЗадача.ЗадачаИсполнителя КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ExchangePlan.Ref",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК X\nИЗ\n\tПланОбмена.ОбменHualei КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ExchangePlan.Code",
+   "generated": "ВЫБРАТЬ\n\tT.Code КАК X\nИЗ\n\tПланОбмена.ОбменHualei КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ExchangePlan.Description",
+   "generated": "ВЫБРАТЬ\n\tT.Description КАК X\nИЗ\n\tПланОбмена.ОбменHualei КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ExchangePlan.SentNo",
+   "generated": "ВЫБРАТЬ\n\tT.SentNo КАК X\nИЗ\n\tПланОбмена.ОбменHualei КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ExchangePlan.ReceivedNo",
+   "generated": "ВЫБРАТЬ\n\tT.ReceivedNo КАК X\nИЗ\n\tПланОбмена.ОбменHualei КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ExchangePlan.ThisNode",
+   "generated": "ВЫБРАТЬ\n\tT.ThisNode КАК X\nИЗ\n\tПланОбмена.ОбменHualei КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Constant",
+   "generated": "ВЫБРАТЬ\n\tT.Value КАК X\nИЗ\n\tКонстанта.DeleteFL_WorkerCount КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "DocumentJournal",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК Ref,\n\tT.Date КАК Date,\n\tT.Number КАК Number,\n\tT.Type КАК X,\n\tT.Posted КАК Y\nИЗ\n\tЖурналДокументов.Взаимодействия КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "FilterCriterion",
+   "generated": "ВЫБРАТЬ\n\tT.Ref КАК X\nИЗ\n\tКритерийОтбора.СвязанныеДокументы(&V) КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ru_FilterCriterion",
+   "generated": "ВЫБРАТЬ\n\tT.Ссылка КАК X\nИЗ\n\tКритерийОтбора.СвязанныеДокументы(&V) КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Catalog.Parent.IsFolder",
+   "generated": "ВЫБРАТЬ\n\tT.Parent КАК X,\n\tT.IsFolder КАК Y\nИЗ\n\tСправочник.CC_ПравилаОтбораОбъектов КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "Catalog.Owner",
+   "generated": "ВЫБРАТЬ\n\tT.Owner КАК X\nИЗ\n\tСправочник.CC_ПродавцыПлатформERP КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccumulationRegister.Balance",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tРегистрНакопления.ВзаиморасчетыВ2В.Остатки КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccumulationRegister.BalanceAndTurnovers",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tРегистрНакопления.ВзаиморасчетыВ2В.ОстаткиИОбороты(, , Month, RegisterRecordsAndPeriodBoundaries, ) КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccumulationRegister.RecordType",
+   "generated": "ВЫБРАТЬ\n\tT.RecordType КАК X\nИЗ\n\tРегистрНакопления.ВзаиморасчетыВ2В КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "AccumulationRegister.RecordType.value",
+   "generated": "ВЫБРАТЬ\n\tT.Period КАК Period\nИЗ\n\tРегистрНакопления.ВзаиморасчетыВ2В КАК T\nГДЕ\n\tT.RecordType = VALUE(AccumulationRecordType.Receipt)",
+   "platformAccepted": true
+  },
+  {
+   "name": "ChartOfCharacteristicTypes.Description2",
+   "generated": "ВЫБРАТЬ\n\tT.Description КАК X\nИЗ\n\tПланВидовХарактеристик.ВидыСубконтоХозрасчетные КАК T",
+   "platformAccepted": true
+  },
+  {
+   "name": "ru_BalanceAndTurnovers",
+   "generated": "ВЫБРАТЬ\n\tT.*\nИЗ\n\tРегистрНакопления.ВзаиморасчетыВ2В.ОстаткиИОбороты(, , Месяц, ДвиженияИГраницыПериода, ) КАК T",
    "platformAccepted": true
   }
  ]

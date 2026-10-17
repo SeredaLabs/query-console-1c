@@ -25,6 +25,7 @@
  * псевдонимы после `КАК`.
  */
 import { tokenize, wordOf, type Token } from './sdblLexer';
+import { canonicalMetadataKind } from './sdblEnglish';
 import type { QueryModel, SelectedField, SelectedTable, Condition, FieldRef } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import type { QueryDocument } from './unionModel';
@@ -416,7 +417,7 @@ function qualifyExpression(raw: string, ctx: OwnerContext): string {
     // метаданных — это оператор, а не поле (поле `Ссылка` стоит как значение, без типа
     // следом). Пропускаем.
     if (canon === 'ССЫЛКА' && next && (next.type === 'ident' || next.type === 'keyword')
-        && TYPE_PREFIXES.has(up(next.text ?? next.value))) continue;
+        && TYPE_PREFIXES.has(up(canonicalMetadataKind(next.text ?? next.value)))) continue;
 
     // Голова пути после `.` — это сегмент уже-квалифицированной ссылки/типа; пропускаем.
     if (prev && prev.type === 'punct' && prev.value === '.') continue;
@@ -450,7 +451,7 @@ function qualifyExpression(raw: string, ctx: OwnerContext): string {
     // даже если слово-омоним совпадает с полем источника — не квалифицируем.
     const afterRefOp = prevV === 'ССЫЛКА';
     const isSourceField = !afterRefOp && ctx.sources.filter(s => s.fields?.has(word)).length === 1;
-    if (hasDotAfter && TYPE_PREFIXES.has(word) && !isSourceField) continue; // Справочник.X — тип
+    if (hasDotAfter && TYPE_PREFIXES.has(up(canonicalMetadataKind(word))) && !isSourceField) continue; // Справочник.X — тип
 
     const alias = ownerAlias(ctx, t.text ?? t.value, !!hasDotAfter);
     if (alias === undefined) continue;
