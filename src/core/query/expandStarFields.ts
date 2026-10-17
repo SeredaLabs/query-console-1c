@@ -38,6 +38,24 @@ export function markProvenTempTable(table: MetaTable, columns: string[] | undefi
   else provenTempTableColumns.delete(table);
 }
 
+/**
+ * Temp tables whose creator kept a wildcard: their registered columns are only
+ * the known part (C24, A2 closure audit). A later wildcard over such a table is
+ * kept as written in every policy — expanding it to the known columns would drop
+ * the unknown ones (the platform returns all of them).
+ */
+const incompleteTempTables = new WeakSet<MetaTable>();
+
+export function markIncompleteTempTable(table: MetaTable, incomplete: boolean): void {
+  if (incomplete) incompleteTempTables.add(table);
+  else incompleteTempTables.delete(table);
+}
+
+/** A select list that keeps a wildcard: its columns are known only in part. */
+export function hasUnexpandedWildcard(model: QueryModel): boolean {
+  return [...model.fields, ...(model.trailingFields ?? [])].some(f => f.path === '*' || isWildcardExpression(f.expression));
+}
+
 /** An explicit `КАК` of a select field (not a name the parser synthesized). */
 function explicitAlias(f: SelectedField): string | undefined {
   return f.alias !== undefined && !isSynthesizedAlias(f) ? f.alias : undefined;
@@ -254,8 +272,9 @@ export function expandStarFields(model: QueryModel, resolver?: MetadataResolver,
   // Односегментное имя — временная таблица: неопределённая ВТ даёт ноль колонок, как
   // у платформы (`ВЫБРАТЬ * ИЗ ВТ2` → пустой текст СхемаЗапроса).
   const unknownSource = (fullName: string | undefined): boolean =>
-    resolver.metadataUnknown === true && fullName !== undefined && fullName.includes('.') &&
-    !resolver.tableByFullName(fullName) && !resolver.virtualTableByFullName?.(fullName);
+    (resolver.metadataUnknown === true && fullName !== undefined && fullName.includes('.') &&
+      !resolver.tableByFullName(fullName) && !resolver.virtualTableByFullName?.(fullName)) ||
+    incompleteSource(resolver, fullName);
 
   // C24: a nested SELECT source has no metadata name; its columns are not resolved
   // here (step 1), so a wildcard over it is kept as written, never removed — the
@@ -308,6 +327,12 @@ export function expandStarFields(model: QueryModel, resolver?: MetadataResolver,
   }
 }
 
+/** A batch temp table whose columns are known only in part (`markIncompleteTempTable`). */
+function incompleteSource(resolver: MetadataResolver, fullName: string | undefined): boolean {
+  const meta = fullName ? resolver.tableByFullName(fullName) : undefined;
+  return meta !== undefined && incompleteTempTables.has(meta);
+}
+
 /**
  * `analysis`: every wildcard has sources, none is a nested SELECT or `Т.Поле.*`, and
  * the resolver knows every source — the constructor algorithm then removes nothing.
@@ -324,6 +349,7 @@ function everySourceResolves(model: QueryModel, resolver: MetadataResolver): boo
     for (const t of sources) {
       if (!t || t.subquery || !t.fullName) return false;
       if (!resolver.tableByFullName(t.fullName) && !resolver.virtualTableByFullName?.(t.fullName)) return false;
+      if (incompleteSource(resolver, t.fullName)) return false;
     }
   }
   return true;
