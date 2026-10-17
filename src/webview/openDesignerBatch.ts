@@ -3,6 +3,7 @@ import type { MetadataResolver } from '../core/query/metadataResolver';
 import { tryOpenBatch, type ParseAttempt } from '../core/query/validateBatch';
 import { generateBatch } from '../core/query/sdblGenerator';
 import { tokenize } from '../core/query/sdblLexer';
+import { translateEnglishQuery } from '../core/query/translateEnglish';
 
 export const COMMENT_LOSS_ON_OPEN = 'Конструктор не может сохранить все комментарии этого запроса. При сохранении часть комментариев будет потеряна. Продолжить?';
 
@@ -22,7 +23,10 @@ export type DesignerOpenAttempt = ParseAttempt | {
  * comments independently; package separators are excluded by the binder contract.
  * Only this known loss offers a candidate for confirmation. Other failures stay
  * errors and cannot be overridden. */
-export function tryOpenDesignerBatch(text: string, resolver?: MetadataResolver): DesignerOpenAttempt {
+export function tryOpenDesignerBatch(input: string, resolver?: MetadataResolver): DesignerOpenAttempt {
+  // C2: an English query opens in Russian words, as in the 1C Designer, when the
+  // translation is proven safe; otherwise as written.
+  const text = translateEnglishQuery(input) ?? input;
   const result = tryOpenBatch(text, resolver, { preserveComments: true });
   if (!result.ok) return result;
   try {

@@ -1,5 +1,5 @@
 {
- "source": "SL_kza, platform 8.3.15.1489, 2026-10-17, through the mcp_APIBackend server: \"platform\" = validate_query (СхемаЗапроса); nothing was executed. \"designerApplied\" = this product's Designer open → Apply (preserve mode, no metadata) on branch feat/c2-detection-metadata (C2 slices 1–3), each generated text then validated on the platform.",
+ "source": "SL_kza, platform 8.3.15.1489, 2026-10-17, through the mcp_APIBackend server: \"platform\" = validate_query (СхемаЗапроса); nothing was executed. \"designerApplied\" = this product's Designer open → Apply (preserve mode, no metadata) on branch feat/c2-apply-russian (C2 slices 1–4: an English query opens in Russian words), each generated text then validated on the platform.",
  "verdict": "C2: the platform reads one bilingual word table. English keywords, functions, period words and metadata names are accepted, mixed freely with Russian; the canonical text (СхемаЗапроса) is Russian, aliases and names inside ЗНАЧЕНИЕ()/ТИП() are kept as written. Words reserved as an alias are the same in both languages (`КАК From` is rejected like `AS ИЗ`). A word written right after `.` is a name in either language (`E.Order`, `ВТ.Упорядочить`).",
  "notes": "Failures in the metadataNames and russianControls groups come from objects or attributes absent in SL_kza (the Russian controls fail the same way), not from the language. GROUPING SETS / ГРУППИРУЮЩИМ НАБОРАМ and the newer string functions are rejected in both languages on 8.3.15. Kind / virtual table / standard attribute names were probed per kind on an object that has them (metadataNames group, 2026-10-17); РегистрРасчета, ПланВидовРасчета and Последовательность have no object in SL_kza.",
  "cases": [
@@ -2273,52 +2273,52 @@
   },
   {
    "name": "where_not_and_or",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tNOT Cur.DeletionMark\n\tИ (Cur.Code = \"1\"\n\t\t\tИЛИ Cur.Code = \"2\")",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tНЕ Cur.DeletionMark\n\tИ (Cur.Code = \"1\"\n\t\t\tИЛИ Cur.Code = \"2\")",
    "platformAccepted": true
   },
   {
    "name": "like_escape",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Code ПОДОБНО \"%1%\" ESCAPE \"~\"",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Code ПОДОБНО \"%1%\" СПЕЦСИМВОЛ \"~\"",
    "platformAccepted": true
   },
   {
    "name": "in_between",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\t(Cur.Code IN (\"1\", \"2\")\n\t\t\tИЛИ Cur.Code BETWEEN \"0\" AND \"9\")",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\t(Cur.Code В (\"1\", \"2\")\n\t\t\tИЛИ Cur.Code МЕЖДУ \"0\" И \"9\")",
    "platformAccepted": true
   },
   {
    "name": "in_hierarchy",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ref В HIERARCHY (&P)",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ref В ИЕРАРХИИ(&P)",
    "platformAccepted": true
   },
   {
    "name": "is_null",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Description IS NOT NULL",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Description ЕСТЬ НЕ NULL ",
    "platformAccepted": true
   },
   {
    "name": "refs",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ref REFS Catalog.Валюты",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ref ССЫЛКА Справочник.Валюты",
    "platformAccepted": true
   },
   {
    "name": "value_emptyref",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ref <> VALUE(Catalog.Валюты.EmptyRef)",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ref <> ЗНАЧЕНИЕ(Catalog.Валюты.EmptyRef)",
    "platformAccepted": true
   },
   {
    "name": "value_ru_pustaya",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ref <> VALUE(Catalog.Валюты.ПустаяСсылка)",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tCur.Ref <> ЗНАЧЕНИЕ(Catalog.Валюты.ПустаяСсылка)",
    "platformAccepted": true
   },
   {
    "name": "type_valuetype",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tVALUETYPE(Cur.Ref) = TYPE(Catalog.Валюты)",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code\nИЗ\n\tСправочник.Валюты КАК Cur\nГДЕ\n\tТИПЗНАЧЕНИЯ(Cur.Ref) = ТИП(Catalog.Валюты)",
    "platformAccepted": true
   },
   {
    "name": "undefined_true_false",
-   "generated": "ВЫБРАТЬ\n\tTRUE КАК A,\n\tFALSE КАК B,\n\tUNDEFINED КАК C,\n\tNULL КАК D",
+   "generated": "ВЫБРАТЬ\n\tИСТИНА КАК A,\n\tЛОЖЬ КАК B,\n\tНЕОПРЕДЕЛЕНО КАК C,\n\tNULL КАК D",
    "platformAccepted": true
   },
   {
@@ -2328,37 +2328,37 @@
   },
   {
    "name": "cast_string",
-   "generated": "ВЫБРАТЬ\n\tCAST(Cur.Code AS STRING(10)) КАК S\nИЗ\n\tСправочник.Валюты КАК Cur",
+   "generated": "ВЫБРАТЬ\n\tВЫРАЗИТЬ(Cur.Code КАК СТРОКА(10)) КАК S\nИЗ\n\tСправочник.Валюты КАК Cur",
    "platformAccepted": true
   },
   {
    "name": "cast_number_bool_date",
-   "generated": "ВЫБРАТЬ\n\tCAST(1 AS NUMBER(10, 2)) КАК N,\n\tCAST(TRUE AS BOOLEAN) КАК L,\n\tCAST(DATETIME(2020, 1, 1) AS DATE) КАК D",
+   "generated": "ВЫБРАТЬ\n\tВЫРАЗИТЬ(1 КАК ЧИСЛО(10, 2)) КАК N,\n\tВЫРАЗИТЬ(ИСТИНА КАК БУЛЕВО) КАК L,\n\tВЫРАЗИТЬ(ДАТАВРЕМЯ(2020, 1, 1) КАК ДАТА) КАК D",
    "platformAccepted": true
   },
   {
    "name": "cast_catalog",
-   "generated": "ВЫБРАТЬ\n\tCAST(Cur.Ref AS Catalog.Валюты) КАК R\nИЗ\n\tСправочник.Валюты КАК Cur",
+   "generated": "ВЫБРАТЬ\n\tВЫРАЗИТЬ(Cur.Ref КАК Справочник.Валюты) КАК R\nИЗ\n\tСправочник.Валюты КАК Cur",
    "platformAccepted": true
   },
   {
    "name": "funcs_str",
-   "generated": "ВЫБРАТЬ\n\tЕСТЬNULL(Cur.Description, \"\") КАК A,\n\tSUBSTRING(Cur.Description, 1, 3) КАК B,\n\tPRESENTATION(Cur.Ref) КАК C,\n\tREFPRESENTATION(Cur.Ref) КАК D\nИЗ\n\tСправочник.Валюты КАК Cur",
+   "generated": "ВЫБРАТЬ\n\tЕСТЬNULL(Cur.Description, \"\") КАК A,\n\tПОДСТРОКА(Cur.Description, 1, 3) КАК B,\n\tПРЕДСТАВЛЕНИЕ(Cur.Ref) КАК C,\n\tПРЕДСТАВЛЕНИЕССЫЛКИ(Cur.Ref) КАК D\nИЗ\n\tСправочник.Валюты КАК Cur",
    "platformAccepted": true
   },
   {
    "name": "funcs_date",
-   "generated": "ВЫБРАТЬ\n\tDATEADD(DATETIME(2020, 1, 1), DAY, 1) КАК A,\n\tDATEDIFF(DATETIME(2020, 1, 1), DATETIME(2020, 2, 1), DAY) КАК B,\n\tBEGINOFPERIOD(DATETIME(2020, 1, 1), MONTH) КАК C,\n\tENDOFPERIOD(DATETIME(2020, 1, 1), YEAR) КАК D",
+   "generated": "ВЫБРАТЬ\n\tДОБАВИТЬКДАТЕ(ДАТАВРЕМЯ(2020, 1, 1), ДЕНЬ, 1) КАК A,\n\tРАЗНОСТЬДАТ(ДАТАВРЕМЯ(2020, 1, 1), ДАТАВРЕМЯ(2020, 2, 1), ДЕНЬ) КАК B,\n\tНАЧАЛОПЕРИОДА(ДАТАВРЕМЯ(2020, 1, 1), МЕСЯЦ) КАК C,\n\tКОНЕЦПЕРИОДА(ДАТАВРЕМЯ(2020, 1, 1), ГОД) КАК D",
    "platformAccepted": true
   },
   {
    "name": "funcs_parts",
-   "generated": "ВЫБРАТЬ\n\tYEAR(DATETIME(2020, 1, 1)) КАК A,\n\tQUARTER(DATETIME(2020, 1, 1)) КАК B,\n\tMONTH(DATETIME(2020, 1, 1)) КАК C,\n\tDAYOFYEAR(DATETIME(2020, 1, 1)) КАК D,\n\tDAY(DATETIME(2020, 1, 1)) КАК E,\n\tWEEK(DATETIME(2020, 1, 1)) КАК F,\n\tWEEKDAY(DATETIME(2020, 1, 1)) КАК G,\n\tHOUR(DATETIME(2020, 1, 1)) КАК H,\n\tMINUTE(DATETIME(2020, 1, 1)) КАК I,\n\tSECOND(DATETIME(2020, 1, 1)) КАК J",
+   "generated": "ВЫБРАТЬ\n\tГОД(ДАТАВРЕМЯ(2020, 1, 1)) КАК A,\n\tКВАРТАЛ(ДАТАВРЕМЯ(2020, 1, 1)) КАК B,\n\tМЕСЯЦ(ДАТАВРЕМЯ(2020, 1, 1)) КАК C,\n\tДЕНЬГОДА(ДАТАВРЕМЯ(2020, 1, 1)) КАК D,\n\tДЕНЬ(ДАТАВРЕМЯ(2020, 1, 1)) КАК E,\n\tНЕДЕЛЯ(ДАТАВРЕМЯ(2020, 1, 1)) КАК F,\n\tДЕНЬНЕДЕЛИ(ДАТАВРЕМЯ(2020, 1, 1)) КАК G,\n\tЧАС(ДАТАВРЕМЯ(2020, 1, 1)) КАК H,\n\tМИНУТА(ДАТАВРЕМЯ(2020, 1, 1)) КАК I,\n\tСЕКУНДА(ДАТАВРЕМЯ(2020, 1, 1)) КАК J",
    "platformAccepted": true
   },
   {
    "name": "aggregates",
-   "generated": "ВЫБРАТЬ\n\tКОЛИЧЕСТВО(РАЗЛИЧНЫЕ Cur.Ref) КАК A,\n\tSUM(1) КАК B,\n\tМАКСИМУМ(Cur.Code) КАК C,\n\tМИНИМУМ(Cur.Code) КАК D,\n\tAVG(1) КАК E\nИЗ\n\tСправочник.Валюты КАК Cur",
+   "generated": "ВЫБРАТЬ\n\tКОЛИЧЕСТВО(РАЗЛИЧНЫЕ Cur.Ref) КАК A,\n\tСУММА(1) КАК B,\n\tМАКСИМУМ(Cur.Code) КАК C,\n\tМИНИМУМ(Cur.Code) КАК D,\n\tСРЕДНЕЕ(1) КАК E\nИЗ\n\tСправочник.Валюты КАК Cur",
    "platformAccepted": true
   },
   {
@@ -2373,7 +2373,7 @@
   },
   {
    "name": "group_having_order",
-   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code,\n\tCOUNT(*) КАК N\nИЗ\n\tСправочник.Валюты КАК Cur\n\nСГРУППИРОВАТЬ ПО\n\tCur.Code\n\nИМЕЮЩИЕ\n\tCOUNT(*) > 0\n\nУПОРЯДОЧИТЬ ПО\n\tCode УБЫВ,\n\tN\nАВТОУПОРЯДОЧИВАНИЕ",
+   "generated": "ВЫБРАТЬ\n\tCur.Code КАК Code,\n\tКОЛИЧЕСТВО(*) КАК N\nИЗ\n\tСправочник.Валюты КАК Cur\n\nСГРУППИРОВАТЬ ПО\n\tCur.Code\n\nИМЕЮЩИЕ\n\tКОЛИЧЕСТВО(*) > 0\n\nУПОРЯДОЧИТЬ ПО\n\tCode УБЫВ,\n\tN\nАВТОУПОРЯДОЧИВАНИЕ",
    "platformAccepted": true
   },
   {
@@ -2408,7 +2408,7 @@
   },
   {
    "name": "totals_periods",
-   "generated": "ВЫБРАТЬ\n\tDATETIME(2020, 1, 1) КАК P,\n\t1 КАК N\nИТОГИ\n\tСУММА(N)\nПО\n\tP ПЕРИОДАМИ(DAY, DATETIME(2020,1,1), DATETIME(2020,1,3))",
+   "generated": "ВЫБРАТЬ\n\tДАТАВРЕМЯ(2020, 1, 1) КАК P,\n\t1 КАК N\nИТОГИ\n\tСУММА(N)\nПО\n\tP ПЕРИОДАМИ(ДЕНЬ, ДАТАВРЕМЯ(2020,1,1), ДАТАВРЕМЯ(2020,1,3))",
    "platformAccepted": true
   },
   {
@@ -2423,7 +2423,7 @@
   },
   {
    "name": "en_lowercase",
-   "generated": "ВЫБРАТЬ\n\tcur.code КАК code\nИЗ\n\tСправочник.Валюты КАК cur\nГДЕ\n\tnot cur.deletionmark",
+   "generated": "ВЫБРАТЬ\n\tcur.code КАК code\nИЗ\n\tСправочник.Валюты КАК cur\nГДЕ\n\tНЕ cur.deletionmark",
    "platformAccepted": true
   },
   {
@@ -2478,7 +2478,7 @@
   },
   {
    "name": "type_en_primitives",
-   "generated": "ВЫБРАТЬ\n\tCAST(1 AS NUMBER) КАК N,\n\tCAST(\"\" AS STRING) КАК S",
+   "generated": "ВЫБРАТЬ\n\tВЫРАЗИТЬ(1 КАК ЧИСЛО) КАК N,\n\tВЫРАЗИТЬ(\"\" КАК СТРОКА) КАК S",
    "platformAccepted": true
   },
   {
@@ -2493,7 +2493,7 @@
   },
   {
    "name": "en_period_names",
-   "generated": "ВЫБРАТЬ\n\tBEGINOFPERIOD(&D, TENDAYS) КАК A,\n\tBEGINOFPERIOD(&D, HALFYEAR) КАК B,\n\tBEGINOFPERIOD(&D, WEEK) КАК C,\n\tBEGINOFPERIOD(&D, QUARTER) КАК E,\n\tBEGINOFPERIOD(&D, HOUR) КАК F,\n\tBEGINOFPERIOD(&D, MINUTE) КАК G",
+   "generated": "ВЫБРАТЬ\n\tНАЧАЛОПЕРИОДА(&D, ДЕКАДА) КАК A,\n\tНАЧАЛОПЕРИОДА(&D, ПОЛУГОДИЕ) КАК B,\n\tНАЧАЛОПЕРИОДА(&D, НЕДЕЛЯ) КАК C,\n\tНАЧАЛОПЕРИОДА(&D, КВАРТАЛ) КАК E,\n\tНАЧАЛОПЕРИОДА(&D, ЧАС) КАК F,\n\tНАЧАЛОПЕРИОДА(&D, МИНУТА) КАК G",
    "platformAccepted": true
   },
   {
@@ -2503,12 +2503,12 @@
   },
   {
    "name": "en_in_subquery",
-   "generated": "ВЫБРАТЬ\n\t1 КАК A\nГДЕ\n\t1 IN (SELECT 1)",
+   "generated": "ВЫБРАТЬ\n\t1 КАК A\nГДЕ\n\t1 В (ВЫБРАТЬ 1)",
    "platformAccepted": true
   },
   {
    "name": "en_pred",
-   "generated": "ВЫБРАТЬ\n\tVALUE(Справочник.Валюты.EmptyRef) КАК E",
+   "generated": "ВЫБРАТЬ\n\tЗНАЧЕНИЕ(Справочник.Валюты.EmptyRef) КАК E",
    "platformAccepted": true
   },
   {
@@ -2538,7 +2538,7 @@
   },
   {
    "name": "en_enum_value_empty",
-   "generated": "ВЫБРАТЬ\n\tVALUE(Enum.CC_ShippingType.EmptyRef) КАК E",
+   "generated": "ВЫБРАТЬ\n\tЗНАЧЕНИЕ(Enum.CC_ShippingType.EmptyRef) КАК E",
    "platformAccepted": true
   },
   {
@@ -2563,7 +2563,7 @@
   },
   {
    "name": "ru_kw_en_period_word",
-   "generated": "ВЫБРАТЬ\n\tНАЧАЛОПЕРИОДА(&D, MONTH) КАК A",
+   "generated": "ВЫБРАТЬ\n\tНАЧАЛОПЕРИОДА(&D, МЕСЯЦ) КАК A",
    "platformAccepted": true
   },
   {
@@ -2973,7 +2973,7 @@
   },
   {
    "name": "AccumulationRegister.RecordType.value",
-   "generated": "ВЫБРАТЬ\n\tT.Period КАК Period\nИЗ\n\tРегистрНакопления.ВзаиморасчетыВ2В КАК T\nГДЕ\n\tT.RecordType = VALUE(AccumulationRecordType.Receipt)",
+   "generated": "ВЫБРАТЬ\n\tT.Period КАК Period\nИЗ\n\tРегистрНакопления.ВзаиморасчетыВ2В КАК T\nГДЕ\n\tT.RecordType = ЗНАЧЕНИЕ(AccumulationRecordType.Receipt)",
    "platformAccepted": true
   },
   {

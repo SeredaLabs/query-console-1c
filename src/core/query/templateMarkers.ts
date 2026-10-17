@@ -7,18 +7,22 @@
  * query (platform fixture `test/fixtures/platform/u1-template-markers.json`).
  *
  * The rule compares, for every marker in order, the code token before and after
- * it in the original and in the text about to be written. Layout, comments and
- * keyword case do not count; a `#` inside a string literal or a comment is not a
+ * it in the original and in the text about to be written. Layout, comments,
+ * keyword case and the language of a word do not count; a `#` inside a string literal or a comment is not a
  * marker. Pure, lexer-based.
  */
 import { tryTokenize, type Token } from './sdblLexer';
+import { languageFreeWord } from './translateEnglish';
 
 const isMarker = (t: Token): boolean => t.type === 'ident' && t.text.startsWith('#') && t.text.length > 1;
 
-/** Comparable spelling of a neighbour token: names and keywords case-insensitive. */
+/**
+ * Comparable spelling of a neighbour token: names and words case-insensitive and
+ * language-free (C2: the Designer writes an English query in Russian words).
+ */
 function key(t: Token | undefined): string {
   if (!t) return '';
-  return t.type === 'ident' || t.type === 'keyword' ? `${t.type === 'ident' ? 'i' : 'k'}:${t.value.toUpperCase()}` : `${t.type}:${t.text}`;
+  return t.type === 'ident' || t.type === 'keyword' ? `w:${languageFreeWord(t.type === 'keyword' ? t.value : t.text)}` : `${t.type}:${t.text}`;
 }
 
 interface MarkerContext { marker: string; before: string; after: string }
