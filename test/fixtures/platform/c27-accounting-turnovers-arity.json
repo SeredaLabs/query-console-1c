@@ -1,0 +1,22 @@
+{
+ "source": "SL_kza, platform 8.3.15.1489, 2026-10-17, validate_query (СхемаЗапроса) through the mcp_APIBackend server; nothing executed.",
+ "verdict": "C27: an accounting Обороты with fewer written positions and the same query with all eight positions get the same canonical text, so the missing trailing positions are cosmetic. The metadata-free Designer form (six positions) has the same canonical text too.",
+ "pairs": [
+  {
+   "short": "ВЫБРАТЬ Т.Счет КАК Счет, Т.КорСчет КАК КорСчет, Т.СуммаОборот КАК СуммаОборот ИЗ РегистрБухгалтерии.Хозрасчетный.Обороты(&Н, &К) КАК Т",
+   "full": "ВЫБРАТЬ Т.Счет КАК Счет, Т.КорСчет КАК КорСчет, Т.СуммаОборот КАК СуммаОборот ИЗ РегистрБухгалтерии.Хозрасчетный.Обороты(&Н, &К, , , , , , ) КАК Т",
+   "sameCanonical": true,
+   "canonical": "ВЫБРАТЬ\n\tТ.Счет КАК Счет,\n\tТ.КорСчет КАК КорСчет,\n\tТ.СуммаОборот КАК СуммаОборот\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.Обороты(&Н, &К, , , , , , ) КАК Т",
+   "designerArgs": "(&Н, &К, , , , )",
+   "designerSameCanonical": true
+  },
+  {
+   "short": "ВЫБРАТЬ Т.Счет КАК Счет ИЗ РегистрБухгалтерии.Хозрасчетный.Обороты(, , , , , {(&П1), (&П2)}) КАК Т",
+   "full": "ВЫБРАТЬ Т.Счет КАК Счет ИЗ РегистрБухгалтерии.Хозрасчетный.Обороты(, , , , , {(&П1), (&П2)}, , ) КАК Т",
+   "sameCanonical": true,
+   "canonical": "ВЫБРАТЬ\n\tТ.Счет КАК Счет\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.Обороты(, , , , , {(&П1), (&П2)}, , ) КАК Т",
+   "designerArgs": "(, , , , , {(&П1), (&П2)})",
+   "designerSameCanonical": true
+  }
+ ]
+}
