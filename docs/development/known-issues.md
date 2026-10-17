@@ -7,9 +7,11 @@ Ukrainian/Russian. Historical platform observations are indexed in [audits](audi
 
 ## Query editing and IDE assistance
 
-- Detection recognizes static BSL strings beginning with `ВЫБРАТЬ`/`УНИЧТОЖИТЬ`.
-  English SDBL parses, but English queries are not yet detected in BSL and English
-  metadata names are not resolved (C2, in progress). Dynamic
+- Detection recognizes static BSL strings beginning with `ВЫБРАТЬ`/`УНИЧТОЖИТЬ`,
+  and `SELECT`/`DROP` unless the string carries native SQL code (`--`, `/* */`,
+  `@name`, `[name]`). Parse errors are reported only for strings known to be 1C
+  queries: an English string that does not parse may be native SQL. Words inside
+  raw expressions of an English query are written back as typed (C2). Dynamic
   string composition cannot be evaluated; the extension does not execute queries.
 - Parsing/Apply checks supported structure and selected metadata semantics, not
   full grammar, arbitrary-expression validity or input/output equivalence. Unknown

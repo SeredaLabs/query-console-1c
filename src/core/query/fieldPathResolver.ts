@@ -1,5 +1,6 @@
 import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable, MetaField } from '../metadata/types';
+import { ENGLISH_STANDARD_FIELDS } from './sdblEnglish';
 
 /**
  * Shared field-path resolution kernel (semantic-core hardening, step 1).
@@ -76,7 +77,11 @@ export interface FieldPathResolution {
  * `dropRedundantGroupDerefs.ts` before this module existed). */
 export function findField(meta: MetaTable, name: string): MetaField | undefined {
   const up = name.toUpperCase();
-  return meta.fields.find(f => f.name.toUpperCase() === up);
+  const exact = meta.fields.find(f => f.name.toUpperCase() === up);
+  if (exact) return exact;
+  // C2: an English standard attribute name (`Ref`, `Code`…) is its Russian field.
+  const russian = ENGLISH_STANDARD_FIELDS.get(up);
+  return russian && meta.fields.find(f => f.kind === 'standard' && russian.includes(f.name));
 }
 
 /** First reference type on a field, if any (a field's `types` is a union — 1C fields

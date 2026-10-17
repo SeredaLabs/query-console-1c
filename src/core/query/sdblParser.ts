@@ -53,6 +53,7 @@ import { renderOperatorRhs, needsFormatting, isRootNotGroup, normalizeLeafCase }
 import { tokenize, tryTokenize, isWordToken, wordOf, canonicalWord, replaceInCodeRanges, codeRanges, isCodeAt, isNameToken as isLexerName } from './sdblLexer';
 import { splitArgComments } from './argComments';
 import type { Token } from './sdblLexer';
+import { canonicalMetadataKind, canonicalTableName } from './sdblEnglish';
 import { bareParamName } from './exprAutoAlias';
 import { deriveProducerColumns } from './producerColumns';
 import { advanceTempTableRegistry } from './tempTableLifetimes';
@@ -407,7 +408,7 @@ export function parseQuery(text: string): QueryModel {
 function isImplicitSourceHead(tokens: readonly Token[], i: number): boolean {
   const t = tokens[i];
   if (!isNameToken(t)) return false;
-  if (!METADATA_KINDS.has(t.text.toUpperCase())) return false;
+  if (!METADATA_KINDS.has(canonicalMetadataKind(t.text).toUpperCase())) return false;
   // Голова цепочки: перед ней нет `.` (иначе — продолжение чужого пути).
   const prev = tokens[i - 1];
   if (prev && prev.type === 'punct' && prev.value === '.') return false;
@@ -2129,7 +2130,8 @@ function parseTableSource(cur: Cursor, index: number): SelectedTable {
     recordTableRange();
     return { id: 't' + index, fullName: '', alias: aliasTok.text, subquery };
   }
-  const fullName = parseDottedName(cur);
+  // C2: an English kind / virtual table is its Russian name (`sdblEnglish.ts`).
+  const fullName = canonicalTableName(parseDottedName(cur));
 
   let virtual: VirtualParams | undefined;
   if (cur.isPunct('(')) {
@@ -4793,7 +4795,7 @@ function parseLockForUpdate(cur: Cursor): string[] {
   cur.expectKeyword('ИЗМЕНЕНИЯ');
   const names: string[] = [];
   while (cur.peek().type === 'ident' || (cur.peek().type === 'keyword' && !isSectionKeyword(cur.peek().value))) {
-    names.push(parseDottedName(cur));
+    names.push(canonicalTableName(parseDottedName(cur)));
   }
   return names;
 }

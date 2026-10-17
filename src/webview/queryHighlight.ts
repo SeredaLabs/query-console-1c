@@ -1,4 +1,5 @@
 import { FUNCTION_CATALOG, type FunctionGroup, type FunctionLeaf } from '../core/query/functionCatalog';
+import { ENGLISH_KEYWORDS, ENGLISH_WORDS } from '../core/query/sdblEnglish';
 
 export type HighlightTokenType = 'plain' | 'keyword' | 'function' | 'string' | 'date' | 'number' | 'param' | 'comment';
 
@@ -24,6 +25,9 @@ const KEYWORDS = new Set([
   'ИНДЕКСИРОВАТЬ', 'УНИКАЛЬНО', 'ДЛЯ', 'ИЗМЕНЕНИЯ', 'ОБЪЕДИНИТЬ', 'ВСЕ',
   'ССЫЛКА', 'ВЫБОР', 'КОГДА', 'ТОГДА', 'ИНАЧЕ', 'КОНЕЦ',
 ]);
+// C2: the English spelling of each of these words is highlighted the same way.
+for (const [en, ru] of ENGLISH_KEYWORDS) if (KEYWORDS.has(ru)) KEYWORDS.add(en);
+for (const [en, rus] of ENGLISH_WORDS) if (rus.some(ru => KEYWORDS.has(ru))) KEYWORDS.add(en);
 
 /** Имена функций (СТРОКА, ГОД, ВЫРАЗИТЬ, ...), извлечённые из каталога функций конструктора. */
 function buildFunctionNames(): Set<string> {

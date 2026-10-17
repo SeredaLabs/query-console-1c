@@ -15,8 +15,8 @@ connection, result grid, execution history, or query transport.
 
 ## 🧪 Detection and validation are bounded
 
-Cursor detection supports static BSL strings beginning with `ВЫБРАТЬ` or
-`УНИЧТОЖИТЬ`. The tolerant parser and validator are not a complete 1C compiler.
+Cursor detection supports static BSL strings beginning with `ВЫБРАТЬ`,
+`УНИЧТОЖИТЬ`, `SELECT` or `DROP`. The tolerant parser and validator are not a complete 1C compiler.
 Successful parsing does not prove that every custom expression, field,
 dot-navigation chain, or platform-specific construct is valid.
 
@@ -29,7 +29,9 @@ an unresolved `*`, conditions inside subqueries, and custom expressions are
 not checked. Editor diagnostics report syntax errors only; a missing field is
 reported by the designer, not underlined in the editor.
 
-English SDBL is currently unsupported. Completion does not resolve aliases of a
+For an English query, parse errors are not underlined (the string may be
+native SQL), and words inside custom expressions are written back as typed;
+the 1C platform accepts that mixed text. Completion does not resolve aliases of a
 condition subquery written inside a custom expression (for example an `ИЛИ` chain).
 Apply validates supported structure and selected metadata semantics, but does
 not prove that the generated query means the same as the original.
