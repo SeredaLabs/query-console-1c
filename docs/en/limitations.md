@@ -30,8 +30,9 @@ not checked. Editor diagnostics report syntax errors only; a missing field is
 reported by the designer, not underlined in the editor.
 
 For an English query, parse errors are not underlined (the string may be
-native SQL), and words inside custom expressions are written back as typed;
-the 1C platform accepts that mixed text. Completion does not resolve aliases of a
+native SQL). The designer writes it in Russian words; names stay as typed
+(`Cur.Code`, while the 1C Designer, which has the metadata, prints `Cur.Код`).
+Completion does not resolve aliases of a
 condition subquery written inside a custom expression (for example an `ИЛИ` chain).
 Apply validates supported structure and selected metadata semantics, but does
 not prove that the generated query means the same as the original.
