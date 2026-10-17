@@ -3,6 +3,38 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## 0.2.0 - 2026-10-17
+
+### Added
+
+- English 1C queries. `SELECT … FROM … WHERE …` with English keywords,
+  functions, period words and metadata names (`Catalog.`, `AccumulationRegister.…
+  .Turnovers`, `Ref`, `Code`, `Date`…), also mixed with Russian, is recognised in
+  BSL strings, gets hover, completion and diagnostics, and opens in the designer.
+  The designer writes it in Russian words, as the 1C query constructor does;
+  aliases and other names stay as written.
+- A `SELECT` string that carries native SQL code (`--` or `/* */` comments,
+  `@name` variables, `[name]` quoting) is not treated as a 1C query, and an
+  English string that does not parse is not underlined, since it may be SQL.
+
+### Fixed
+
+- Query templates with `#Имя` markers: the designer no longer applies a change
+  to the text around a marker (an added `КАК`, removed parentheses), which broke
+  the query after BSL substituted the marker; pressing **OK** without edits just
+  closes the designer.
+- In a `ИЗ` list with comma-separated sources, a join condition sees only its
+  own join chain, as on the platform; a bare field name is no longer bound to a
+  table of another comma-separated source.
+- `ВЫБРАТЬ * ИЗ ВТ` over a temp table whose columns are only partly known (its
+  creator kept a `*`) is kept as written in hover and completion instead of
+  listing only the known columns.
+- A word written right after a dot is read as a name (`Т.Упорядочить`,
+  `E.Order`), as the platform reads it.
+- Classic designer: the field-source trees of all tabs share one layout and
+  keep selection and drag-and-drop identities; expanding a reference in the
+  database tree no longer expands recursive references on its own.
+
 ## 0.1.99 - 2026-10-14
 
 ### Fixed
