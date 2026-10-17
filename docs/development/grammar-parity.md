@@ -49,7 +49,7 @@ Core v1 is ordinary SDBL as opened by the 1C Query Designer.
 | DCS braces `{…}` | Out of scope for Core v1 grammar parity: a data-composition extension over the query model. A future DCS layer gets its own coverage contract. |
 | Template markers `#Имя` (U1) | Syntax in scope: ours must not fail only because of `#Имя`. Syntax/preservation confirmed locally (open → stable round trip → Apply); substitution semantics checked on the platform (2026-10-15): the Designer's synthesized `КАК` on an unaliased marker source breaks substituted templates (U1 defect); nothing is interpreted or transformed; current Apply behavior retained pending platform evidence. U1 must answer whether Query Core editing/generation can change the value or scope of `#Имя`: if yes, a safety gate is required; if it stays opaque preserved syntax, no Apply block is needed. |
 | Reference gaps | Absence from the 8.3.20 reference is not evidence of invalidity or exclusion. A construct is in scope if the ordinary 1C Query Designer accepts and preserves it as part of the query, whatever its origin; it is out of scope only if it exists solely in the DCS query layer, like `{…}`. Until probed, such areas stay pending with a concrete question. |
-| English SDBL (C2) | In scope, P1. Core v1 does not ship with this known gap. It is implemented after or together with A1, not as more contextual-keyword special cases. |
+| English SDBL (C2) | Implemented 2026-10-17 (release 0.2.0): one bilingual word table, English metadata names, Apply writes Russian words; leftovers in C34. |
 
 Also out of scope:
 - dynamic BSL text assembly;
@@ -346,7 +346,7 @@ query console, plus the wizard canonical text, on a modern 8.3 web client.
 | Stage 0 result | Entries |
 |---|---|
 | Platform-valid, ours accepts, stable, Apply allowed | 12 |
-| Platform-valid, ours rejects (syntax gap) | 2: English SDBL → C2 |
+| Platform-valid, ours rejects (syntax gap) | 2: English SDBL → C2 (since fixed, 2026-10-17) |
 | Platform-invalid, ours rejects | 5 |
 | Platform-invalid, ours accepts, Apply blocked (C5) | 5 (3 of them unstable on the second pass) |
 | Platform unknown (U2), Apply blocked | 1 |
