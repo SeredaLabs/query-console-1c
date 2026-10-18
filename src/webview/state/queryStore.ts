@@ -5,6 +5,8 @@ import type { RefId } from '../../shared/messages';
 import type { MetaField } from '../../core/metadata/types';
 import { deriveUnionColumns, selectColumnAliases, type QueryDocument } from '../../core/query/unionModel';
 import type { BatchDocument } from '../../core/query/batchModel';
+import { planWildcardExpansion, type WildcardExpansion } from '../../core/query/expandStarFields';
+import { buildResolverFromTables } from '../../core/metadata/buildModelResolver';
 import {
   assembleBatch,
   assembleMembers,
@@ -173,6 +175,8 @@ export type QueryAction =
   | { type: 'ADD_ALL_FIELDS_WITH_TABLE'; tableFullName: string; fieldPaths: string[] }
   // 7.8.16: двойной клик по выбранной таблице → все её поля (дубли разрешены).
   | { type: 'ADD_ALL_FIELDS_DUP'; tableId: string }
+  // C24 step 1b: replace the active query's `*` by the configuration columns (explicit command).
+  | { type: 'EXPAND_WILDCARDS' }
   // 7.8.5: двойной клик по полю → правка как произвольного выражения (на месте).
   | { type: 'SET_FIELD_EXPRESSION'; fieldIdx: number; expression: string }
   // 7.8.8 / 7.8.9: источник-подзапрос / описание временной таблицы.
@@ -311,6 +315,19 @@ export const metadataCatalogRef: MetadataCatalogRef = { current: [] };
  * (без крапки, звичайний SDBL-ідентифікатор) структурно не можуть
  * колізувати за чинними правилами іменування 1С.
  */
+/**
+ * C24 step 1b: what the "expand `*`" command would do for the active query — the
+ * new select list or a structured refusal. The button reads it to enable itself and
+ * name the reason; `EXPAND_WILDCARDS` calls it again when applied, so a state that
+ * changed after the confirmation is checked anew. Only the configuration catalog is
+ * used (not batch temp tables or synthetic sources); a UNION member is refused,
+ * because its columns align with the other members by position.
+ */
+export function wildcardExpansionPlan(state: QueryState): WildcardExpansion {
+  if (state.queryList.length > 1) return { ok: false, reason: 'union' };
+  return planWildcardExpansion(buildModelFromFlat(snapshotActive(state)), buildResolverFromTables(metadataCatalogRef.current));
+}
+
 export function allTables(state: QueryState): MetaTable[] {
   return [...availableTempTables(state), ...metadataCatalogRef.current, ...state.syntheticTables];
 }
@@ -752,6 +769,13 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
         focusedSelectedTableId: newFocusedTableId,
         selectedFields: [...state.selectedFields, ...toAdd],
       };
+    }
+
+    case 'EXPAND_WILDCARDS': {
+      // Only the select list of the active query changes; a refusal leaves the state as is.
+      const plan = wildcardExpansionPlan(state);
+      if (!plan.ok) return state;
+      return { ...state, selectedFields: plan.fields, focusedSelectedFieldIdx: null };
     }
 
     case 'ADD_ALL_FIELDS_DUP': {

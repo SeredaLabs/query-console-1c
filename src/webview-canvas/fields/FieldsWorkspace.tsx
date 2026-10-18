@@ -8,6 +8,7 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import type { SupportedLocale } from '../../shared/locale';
 import { allTables, type QueryAction, type QueryState } from '../../webview/state/queryStore';
 import { ResizeHandle } from '../../webview/components/ResizeHandle';
+import { useExpandWildcards } from '../../webview/components/ExpandWildcardsCommand';
 import { t } from '../i18n';
 import { CARD, DIMENSIONS, SECTION_LABEL, TOKENS } from '../theme';
 
@@ -227,6 +228,7 @@ export function FieldsWorkspace({
 }): React.ReactElement {
   const [query, setQuery] = React.useState('');
   const [checked, setChecked] = React.useState<Set<number>>(new Set());
+  const expandWildcards = useExpandWildcards(state, dispatch);
   const [activeIdx, setActiveIdx] = React.useState<number | null>(null);
   const [addFieldOpen, setAddFieldOpen] = React.useState(false);
   const [addFieldQuery, setAddFieldQuery] = React.useState('');
@@ -477,6 +479,22 @@ export function FieldsWorkspace({
         >
           <span className="codicon codicon-arrow-down" style={{ fontSize: 14 }} />
         </button>
+
+        <span style={{ width: 1, height: 18, background: TOKENS.border, margin: '0 2px', flexShrink: 0 }} />
+
+        {/* C24 step 1b: the same command and plan as Classic (`ExpandWildcardsCommand`). */}
+        <button
+          type="button"
+          data-testid="expand-wildcards"
+          title={expandWildcards.title}
+          onClick={expandWildcards.request}
+          disabled={!expandWildcards.plan.ok}
+          style={{ ...BTN, flexShrink: 0, ...(!expandWildcards.plan.ok ? BTN_DISABLED : {}) }}
+        >
+          <span className="codicon codicon-list-flat" style={{ fontSize: 14 }} />
+          {!isCompact && t(locale, 'fieldsWorkspaceExpandWildcards')}
+        </button>
+        {expandWildcards.dialog}
 
         <span style={{ flex: '1 0 8px' }} />
         {fields.length > 0 && (

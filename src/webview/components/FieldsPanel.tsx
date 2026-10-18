@@ -26,12 +26,17 @@ interface Props {
   onEditField: (idx: number) => void;
   /** 7.8.6: перетаскивание таблицы в список — добавить все её поля. */
   onDropTable: (tableFullName: string) => void;
+  /** C24 step 1b: «Развернуть *» — доступность и подсказка (причина отказа) из плана команды. */
+  canExpandWildcards: boolean;
+  expandWildcardsTitle: string;
+  onExpandWildcards: () => void;
 }
 
 export function FieldsPanel({
   selectedTables, selectedFields, tabSectionFields, focusedSelectedFieldIdx,
   onDropField, onDropTabSection, onRemoveField, onRemoveTabSection, onRemoveTabSectionSubField,
   onFocusField, canAddExpression, onAddExpression, onEditField, onDropTable,
+  canExpandWildcards, expandWildcardsTitle, onExpandWildcards,
 }: Props): React.ReactElement {
   const [isDragOver, setIsDragOver] = React.useState(false);
   const [expandedTs, setExpandedTs] = React.useState<Set<string>>(new Set(
@@ -112,6 +117,13 @@ export function FieldsPanel({
           tone="edit"
           disabled={focusedSelectedFieldIdx === null || !selectedFields[focusedSelectedFieldIdx]}
           onClick={() => focusedSelectedFieldIdx !== null && onEditField(focusedSelectedFieldIdx)}
+        />
+        <IconButton
+          testId="expand-wildcards"
+          icon="list-flat"
+          title={expandWildcardsTitle}
+          disabled={!canExpandWildcards}
+          onClick={onExpandWildcards}
         />
       </PanelHeader>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 4 }}>

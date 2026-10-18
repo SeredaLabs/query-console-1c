@@ -15,6 +15,12 @@ Use **Tables and fields** to select sources and output fields. The metadata tree
 supports multi-word search. Selected tables expose their fields, aliases, and
 virtual-table parameters.
 
+A `*` stays as written. **Expand \*** in the field list replaces it with the
+columns of the configuration metadata, after a confirmation: the columns come
+from the configuration dump, so attributes of configuration extensions and later
+changes are not included. The command is available for configuration tables
+without tabular sections outside a UNION; its tooltip names the reason when not.
+
 Use the remaining tabs for joins, conditions, grouping, ordering, totals,
 unions, indexes, and additional query options. **Batch** manages multiple
 statements, temporary tables, and their order. **Builder** helps assemble

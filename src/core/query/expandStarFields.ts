@@ -107,7 +107,7 @@ function expandProvenWildcards(model: QueryModel, resolver: MetadataResolver | u
 
   const byAlias = new Map<string, SelectedTable>();
   for (const t of model.tables) if (t.alias) byAlias.set(t.alias.toUpperCase(), t);
-  const plans = new Map<SelectedField, Array<{ tableId: string; columns: string[] }>>();
+  const plans: ColumnPlans = new Map();
   for (const f of model.fields) {
     const star = parseStar(f);
     if (!star) continue;
@@ -123,9 +123,19 @@ function expandProvenWildcards(model: QueryModel, resolver: MetadataResolver | u
     plans.set(f, plan);
   }
 
-  // The expanded columns are named with the other columns left to right, as the
-  // platform does (`columnNames`), and keep that name as a synthesized one (sections
-  // such as `ИТОГИ … ПО <имя>` refer to columns by name).
+  model.fields = applyColumnPlans(model, plans);
+}
+
+/** Columns that replace one wildcard field: per source, in FROM order. */
+type ColumnPlans = Map<SelectedField, Array<{ tableId: string; columns: string[] }>>;
+
+/**
+ * The select list with every planned wildcard replaced by its columns (a new array;
+ * other fields are the same objects). The expanded columns are named with the other
+ * columns left to right, as the platform does (`columnNames`), and keep that name as
+ * a synthesized one (sections such as `ИТОГИ … ПО <имя>` refer to columns by name).
+ */
+function applyColumnPlans(model: QueryModel, plans: ColumnPlans): SelectedField[] {
   const fields: SelectedField[] = [];
   const expanded = new Set<SelectedField>();
   for (const f of model.fields) {
@@ -144,7 +154,83 @@ function expandProvenWildcards(model: QueryModel, resolver: MetadataResolver | u
     const name = names[i];
     if (expanded.has(f) && name !== undefined) { f.alias = name; f.aliasSynthesized = name; }
   });
-  model.fields = fields;
+  return fields;
+}
+
+/**
+ * Why the explicit Designer command cannot expand the wildcards of a select list
+ * (C24 step 1b decision: no automatic expansion; the user expands on request).
+ */
+export type WildcardExpansionRefusal =
+  | 'noWildcard'          // the select list has no `*`
+  | 'union'               // the query is a UNION member (columns align by position)
+  | 'comments'            // a wildcard row carries comments that would be lost
+  | 'unnamedColumns'      // an expression without `КАК` is named after the expansion
+  | 'projections'         // tabular-section or trailing columns already in the list
+  | 'attributeWildcard'   // `Т.Поле.*`
+  | 'subquerySource'      // a nested SELECT source
+  | 'unsupportedSource'   // virtual table, `#`/`&`, or a kind whose columns are not attested
+  | 'unknownSource'       // not in the configuration metadata (also batch temp tables)
+  | 'tabularSections';    // the source has tabular sections (columns Classic cannot show in order)
+
+export type WildcardExpansion =
+  | { ok: true; fields: SelectedField[] }
+  | { ok: false; reason: WildcardExpansionRefusal; source?: string };
+
+/**
+ * Kinds whose synthesized columns are not attested on the platform (C29: a chart of
+ * accounts with `OrderLength = 0`, calculation registers and charts of calculation types).
+ */
+const UNATTESTED_KINDS = new Set(['ПланСчетов', 'РегистрРасчета', 'ПланВидовРасчета']);
+
+/**
+ * C24 step 1b — the explicit "expand `*`" command of the Designer. Pure: the input is
+ * not changed; the result is the new select list, or why it cannot be built.
+ *
+ * Unlike `expandStarFields`, this is an edit contract: every wildcard of the list is
+ * expanded from `catalog` (the configuration metadata only) or none is; the columns of
+ * a source are its main fields and then its trailing standard fields (the platform
+ * order when the source has no tabular sections), and they all stay in the select
+ * list, so the Designer shows every column it writes. Names follow the platform
+ * (`columnNames`, C30). The metadata is not proven complete (extensions, a stale
+ * dump): the caller must say so; this function only refuses what it cannot build.
+ */
+export function planWildcardExpansion(model: QueryModel, catalog: MetadataResolver): WildcardExpansion {
+  const stars = model.fields.filter(f => parseStar(f) !== null);
+  if (stars.length === 0) return { ok: false, reason: 'noWildcard' };
+  if (model.tabSectionFields?.length || model.trailingFields?.length) return { ok: false, reason: 'projections' };
+  if (stars.some(f => f.commentLeading?.length || f.commentTrailing)) return { ok: false, reason: 'comments' };
+  if (model.fields.some(f => !parseStar(f) && explicitAlias(f) === undefined && (f.expression !== undefined || f.func !== undefined || f.alias !== undefined))) {
+    return { ok: false, reason: 'unnamedColumns' };
+  }
+
+  const byAlias = new Map<string, SelectedTable>();
+  for (const t of model.tables) if (t.alias) byAlias.set(t.alias.toUpperCase(), t);
+  const plans: ColumnPlans = new Map();
+  for (const f of stars) {
+    const star = parseStar(f)!;
+    if (star.viaAttribute) return { ok: false, reason: 'attributeWildcard' };
+    const sources = star.alias ? [byAlias.get(star.alias.toUpperCase())] : model.tables;
+    if (sources.length === 0) return { ok: false, reason: 'unknownSource' };
+    const plan: Array<{ tableId: string; columns: string[] }> = [];
+    for (const t of sources) {
+      if (!t) return { ok: false, reason: 'unknownSource', source: star.alias };
+      if (t.subquery) return { ok: false, reason: 'subquerySource', source: t.alias };
+      if (t.virtual || !t.fullName || /^[#&]/u.test(t.fullName)) return { ok: false, reason: 'unsupportedSource', source: t.fullName || t.alias };
+      if (catalog.virtualTableByFullName?.(t.fullName)) return { ok: false, reason: 'unsupportedSource', source: t.fullName };
+      const meta = catalog.tableByFullName(t.fullName);
+      if (!meta || meta.virtual) return { ok: false, reason: 'unknownSource', source: t.fullName };
+      if (UNATTESTED_KINDS.has(meta.kind)) return { ok: false, reason: 'unsupportedSource', source: t.fullName };
+      const all = buildSelectAllModel(meta);
+      if (all.tabSectionFields?.length) return { ok: false, reason: 'tabularSections', source: t.fullName };
+      plan.push({ tableId: t.id, columns: [...all.fields, ...(all.trailingFields ?? [])].map(c => c.path) });
+    }
+    plans.set(f, plan);
+  }
+  // Fresh copies of the kept fields: the result shares nothing mutable with the input.
+  const copy: QueryModel = { ...model, fields: model.fields.map(f => ({ ...f })) };
+  const copyPlans: ColumnPlans = new Map([...plans].map(([f, plan]) => [copy.fields[model.fields.indexOf(f)], plan] as const));
+  return { ok: true, fields: applyColumnPlans(copy, copyPlans) };
 }
 
 /**
