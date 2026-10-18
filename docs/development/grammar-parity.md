@@ -13,7 +13,8 @@ reasoning and phases; the [ledger](technical-debt.md) (V5) owns status.
 The gate is a Query Core v1 blocker (ledger V5, P1): Core v1 cannot be
 declared until it holds with sufficient coverage confidence. It is not a claim
 that the current product is unsafe; concrete known gaps are separate C items
-(currently C24; C2 was fixed on 2026-10-17).
+(currently C36, a deliberate divergence; C2 and C24 were fixed on
+2026-10-17/18).
 
 The claim is bounded: it never says the whole 1C grammar is proven, and it is
 always reported with coverage confidence:
@@ -242,11 +243,12 @@ forms are the exception: their examples keep the `*`.
 
 - **`УНИЧТОЖИТЬ`** is covered by 14 platform-recorded golden packages. The
   1C reference lists it only in the bilingual keyword table.
-- **C24.** The Designer round trip rewrites a wildcard projection
-  (`ВЫБРАТЬ *` → `* КАК Поле1`, `Т.*` → `Т.* КАК Поле1`), and Apply allows the
-  changed text. The platform canonical text expands the star. Whether the
-  platform accepts the rewritten form is not yet attested (`PQ-C24`). The area
-  stays covered, with an open debt item.
+- **C24 (closed 2026-10-18).** The rewritten forms `* КАК Поле1` / `Т.* КАК Поле1`
+  are platform syntax errors (`PQ-C24`, run on SL_kza 2026-10-18,
+  [fixture](../../test/fixtures/platform/c24-completion.json)); the Designer has
+  not written them since C24 step 0 and keeps `*` as written. The platform
+  canonical text expands the star; that difference is deliberate (no proof of
+  metadata completeness) and is owned by C36.
 - **Example selection matters.** Golden `ИЗ`-source and `Источник.Таблица.*`
   hits inside DCS braces do not attest the ordinary form. The tabular `.*`
   form is therefore pending.
@@ -256,8 +258,9 @@ forms are the exception: their examples keep the `*`.
 ### Probe queue
 
 [`probe-queue.jsonl`](../../test/fixtures/grammar-parity/probe-queue.jsonl)
-holds one executable probe per pending area (34 probes over 96 forms), plus
-debt probes for open items found by the review (`PQ-C24`). Each
+holds one executable probe per pending area (34 probes over 96 forms). The debt
+probe `PQ-C24` was run on 2026-10-18 and left the queue; its results are in the
+[C24 fixture](../../test/fixtures/platform/c24-completion.json). Each
 probe has a question, a query text and its metadata needs, and records the
 platform build, acceptance and the Designer canonical text. Texts use the
 corpus fixture object names; as in Stage 0, substitutions for the live base
@@ -355,7 +358,7 @@ query console, plus the wizard canonical text, on a modern 8.3 web client.
 date not recorded).
 - All 128 open with a stable second pass and Apply allowed.
 - The canonical `query_text` matches for 122.
-- It differs for 2: the `*` forms, C24.
+- It differs for 2: the `*` forms, which the Designer keeps (C36).
 - It is not compared for 4, whose only examples carry comments, templates or
   no recorded text.
 
