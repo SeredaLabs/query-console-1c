@@ -5,7 +5,7 @@ import type { RefId } from '../../shared/messages';
 import type { MetaField } from '../../core/metadata/types';
 import { deriveUnionColumns, selectColumnAliases, type QueryDocument } from '../../core/query/unionModel';
 import type { BatchDocument } from '../../core/query/batchModel';
-import { planWildcardExpansion, type WildcardExpansion } from '../../core/query/expandStarFields';
+import { isWildcardExpression, planWildcardExpansion, type WildcardExpansion } from '../../core/query/expandStarFields';
 import { buildResolverFromTables } from '../../core/metadata/buildModelResolver';
 import {
   assembleBatch,
@@ -508,7 +508,8 @@ function synthesizeSubqueryTables(doc: BatchDocument, taken: Set<string>): MetaT
         while (taken.has(name)) name = `${base}${i++}`;
         taken.add(name);
         sel.fullName = name;
-        const fields: MetaField[] = deriveUnionColumns(sel.subquery.members).map(c => ({
+        // C24: a kept wildcard stands for columns not known here — not a column named `Т.*`.
+        const fields: MetaField[] = deriveUnionColumns(sel.subquery.members).filter(c => !isWildcardExpression(c.cells[0] ?? undefined)).map(c => ({
           name: c.alias,
           kind: 'attribute',
           types: [],

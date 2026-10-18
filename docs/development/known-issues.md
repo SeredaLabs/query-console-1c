@@ -36,7 +36,7 @@ Ukrainian/Russian. Historical platform observations are indexed in [audits](audi
   skips subquery-condition field checks to avoid false negatives.
 - A temp-table producer whose columns are not fully known (a `*` the parser could
   not expand) leaves a later `*` over that temp table unexpanded everywhere, so hover
-  and completion do not list its columns (C24). A complete inferred
+  and completion do not list its columns (kept by design, see C24). A complete inferred
   scalar temp schema supports position-aware field validation/assistance; inferred
   columns do not provide reference types for deeper navigation.
 
