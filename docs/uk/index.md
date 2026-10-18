@@ -3,9 +3,27 @@ source_version: 3
 translation_status: current
 -->
 
-# 📘 Посібник користувача
-
-[English](../en/index.md) · [Українська](../uk/index.md) · [Русский](../ru/index.md)
+<h1>
+  <a href="../ru/index.md" title="Русский">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/ru-icon.svg">
+      <img align="right" src="../../assets/images/lang/ru-button.svg" alt="Русский" height="32">
+    </picture>
+  </a>
+  <a href="../uk/index.md" title="Українська">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/uk-icon-active.svg">
+      <img align="right" src="../../assets/images/lang/uk-button-active.svg" alt="Українська" height="32">
+    </picture>
+  </a>
+  <a href="../en/index.md" title="English">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/en-icon.svg">
+      <img align="right" src="../../assets/images/lang/en-button.svg" alt="English" height="32">
+    </picture>
+  </a>
+  📘 Посібник користувача
+</h1>
 
 🧩 **1C: Query Constructor** — візуальний редактор статичних запитів 1С SDBL у
 BSL-файлах, а також семантичний шар — підказки, автодоповнення та

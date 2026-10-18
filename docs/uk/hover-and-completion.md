@@ -3,9 +3,27 @@ source_version: 3
 translation_status: current
 -->
 
-# 🔍 Підказки, автодоповнення та діагностика
-
-[English](../en/hover-and-completion.md) · [Українська](../uk/hover-and-completion.md) · [Русский](../ru/hover-and-completion.md)
+<h1>
+  <a href="../ru/hover-and-completion.md" title="Русский">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/ru-icon.svg">
+      <img align="right" src="../../assets/images/lang/ru-button.svg" alt="Русский" height="32">
+    </picture>
+  </a>
+  <a href="../uk/hover-and-completion.md" title="Українська">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/uk-icon-active.svg">
+      <img align="right" src="../../assets/images/lang/uk-button-active.svg" alt="Українська" height="32">
+    </picture>
+  </a>
+  <a href="../en/hover-and-completion.md" title="English">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/en-icon.svg">
+      <img align="right" src="../../assets/images/lang/en-button.svg" alt="English" height="32">
+    </picture>
+  </a>
+  🔍 Підказки, автодоповнення та діагностика
+</h1>
 
 Ці можливості працюють прямо в тексті запиту всередині файлу `.bsl` — без
 відкриття Конструктора запитів. Вони використовують те саме вивантаження

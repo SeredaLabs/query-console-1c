@@ -3,9 +3,27 @@ source_version: 3
 translation_status: canonical
 -->
 
-# 🔍 Hover, autocomplete, and diagnostics
-
-[English](../en/hover-and-completion.md) · [Українська](../uk/hover-and-completion.md) · [Русский](../ru/hover-and-completion.md)
+<h1>
+  <a href="../ru/hover-and-completion.md" title="Русский">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/ru-icon.svg">
+      <img align="right" src="../../assets/images/lang/ru-button.svg" alt="Русский" height="32">
+    </picture>
+  </a>
+  <a href="../uk/hover-and-completion.md" title="Українська">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/uk-icon.svg">
+      <img align="right" src="../../assets/images/lang/uk-button.svg" alt="Українська" height="32">
+    </picture>
+  </a>
+  <a href="../en/hover-and-completion.md" title="English">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/en-icon-active.svg">
+      <img align="right" src="../../assets/images/lang/en-button-active.svg" alt="English" height="32">
+    </picture>
+  </a>
+  🔍 Hover, autocomplete, and diagnostics
+</h1>
 
 These work directly on a query string inside a `.bsl` file — no need to open
 Query Designer first. They read the same metadata export as the designer

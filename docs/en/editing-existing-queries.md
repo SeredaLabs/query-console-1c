@@ -3,9 +3,27 @@ source_version: 5
 translation_status: canonical
 -->
 
-# ✏️ Editing existing queries
-
-[English](../en/editing-existing-queries.md) · [Українська](../uk/editing-existing-queries.md) · [Русский](../ru/editing-existing-queries.md)
+<h1>
+  <a href="../ru/editing-existing-queries.md" title="Русский">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/ru-icon.svg">
+      <img align="right" src="../../assets/images/lang/ru-button.svg" alt="Русский" height="32">
+    </picture>
+  </a>
+  <a href="../uk/editing-existing-queries.md" title="Українська">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/uk-icon.svg">
+      <img align="right" src="../../assets/images/lang/uk-button.svg" alt="Українська" height="32">
+    </picture>
+  </a>
+  <a href="../en/editing-existing-queries.md" title="English">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/en-icon-active.svg">
+      <img align="right" src="../../assets/images/lang/en-button-active.svg" alt="English" height="32">
+    </picture>
+  </a>
+  ✏️ Editing existing queries
+</h1>
 
 ## 🔎 Query detection
 

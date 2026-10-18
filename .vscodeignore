@@ -5,6 +5,7 @@
 .gitignore
 AGENTS.md
 assets/images/readme-hero.svg
+assets/images/lang/**
 src/**
 test/**
 test-results/**
