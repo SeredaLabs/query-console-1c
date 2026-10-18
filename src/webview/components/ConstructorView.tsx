@@ -21,6 +21,7 @@ import { TempTableDialog } from './TempTableDialog';
 import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
 import { CodeEditor } from './CodeEditor';
 import { IconButton } from './IconButton';
+import { useExpandWildcards } from './ExpandWildcardsCommand';
 import { CommentLossDialog } from './CommentLossDialog';
 import { DesignerModeToggle } from './DesignerModeToggle';
 import type { BatchDocument } from '../../core/query/batchModel';
@@ -98,6 +99,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
 
   const tailSections = compoundSections(state);
   const dispatchTail = (action: QueryAction) => dispatchCompoundSection(state, dispatch, action);
+  const expandWildcards = useExpandWildcards(state, dispatch);
 
   // ТЗ §56 P1.7: allTables(state) аллоцирует НОВЫЙ массив на каждый вызов —
   // мемоизируем ОДИН раз на рендер (а не зовём напрямую в ~13 местах ниже),
@@ -389,6 +391,9 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
               dispatch({ type: 'REMOVE_TAB_SECTION_SUB_FIELD', tableId, tsName, fieldName })
             }
             onFocusField={idx => dispatch({ type: 'FOCUS_SELECTED_FIELD', idx })}
+            canExpandWildcards={expandWildcards.plan.ok}
+            expandWildcardsTitle={expandWildcards.title}
+            onExpandWildcards={expandWildcards.request}
             canAddExpression={state.selectedTables.length > 0}
             onAddExpression={() => {
               // 7.8.4: «+» открывает «Произвольное выражение» с полями всех таблиц;
@@ -740,6 +745,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           умолчанию выключено) переключает на новую раскладку из QueryTextDialog —
           обе ветки ниже используют один и тот же handleApplyQueryEdit/onClose, так
           что флаг — чистый UI-свитч, безопасно выключаемый в рантайме без revert кода. */}
+      {expandWildcards.dialog}
       {commentLoss && <CommentLossDialog
         lost={commentLoss.lost}
         onCancel={() => setCommentLoss(null)}

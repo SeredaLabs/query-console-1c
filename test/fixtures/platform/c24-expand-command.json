@@ -1,0 +1,1205 @@
+{
+ "source": "SL_kza, platform 8.3.15.1489, 2026-10-18, mcp_APIBackend: \"platform\" = validate_query (СхемаЗапроса): result column names in order and the canonical text, whose select list is the platform's own expansion of `*` (column provenance). Metadata: built from get_metadata_structure in the shape this product's XML loader produces (standard fields per kind in the loader's order, ВерсияДанных added as the loader does; queryable common attributes only); no XML dump of SL_kza was available. The command ran through the Designer store (SET_METADATA → LOAD_BATCH → EXPAND_WILDCARDS → computeBatchTextSafe) on branch feat/c24-expand-wildcards-command.",
+ "verdict": "C24 step 1b command: for every query the command expanded, its text is accepted and has the same column names, order and provenance (`Т1.<поле> КАК <имя>`) as the platform's expansion of `*`, including name collisions (`Код1`) and fields before/after `*`. Types: validate_query does not return result types; each column's type is the metadata type of its source field (same provenance as the platform's), except ВерсияДанных, which get_metadata_structure does not list. Sources with tabular sections are refused. This proves the command's rules for this metadata; it does not prove that any configuration's metadata (extensions, a stale dump) is complete.",
+ "tables": [
+  {
+   "kind": "Справочник",
+   "name": "Валюты",
+   "fullName": "Справочник.Валюты",
+   "fields": [
+    {
+     "name": "Ссылка",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ВерсияДанных",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ПометкаУдаления",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Код",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Наименование",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "НаименованиеПолное",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПараметрыПрописиНаАнглийском",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПараметрыПрописиНаРусском",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПараметрыПрописиНаУкраинском",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Символ",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ЗагружатьИзИнтернета",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Картинка",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "GUID_BPM",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Предопределенный",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ИмяПредопределенныхДанных",
+     "kind": "standard",
+     "types": []
+    }
+   ]
+  },
+  {
+   "kind": "Справочник",
+   "name": "CC_ПравилаОтбораОбъектов",
+   "fullName": "Справочник.CC_ПравилаОтбораОбъектов",
+   "fields": [
+    {
+     "name": "Ссылка",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ВерсияДанных",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ПометкаУдаления",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Родитель",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ЭтоГруппа",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Код",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Наименование",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Активное",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ИмяМакета",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ИмяМакетаПредставление",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОписаниеОтбора",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Отбор",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПериодДействияНачало",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПериодДействияОкончание",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ИерархическаяВыгрузка",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Автор",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Комментарий",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Предопределенный",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ИмяПредопределенныхДанных",
+     "kind": "standard",
+     "types": []
+    }
+   ],
+   "tabularSections": [
+    {
+     "kind": "ТабличнаяЧасть",
+     "name": "ДополнительныеПараметры",
+     "fullName": "Справочник.CC_ПравилаОтбораОбъектов.ДополнительныеПараметры",
+     "fields": []
+    }
+   ]
+  },
+  {
+   "kind": "Справочник",
+   "name": "CC_ПродавцыПлатформERP",
+   "fullName": "Справочник.CC_ПродавцыПлатформERP",
+   "fields": [
+    {
+     "name": "Ссылка",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ВерсияДанных",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ПометкаУдаления",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Владелец",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Код",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Наименование",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ИдентификаторПлатформы",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Предопределенный",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ИмяПредопределенныхДанных",
+     "kind": "standard",
+     "types": []
+    }
+   ],
+   "tabularSections": [
+    {
+     "kind": "ТабличнаяЧасть",
+     "name": "АутентификацияНаПлатформе",
+     "fullName": "Справочник.CC_ПродавцыПлатформERP.АутентификацияНаПлатформе",
+     "fields": []
+    }
+   ]
+  },
+  {
+   "kind": "Документ",
+   "name": "АктивацияПромокода",
+   "fullName": "Документ.АктивацияПромокода",
+   "fields": [
+    {
+     "name": "Ссылка",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ВерсияДанных",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ПометкаУдаления",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Номер",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Дата",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Проведен",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Контрагент",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Промокод",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Посылка",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Автор",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Комментарий",
+     "kind": "attribute",
+     "types": []
+    }
+   ]
+  },
+  {
+   "kind": "Документ",
+   "name": "Посылка",
+   "fullName": "Документ.Посылка",
+   "fields": [
+    {
+     "name": "Ссылка",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ВерсияДанных",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ПометкаУдаления",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Номер",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Дата",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Проведен",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "SendOneClick",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "АдресАктуальный",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Архив",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Брендовый",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ВалютаОперации",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Вес",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ВидДоставки",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ВидОпасности",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ВидПроблемы",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ВидСервиса",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ВиртуальнаяПосылка",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ВходящийТрекингНомер",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ГабаритВысота",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ГабаритДлина",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ГабаритШирина",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Город_uid",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Город_Наименование",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ДопОписаниеПроблемы",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Зона",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ИспользуетНашIOSS",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Кратность",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Курс",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Менеджер",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "НомерТТН_НП",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Область_uid",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Область_Наименование",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОбъемныйВес",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Организация",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Основание",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Отделение_uid",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Отделение_Наименование",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОтложитьДляДопОбработки",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОтправительАдрес",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОтправительГород",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОтправительДом",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОтправительИндекс",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОтправительКвартира",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОтправительКонтрагент",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОтправительОбласть",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОтправительСтрана",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОтправительТелефон",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОтправительУлица",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ОтправительФИО",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПерсональныйКомментарийКлиента",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Получатель",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПолучательАдрес",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПолучательГород",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПолучательДом",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПолучательИндекс",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПолучательКвартира",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПолучательКонтрагент",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПолучательОбласть",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПолучательСтрана",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПолучательТарифныйПлан",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПолучательТелефон",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПолучательУлица",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПосылкаБезКонтроляОграничений",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Проект",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПропускатьПоКредитномуЛимиту",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "ПроцентСкидки",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "РасчетныйВес",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "СкидкаНаценка",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Склад",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "СлужбыДоставки",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "СтатьяДР",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Стоимость",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "СуммаСкидки",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Улица_uid",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Улица_Наименование",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Ценность",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Штрихкод",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "GUID",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Автор",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "Комментарий",
+     "kind": "attribute",
+     "types": []
+    },
+    {
+     "name": "КомментарийСклада",
+     "kind": "attribute",
+     "types": []
+    }
+   ],
+   "tabularSections": [
+    {
+     "kind": "ТабличнаяЧасть",
+     "name": "Товары",
+     "fullName": "Документ.Посылка.Товары",
+     "fields": []
+    },
+    {
+     "kind": "ТабличнаяЧасть",
+     "name": "Услуги",
+     "fullName": "Документ.Посылка.Услуги",
+     "fields": []
+    },
+    {
+     "kind": "ТабличнаяЧасть",
+     "name": "ДополнительныеРеквизиты",
+     "fullName": "Документ.Посылка.ДополнительныеРеквизиты",
+     "fields": []
+    }
+   ]
+  },
+  {
+   "kind": "Перечисление",
+   "name": "CC_ShippingType",
+   "fullName": "Перечисление.CC_ShippingType",
+   "fields": [
+    {
+     "name": "Ссылка",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Порядок",
+     "kind": "standard",
+     "types": []
+    }
+   ]
+  },
+  {
+   "kind": "РегистрСведений",
+   "name": "КурсыВалют",
+   "fullName": "РегистрСведений.КурсыВалют",
+   "fields": [
+    {
+     "name": "Период",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Регистратор",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "НомерСтроки",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Активность",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Валюта",
+     "kind": "dimension",
+     "types": []
+    },
+    {
+     "name": "Курс",
+     "kind": "resource",
+     "types": []
+    },
+    {
+     "name": "Кратность",
+     "kind": "resource",
+     "types": []
+    }
+   ]
+  },
+  {
+   "kind": "РегистрНакопления",
+   "name": "ВзаиморасчетыВ2В",
+   "fullName": "РегистрНакопления.ВзаиморасчетыВ2В",
+   "fields": [
+    {
+     "name": "Период",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Регистратор",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "НомерСтроки",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Активность",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "ВидДвижения",
+     "kind": "standard",
+     "types": []
+    },
+    {
+     "name": "Контрагент",
+     "kind": "dimension",
+     "types": []
+    },
+    {
+     "name": "ВалютаОперации",
+     "kind": "dimension",
+     "types": []
+    },
+    {
+     "name": "Посылка",
+     "kind": "dimension",
+     "types": []
+    },
+    {
+     "name": "СуммаПоПосылке",
+     "kind": "resource",
+     "types": []
+    },
+    {
+     "name": "СуммаКОплате",
+     "kind": "resource",
+     "types": []
+    },
+    {
+     "name": "Оплачено",
+     "kind": "resource",
+     "types": []
+    }
+   ]
+  }
+ ],
+ "cases": [
+  {
+   "query": "ВЫБРАТЬ * ИЗ Справочник.Валюты КАК Т1",
+   "commandText": "ВЫБРАТЬ\n\tТ1.Ссылка КАК Ссылка,\n\tТ1.ВерсияДанных КАК ВерсияДанных,\n\tТ1.ПометкаУдаления КАК ПометкаУдаления,\n\tТ1.Код КАК Код,\n\tТ1.Наименование КАК Наименование,\n\tТ1.НаименованиеПолное КАК НаименованиеПолное,\n\tТ1.ПараметрыПрописиНаАнглийском КАК ПараметрыПрописиНаАнглийском,\n\tТ1.ПараметрыПрописиНаРусском КАК ПараметрыПрописиНаРусском,\n\tТ1.ПараметрыПрописиНаУкраинском КАК ПараметрыПрописиНаУкраинском,\n\tТ1.Символ КАК Символ,\n\tТ1.ЗагружатьИзИнтернета КАК ЗагружатьИзИнтернета,\n\tТ1.Картинка КАК Картинка,\n\tТ1.GUID_BPM КАК GUID_BPM,\n\tТ1.Предопределенный КАК Предопределенный,\n\tТ1.ИмяПредопределенныхДанных КАК ИмяПредопределенныхДанных\nИЗ\n\tСправочник.Валюты КАК Т1",
+   "starValid": true,
+   "commandValid": true,
+   "error": null,
+   "sameNamesAndOrder": true,
+   "columns": [
+    [
+     "Ссылка",
+     "ВерсияДанных",
+     "ПометкаУдаления",
+     "Код",
+     "Наименование",
+     "НаименованиеПолное",
+     "ПараметрыПрописиНаАнглийском",
+     "ПараметрыПрописиНаРусском",
+     "ПараметрыПрописиНаУкраинском",
+     "Символ",
+     "ЗагружатьИзИнтернета",
+     "Картинка",
+     "GUID_BPM",
+     "Предопределенный",
+     "ИмяПредопределенныхДанных"
+    ]
+   ],
+   "sameProvenance": true,
+   "typesByProvenance": [
+    "Справочник.Валюты",
+    null,
+    "Булево",
+    "Строка(3)",
+    "Строка(5)",
+    "Строка(10)",
+    "Строка(неогр)",
+    "Строка(неогр)",
+    "Строка(неогр)",
+    "Строка(1)",
+    "Булево",
+    "Value storage",
+    "Строка(36)",
+    "Булево",
+    "Строка(256)"
+   ],
+   "allTypesKnown": false
+  },
+  {
+   "query": "ВЫБРАТЬ * ИЗ Справочник.CC_ПравилаОтбораОбъектов КАК Т1",
+   "command": "tabularSections"
+  },
+  {
+   "query": "ВЫБРАТЬ * ИЗ Справочник.CC_ПродавцыПлатформERP КАК Т1",
+   "command": "tabularSections"
+  },
+  {
+   "query": "ВЫБРАТЬ * ИЗ Документ.АктивацияПромокода КАК Т1",
+   "commandText": "ВЫБРАТЬ\n\tТ1.Ссылка КАК Ссылка,\n\tТ1.ВерсияДанных КАК ВерсияДанных,\n\tТ1.ПометкаУдаления КАК ПометкаУдаления,\n\tТ1.Номер КАК Номер,\n\tТ1.Дата КАК Дата,\n\tТ1.Проведен КАК Проведен,\n\tТ1.Контрагент КАК Контрагент,\n\tТ1.Промокод КАК Промокод,\n\tТ1.Посылка КАК Посылка,\n\tТ1.Автор КАК Автор,\n\tТ1.Комментарий КАК Комментарий\nИЗ\n\tДокумент.АктивацияПромокода КАК Т1",
+   "starValid": true,
+   "commandValid": true,
+   "error": null,
+   "sameNamesAndOrder": true,
+   "columns": [
+    [
+     "Ссылка",
+     "ВерсияДанных",
+     "ПометкаУдаления",
+     "Номер",
+     "Дата",
+     "Проведен",
+     "Контрагент",
+     "Промокод",
+     "Посылка",
+     "Автор",
+     "Комментарий"
+    ]
+   ],
+   "sameProvenance": true,
+   "typesByProvenance": [
+    "Документ.АктивацияПромокода",
+    null,
+    "Булево",
+    "Строка(9)",
+    "ДатаВремя",
+    "Булево",
+    "Справочник.Контрагенты",
+    "Справочник.Промокоды",
+    "Документ.Посылка",
+    "Справочник.Пользователи",
+    "Строка(255)"
+   ],
+   "allTypesKnown": false
+  },
+  {
+   "query": "ВЫБРАТЬ * ИЗ Перечисление.CC_ShippingType КАК Т1",
+   "commandText": "ВЫБРАТЬ\n\tТ1.Ссылка КАК Ссылка,\n\tТ1.Порядок КАК Порядок\nИЗ\n\tПеречисление.CC_ShippingType КАК Т1",
+   "starValid": true,
+   "commandValid": true,
+   "error": null,
+   "sameNamesAndOrder": true,
+   "columns": [
+    [
+     "Ссылка",
+     "Порядок"
+    ]
+   ],
+   "sameProvenance": true,
+   "typesByProvenance": [
+    "Перечисление.CC_ShippingType",
+    "Число(0,0)"
+   ],
+   "allTypesKnown": true
+  },
+  {
+   "query": "ВЫБРАТЬ * ИЗ РегистрСведений.КурсыВалют КАК Т1",
+   "commandText": "ВЫБРАТЬ\n\tТ1.Период КАК Период,\n\tТ1.Регистратор КАК Регистратор,\n\tТ1.НомерСтроки КАК НомерСтроки,\n\tТ1.Активность КАК Активность,\n\tТ1.Валюта КАК Валюта,\n\tТ1.Курс КАК Курс,\n\tТ1.Кратность КАК Кратность\nИЗ\n\tРегистрСведений.КурсыВалют КАК Т1",
+   "starValid": true,
+   "commandValid": true,
+   "error": null,
+   "sameNamesAndOrder": true,
+   "columns": [
+    [
+     "Период",
+     "Регистратор",
+     "НомерСтроки",
+     "Активность",
+     "Валюта",
+     "Курс",
+     "Кратность"
+    ]
+   ],
+   "sameProvenance": true,
+   "typesByProvenance": [
+    "ДатаВремя",
+    "Документ.КорректировкаРегистров | Документ.УстановкаМаржи | Документ.УстановитьКурсВалют",
+    "Число(9,0)",
+    "Булево",
+    "Справочник.Валюты",
+    "Число(10,4)",
+    "Число(10,0)"
+   ],
+   "allTypesKnown": true
+  },
+  {
+   "query": "ВЫБРАТЬ * ИЗ РегистрНакопления.ВзаиморасчетыВ2В КАК Т1",
+   "commandText": "ВЫБРАТЬ\n\tТ1.Период КАК Период,\n\tТ1.Регистратор КАК Регистратор,\n\tТ1.НомерСтроки КАК НомерСтроки,\n\tТ1.Активность КАК Активность,\n\tТ1.ВидДвижения КАК ВидДвижения,\n\tТ1.Контрагент КАК Контрагент,\n\tТ1.ВалютаОперации КАК ВалютаОперации,\n\tТ1.Посылка КАК Посылка,\n\tТ1.СуммаПоПосылке КАК СуммаПоПосылке,\n\tТ1.СуммаКОплате КАК СуммаКОплате,\n\tТ1.Оплачено КАК Оплачено\nИЗ\n\tРегистрНакопления.ВзаиморасчетыВ2В КАК Т1",
+   "starValid": true,
+   "commandValid": true,
+   "error": null,
+   "sameNamesAndOrder": true,
+   "columns": [
+    [
+     "Период",
+     "Регистратор",
+     "НомерСтроки",
+     "Активность",
+     "ВидДвижения",
+     "Контрагент",
+     "ВалютаОперации",
+     "Посылка",
+     "СуммаПоПосылке",
+     "СуммаКОплате",
+     "Оплачено"
+    ]
+   ],
+   "sameProvenance": true,
+   "typesByProvenance": [
+    "ДатаВремя",
+    "Документ.Посылка | Документ.ЗаявкаНаПополнениеБалансаКлиента | Документ.РаспределениеОплатПоПосылкам | Документ.СчетНаОплатуВ2В",
+    "Число(9,0)",
+    "Булево",
+    "ВидДвиженияНакопления",
+    "Справочник.Контрагенты",
+    "Справочник.Валюты",
+    "Документ.Посылка",
+    "Число(15,2)",
+    "Число(15,2)",
+    "Число(15,2)"
+   ],
+   "allTypesKnown": true
+  },
+  {
+   "query": "ВЫБРАТЬ * ИЗ Справочник.Валюты КАК Т1, Перечисление.CC_ShippingType КАК Т2",
+   "commandText": "ВЫБРАТЬ\n\tТ1.Ссылка КАК Ссылка,\n\tТ1.ВерсияДанных КАК ВерсияДанных,\n\tТ1.ПометкаУдаления КАК ПометкаУдаления,\n\tТ1.Код КАК Код,\n\tТ1.Наименование КАК Наименование,\n\tТ1.НаименованиеПолное КАК НаименованиеПолное,\n\tТ1.ПараметрыПрописиНаАнглийском КАК ПараметрыПрописиНаАнглийском,\n\tТ1.ПараметрыПрописиНаРусском КАК ПараметрыПрописиНаРусском,\n\tТ1.ПараметрыПрописиНаУкраинском КАК ПараметрыПрописиНаУкраинском,\n\tТ1.Символ КАК Символ,\n\tТ1.ЗагружатьИзИнтернета КАК ЗагружатьИзИнтернета,\n\tТ1.Картинка КАК Картинка,\n\tТ1.GUID_BPM КАК GUID_BPM,\n\tТ1.Предопределенный КАК Предопределенный,\n\tТ1.ИмяПредопределенныхДанных КАК ИмяПредопределенныхДанных,\n\tТ2.Ссылка КАК Ссылка1,\n\tТ2.Порядок КАК Порядок\nИЗ\n\tСправочник.Валюты КАК Т1,\n\tПеречисление.CC_ShippingType КАК Т2",
+   "starValid": true,
+   "commandValid": true,
+   "error": null,
+   "sameNamesAndOrder": true,
+   "columns": [
+    [
+     "Ссылка",
+     "ВерсияДанных",
+     "ПометкаУдаления",
+     "Код",
+     "Наименование",
+     "НаименованиеПолное",
+     "ПараметрыПрописиНаАнглийском",
+     "ПараметрыПрописиНаРусском",
+     "ПараметрыПрописиНаУкраинском",
+     "Символ",
+     "ЗагружатьИзИнтернета",
+     "Картинка",
+     "GUID_BPM",
+     "Предопределенный",
+     "ИмяПредопределенныхДанных",
+     "Ссылка1",
+     "Порядок"
+    ]
+   ],
+   "sameProvenance": true,
+   "typesByProvenance": [
+    "Справочник.Валюты",
+    null,
+    "Булево",
+    "Строка(3)",
+    "Строка(5)",
+    "Строка(10)",
+    "Строка(неогр)",
+    "Строка(неогр)",
+    "Строка(неогр)",
+    "Строка(1)",
+    "Булево",
+    "Value storage",
+    "Строка(36)",
+    "Булево",
+    "Строка(256)",
+    "Перечисление.CC_ShippingType",
+    "Число(0,0)"
+   ],
+   "allTypesKnown": false
+  },
+  {
+   "query": "ВЫБРАТЬ Т1.Код КАК Код, Т1.* ИЗ Справочник.Валюты КАК Т1",
+   "commandText": "ВЫБРАТЬ\n\tТ1.Код КАК Код,\n\tТ1.Ссылка КАК Ссылка,\n\tТ1.ВерсияДанных КАК ВерсияДанных,\n\tТ1.ПометкаУдаления КАК ПометкаУдаления,\n\tТ1.Код КАК Код1,\n\tТ1.Наименование КАК Наименование,\n\tТ1.НаименованиеПолное КАК НаименованиеПолное,\n\tТ1.ПараметрыПрописиНаАнглийском КАК ПараметрыПрописиНаАнглийском,\n\tТ1.ПараметрыПрописиНаРусском КАК ПараметрыПрописиНаРусском,\n\tТ1.ПараметрыПрописиНаУкраинском КАК ПараметрыПрописиНаУкраинском,\n\tТ1.Символ КАК Символ,\n\tТ1.ЗагружатьИзИнтернета КАК ЗагружатьИзИнтернета,\n\tТ1.Картинка КАК Картинка,\n\tТ1.GUID_BPM КАК GUID_BPM,\n\tТ1.Предопределенный КАК Предопределенный,\n\tТ1.ИмяПредопределенныхДанных КАК ИмяПредопределенныхДанных\nИЗ\n\tСправочник.Валюты КАК Т1",
+   "starValid": true,
+   "commandValid": true,
+   "error": null,
+   "sameNamesAndOrder": true,
+   "columns": [
+    [
+     "Код",
+     "Ссылка",
+     "ВерсияДанных",
+     "ПометкаУдаления",
+     "Код1",
+     "Наименование",
+     "НаименованиеПолное",
+     "ПараметрыПрописиНаАнглийском",
+     "ПараметрыПрописиНаРусском",
+     "ПараметрыПрописиНаУкраинском",
+     "Символ",
+     "ЗагружатьИзИнтернета",
+     "Картинка",
+     "GUID_BPM",
+     "Предопределенный",
+     "ИмяПредопределенныхДанных"
+    ]
+   ],
+   "sameProvenance": true,
+   "typesByProvenance": [
+    "Строка(3)",
+    "Справочник.Валюты",
+    null,
+    "Булево",
+    "Строка(3)",
+    "Строка(5)",
+    "Строка(10)",
+    "Строка(неогр)",
+    "Строка(неогр)",
+    "Строка(неогр)",
+    "Строка(1)",
+    "Булево",
+    "Value storage",
+    "Строка(36)",
+    "Булево",
+    "Строка(256)"
+   ],
+   "allTypesKnown": false
+  },
+  {
+   "query": "ВЫБРАТЬ Т1.*, 1 КАК Ссылка ИЗ Справочник.Валюты КАК Т1",
+   "commandText": "ВЫБРАТЬ\n\tТ1.Ссылка КАК Ссылка1,\n\tТ1.ВерсияДанных КАК ВерсияДанных,\n\tТ1.ПометкаУдаления КАК ПометкаУдаления,\n\tТ1.Код КАК Код,\n\tТ1.Наименование КАК Наименование,\n\tТ1.НаименованиеПолное КАК НаименованиеПолное,\n\tТ1.ПараметрыПрописиНаАнглийском КАК ПараметрыПрописиНаАнглийском,\n\tТ1.ПараметрыПрописиНаРусском КАК ПараметрыПрописиНаРусском,\n\tТ1.ПараметрыПрописиНаУкраинском КАК ПараметрыПрописиНаУкраинском,\n\tТ1.Символ КАК Символ,\n\tТ1.ЗагружатьИзИнтернета КАК ЗагружатьИзИнтернета,\n\tТ1.Картинка КАК Картинка,\n\tТ1.GUID_BPM КАК GUID_BPM,\n\tТ1.Предопределенный КАК Предопределенный,\n\tТ1.ИмяПредопределенныхДанных КАК ИмяПредопределенныхДанных,\n\t1 КАК Ссылка\nИЗ\n\tСправочник.Валюты КАК Т1",
+   "starValid": true,
+   "commandValid": true,
+   "error": null,
+   "sameNamesAndOrder": true,
+   "columns": [
+    [
+     "Ссылка1",
+     "ВерсияДанных",
+     "ПометкаУдаления",
+     "Код",
+     "Наименование",
+     "НаименованиеПолное",
+     "ПараметрыПрописиНаАнглийском",
+     "ПараметрыПрописиНаРусском",
+     "ПараметрыПрописиНаУкраинском",
+     "Символ",
+     "ЗагружатьИзИнтернета",
+     "Картинка",
+     "GUID_BPM",
+     "Предопределенный",
+     "ИмяПредопределенныхДанных",
+     "Ссылка"
+    ]
+   ],
+   "sameProvenance": true,
+   "typesByProvenance": [
+    "Справочник.Валюты",
+    null,
+    "Булево",
+    "Строка(3)",
+    "Строка(5)",
+    "Строка(10)",
+    "Строка(неогр)",
+    "Строка(неогр)",
+    "Строка(неогр)",
+    "Строка(1)",
+    "Булево",
+    "Value storage",
+    "Строка(36)",
+    "Булево",
+    "Строка(256)",
+    null
+   ],
+   "allTypesKnown": false
+  },
+  {
+   "query": "ВЫБРАТЬ * ИЗ Документ.Посылка КАК Т1",
+   "command": "tabularSections"
+  }
+ ]
+}
