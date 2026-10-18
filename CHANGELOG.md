@@ -3,6 +3,32 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## 0.2.1 - 2026-10-18
+
+### Added
+
+- Designer: an **Expand `*`** command in the field list (Classic and Canvas).
+  After a confirmation it replaces `*` / `Т.*` with the source's columns from
+  the configuration metadata, with the names and order the platform gives them.
+  The metadata may be incomplete (extensions, an outdated dump), so the
+  designer never does this on its own: opening and applying a query keeps `*`
+  as written. When the command cannot expand (a union, a subquery or virtual
+  table source, tabular sections, an unknown table…) the button is disabled and
+  its tooltip says why.
+
+### Fixed
+
+- A `*` kept in a union (`ВЫБРАТЬ Т.* … ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ Т2.* …`) was
+  written as `Т.* КАК Т.*`, which the platform rejects; such a query also could
+  not be reopened in the designer.
+- Query templates: a `#Имя` source written without an alias no longer gets a
+  `КАК` from the designer, so `ВЫБРАТЬ * ИЗ #Таблица` and similar templates can
+  be applied again.
+- A removed redundant parenthesis no longer leaves a double space
+  (`МАКСИМУМ(Код)  + …`).
+- Hover and completion: a temp table made by `ВЫБРАТЬ *, Т.Б …` has the
+  column names the platform gives it (`А`, `Б`, `Б1`).
+
 ## 0.2.0 - 2026-10-17
 
 ### Added
