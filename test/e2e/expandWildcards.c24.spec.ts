@@ -53,6 +53,29 @@ for (const surface of ['classic', 'canvas'] as const) {
     await expect(rows(page, surface)).toHaveCount(1);
   });
 
+  test(`${surface}: new metadata re-plans the command`, async ({ page }) => {
+    await open(page, surface, 'ВЫБРАТЬ * ИЗ Справочник.Валюты КАК В');
+    await expect(page.getByTestId('expand-wildcards')).toBeEnabled();
+    // The host sends new metadata: the table now has a tabular section.
+    const changed = [{ ...TABLES[0], tabularSections: [{ kind: 'ТабличнаяЧасть', name: 'Курсы', fullName: 'Справочник.Валюты.Курсы', fields: [] }] }];
+    await page.evaluate(tables => window.dispatchEvent(new MessageEvent('message', { data: { type: 'metadataTree', tables } })), changed);
+    await expect(page.getByTestId('expand-wildcards')).toBeDisabled();
+    await expect(page.getByTestId('expand-wildcards')).toHaveAttribute('title', /табличные части/u);
+  });
+
+  test(`${surface}: a precondition lost while confirming is named and changes nothing`, async ({ page }) => {
+    await open(page, surface, 'ВЫБРАТЬ * ИЗ Справочник.Валюты КАК В');
+    await page.getByTestId('expand-wildcards').click();
+    await expect(page.getByTestId('expand-wildcards-continue')).toBeEnabled();
+    // The metadata changes while the dialog is open: the table is no longer known.
+    await page.evaluate(() => window.dispatchEvent(new MessageEvent('message', { data: { type: 'metadataTree', tables: [] } })));
+    await expect(page.getByTestId('expand-wildcards-refusal')).toContainText('Справочник.Валюты');
+    await expect(page.getByTestId('expand-wildcards-continue')).toBeDisabled();
+    await page.getByTestId('expand-wildcards-cancel').click();
+    await expect(rows(page, surface)).toHaveCount(1);
+    expect(await apply(page, surface)).toContain('*');
+  });
+
   test(`${surface}: confirmed expansion writes only columns the list shows`, async ({ page }) => {
     await open(page, surface, 'ВЫБРАТЬ * ИЗ Справочник.Валюты КАК В');
     await page.getByTestId('expand-wildcards').click();

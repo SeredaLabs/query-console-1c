@@ -325,7 +325,18 @@ export const metadataCatalogRef: MetadataCatalogRef = { current: [] };
  */
 export function wildcardExpansionPlan(state: QueryState): WildcardExpansion {
   if (state.queryList.length > 1) return { ok: false, reason: 'union' };
-  return planWildcardExpansion(buildModelFromFlat(snapshotActive(state)), buildResolverFromTables(metadataCatalogRef.current));
+  return planWildcardExpansion(buildModelFromFlat(snapshotActive(state)), catalogResolver(metadataCatalogRef.current));
+}
+
+/**
+ * The plan runs on every Designer state change; building a resolver over a large
+ * catalog costs milliseconds (≈3.5 ms for 7,000 tables), so it is built once per
+ * catalog. The catalog array is replaced, never mutated, by `SET_METADATA`.
+ */
+let cachedCatalog: { tables: MetaTable[]; resolver: ReturnType<typeof buildResolverFromTables> } | undefined;
+function catalogResolver(tables: MetaTable[]): ReturnType<typeof buildResolverFromTables> {
+  if (cachedCatalog?.tables !== tables) cachedCatalog = { tables, resolver: buildResolverFromTables(tables) };
+  return cachedCatalog.resolver;
 }
 
 export function allTables(state: QueryState): MetaTable[] {

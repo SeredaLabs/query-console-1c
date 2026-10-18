@@ -2,7 +2,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { BTN, BTN_SECONDARY, DIALOG_PANEL, DIALOG_TITLE } from '../sharedStyles';
 import { t, type MessageKey } from '../i18n';
-import { wildcardExpansionPlan, type QueryAction, type QueryState } from '../state/queryStore';
+import { metadataCatalogRef, wildcardExpansionPlan, type QueryAction, type QueryState } from '../state/queryStore';
 import type { WildcardExpansion } from '../../core/query/expandStarFields';
 
 /**
@@ -16,15 +16,22 @@ export function useExpandWildcards(state: QueryState, dispatch: React.Dispatch<Q
   request: () => void;
   dialog: React.ReactElement | null;
 } {
-  const plan = React.useMemo(() => wildcardExpansionPlan(state), [state]);
+  // The catalog lives outside `state` (metadataCatalogRef). `SET_METADATA` gives the
+  // main store a new state, but a nested editor has its own store: depend on the
+  // catalog too, so a re-render after new metadata re-plans every editor.
+  const catalog = metadataCatalogRef.current;
+  const plan = React.useMemo(() => wildcardExpansionPlan(state), [state, catalog]);
   const [pending, setPending] = React.useState(false);
   const title = plan.ok
     ? t('fields.expandWildcards')
     : t(`fields.expandWildcards.refused.${plan.reason}` as MessageKey, { source: plan.source ?? '' });
+  // The dialog follows the current plan: if a precondition stops holding while it is
+  // open, it names the reason and cannot confirm. The reducer checks again anyway.
   const dialog = pending
     ? <ExpandWildcardsDialog
+        refusal={plan.ok ? undefined : title}
         onCancel={() => setPending(false)}
-        onConfirm={() => { setPending(false); dispatch({ type: 'EXPAND_WILDCARDS' }); }}
+        onConfirm={() => { if (!plan.ok) return; setPending(false); dispatch({ type: 'EXPAND_WILDCARDS' }); }}
       />
     : null;
   return { plan, title, request: () => { if (plan.ok) setPending(true); }, dialog };
@@ -35,7 +42,7 @@ export function useExpandWildcards(state: QueryState, dispatch: React.Dispatch<Q
  * configuration dump, which is not proven complete (extensions, a stale dump).
  * Confirming is the user's choice, not a proof of completeness.
  */
-function ExpandWildcardsDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }): React.ReactElement {
+function ExpandWildcardsDialog({ refusal, onConfirm, onCancel }: { refusal?: string; onConfirm: () => void; onCancel: () => void }): React.ReactElement {
   const overlay = React.useRef<HTMLDivElement>(null);
   const cancel = React.useRef<HTMLButtonElement>(null);
   const confirm = React.useRef<HTMLButtonElement>(null);
@@ -68,9 +75,11 @@ function ExpandWildcardsDialog({ onConfirm, onCancel }: { onConfirm: () => void;
         style={{ ...DIALOG_PANEL, width: 480, maxWidth: 'calc(100vw - 40px)', padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div id="expand-wildcards-title" style={DIALOG_TITLE}>{t('dialog.expandWildcards.title')}</div>
         <div id="expand-wildcards-body" style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{t('dialog.expandWildcards.body')}</div>
+        {refusal && <div role="alert" data-testid="expand-wildcards-refusal"
+          style={{ fontSize: 13, color: 'var(--vscode-errorForeground, #f48771)' }}>{refusal}</div>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button ref={cancel} type="button" data-testid="expand-wildcards-cancel" style={BTN_SECONDARY} onClick={onCancel}>{t('actions.cancel')}</button>
-          <button ref={confirm} type="button" data-testid="expand-wildcards-continue" style={BTN} onClick={onConfirm}>{t('dialog.expandWildcards.continue')}</button>
+          <button ref={confirm} type="button" data-testid="expand-wildcards-continue" style={BTN} disabled={refusal !== undefined} onClick={onConfirm}>{t('dialog.expandWildcards.continue')}</button>
         </div>
       </div>
     </div>, document.body,
