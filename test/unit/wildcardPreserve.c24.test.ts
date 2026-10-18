@@ -280,9 +280,14 @@ describe('complex scenarios: Designer text equals СхемаЗапроса (SL_k
     expect(out).toBe('ВЫБРАТЬ\n\tП.*,\n\tП.Код\nИЗ\n\t(ВЫБРАТЬ\n\t\tТ.*,\n\t\tТ.Код\n\tИЗ\n\t\tСправочник.Валюты КАК Т) КАК П');
   });
 
-  it('a kept wildcard in a UNION member is not applied (no silent change)', () => {
+  it('a kept wildcard in a UNION member is written as it was (no silent change)', () => {
+    // Before the C24 completion Apply was refused only because the column got
+    // `КАК Т.*` (a syntax error). Now the members are written with the same select
+    // items — no alias on the wildcard, no NULL padding. The input itself is
+    // platform-invalid here ("Different numbers of fields in combined queries"), and
+    // so is the written text, with the same verdict (c24-completion.json, mixed_*).
     const text = 'ВЫБРАТЬ Т.Код, Т.* ИЗ Справочник.Валюты КАК Т ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ Т.Код, Т.Наименование ИЗ Справочник.Валюты КАК Т';
-    expect(designer(text).applyOk).toBe(false);
+    expect(designer(text).text).toBe('ВЫБРАТЬ\n\tТ.Код КАК Код,\n\tТ.*\nИЗ\n\tСправочник.Валюты КАК Т\n\nОБЪЕДИНИТЬ ВСЕ\n\nВЫБРАТЬ\n\tТ.Код,\n\tТ.Наименование\nИЗ\n\tСправочник.Валюты КАК Т');
   });
 });
 

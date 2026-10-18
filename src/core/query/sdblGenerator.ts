@@ -2652,6 +2652,8 @@ function buildUnionBlocksScalar(members: UnionMember[]): string[] {
       const expr = col.cells[i] ?? 'NULL';
       if (i !== 0) return `\t${expr}`;
       const f0 = head0[ci];
+      // C24: a kept wildcard is not one column; it has no name (`Т.* КАК Т.*` is a syntax error).
+      if (f0 !== undefined && isWildcardExpression(f0.expression)) return `\t${expr}`;
       const emitAlias = (f0 === undefined || !keepsBareParam(f0))
         && (!suppressAutoAlias || (f0 !== undefined && f0.alias !== undefined && !hiddenUnderSuppress(f0)));
       return emitAlias ? `\t${expr} КАК ${col.alias}` : `\t${expr}`;
@@ -2687,7 +2689,7 @@ function buildUnionBlocksWithTabSection(members: UnionMember[]): string[] {
       // Псевдоним столбца берём с поля участника-головы (его псевдоним выборки).
       const alias = elementAlias(el, m.model);
       const synthesizedExpr = el.field.expression !== undefined && (el.field.alias === undefined || hiddenUnderSuppress(el.field));
-      const emitAlias = !keepsBareParam(el.field) && (!suppressAutoAlias || !synthesizedExpr);
+      const emitAlias = !keepsBareParam(el.field) && !isWildcardExpression(el.field.expression) && (!suppressAutoAlias || !synthesizedExpr);
       fieldLines.push(emitAlias ? `\t${expr} КАК ${alias}` : `\t${expr}`);
     }
     return buildQueryBlock(m.model, fieldLines, aliases, i === 0);

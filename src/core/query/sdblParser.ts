@@ -66,7 +66,7 @@ import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable, MetaField } from '../metadata/types';
 import type { SourceMapSink, SourceMapEvent, BatchSourceMapSink, AbsoluteSourceMapEvent, TextRange } from './sourceMap';
 import { RecordingSourceMapSink } from './sourceMap';
-import { expandStarFields, markProvenTempTable, markIncompleteTempTable, hasUnexpandedWildcard, provenColumnNames, type WildcardPolicy } from './expandStarFields';
+import { expandStarFields, markProvenTempTable, markIncompleteTempTable, hasUnexpandedWildcard, provenColumnNames, isWildcardExpression, type WildcardPolicy } from './expandStarFields';
 import { expandTabSectionFields } from './expandTabSectionFields';
 import { wrapTabSectionAggregates } from './wrapTabSectionAggregates';
 import { dropUserIBConditions } from './dropUserIBConditions';
@@ -5503,7 +5503,8 @@ function rewriteMemberAliases(model: QueryModel, columnAliases: string[]): void 
       return;
     }
     const alias = columnAliases[k];
-    if (alias === undefined) {
+    // C24: a kept wildcard (in this member or as member 0's column) has no column name.
+    if (alias === undefined || isWildcardExpression(alias) || isWildcardExpression(f.expression)) {
       rewritten.push(f);
       return;
     }

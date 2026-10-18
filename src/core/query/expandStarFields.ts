@@ -281,15 +281,15 @@ export function expandStarFields(model: QueryModel, resolver?: MetadataResolver,
     if (t.alias && !t.subquery) aliasToFull.set(t.alias.toUpperCase(), t.fullName);
   }
 
-  // Зарезервированные псевдонимы — все ЯВНЫЕ (не-звёздные) поля выборки.
-  // Конструктор переименовывает именно развёрнутую колонку при коллизии, явное
-  // поле сохраняет свой псевдоним.
-  const reserved = new Set<string>();
-  for (const f of model.fields) {
-    if (parseStar(f)) continue;
-    const a = fieldAlias(f);
-    if (a) reserved.add(a.toUpperCase());
-  }
+  // C24 D4: expanded columns are created unnamed and named at the end by the platform
+  // rule (`columnNames`, C30: explicit `КАК` reserved, the rest left to right), as in
+  // `preserve`; the names are synthesized, so a condition subquery does not print them.
+  const expandedColumns = new Set<SelectedField>();
+  const column = (ef: SelectedField, tableId: string): SelectedField => {
+    const f: SelectedField = { tableId, path: ef.path };
+    expandedColumns.add(f);
+    return f;
+  };
 
   const newFields: SelectedField[] = [];
   // Поля, выводимые после звёздной развёртки (табличные части + завершающие
@@ -333,7 +333,7 @@ export function expandStarFields(model: QueryModel, resolver?: MetadataResolver,
     if (!meta || tableId === undefined) return false;
     const expanded = buildSelectAllModel(meta);
     for (const ef of expanded.fields) {
-      const fld = makeField(ef, tableId, reserved);
+      const fld = column(ef, tableId);
       // Основные поля первого развёрнутого источника — в head (генератор печатает их
       // первыми); основные поля последующих источников — в rest c selectOrder, чтобы
       // они шли ПОСЛЕ проекций ТЧ / завершающих полей предыдущих источников.
@@ -344,7 +344,9 @@ export function expandStarFields(model: QueryModel, resolver?: MetadataResolver,
       tabSections.push({ ...ts, tableId, selectOrder: order++ });
     }
     for (const ef of expanded.trailingFields ?? []) {
-      trailing.push({ ...makeField(ef, tableId, reserved), selectOrder: order++ });
+      const fld = column(ef, tableId);
+      fld.selectOrder = order++;
+      trailing.push(fld);
     }
     // Первый развёрнутый источник полностью обработан — head закрыт: все колонки
     // последующих источников обязаны идти ПОСЛЕ него (перемежение по selectOrder).
@@ -411,6 +413,33 @@ export function expandStarFields(model: QueryModel, resolver?: MetadataResolver,
   if (trailing.length) {
     model.trailingFields = [...trailing, ...(model.trailingFields ?? [])];
   }
+  if (expandedColumns.size) {
+    const elements = printOrder(model);
+    const names = columnNames(model, elements);
+    elements.forEach((el, i) => {
+      const name = names[i];
+      if (el.kind === 'field' && expandedColumns.has(el.field) && name !== undefined) {
+        el.field.alias = name;
+        el.field.aliasSynthesized = name;
+      }
+    });
+  }
+}
+
+/**
+ * The select list in print order — the rule of `orderedSelectElements` (unionModel,
+ * not imported here: it would close an import cycle through the generator): the head
+ * fields, then tabular-section projections and trailing fields by `selectOrder` when
+ * every one has it, otherwise bucket by bucket.
+ */
+function printOrder(model: QueryModel): Array<{ kind: 'field'; field: SelectedField } | { kind: 'ts'; tsf: SelectedTabSectionField }> {
+  type El = { kind: 'field'; field: SelectedField } | { kind: 'ts'; tsf: SelectedTabSectionField };
+  const rest: Array<{ order: number | undefined; el: El }> = [
+    ...(model.tabSectionFields ?? []).map(tsf => ({ order: tsf.selectOrder, el: { kind: 'ts' as const, tsf } })),
+    ...(model.trailingFields ?? []).map(field => ({ order: field.selectOrder, el: { kind: 'field' as const, field } })),
+  ];
+  if (rest.every(r => r.order !== undefined)) rest.sort((a, b) => a.order! - b.order!);
+  return [...model.fields.map(field => ({ kind: 'field' as const, field })), ...rest.map(r => r.el)];
 }
 
 /** A batch temp table whose columns are known only in part (`markIncompleteTempTable`). */
@@ -439,18 +468,6 @@ function everySourceResolves(model: QueryModel, resolver: MetadataResolver): boo
     }
   }
   return true;
-}
-
-/** Создаёт развёрнутое поле с дедупом псевдонима против `reserved`. */
-function makeField(src: SelectedField, tableId: string, reserved: Set<string>): SelectedField {
-  const base = src.alias ?? src.path;
-  let alias = base;
-  let n = 0;
-  while (reserved.has(alias.toUpperCase())) {
-    alias = `${base}${++n}`;
-  }
-  reserved.add(alias.toUpperCase());
-  return { tableId, path: src.path, alias };
 }
 
 function hasStar(fields: SelectedField[]): boolean {
@@ -491,13 +508,6 @@ function parseStar(f: SelectedField): StarInfo | null {
  */
 export function isWildcardExpression(expression: string | undefined): boolean {
   return expression !== undefined && parseStar({ tableId: '', path: '', expression }) !== null;
-}
-
-/** Псевдоним (или авто-псевдоним) явного поля для резервирования. */
-function fieldAlias(f: SelectedField): string | undefined {
-  if (f.alias !== undefined) return f.alias;
-  if (f.expression !== undefined) return undefined; // авто `ПолеN` назначится позже
-  return f.path.split('.').pop() ?? f.path;
 }
 
 function findTableId(model: QueryModel, alias: string): string | undefined {
