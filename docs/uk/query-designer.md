@@ -3,9 +3,27 @@ source_version: 6
 translation_status: current
 -->
 
-# 🧩 Робота з конструктором запитів
-
-[English](../en/query-designer.md) · [Українська](../uk/query-designer.md) · [Русский](../ru/query-designer.md)
+<h1>
+  <a href="../ru/query-designer.md" title="Русский">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/ru-icon.svg">
+      <img align="right" src="../../assets/images/lang/ru-button.svg" alt="Русский" height="32">
+    </picture>
+  </a>
+  <a href="../uk/query-designer.md" title="Українська">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/uk-icon-active.svg">
+      <img align="right" src="../../assets/images/lang/uk-button-active.svg" alt="Українська" height="32">
+    </picture>
+  </a>
+  <a href="../en/query-designer.md" title="English">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="../../assets/images/lang/en-icon.svg">
+      <img align="right" src="../../assets/images/lang/en-button.svg" alt="English" height="32">
+    </picture>
+  </a>
+  🧩 Робота з конструктором запитів
+</h1>
 
 Наведені нижче інструкції з вкладками описують Classic; Canvas Preview має окремий workflow.
 

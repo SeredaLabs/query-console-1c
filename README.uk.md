@@ -8,9 +8,24 @@ translation_status: current
 </p>
 
 <p>
-  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.ru.md"><img align="right" src="https://img.shields.io/badge/%F0%9F%87%B7%F0%9F%87%BA-%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9-3B4658?style=flat-square" alt="Документация на русском"></a>
-  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.uk.md"><img align="right" src="https://img.shields.io/badge/%F0%9F%87%BA%F0%9F%87%A6-%D0%A3%D0%BA%D1%80%D0%B0%D1%97%D0%BD%D1%81%D1%8C%D0%BA%D0%B0-397FD8?style=flat-square" alt="Документація українською"></a>
-  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.md"><img align="right" src="https://img.shields.io/badge/%F0%9F%87%AC%F0%9F%87%A7-English-3B4658?style=flat-square" alt="English documentation"></a>
+  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.ru.md" title="Русский">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="https://raw.githubusercontent.com/SeredaLabs/query-console-1c/main/assets/images/lang/ru-icon.png">
+      <img align="right" src="https://raw.githubusercontent.com/SeredaLabs/query-console-1c/main/assets/images/lang/ru-button.png" alt="Русский" height="32">
+    </picture>
+  </a>
+  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.uk.md" title="Українська">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="https://raw.githubusercontent.com/SeredaLabs/query-console-1c/main/assets/images/lang/uk-icon-active.png">
+      <img align="right" src="https://raw.githubusercontent.com/SeredaLabs/query-console-1c/main/assets/images/lang/uk-button-active.png" alt="Українська" height="32">
+    </picture>
+  </a>
+  <a href="https://github.com/SeredaLabs/query-console-1c/blob/main/README.md" title="English">
+    <picture>
+      <source media="(max-width: 1000px)" srcset="https://raw.githubusercontent.com/SeredaLabs/query-console-1c/main/assets/images/lang/en-icon.png">
+      <img align="right" src="https://raw.githubusercontent.com/SeredaLabs/query-console-1c/main/assets/images/lang/en-button.png" alt="English" height="32">
+    </picture>
+  </a>
   <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://img.shields.io/badge/VS_Code-Marketplace-397FD8?style=flat-square&logo=visualstudiocode&logoColor=white" alt="Установити з VS Code Marketplace"></a>
   <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://vsmarketplacebadges.dev/version-short/SeredaLabs.query-console-1c.svg" alt="Версія у VS Code Marketplace"></a>
   <a href="https://marketplace.visualstudio.com/items?itemName=SeredaLabs.query-console-1c"><img src="https://vsmarketplacebadges.dev/installs-short/SeredaLabs.query-console-1c.svg" alt="Кількість установлень із VS Code Marketplace"></a>
