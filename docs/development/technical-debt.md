@@ -14,7 +14,7 @@ one place, ordered by priority.
 
 ## Open items
 
-20 items: P1 — 1, P2 — 14, P3 — 5. No item is P0.
+19 items: P1 — 1, P2 — 13, P3 — 5. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
@@ -30,7 +30,6 @@ one place, ordered by priority.
 | UX-C4 | OPEN · P2 | Canvas UX | Responsive, keyboard, accessibility and release review of recursive workflows. |
 | UX-C5 | OPEN · P2 | Canvas UX | UI → generated SDBL cross-highlight. |
 | UX-C6 | OPEN · P2 | Canvas UX | Advanced field-to-field JOIN drag, shortcuts and find/focus helpers. |
-| UX-C7 | OPEN · P2 | Canvas UX | Sort-priority reorder UI. |
 | UX-C8 | OPEN · P2 | Canvas UX | Canvas cache refresh and lazy reference-field expansion parity. |
 | UX-C9 | OPEN · P2 | Canvas UX | Full positional UNION mapping for tabular/trailing projections. |
 | R11 | PARTIAL · P3 | Correctness | Three GROUP BY rewrites of the constructor-parity mode differ from СхемаЗапроса for some shapes; the Designer keeps GROUP BY as written. |
@@ -200,7 +199,7 @@ not missing critical baseline work or a continuation of phase numbering.
 | UX-C4 | OPEN · P2 | Responsive, keyboard, accessibility and release review of recursive workflows. | Baseline Enter/Space exists. Spatial navigation, all-workspace contrast/focus, minimap/viewport and screen-reader review remain before Preview removal. |
 | UX-C5 | OPEN · P2 | UI → generated SDBL cross-highlight. | Generator has no semantic output-range contract; parser input maps are insufficient. Design stable model/output ranges first; no heuristic text search. Read-only dock/highlight/copy/resize/collapse is complete. |
 | UX-C6 | OPEN · P2 | Advanced field-to-field JOIN drag, shortcuts and find/focus helpers. | Existing drag/pan/zoom/search/basic activation stays; narrow UX design, no domain duplication. |
-| UX-C7 | OPEN · P2 | Sort-priority reorder UI. | Array order is preserved; no MOVE_ORDER action exists. Add a narrow shared action with both-UI tests. |
+| UX-C7 | CLOSED | Sort-priority buttons in Classic and Canvas (2026-10-19). | Shared `MOVE_ORDER_FIELD` moves whole entries by index; direction, hierarchy, expressions, aliases and section comments survive. UNION tail routing and filtered Canvas indices are covered by [unit](../../test/unit/orderPriority.uxc7.test.ts) and [browser](../../test/e2e/orderPriority.spec.ts) regressions. |
 | UX-C8 | OPEN · P2 | Canvas cache refresh and lazy reference-field expansion parity. | Classic has refresh/ref message handling and SET_REF_FIELDS; Canvas lacks controls/response wiring. Reuse host/session; loaded navigation already works. |
 | UX-C9 | OPEN · P2 | Full positional UNION mapping for tabular/trailing projections. | Scalar-only deriveUnionColumns differs from generator orderedSelectElements. Preserve-only guard suppresses partial mapping. Shared alignment plus safe alias/reorder contract; coordinate A2 without requiring full A2 completion first. |
 | UX-C10 | OPEN · P3 · DEFERRED | Global stable Query/Scope ID proposal. | No current consumer needs persistent cross-tree identity. Local recursive drafts work with parent source IDs; this is not a baseline or release prerequisite. |

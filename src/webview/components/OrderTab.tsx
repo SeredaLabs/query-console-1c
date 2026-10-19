@@ -5,6 +5,7 @@ import { defaultTableAlias } from '../../core/query/queryModel';
 import { distinctFieldRefs } from '../fieldSource';
 import { SelectedFieldsTree } from './SelectedFieldsTree';
 import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
+import { IconButton } from './IconButton';
 import { RowRemoveButton } from './RowRemoveButton';
 import { useFieldDragDrop } from '../hooks/useFieldDragDrop';
 import { SECTION_HEADER, INPUT, EMPTY_HINT, panelBox, ROW_PADDING_Y, TREE_ROW_GAP } from '../sharedStyles';
@@ -19,12 +20,13 @@ interface Props {
   onRemoveOrderField: (tableId: string, path: string) => void;
   onSetOrderDirection: (tableId: string, path: string, direction: SortDirection) => void;
   onSetOrderAuto: (auto: boolean) => void;
+  onMoveOrderField: (fieldIdx: number, direction: 'up' | 'down') => void;
 }
 
 export function OrderTab(props: Props): React.ReactElement {
   const {
     selectedTables, selectedFields, metaTables, order,
-    onAddOrderField, onRemoveOrderField, onSetOrderDirection, onSetOrderAuto,
+    onAddOrderField, onRemoveOrderField, onSetOrderDirection, onSetOrderAuto, onMoveOrderField,
   } = props;
 
   // Источник: обычные поля выборки (не выражения, не ТЧ).
@@ -62,7 +64,7 @@ export function OrderTab(props: Props): React.ReactElement {
         <div style={{ ...panelBox, flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex' }}>
             <div style={{ ...SECTION_HEADER, flex: 1 }}>{t('common.field')}</div>
-            <div style={{ ...SECTION_HEADER, width: 180, flexShrink: 0 }}>{t('tabs.order')}</div>
+            <div style={{ ...SECTION_HEADER, width: 240, flexShrink: 0 }}>{t('tabs.order')}</div>
           </div>
           <div
             style={dropZone}
@@ -73,8 +75,8 @@ export function OrderTab(props: Props): React.ReactElement {
               if (d) onAddOrderField(d.tableId, d.path);
             }}
           >
-            {order.fields.map((f: OrderField) => (
-              <div key={`${f.tableId}:${f.path}`} className="qc-row" style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 4px ${ROW_PADDING_Y}px 8px`, gap: 4 }}>
+            {order.fields.map((f: OrderField, idx) => (
+              <div key={idx} data-testid="order-priority-row" className="qc-row" style={{ display: 'flex', alignItems: 'center', padding: `${ROW_PADDING_Y}px 4px ${ROW_PADDING_Y}px 8px`, gap: 4 }}>
                 <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: TREE_ROW_GAP }}>
                   <span className="codicon codicon-symbol-field" style={{ fontSize: 13, opacity: 0.75, flexShrink: 0 }} />
                   {labelFor(f.tableId, f.path)}
@@ -87,6 +89,10 @@ export function OrderTab(props: Props): React.ReactElement {
                   <option value="asc">{t('order.ascending')}</option>
                   <option value="desc">{t('order.descending')}</option>
                 </select>
+                <IconButton icon="arrow-up" title={t('actions.moveUp')} disabled={idx === 0}
+                  onClick={() => onMoveOrderField(idx, 'up')} />
+                <IconButton icon="arrow-down" title={t('actions.moveDown')} disabled={idx === order.fields.length - 1}
+                  onClick={() => onMoveOrderField(idx, 'down')} />
                 <RowRemoveButton title={t('actions.remove')} onClick={() => onRemoveOrderField(f.tableId, f.path)} />
               </div>
             ))}
