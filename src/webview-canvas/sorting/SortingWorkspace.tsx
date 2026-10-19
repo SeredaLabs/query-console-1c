@@ -5,13 +5,14 @@ import type { SupportedLocale } from '../../shared/locale';
 import type { QueryAction, QueryState } from '../../webview/state/queryStore';
 import { t } from '../i18n';
 import { CARD, SECTION_LABEL, TOKENS } from '../theme';
+import { IconButton } from '../../webview/components/IconButton';
 import { distinctFieldRefs } from '../../webview/fieldSource';
 
 /**
  * Phase 10 — Sorting Workspace. Той самий мінімальний грід-патерн, що й
  * Grouping (Phase 9): список `order.fields` (ADD_ORDER_FIELD/
  * REMOVE_ORDER_FIELD/SET_ORDER_DIRECTION) + "Автоупорядочивание"
- * (SET_ORDER_AUTO) — жодних нових reducer actions.
+ * (SET_ORDER_AUTO) та пріоритет (MOVE_ORDER_FIELD).
  *
  * Кандидати для "+ Сортування" — ЛИШЕ прості (не-expression) поля з уже
  * вибраного SELECT-списку (`selectedFields`), той самий обсяг, що й
@@ -22,10 +23,8 @@ import { distinctFieldRefs } from '../../webview/fieldSource';
  * непредставиме без alias. Це та сама причина, чому Fields tab свідомо не
  * додав "Сортування"-колонку (задокументовано в FieldsWorkspace.tsx).
  *
- * Свідомо НЕ включено: reorder/пріоритет сортування — `MOVE_ORDER_FIELD`
- * НЕ існує в reducer'і (на відміну від Fields' MOVE_FIELD), і Classic
- * OrderTab.tsx теж не має reorder UI (пріоритет — порядок додавання) —
- * це не regression, а збіг з уже наявною поведінкою.
+ * Reordering uses the shared MOVE_ORDER_FIELD action with the original array
+ * index, including when the visible rows are filtered by search.
  */
 
 const BAR_STYLE: React.CSSProperties = {
@@ -294,7 +293,7 @@ export function SortingWorkspace({
                   <col style={{ width: 24 }} />
                   <col />
                   <col style={{ width: 110 }} />
-                  <col style={{ width: 32 }} />
+                  <col style={{ width: 84 }} />
                 </colgroup>
                 <thead>
                   <tr>
@@ -306,7 +305,7 @@ export function SortingWorkspace({
                 </thead>
                 <tbody>
                   {visible.map(({ f, idx }) => (
-                    <tr key={idx}>
+                    <tr key={idx} data-testid="order-priority-row">
                       <td style={{ ...TD, textAlign: 'right', color: TOKENS.textSecondary, fontVariantNumeric: 'tabular-nums' }}>{idx + 1}</td>
                       <td style={TD}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
@@ -327,14 +326,20 @@ export function SortingWorkspace({
                         </select>
                       </td>
                       <td style={TD}>
-                        <button
-                          type="button"
-                          title={t(locale, 'sortingWorkspaceRemove')}
-                          onClick={() => dispatch({ type: 'REMOVE_ORDER_FIELD', tableId: f.tableId, path: f.path })}
-                          style={{ border: 'none', background: 'transparent', color: TOKENS.textMuted, cursor: 'pointer', fontSize: 13, padding: '2px 4px' }}
-                        >
-                          <span className="codicon codicon-close" />
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <IconButton icon="arrow-up" title={t(locale, 'fieldsWorkspaceMoveUp')} disabled={idx === 0}
+                            onClick={() => dispatch({ type: 'MOVE_ORDER_FIELD', fieldIdx: idx, direction: 'up' })} />
+                          <IconButton icon="arrow-down" title={t(locale, 'fieldsWorkspaceMoveDown')} disabled={idx === orderFields.length - 1}
+                            onClick={() => dispatch({ type: 'MOVE_ORDER_FIELD', fieldIdx: idx, direction: 'down' })} />
+                          <button
+                            type="button"
+                            title={t(locale, 'sortingWorkspaceRemove')}
+                            onClick={() => dispatch({ type: 'REMOVE_ORDER_FIELD', tableId: f.tableId, path: f.path })}
+                            style={{ border: 'none', background: 'transparent', color: TOKENS.textMuted, cursor: 'pointer', fontSize: 13, padding: '2px 4px' }}
+                          >
+                            <span className="codicon codicon-close" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

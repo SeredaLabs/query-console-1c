@@ -579,6 +579,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           onRemoveOrderField={(tableId, path) => dispatchTail({ type: 'REMOVE_ORDER_FIELD', tableId, path })}
           onSetOrderDirection={(tableId, path, direction) => dispatchTail({ type: 'SET_ORDER_DIRECTION', tableId, path, direction })}
           onSetOrderAuto={auto => dispatchTail({ type: 'SET_ORDER_AUTO', auto })}
+          onMoveOrderField={(fieldIdx, direction) => dispatchTail({ type: 'MOVE_ORDER_FIELD', fieldIdx, direction })}
         />
       )}
 

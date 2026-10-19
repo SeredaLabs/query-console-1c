@@ -258,6 +258,7 @@ export type QueryAction =
   | { type: 'REMOVE_ORDER_FIELD'; tableId: string; path: string }
   | { type: 'SET_ORDER_DIRECTION'; tableId: string; path: string; direction: SortDirection }
   | { type: 'SET_ORDER_AUTO'; auto: boolean }
+  | { type: 'MOVE_ORDER_FIELD'; fieldIdx: number; direction: 'up' | 'down' }
   // --- итоги (ИТОГИ … ПО …) ---
   | { type: 'ADD_TOTAL_GROUP_FIELD'; tableId: string; path: string }
   | { type: 'REMOVE_TOTAL_GROUP_FIELD'; tableId: string; path: string }
@@ -1813,6 +1814,15 @@ export function reducer(state: QueryState, action: QueryAction): QueryState {
           ),
         },
       };
+    }
+
+    case 'MOVE_ORDER_FIELD': {
+      const from = action.fieldIdx;
+      const to = action.direction === 'up' ? from - 1 : from + 1;
+      if (!Number.isInteger(from) || from < 0 || from >= state.order.fields.length || to < 0 || to >= state.order.fields.length) return state;
+      const fields = state.order.fields.slice();
+      [fields[from], fields[to]] = [fields[to], fields[from]];
+      return { ...state, order: { ...state.order, fields } };
     }
 
     case 'SET_ORDER_AUTO':

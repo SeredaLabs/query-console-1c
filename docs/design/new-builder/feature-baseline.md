@@ -32,6 +32,7 @@ constructor surface. User comments are preserved (C17 closed); the comment-loss 
 | GROUP BY basic fields / per-field aggregate | EDIT | EDIT |
 | Grouping sets, explicitGroupCount, legacy grouping aggregates | EDIT/PRESERVE | PRESERVE |
 | ORDER BY add/remove/direction, auto | EDIT, including UNION tail | EDIT, including UNION tail |
+| ORDER priority (move up/down) | EDIT | EDIT; shared action, original indices under search |
 | ORDER hierarchy, expression, qualified/selectAlias | PRESERVE (no hierarchy action) | PRESERVE |
 | TOTALS grouping/kind/alias, aggregate function, grand total | EDIT | EDIT |
 | TOTALS raw expression/operand flags, ПЕРИОДАМИ | PRESERVE | PRESERVE |
