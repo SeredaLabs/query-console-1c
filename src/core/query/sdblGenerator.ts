@@ -11,7 +11,7 @@ import { tokenize, tryTokenize, codeRanges, isCodeAt, isWordToken, replaceInCode
 import type { Token } from './sdblLexer';
 import { parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { bareParamName } from './exprAutoAlias';
-import { isWildcardExpression, type WildcardPolicy } from './expandStarFields';
+import { hasUnexpandedWildcard, isWildcardExpression, type WildcardPolicy } from './expandStarFields';
 import { isSynthesizedAlias } from './columnNames';
 import { LITERAL_WORDS, AGGREGATE_WORDS, META_FUNCTION_WORDS } from './sdblKeywordSets';
 
@@ -2643,12 +2643,16 @@ function renderAutoOrder(order: Order | undefined, hadSection: boolean): string 
  */
 function buildUnionBlocksScalar(members: UnionMember[]): string[] {
   const columns = deriveUnionColumns(members);
+  // C35: select-item positions are not column positions after a kept wildcard.
+  // Preserve each member's list; padding it would add real output columns.
+  const unknownWidth = members.some(m => hasUnexpandedWildcard(m.model));
   // Внутри подзапроса-условия (`В (ВЫБРАТЬ … ОБЪЕДИНИТЬ …)`) конструктор НЕ
   // добавляет авто-псевдоним полю участника 0 (как и в не-union В-подзапросе,
   // suppressAutoAlias); ЯВНЫЙ псевдоним при этом сохраняется (MCP validate_query).
   const head0 = members[0]?.model.fields ?? [];
   return members.map((m, i) => {
-    const fieldLines = columns.map((col, ci) => {
+    const ownColumns = unknownWidth ? columns.slice(0, m.model.fields.length) : columns;
+    const fieldLines = ownColumns.map((col, ci) => {
       const expr = col.cells[i] ?? 'NULL';
       if (i !== 0) return `\t${expr}`;
       const f0 = head0[ci];
@@ -2673,11 +2677,14 @@ function buildUnionBlocksScalar(members: UnionMember[]): string[] {
  */
 function buildUnionBlocksWithTabSection(members: UnionMember[]): string[] {
   const memberEls = members.map(m => orderedSelectElements(m.model));
+  const unknownWidth = members.some(m => hasUnexpandedWildcard(m.model));
   const width = memberEls.reduce((w, els) => Math.max(w, els.length), 0);
   return members.map((m, i) => {
     const aliases = resolveAliases(m.model.tables);
     const fieldLines: string[] = [];
-    for (let ci = 0; ci < width; ci++) {
+    // The same unknown-width rule applies to projections and trailing fields.
+    const memberWidth = unknownWidth ? memberEls[i].length : width;
+    for (let ci = 0; ci < memberWidth; ci++) {
       const el = memberEls[i][ci];
       if (el === undefined) { fieldLines.push('\tNULL'); continue; }
       if (el.kind === 'ts') {

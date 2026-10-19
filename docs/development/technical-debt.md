@@ -14,7 +14,7 @@ one place, ordered by priority.
 
 ## Open items
 
-21 items: P1 — 1, P2 — 14, P3 — 6. No item is P0.
+20 items: P1 — 1, P2 — 14, P3 — 5. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
@@ -35,7 +35,6 @@ one place, ordered by priority.
 | UX-C9 | OPEN · P2 | Canvas UX | Full positional UNION mapping for tabular/trailing projections. |
 | R11 | PARTIAL · P3 | Correctness | Three GROUP BY rewrites of the constructor-parity mode differ from СхемаЗапроса for some shapes; the Designer keeps GROUP BY as written. |
 | C34 | OPEN · P3 | Correctness | English names of calculation registers, charts of calculation types and sequences are not mapped (no such objects in SL_kza). |
-| C35 | OPEN · P3 | Correctness | UNION column count treats a kept `*` as one column: a valid mixed UNION is refused on open. |
 | C36 | OPEN · P3 | Correctness | The Designer keeps `*` where the 1C constructor expands it — deliberate until metadata completeness can be proven. |
 | V2 | OPEN · P3 · dev tooling | Verification | Optional external grammar oracle for development (never a verdict, not in CI or release). |
 | UX-C10 | OPEN · P3 · DEFERRED | Canvas UX | Global stable Query/Scope ID proposal. |
@@ -47,7 +46,6 @@ one place, ordered by priority.
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
 | R11 | PARTIAL · P3 | Three GROUP BY rewrites of the constructor-parity mode differ from СхемаЗапроса for some shapes; the Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
 | C34 | OPEN · P3 | English names of calculation registers, charts of calculation types and sequences are not mapped (no such objects in SL_kza). [Details](#c34-english-sdbl-leftovers). |
-| C35 | OPEN · P3 | UNION column count treats a kept `*` as one column: a valid mixed UNION is refused on open. [Details](#c35-union-column-count-with-a-kept-wildcard). |
 | C36 | OPEN · P3 | The Designer keeps `*` where the 1C constructor expands it — deliberate until metadata completeness can be proven. [Details](#c36-kept--versus-the-constructor-canonical-text). |
 
 The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
@@ -99,11 +97,15 @@ C2 leftovers (2026-10-17): English names of `РегистрРасчета`, `П�
 
 ### C35. UNION column count with a kept wildcard
 
-**Status:** OPEN · P3
+**Status:** CLOSED (bounded, 2026-10-19)
 
-UNION column count with a kept wildcard (found in the C24 completion, 2026-10-18). `checkUnionColumnCount` (`semanticValidator.ts`) counts a kept `*` as one column. A valid mixed UNION (`Пе.* ОБЪЕДИНИТЬ ВСЕ Пе2.Ссылка, Пе2.Порядок`, accepted on SL_kza) is refused on open; a mixed UNION with equal element counts but different real column counts opens and is written back with the same select items — the input is already platform-invalid and our text gets the same verdict ([fixture](../../test/fixtures/platform/c24-completion.json), `mixed_*`). No silent change either way. Related to, not the same as, UX-C9.
+The platform-accepted `u_star_vs_explicit` query ([fixture](../../test/fixtures/platform/c24-completion.json)) now opens and applies without treating a kept `*` as one output column. The validator compares only known widths; an unknown member does not hide a mismatch between two explicit members. Proven batch-temp expansion still participates in the count.
 
-**Next boundary:** Count a wildcard's columns from the configuration catalog when every source resolves; otherwise keep the current check.
+Both scalar and tabular/trailing UNION generation preserve each member's select list when any member keeps a wildcard. They do not pad the lists with `NULL`: select-item positions cannot establish output-column positions in that case. Explicit-column UNION alignment is unchanged. No automatic wildcard expansion or metadata-count approximation was introduced.
+
+The initial validator-only experiment was reverted after Classic and Canvas added `NULL КАК Поле2` to `Т.* ОБЪЕДИНИТЬ ВСЕ Б.Код, Б.Наименование`. The coordinated fix covers that regression with exact output assertions and Apply/reopen in both UIs. [Unit regressions](../../test/unit/c35UnionWildcardCount.test.ts); [browser regressions](../../test/e2e/c24Union.spec.ts). The 1,976-query corpus has zero byte changes in both preserve and constructor modes (3,952 comparisons).
+
+**Boundary:** Unknown wildcard widths remain unvalidated; platform-invalid `mixed_*` inputs in the fixture can still pass local validation. Resolving a source in the catalog does not prove metadata completeness. Exact metadata-based width validation depends on the C36 completeness/provenance decision. Full positional mapping UI (UX-C9) is separate.
 
 ### C36. Kept `*` versus the constructor canonical text
 
@@ -111,7 +113,7 @@ UNION column count with a kept wildcard (found in the C24 completion, 2026-10-18
 
 The Designer keeps `*` over configuration tables where the 1C constructor's canonical text expands it — a deliberate divergence since the C24 step 1b decision (2026-10-18): metadata completeness (extensions, a stale dump) cannot be proven, so no automatic expansion; the explicit "Expand `*`" command exists. Owns the grammar-parity entries `select.star-star` / `select.star-source-star` (canonical text differs).
 
-**Next boundary:** A completeness/provenance signal for the metadata (extensions loaded, dump freshness) before any automatic expansion — or accept the divergence permanently.
+**Next boundary:** A completeness/provenance signal for the metadata (extensions loaded, dump freshness) before any automatic expansion or exact metadata-based UNION width validation — or accept the divergence and unknown width permanently.
 
 ## Architecture
 
@@ -250,6 +252,7 @@ and [audit index](audits/README.md).
 | C21 | CLOSED | Arithmetic ORDER keys headed by a field/path, `(` or unary `-` use the existing token reader and expression model; [report](audits/c21-order-expressions-2026-09-30.md), [regressions](../../test/unit/orderExpressions.c21.test.ts). Full platform expression/type validity remains outside this fix. [Pre-fix evidence](#c21-order-expression-evidence). |
 | C22 | CLOSED | A multiline TOTALS aggregate inside a nested query no longer gains a tab per reopen; fixed with C23. [Regression](../../test/unit/nestedRawIndent.c23.test.ts); the TOTALS and ORDER comment matrices include nested wrappers again. |
 | C23 | CLOSED | Raw multi-line text of a nested query no longer gains indentation on every reopen. [Details](#c23-nested-query-raw-indentation). |
+| C35 | CLOSED | Kept wildcard widths are unknown; mixed UNION lists survive open / Apply without NULL padding. [Details](#c35-union-column-count-with-a-kept-wildcard). |
 | C24 | CLOSED | `*` is never written invalid, kept in the Designer, expanded only by the explicit command (2026-10-18). Follow-ups: C35, C36. [Details](#c24-wildcard-projection). |
 | C25 | CLOSED | Query transformations preserve string-literal bytes (closed again 2026-10-05). [Details](#c25-string-literal-bytes). |
 | C26 | CLOSED | Parentheses inside string literals no longer add an outer pair on every reopen. [Details](#c26-parentheses-inside-literals). |

@@ -33,7 +33,7 @@ import type { Token } from './sdblLexer';
 import { isStructurallyValidExpression, parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { resolveFieldPath } from './fieldPathResolver';
 import { deriveTempTableLifetimes, visibleTempTableAt } from './tempTableSemantics';
-import { isWildcardExpression } from './expandStarFields';
+import { hasUnexpandedWildcard, isWildcardExpression } from './expandStarFields';
 
 const EMPTY_METADATA_RESOLVER: MetadataResolver = {
   tableByFullName: () => undefined,
@@ -433,10 +433,14 @@ export function validateBatchSemantics(
   // `unionModel.ts`/`buildUnionBlocksWithTabSection`), а не число физических полей.
   const checkUnionColumnCount = (qdoc: QueryDocument): void => {
     if (qdoc.members.length < 2) return;
-    const counts = qdoc.members.map(m => orderedSelectElements(m.model).length);
-    if (counts.some(c => c !== counts[0])) {
+    // A kept wildcard has unknown width; catalog presence does not prove completeness.
+    // Still reject mismatches between known members beside an unknown member.
+    const counts = qdoc.members.map(m => hasUnexpandedWildcard(m.model)
+      ? undefined : orderedSelectElements(m.model).length);
+    const known = counts.filter((count): count is number => count !== undefined);
+    if (known.some(c => c !== known[0])) {
       errors.push({
-        message: `Количество столбцов в результате запроса с объединением не совпадает (${counts.join(', ')})`,
+        message: `Количество столбцов в результате запроса с объединением не совпадает (${counts.map(c => c ?? '?').join(', ')})`,
       });
     }
   };
