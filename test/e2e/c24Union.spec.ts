@@ -27,3 +27,18 @@ for (const surface of ['classic', 'canvas'] as const) {
     expect(text).toBe('ВЫБРАТЬ\n\tТ.*,\n\t1 КАК Х\nИЗ\n\tСправочник.Валюты КАК Т\n\nОБЪЕДИНИТЬ ВСЕ\n\nВЫБРАТЬ\n\tТ2.*,\n\t2\nИЗ\n\tСправочник.Валюты КАК Т2');
   });
 }
+
+for (const surface of ['classic', 'canvas'] as const) {
+  test(`${surface}: C35 mixed UNION preserves select lists without NULL padding`, async ({ page }) => {
+    const query = 'ВЫБРАТЬ Т.* ИЗ Справочник.Валюты КАК Т ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ Б.Код, Б.Наименование ИЗ Справочник.Валюты КАК Б';
+    await open(page, surface, query);
+    await page.getByRole('button', { name: surface === 'canvas' ? 'Сохранить' : 'ОК', exact: true }).click();
+    await expect.poll(async () => (await inserts(page)).length).toBe(1);
+    const text = (await inserts(page))[0];
+    expect(text).toBe('ВЫБРАТЬ\n\tТ.*\nИЗ\n\tСправочник.Валюты КАК Т\n\nОБЪЕДИНИТЬ ВСЕ\n\nВЫБРАТЬ\n\tБ.Код,\n\tБ.Наименование\nИЗ\n\tСправочник.Валюты КАК Б');
+    await open(page, surface, text);
+    await page.getByRole('button', { name: surface === 'canvas' ? 'Сохранить' : 'ОК', exact: true }).click();
+    await expect.poll(async () => (await inserts(page)).length).toBe(1);
+    expect((await inserts(page))[0]).toBe(text);
+  });
+}
