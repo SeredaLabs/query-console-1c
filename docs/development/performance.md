@@ -21,3 +21,11 @@ The point-in-time baseline captured before documentation consolidation is
 historical evidence, not current promises, and is no longer kept in the
 repository — see git history at or before the `pre-docs-history-cleanup` tag
 if the original numbers and methodology are needed.
+
+The Graphify navigation experiment (2026-10-20) did not demonstrate an advantage
+over targeted `rg` in the three tested development scenarios. Maintaining the
+index added infrastructure, and call edges alone missed dependencies represented
+by imports or runtime callbacks. The project integration was removed; the
+[compact AI context](ai-context/README.md) remains as source-navigation guidance.
+Context bytes were a proxy, not measured token savings. Historical implementation
+and measurements remain in Git at `3b8962b`.

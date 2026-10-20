@@ -1,7 +1,7 @@
 # Query core route
 
-Load for syntax, generation, schema or IDE questions. Paths below are seeds;
-use Graphify for neighbors, then inspect the actual code and tests.
+Load for syntax, generation, schema or IDE questions. Start at the paths below;
+use `rg` to locate callers and tests, then inspect the actual implementation.
 
 | Responsibility | Entry / next source | Existing authority |
 |---|---|---|
@@ -23,4 +23,4 @@ For a parser change, follow strict validation and tolerant IDE callers
 separately. Core must not acquire VS Code/WebView dependencies; the
 [architecture](../architecture.md) owns exceptions and module initialization
 constraints. The [lexical contract](../expression-lexical-contract.md) owns
-expression rules. Graph call edges do not prove preservation or grammar parity.
+expression rules. Search results do not prove preservation or grammar parity.
