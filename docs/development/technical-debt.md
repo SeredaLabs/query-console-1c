@@ -86,6 +86,8 @@ Remaining (constructor parity only, the Designer keeps the GROUP BY): the rules 
 
 **Next boundary:** Rule-level parity of these three rules against СхемаЗапроса (corpus accept:oracle evidence and the L/S probes disagree: find the distinguishing condition first); close R11 after it.
 
+**First bounded slice (triaged 2026-10-19):** Start with `substituteGroupFieldWithSelectExpr` in `dropRedundantGroupDerefs.ts`, using S1, `L1_agg_subst` and `L4_norm_literal` from the existing platform fixture. The latter two currently have neutral/payload invariance assertions in `groupByLexerGates.r11.test.ts`, not direct assertions that our GROUP BY equals the platform's. Green tests therefore do not close this parity gap. Add direct platform-result regressions first, identify the distinguishing condition against the existing corpus, then narrow this one rule. Keep the other two rules and the preserve/analysis policy unchanged. Validate with both R11 suites and a reviewed before/after corpus comparison in both modes; do not update golden output merely to make the suite pass. This triage does not establish the missing condition or close R11.
+
 ### C34. English SDBL leftovers
 
 **Status:** OPEN · P3
