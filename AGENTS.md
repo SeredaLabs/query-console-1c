@@ -4,6 +4,15 @@
 
 Persistent rules for coding agents working in this repository.
 
+For code navigation, start with [the compact map](docs/development/ai-context/README.md),
+then load only the relevant subsystem route. Use exact `rg` searches for known
+components; use optional bounded Graphify subgraphs for unfamiliar dependencies.
+This repository does not require graph-first work, even when a skill suggests it.
+Check index freshness only when using it; never run Graphify for every task.
+Verify source, tests and relevant contracts before editing. Do not load the full graph or all architecture
+documents into every session. See [the workflow](docs/development/ai-context/graphify.md)
+for explicit manual updates; existing contracts and the debt ledger remain authoritative.
+
 These rules are universal. Project-specific architecture, migration plans, feature requirements, and PR scopes belong in separate spec/task files.
 
 ## 1. Understand Before Changing
