@@ -1019,6 +1019,59 @@ test.describe('Classic / Canvas designer toggle', () => {
     expect(await switches(page)).toEqual([{ type: 'switchDesigner', target: 'classic', text: toCanvas.text }]);
     expect(await insertions(page)).toEqual([]);
   });
+
+  // D1: the generated text drops the unsafe VT arguments and the reopened UI would
+  // no longer block Save, so the switch itself is refused and nothing leaves the webview.
+  for (const surface of ['classic', 'canvas'] as const) {
+    test(`${surface}: D1 an unsafe virtual table refuses the switch without switchDesigner or insertText`, async ({ page }) => {
+      await openWithToggle(page, surface, 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК Т');
+      const apply = page.getByRole('button', { name: surface === 'canvas' ? 'Сохранить' : 'ОК', exact: true });
+      await expect(apply).toBeDisabled();
+      await page.getByTestId(surface === 'canvas' ? 'designer-mode-classic' : 'designer-mode-canvas').click();
+      await expect(page.getByTestId(surface === 'canvas' ? 'canvas-save-error' : 'designer-switch-error'))
+        .toContainText('Невозможно переключить режим конструктора: Виртуальная таблица "РегистрРасчета.Начисления.ДанныеГрафика"');
+      await expect(page.getByTestId(`designer-mode-${surface}`)).toHaveAttribute('aria-pressed', 'true');
+      // The loaded model keeps its unsafe mark: its Apply block and reason remain.
+      await expect(apply).toBeDisabled();
+      if (surface === 'canvas') {
+        await expect(apply).toHaveAttribute('title', /Виртуальная таблица содержит параметры \(третий и последующие аргументы\)/);
+      } else {
+        await expect(page.getByTestId('ok-error')).toContainText('Виртуальная таблица "РегистрРасчета.Начисления.ДанныеГрафика" содержит параметры');
+      }
+      expect(await switches(page)).toEqual([]);
+      expect(await insertions(page)).toEqual([]);
+    });
+  }
+});
+
+// G1: the click-time Apply check validates the generated text against the received
+// metadata (`buildResolver()`); the expression editor itself does not, so an unknown
+// field typed there is refused only by that check.
+test.describe('G1: Apply validates fields against the received metadata', () => {
+  for (const surface of ['classic', 'canvas'] as const) {
+    test(`${surface}: an unknown metadata field is refused with a reason and no insertText`, async ({ page }) => {
+      await open(page, surface, 'ВЫБРАТЬ В.Код + 1 КАК Значение ИЗ Справочник.Валюты КАК В');
+      if (surface === 'canvas') {
+        await page.getByRole('button', { name: /Поля$/ }).click();
+        await page.getByPlaceholder('Псевдоним', { exact: true }).first().click();
+        await page.getByRole('button', { name: 'Редактор выражения', exact: true }).click();
+      } else {
+        // Edit the existing field so it keeps its explicit alias: a new custom field
+        // is named `ПолеN`, which the parser keeps as an opaque expression.
+        await page.getByText('В.Код + 1', { exact: true }).click();
+        await page.locator('button[title="Изменить выбранное поле (произвольное выражение)"]').click();
+      }
+      await page.locator('[data-testid="expr-editor"] .cm-content').fill('В.НетТакогоПоля');
+      await page.getByTestId('expr-ok').click();
+      await expect(page.getByTestId('expr-dialog')).toBeHidden();
+      const apply = page.getByRole('button', { name: surface === 'canvas' ? 'Сохранить' : 'ОК', exact: true });
+      await expect(apply).toBeEnabled();
+      await apply.click();
+      await expect(page.getByTestId(surface === 'canvas' ? 'canvas-save-error' : 'ok-error'))
+        .toContainText('Поле "НетТакогоПоля" не найдено в "Справочник.Валюты"');
+      expect(await insertions(page)).toEqual([]);
+    });
+  }
 });
 
 for (const surface of ['classic', 'canvas'] as const) {

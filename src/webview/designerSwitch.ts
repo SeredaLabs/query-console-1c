@@ -1,4 +1,5 @@
 import type { MetadataResolver } from '../core/query/metadataResolver';
+import { findStaticApplyBlocker } from './applyGate';
 import { computeBatchTextSafe } from './computeBatchText';
 import { tryOpenDesignerBatch } from './openDesignerBatch';
 import type { QueryState } from './state/queryStore';
@@ -17,6 +18,12 @@ export function prepareDesignerSwitch(
   const out = computeBatchTextSafe(state, true);
   const blocked = (reason: string) => ({ ok: false as const, error: t('designer.mode.blocked', { reason }) });
   if (out.error !== null) return blocked(localizeDiagnostic(out.error));
+  // D1: generation drops a virtual table's unsupported extra arguments and the
+  // reopened text no longer carries the mark, so the other UI would save the
+  // loss Apply refuses here. Only this blocker is checked: it is the one shown to
+  // lose user text on the switch.
+  const blocker = findStaticApplyBlocker(state);
+  if (blocker?.kind === 'unsafeVirtualTable') return blocked(t('constructor.unsafeVirtual', { name: blocker.name }));
   if (!out.text.trim()) return { ok: true, text: '' };
   const reopened = tryOpenDesignerBatch(out.text, resolver);
   if (!reopened.ok) return blocked('commentLossDoc' in reopened ? t('designer.mode.commentLoss') : localizeDiagnostic(reopened.error));
