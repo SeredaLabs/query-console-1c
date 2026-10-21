@@ -40,10 +40,10 @@ describe('V5 phase 5: platform-attested inputs and generated outputs (8.3.15.148
   }
 });
 
-// C40: measure outside it.fails so a parser/generator exception cannot masquerade
-// as the expected safety refusal. This is an open gap, not a parity success.
+// C40: the scalar comparison subquery rejected by 8.3.15 is Apply-blocked (see
+// scalarSubquery.c40.test.ts for the other operand positions).
 const scalar = cases.find(c => c.id === 'PQ-expression.scalar-subquery')!;
 const scalarResult = measure(scalar.text);
-it.fails('C40: reject or Apply-block the scalar comparison subquery rejected by 8.3.15', () => {
+it('C40: reject or Apply-block the scalar comparison subquery rejected by 8.3.15', () => {
   expect(!scalarResult.opened.ok || !scalarResult.apply.ok).toBe(true);
 });

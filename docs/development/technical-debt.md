@@ -14,7 +14,7 @@ one place, ordered by priority.
 
 ## Open items
 
-20 items: P1 — 1, P2 — 14, P3 — 5. No item is P0.
+20 items: P1 — 1, P2 — 13, P3 — 6. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
@@ -32,7 +32,7 @@ one place, ordered by priority.
 | UX-C6 | OPEN · P2 | Canvas UX | Advanced field-to-field JOIN drag, shortcuts and find/focus helpers. |
 | UX-C8 | OPEN · P2 | Canvas UX | Canvas cache refresh and lazy reference-field expansion parity. |
 | UX-C9 | OPEN · P2 | Canvas UX | Full positional UNION mapping for tabular/trailing projections. |
-| C40 | OPEN · P2 | Correctness | Scalar comparison subquery rejected by 8.3.15.1489 is allowed by Apply; modern-platform verdict pending. |
+| C40 | PARTIAL · P3 | Correctness | Apply now refuses scalar subqueries in comparisons, ВЫБОР, join conditions and function arguments (rejected by 8.3.15.1489); only the newer-platform verdict is missing. |
 | R11 | PARTIAL · P3 | Correctness | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. |
 | C34 | PARTIAL · P3 | Correctness | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. |
 | C37 | OPEN · P3 | Correctness | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. |
@@ -49,7 +49,7 @@ one place, ordered by priority.
 | C37 | OPEN · P3 | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C38 | OPEN · P3 | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C39 | OPEN · P3 | English standard field names remain English in Russian output; platform canonical text translates them. [Evidence](audits/v5-phase5-2026-10-21.md). |
-| C40 | OPEN · P2 | Scalar comparison subquery rejected by 8.3.15.1489 is allowed by Apply; modern-platform verdict pending. [Evidence](audits/v5-phase5-2026-10-21.md). |
+| C40 | PARTIAL · P3 | Apply now refuses scalar subqueries in comparisons, ВЫБОР, join conditions and function arguments (rejected by 8.3.15.1489); only the newer-platform verdict is missing. [Evidence](../../test/fixtures/platform/c40-scalar-subquery.json). |
 
 The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
 comment handling and recovery limits. No outstanding correctness item is P0.
@@ -213,7 +213,7 @@ The initial validator-only experiment was reverted after Classic and Canvas adde
 
 ### C37–C40. Phase 5 findings
 
-**C37 / C38 / C39: OPEN · P3; C40: OPEN · P2.**
+**C37 / C38 / C39: OPEN · P3; C40: PARTIAL · P3 (was OPEN · P2).**
 [Audit and exact probes](audits/v5-phase5-2026-10-21.md), 2026-10-21,
 platform 8.3.15.1489 (build confirmed by the user).
 
@@ -227,13 +227,31 @@ platform 8.3.15.1489 (build confirmed by the user).
   Generated output remains platform-valid with identical platform canonical text.
   Do not globally translate arbitrary identifiers: metadata/alias context matters.
 - **C40:** `PQ-expression.scalar-subquery`: platform rejects a SELECT used as the
-  right operand of `=`; ours opens and permits Apply in both measured metadata
-  modes. Text is preserved, not silently corrupted. The new test explicitly
-  expects failure of the desired refusal; a modern-platform reprobe is needed
-  before changing the accepted grammar. This is not covered by the old C5 cases.
+  right operand of `=`; ours opened it and permitted Apply (text preserved, not
+  corrupted). Not covered by the old C5 cases.
+  *Fix (2026-10-21):* the structural acceptor (`isStructurallyValidExpression`,
+  `expressionSyntaxCheck.ts`) skipped any `(ВЫБРАТЬ …)` group, and the parser keeps
+  such a condition as custom text, so `findMalformedCustomExpressions` never saw it.
+  A subquery is now accepted only as the operand of `В` / `НЕ В` / `В ИЕРАРХИИ`. The
+  existing shared blocker (`findStaticApplyBlocker` → `malformedCustom`) refuses
+  Apply in Classic and Canvas with the existing message; editor diagnostics, which
+  use the same check, mark the form too. Opening and the source text are unchanged.
+  Evidence ([fixture](../../test/fixtures/platform/c40-scalar-subquery.json),
+  `validate_query`, 8.3.15.1489): rejected — `=` on either side, `<>`, a ВЫБОР
+  condition, a join condition, a function argument, the select list; accepted and
+  still applied — `В`, `НЕ В`, `В ИЕРАРХИИ`, a tuple `(А, Б) В (…)`, `В (…)` in a join
+  condition. Committed corpus: 0 of 7,882 malformed-expression checks changed
+  (1,976 inputs and platform texts, with and without metadata; 326 contain a nested
+  `(ВЫБРАТЬ`). [Regressions](../../test/unit/scalarSubquery.c40.test.ts), e2e in
+  `canvas.spec.ts` (both editors).
+  *Version boundary:* every verdict is from 8.3.15.1489; no newer platform was
+  probed and no 1C documentation of scalar subqueries was found. If a newer
+  platform accepts them, the refusal is over-strict (Apply refused, nothing
+  written), and the rule would need a target-version decision.
 
 **Next boundary:** separate bounded fixes or explicit canonical-policy decisions
-for C37–C39; modern-version evidence and a bounded safety decision for C40.
+for C37–C39; for C40, a verdict from a current platform build (close C40 if it also
+rejects; otherwise decide how the refusal depends on the target version).
 No production code or golden output changed in this audit.
 
 ## Architecture

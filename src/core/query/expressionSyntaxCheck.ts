@@ -83,9 +83,14 @@ function looksLikeSubquery(cur: ExprCursor): boolean {
 /** `( <содержимое> )` после уже потреблённой `(`: подзапрос (пропускается по
  * балансу), список значений через запятую (`(expr, expr, …)` — покрывает и
  * список для `В (…)`, и одиночное выражение/условие в скобках), голая `*`
- * (`СЧИТАТЬ(*)`), либо пусто (`ПУСТАЯТАБЛИЦА.()`, `АВТОНОМЕРЗАПИСИ()`). */
-function acceptGroupContent(cur: ExprCursor): boolean {
-  if (looksLikeSubquery(cur)) return skipBalancedGroup(cur);
+ * (`СЧИТАТЬ(*)`), либо пусто (`ПУСТАЯТАБЛИЦА.()`, `АВТОНОМЕРЗАПИСИ()`).
+ *
+ * C40: подзапрос допустим только как операнд `В` / `НЕ В` / `В ИЕРАРХИИ`
+ * (`allowSubquery`). Скалярный подзапрос — операнд сравнения, арифметики или
+ * аргумент функции — платформа отвергает как синтаксическую ошибку (8.3.15.1489,
+ * test/fixtures/platform/c40-scalar-subquery.json). */
+function acceptGroupContent(cur: ExprCursor, allowSubquery = false): boolean {
+  if (looksLikeSubquery(cur)) return allowSubquery && skipBalancedGroup(cur);
   if (isPunct(cur.peek(), ')')) { cur.next(); return true; } // пусто
   // КОЛИЧЕСТВО(РАЗЛИЧНЫЕ …) — единственная агрегатная функция с DISTINCT
   // внутри скобок (aggregateFunctions в грамматике). Разрешаем ключевое слово
@@ -323,7 +328,7 @@ function acceptValue(cur: ExprCursor): boolean {
       if (isWordToken(cur.peek(), 'ИЕРАРХИИ', 'HIERARCHY')) cur.next();
       if (!isPunct(cur.peek(), '(')) return false;
       cur.next();
-      if (!acceptGroupContent(cur)) return false;
+      if (!acceptGroupContent(cur, true)) return false;
       continue;
     }
     if (isWordToken(t, 'ССЫЛКА', 'REFS')) {
