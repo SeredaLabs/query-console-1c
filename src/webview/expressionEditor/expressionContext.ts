@@ -2,7 +2,7 @@ import type { MetaField, MetaTable } from '../../core/metadata/types';
 import type { MetadataResolver } from '../../core/query/metadataResolver';
 import { resolveFieldPath } from '../../core/query/fieldPathResolver';
 import { describeFieldTypes } from '../../core/metadata/describeType';
-import { tokenize, SdblLexError, type Token } from '../../core/query/sdblLexer';
+import { tokenize, isWordToken, SdblLexError, type Token } from '../../core/query/sdblLexer';
 import { isStructurallyValidExpression } from '../../core/query/expressionSyntaxCheck';
 
 /**
@@ -14,6 +14,8 @@ import { isStructurallyValidExpression } from '../../core/query/expressionSyntax
 export interface ExpressionSource {
   alias: string;
   meta: MetaTable;
+  /** Origin of field types for arithmetic hints; omitted means unproven. */
+  typeOrigin?: 'metadata' | 'derived';
 }
 
 export interface ExpressionContext {
@@ -92,12 +94,14 @@ export interface ExpressionAnalysis {
    * конструктора для custom-виразів (PR-14). */
   syntaxValid: boolean;
   issues: ExpressionIssue[];
-  /** Тип результату, лише коли він доведений метаданими (вираз — одне поле). */
+  /** Підпис для UI: поле, літерал або доведена числова арифметика; не валідація. */
   resultType?: string;
 }
 
 interface Chain {
   segments: Token[];
+  start: number;
+  end: number;
 }
 
 function isNameToken(t: Token | undefined): t is Token {
@@ -120,7 +124,7 @@ function collectChains(tokens: Token[]): Chain[] {
       segments.push(tokens[j + 2]);
       j += 2;
     }
-    chains.push({ segments });
+    chains.push({ segments, start: i, end: j });
     i = j;
   }
   return chains;
@@ -131,6 +135,32 @@ function lexicalIssue(text: string, e: unknown): ExpressionIssue {
   if (!(e instanceof SdblLexError)) return { severity: 'error', kind: 'lexical', message };
   const from = Math.min(text.length, e.pos);
   return { from, to: Math.min(text.length, from + 1), severity: 'error', kind: 'lexical', message };
+}
+
+/** Display facts only; the existing structural check owns expression grammar. */
+function constantResultType(tokens: Token[]): string | undefined {
+  if (tokens.length === 1) {
+    if (tokens[0].type === 'string') return 'Строка';
+    if (tokens[0].type === 'number') return 'Число';
+    if (isWordToken(tokens[0], 'ИСТИНА', 'ЛОЖЬ')) return 'Булево';
+  }
+  return undefined;
+}
+
+/** Numeric operands only; precedence cannot change their primitive result type.
+ * Syntax/arity, evaluation and precision remain outside this display fact. */
+function numericArithmeticType(tokens: Token[], fields: ReadonlyMap<number, number>): string | undefined {
+  let hasOperand = false;
+  for (let i = 0; i < tokens.length; i++) {
+    const end = fields.get(i);
+    if (end !== undefined) { hasOperand = true; i = end; continue; }
+    const t = tokens[i];
+    if (t.type === 'number') { hasOperand = true; continue; }
+    if (t.type !== 'punct' || !['+', '-', '*', '/', '(', ')'].includes(t.value)) return undefined;
+    // The structural acceptor permits empty parentheses in some contexts.
+    if (t.value === ')' && tokens[i - 1]?.value === '(') return undefined;
+  }
+  return hasOperand ? 'Число' : undefined;
 }
 
 /**
@@ -161,7 +191,8 @@ export function analyzeExpression(text: string, ctx: ExpressionContext, cursor?:
   const resolver = ctx.resolver ?? EMPTY_RESOLVER;
   const hasSubquery = tokens.some(t => t.type === 'keyword' && t.value === 'ВЫБРАТЬ');
   const chains = collectChains(tokens);
-  let resultType: string | undefined;
+  let resultType = constantResultType(tokens);
+  const numericFields = new Map<number, number>();
 
   for (const chain of chains) {
     const names = chain.segments.map(s => s.text);
@@ -175,6 +206,12 @@ export function analyzeExpression(text: string, ctx: ExpressionContext, cursor?:
       const onlyToken = chains.length === 1 && tokens.length === chain.segments.length * 2 - 1;
       const last = r.resolved[r.resolved.length - 1];
       if (onlyToken && last) resultType = describeFieldTypes(last.field) || undefined;
+      // Direct fields only: composite reference navigation and derived-column
+      // compatibility types do not prove an arithmetic operand's type.
+      if (loc.source.typeOrigin === 'metadata' && loc.path.length === 1 && last
+        && last.field.types.length === 1 && last.field.types[0].primitive === 'Число') {
+        numericFields.set(chain.start, chain.end);
+      }
       continue;
     }
     if (hasSubquery || r.stoppedReason !== 'fieldNotFound') continue;
@@ -193,6 +230,7 @@ export function analyzeExpression(text: string, ctx: ExpressionContext, cursor?:
     });
   }
 
+  resultType ??= numericArithmeticType(tokens, numericFields);
   return { empty: false, syntaxValid, issues, resultType: syntaxValid ? resultType : undefined };
 }
 

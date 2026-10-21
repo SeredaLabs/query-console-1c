@@ -8,6 +8,7 @@ import {
 } from '../../src/webview/expressionEditor/expressionContext';
 import * as fieldChain from '../../src/core/query/fieldChain';
 import * as hoverFieldInfo from '../../src/extension/hoverFieldInfo';
+import { expressionSources } from '../../src/webview/expressionSources';
 
 const N = (digits: number, fractionDigits: number) => ({ primitive: 'Число' as const, digits, fractionDigits });
 
@@ -140,11 +141,72 @@ describe('analyzeExpression', () => {
     expect(analyzeExpression(text, ctx).issues).toHaveLength(1);
   });
 
-  it('infers the result type only for a lone resolved field', () => {
+  it.each([
+    ['42', 'Число'], ['-1.25', 'Число'], ['+2', 'Число'],
+    ['"текст"', 'Строка'], ['""', 'Строка'], ['"a""b"', 'Строка'],
+    ['ИСТИНА', 'Булево'], ['ложь', 'Булево'], ['TRUE', 'Булево'], ['false', 'Булево'],
+    [' // before\n - 1.25 // after', 'Число'],
+  ])('shows the primitive type of literal %s without metadata', (text, resultType) => {
+    expect(analyzeExpression(text, { sources: [], qualified: true })).toMatchObject({
+      syntaxValid: true, issues: [], resultType,
+    });
+  });
+
+  it.each(['1 + 2', '(10 - 3) * 2', '-6 / 4', '1 + 2 * 3',
+    '((1.5))', '-(1 + 2)', '1 + // comment\n 2'])
+  ('shows a numeric type for constant arithmetic %s', text => {
+    expect(analyzeExpression(text, { sources: [], qualified: true })).toMatchObject({
+      syntaxValid: true, issues: [], resultType: 'Число',
+    });
+  });
+
+  it.each(['1 +', '(1 + 2', '1 2', '1 * / 2', '(1)(2)'])
+  ('does not type structurally malformed arithmetic %s', text => {
+    expect(analyzeExpression(text, ctx)).toMatchObject({ syntaxValid: false, resultType: undefined });
+  });
+
+  it.each(['()', '1 + ()', 'Остатки.КоличествоОстаток + 1', 'ВТ.Колонка + 1', '1 + NULL', '1 + &П',
+    '1 = 2', '1 И 2', 'СУММА(1)', '"1 + 2" + 3', '"a" + "b"', '&Параметр', 'NULL', 'НЕОПРЕДЕЛЕНО',
+    'ВЫБОР КОГДА ИСТИНА ТОГДА 1 ИНАЧЕ 2 КОНЕЦ', '1 +', '"незакрыто', '-'])
+  ('does not guess a result type for %s', text => {
+    expect(analyzeExpression(text, ctx).resultType).toBeUndefined();
+  });
+
+  it('keeps metadata qualifiers for a lone resolved field', () => {
     expect(analyzeExpression('Остатки.КоличествоОстаток', ctx).resultType).toBe('Число(15,3)');
     expect(analyzeExpression('Остатки.Товар.Наименование', ctx).resultType).toBe('Строка(150)');
     expect(analyzeExpression('СУММА(Остатки.СуммаОстаток)', ctx).resultType).toBeUndefined();
     expect(analyzeExpression('НАЧАЛОПЕРИОДА(&Дата, МЕСЯЦ)', ctx).resultType).toBeUndefined();
+  });
+
+  it.each(['Остатки.КоличествоОстаток + 1', '(Остатки.СуммаОстаток - Остатки.КоличествоОстаток) * 2',
+    '-Остатки.КоличествоОстаток', 'Остатки.СуммаОстаток / 2'])
+  ('types arithmetic over direct numeric metadata fields: %s', text => {
+    const sources = expressionSources([{ id: 'r', fullName: BALANCES.fullName, alias: 'Остатки' }], [BALANCES]);
+    expect(analyzeExpression(text, { ...ctx, sources })).toMatchObject({ resultType: 'Число', issues: [] });
+  });
+
+  it('supports unqualified metadata fields without changing their standalone qualifiers', () => {
+    const sources = expressionSources([{ id: 'r', fullName: BALANCES.fullName }], [BALANCES]);
+    const context = { ...unqualified, sources };
+    expect(analyzeExpression('КоличествоОстаток / 2', context).resultType).toBe('Число');
+    expect(analyzeExpression('КоличествоОстаток', context).resultType).toBe('Число(15,3)');
+  });
+
+  it('does not use union, unknown, reference, or synthetic types for arithmetic', () => {
+    const meta: MetaTable = { ...BALANCES, fields: [
+      { name: 'Смешанное', kind: 'attribute', types: [N(10, 0), { primitive: 'Строка' }] },
+      { name: 'Неизвестное', kind: 'attribute', types: [] },
+      ...BALANCES.fields,
+    ] };
+    const sources = expressionSources([{ id: 'r', fullName: meta.fullName, alias: 'Остатки' }], [meta]);
+    for (const text of ['Остатки.Смешанное + 1', 'Остатки.Неизвестное + 1', 'Остатки.Товар + 1',
+      'Остатки.Товар.Наименование + 1', 'СУММА(Остатки.КоличествоОстаток)', 'Остатки.КоличествоОстаток + &П']) {
+      expect(analyzeExpression(text, { ...ctx, sources }).resultType, text).toBeUndefined();
+    }
+    const temp: MetaTable = { ...meta, kind: 'ВременнаяТаблица', fullName: 'ВТ' };
+    const derived = expressionSources([{ id: 't', fullName: 'ВТ', alias: 'Остатки' }], [temp]);
+    expect(analyzeExpression('Остатки.КоличествоОстаток + 1', { ...ctx, sources: derived }).resultType).toBeUndefined();
   });
 
   it('checks bare field paths in unqualified mode', () => {

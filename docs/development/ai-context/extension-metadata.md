@@ -13,8 +13,8 @@
 
 Editor write review: trace `insertText` through `panel.ts`, `ApplyBaseline` and
 `insertResult`, and inspect the [Designer gate](designer-query-text.md).
-Graphify cannot connect a `postMessage` discriminant to its receiver as a
-verified runtime edge; search both sides of the typed message.
+Search both sides of each typed message and inspect its receiver;
+`postMessage` does not directly call the host handler.
 
 Tests: `test/unit/applyBaseline.c32.test.ts`, `queryDiagnostics.test.ts`,
 and `test/vscode-integration/insertResult.test.ts`.

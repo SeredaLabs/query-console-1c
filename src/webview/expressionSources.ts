@@ -10,7 +10,9 @@ export function expressionSources(selected: SelectedTable[], tables: MetaTable[]
     if (!meta) return [];
     const periodFields = meta.virtual && ['Обороты', 'ОборотыДтКт', 'ОстаткиИОбороты'].includes(meta.virtual.slice)
       ? accumPeriodFields(sel.virtual?.periodicity) : [];
-    return [{ alias: defaultTableAlias(sel), meta: periodFields.length
+    const typeOrigin = sel.subquery || meta.kind === 'ВременнаяТаблица' || sel.fullName.startsWith('&')
+      ? 'derived' as const : 'metadata' as const;
+    return [{ alias: defaultTableAlias(sel), typeOrigin, meta: periodFields.length
       ? { ...meta, fields: [...periodFields, ...meta.fields] } : meta }];
   });
 }

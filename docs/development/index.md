@@ -6,7 +6,7 @@ use the following owners; historical audits do not override them.
 | Question | Authority |
 |---|---|
 | How does the system work? | [Architecture](architecture.md), [ADRs](decisions/README.md) |
-| Where should an AI agent look first? | [Compact code navigation](ai-context/README.md) (optional, task-scoped Graphify index) |
+| Where should an AI agent look first? | [Compact code navigation](ai-context/README.md) |
 | How do I build it? | [Setup/build](setup-and-build.md), [WebView](webview.md) |
 | What must stay safe? | [Safety/preservation/recovery](contracts/safety-and-preservation.md), [lexical facts](expression-lexical-contract.md), [query model](query-model.md) |
 | How is metadata loaded? | [Metadata](metadata.md) |

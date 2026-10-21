@@ -939,6 +939,56 @@ async function exprText(page: Page): Promise<string> {
 }
 
 test.describe('Произвольное выражение (редактор выражений)', () => {
+  test('A3: literal type updates without changing the saved expression', async ({ page }) => {
+    await openExpressionForNewField(page);
+    const status = page.getByTestId('expr-status');
+    for (const [text, type] of [['42', 'Число'], ['"текст"', 'Строка'], ['ИСТИНА', 'Булево'], ['1 + 2', 'Число'], ['1 + &П', 'неизвестен']]) {
+      await page.locator(EXPR_CONTENT).fill(text);
+      await expect(status).toContainText(`Тип результата: ${type}`);
+    }
+    await page.locator(EXPR_CONTENT).fill('-1.25');
+    await expect(status).toContainText('Тип результата: Число');
+    await page.getByTestId('expr-ok').click();
+    await expect(page.locator('[data-field-idx="0"]')).toContainText('-1.25');
+    await page.locator('[data-field-idx="0"]').dblclick();
+    expect(await exprText(page)).toBe('-1.25');
+    await expect(status).toContainText('Тип результата: Число');
+  });
+
+  test('A3: constant arithmetic type preserves expression text on reopen', async ({ page }) => {
+    await openExpressionForNewField(page);
+    const text = '(10 - 3) * 2';
+    await page.locator(EXPR_CONTENT).fill(text);
+    await expect(page.getByTestId('expr-status')).toContainText('Тип результата: Число');
+    await page.getByTestId('expr-ok').click();
+    await page.locator('[data-field-idx="0"]').dblclick();
+    expect(await exprText(page)).toBe(text);
+    await expect(page.getByTestId('expr-status')).toContainText('Тип результата: Число');
+    await page.locator(EXPR_CONTENT).fill('1 + ()');
+    await expect(page.getByTestId('expr-status')).toContainText('Тип результата: неизвестен');
+  });
+
+  test('A3: numeric metadata arithmetic is a display hint and survives reopen', async ({ page }) => {
+    await page.goto(BASE);
+    await expect(page.getByTestId('loading-overlay')).toBeHidden();
+    await page.evaluate(() => window.dispatchEvent(new MessageEvent('message', { data: {
+      type: 'metadataTree', tables: [{ kind: 'Справочник', name: 'Числа', fullName: 'Справочник.Числа', fields: [
+        { name: 'Сумма', kind: 'attribute', types: [{ primitive: 'Число', digits: 15, fractionDigits: 2 }] },
+      ] }],
+    } })));
+    await loadModelText(page, 'ВЫБРАТЬ Т.Сумма ИЗ Справочник.Числа КАК Т');
+    await page.locator('button[title="Добавить поле (произвольное выражение)"]').click();
+    const text = '(Т.Сумма + 1) / 2';
+    await page.locator(EXPR_CONTENT).fill(text);
+    await expect(page.getByTestId('expr-status')).toContainText('Тип результата: Число');
+    await page.getByTestId('expr-ok').click();
+    await page.locator('[data-field-idx="1"]').dblclick();
+    expect(await exprText(page)).toBe(text);
+    await expect(page.getByTestId('expr-status')).toContainText('Тип результата: Число');
+    await page.locator(EXPR_CONTENT).fill('Т.Сумма + &П');
+    await expect(page.getByTestId('expr-status')).toContainText('Тип результата: неизвестен');
+  });
+
   test('open → OK без изменений сохраняет выражение; Отмена не меняет его', async ({ page }) => {
     await openExpressionForNewField(page);
     await page.locator(EXPR_CONTENT).fill('ЕСТЬNULL(Валюты.Код, "-")');

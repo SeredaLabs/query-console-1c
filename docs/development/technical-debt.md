@@ -20,7 +20,7 @@ one place, ordered by priority.
 |---|---|---|---|
 | V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 (34 probes, 96 forms on a live base) is not run yet; the only known gap is C36, deliberate. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
-| A3 | PARTIAL · P2 | Architecture | The expression editor types only a lone resolved field; other expressions stay untyped. |
+| A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple literals and numeric arithmetic over constants/direct metadata fields; other compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
 | V3 | PARTIAL · P2 | Verification | The Apply gate never compares input and output semantics. |
 | U2 | UNKNOWN · P2 | Platform unknowns | Sequence `Границы` argument layout unconfirmed (no base with sequences); such queries are Apply-blocked. |
@@ -88,6 +88,45 @@ Remaining (constructor parity only, the Designer keeps the GROUP BY): the rules 
 
 **First bounded slice (triaged 2026-10-19):** Start with `substituteGroupFieldWithSelectExpr` in `dropRedundantGroupDerefs.ts`, using S1, `L1_agg_subst` and `L4_norm_literal` from the existing platform fixture. The latter two currently have neutral/payload invariance assertions in `groupByLexerGates.r11.test.ts`, not direct assertions that our GROUP BY equals the platform's. Green tests therefore do not close this parity gap. Add direct platform-result regressions first, identify the distinguishing condition against the existing corpus, then narrow this one rule. Keep the other two rules and the preserve/analysis policy unchanged. Validate with both R11 suites and a reviewed before/after corpus comparison in both modes; do not update golden output merely to make the suite pass. This triage does not establish the missing condition or close R11.
 
+**Slice investigation (2026-10-20):** Direct platform comparisons now cover S1,
+both L1 substitution variants and both L4 variants, plus four fresh
+[`validate_query` probes](../../test/fixtures/platform/r11-substitution-probes.json)
+(no execution; the tool did not report the platform build). All nine constructor
+comparisons fail on the current implementation; they are explicitly `it.fails`
+in `groupByLexerGates.r11.test.ts`, with parsing/generation outside the expected-failure
+assertions. The same nine cases pass in preserve and analysis. A field in the CASE
+result rather than its condition, and removing the aggregate column, do not by
+themselves make the platform substitute it.
+
+An instrumented temporary build found **zero substitutions across the 1,976
+committed corpus inputs with metadata in constructor mode**. That corpus cannot
+distinguish a correct narrowing from disabling the rule. A control run on the four
+new probes recorded four substitutions, confirming the instrumentation observes
+the rule (checked 2026-10-21). Historical commits
+`2593a0e2` and `b1b1f4c7` cite a positive `ЗависшиеЗадачи` case in the private
+17,933-query corpus, but do not include its query/expected output; that case is
+absent from the committed corpus and the default local `tmp/` corpus is absent.
+No production rule was changed. Next prerequisite: obtain a reproducible positive
+platform substitution case (ideally that original input/output and metadata),
+then compare controlled variants before narrowing the rule. R11 remains PARTIAL;
+expected failures are evidence of the gap, not completed parity.
+
+**Other two rules (2026-10-21):** Direct expected-failure comparisons now also
+cover both `L1_agg_drop` variants and `L2b_same_name`. Three fresh
+[move probes](../../test/fixtures/platform/r11-move-probes.json) keep the GROUP BY
+order on the platform whether the dereference appears inside an aggregate,
+outside it, or in both positions; restricting the rule to occurrences outside
+aggregates is therefore insufficient. All six comparisons are explicit
+`it.fails`; preserve/analysis controls compare against the authored GROUP BY,
+not the constructor's rewrite. Temporary bundled-code experiments separately
+disabled the result-position exemption in `dropRedundantGroupDerefs` and the
+entire `moveBeforePrefixGroupDerefToEnd` rule: each changed **0/1,976** committed
+corpus outputs with metadata in constructor mode. No source implementation or
+golden changed. Positive historical witnesses (`Взаимозачет bsl_21` for keeping
+the dereference; `ФормированиеПартийЗЕРНО bsl_5` for moving it) are still needed
+to test a distinguishing condition. These experiments do not justify removing
+either rule or claim coverage of the unavailable private corpus.
+
 ### C34. English SDBL leftovers
 
 **Status:** OPEN · P3
@@ -120,7 +159,13 @@ The Designer keeps `*` over configuration tables where the 1C constructor's cano
 
 | ID | Status / priority | Remaining work and evidence | Next boundary |
 |---|---|---|---|
-| A3 | PARTIAL · P2 | [Expression context](../../src/webview/expressionEditor/expressionContext.ts) types a lone resolved field; arbitrary expressions remain unknown ([tests](../../test/unit/expressionContext.test.ts)). [Audit type boundary](audits/query-core-edt-2026-10-01.md#semantictype-model): parser temp-table `Строка` markers also cover number/Boolean literals and mean non-reference, not their actual result type. | Display-only inference using A1 representation and attested result types; keep type facts separate from validation and do not infer types from compatibility markers. The old independent walker proposal is obsolete; no separate grammar. |
+| A3 | PARTIAL · P2 | [Expression context](../../src/webview/expressionEditor/expressionContext.ts) types a lone resolved field and simple literals and numeric arithmetic over constants/direct metadata fields; other compound expressions remain unknown ([tests](../../test/unit/expressionContext.test.ts)). [Audit type boundary](audits/query-core-edt-2026-10-01.md#semantictype-model): parser temp-table `Строка` markers also cover number/Boolean literals and mean non-reference, not their actual result type. | Display-only inference using A1 representation and attested result types; keep type facts separate from validation and do not infer types from compatibility markers. The old independent walker proposal is obsolete; no separate grammar. |
+
+A3 literal slice (2026-10-21): display-only primitive labels reuse SDBL lexer tokens, including signed numbers and English Boolean spelling. No precision/length qualifiers are guessed; at this step NULL, parameters, functions and compound expressions remained unknown. Field metadata qualifiers and validation are unchanged. Live SmartLogistic DEV `execute_query` over constants only confirmed `ПРЕДСТАВЛЕНИЕ(ТИПЗНАЧЕНИЯ(...))`: `42` and `-1.25` → `Number`, `"текст"` → `String`, `ИСТИНА` → `Boolean`; platform build was not reported. Unit regressions and the Classic expression-editor status/save/reopen test cover the slice. A3 remains PARTIAL.
+
+A3 numeric arithmetic slice (2026-10-21): a structurally accepted expression containing only numeric literals, `+ - * /` and parentheses displays `Число`, without evaluating it or guessing precision. Empty parentheses provide no type fact even where the structural acceptor admits them. Fields, parameters, NULL, functions, comparisons and string operations are excluded from this rule. Live constant-only `ПРЕДСТАВЛЕНИЕ(ТИПЗНАЧЕНИЯ(...))` probes returned `Number` for `1 + 2`, `(10 - 3) * 2`, `-6 / 4`, and `1 + 2 * 3` (SmartLogistic DEV, build not reported). Unit tests cover malformed/unsupported boundaries; Classic status/save/reopen is covered in E2E. This is not a runtime-validity or division-by-zero check. A3 remains PARTIAL.
+
+A3 direct numeric fields slice (2026-10-21): the expression-source adapter labels metadata versus derived sources only in the editor context (no persisted schema change). Arithmetic can use direct fields with exactly one numeric type from metadata-labeled sources, retaining qualifiers for standalone fields but showing only `Число` for arithmetic. Unmarked/derived sources, composite types, reference navigation, functions and parameters remain outside arithmetic inference. Live metadata confirmed numeric `Справочник.Контрагенты.ПериодИнвойса` and `ПериодОплаты`; a read-only `ПЕРВЫЕ 1` query returned only `Number` type labels for `Т.ПериодОплаты + 1`, `(Т.ПериодИнвойса - Т.ПериодОплаты) * 2`, and `Т.ПериодОплаты / 2` (SmartLogistic DEV, build not reported). No database values were recorded. Existing standalone-field typing, diagnostics and Apply policy remain unchanged; A3 stays PARTIAL.
 
 The [2026-10-01 EDT audit](audits/query-core-edt-2026-10-01.md) confirms the
 existing A1/A2/A3 direction without new debt IDs or status/priority changes.
