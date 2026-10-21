@@ -60,6 +60,12 @@ export const ENGLISH_METADATA_KINDS: ReadonlyMap<string, string> = new Map([
   ['INFORMATIONREGISTER', 'РегистрСведений'], ['ACCUMULATIONREGISTER', 'РегистрНакопления'],
   ['ACCOUNTINGREGISTER', 'РегистрБухгалтерии'], ['DOCUMENTJOURNAL', 'ЖурналДокументов'],
   ['FILTERCRITERION', 'КритерийОтбора'],
+  // C34: not attested on a platform base (SL_kza has no such objects, and the platform
+  // answers `Table not found` alike for a known and an unknown kind). Source: the
+  // bilingual SDBL lexer of 1c-syntax/bsl-parser (SDBLLexer.g4 @ d446af2) and the 1C
+  // developer guide (`CalculationRegister.Accruals.ScheduleData`, `….BaseAccruals`).
+  ['CALCULATIONREGISTER', 'РегистрРасчета'], ['CHARTOFCALCULATIONTYPES', 'ПланВидовРасчета'],
+  ['SEQUENCE', 'Последовательность'],
 ]);
 
 /**
@@ -78,6 +84,9 @@ export const ENGLISH_SUBTABLES: ReadonlyMap<string, ReadonlyMap<string, string>>
     ['RECORDSWITHEXTDIMENSIONS', 'ДвиженияССубконто'], ['EXTDIMENSIONS', 'Субконто'],
   ])],
   ['ПланСчетов', new Map([['EXTDIMENSIONTYPES', 'ВидыСубконто']])],
+  // C34, same source as the kinds above. `Base<Register>` is handled in canonicalTableName.
+  ['РегистрРасчета', new Map([['ACTUALACTIONPERIOD', 'ФактическийПериодДействия'], ['SCHEDULEDATA', 'ДанныеГрафика']])],
+  ['Последовательность', new Map([['BOUNDARIES', 'Границы']])],
 ]);
 
 /**
@@ -117,6 +126,12 @@ export function canonicalTableName(fullName: string): string {
   const kind = ENGLISH_METADATA_KINDS.get(parts[0].toUpperCase());
   if (kind === undefined) return fullName;
   parts[0] = kind;
-  if (parts.length >= 3) parts[2] = ENGLISH_SUBTABLES.get(kind)?.get(parts[2].toUpperCase()) ?? parts[2];
+  if (parts.length >= 3) {
+    const sub = ENGLISH_SUBTABLES.get(kind)?.get(parts[2].toUpperCase());
+    if (sub !== undefined) parts[2] = sub;
+    // The base virtual table of a calculation register is named after the base
+    // register: `База<Имя>` / `Base<Name>` (C34).
+    else if (kind === 'РегистрРасчета' && /^base./iu.test(parts[2])) parts[2] = 'База' + parts[2].slice(4);
+  }
   return parts.join('.');
 }
