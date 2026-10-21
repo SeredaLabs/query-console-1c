@@ -1,5 +1,7 @@
 # Audit and evidence index
 
+
+Latest: [V5 Phase 5 partial platform verification](v5-phase5-2026-10-21.md).
 Historical investigations explain how findings were obtained. They do not own
 current status: use the [ledger](../technical-debt.md), [architecture](../architecture.md)
 and [contracts](../contracts/safety-and-preservation.md). Dates, old priorities,
