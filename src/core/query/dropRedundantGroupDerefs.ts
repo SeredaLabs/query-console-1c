@@ -2,7 +2,7 @@ import type { QueryModel, FieldRef, SelectedTable } from './queryModel';
 import { defaultTableAlias } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable } from '../metadata/types';
-import { tokenize, tryTokenize, isWordToken, isNameToken, type Token } from './sdblLexer';
+import { tokenize, tryTokenize, isWordToken, type Token } from './sdblLexer';
 import { META_FUNCTION_WORDS } from './sdblKeywordSets';
 import { resolveFieldPath } from './fieldPathResolver';
 
@@ -21,35 +21,6 @@ function codeTokens(expr: string): Token[] | undefined {
 }
 
 const isPunct = (t: Token | undefined, v: string): boolean => t?.type === 'punct' && t.value === v;
-
-/** Aggregate names (English ones belong to C2 and stay as they were). */
-const AGG_WORDS = ['СУММА', 'КОЛИЧЕСТВО', 'МАКСИМУМ', 'МИНИМУМ', 'СРЕДНЕЕ', 'SUM', 'COUNT', 'MAX', 'MIN', 'AVG'];
-
-/** `expr` calls an aggregate: an aggregate name followed by `(`. */
-function hasAggregateCall(expr: string): boolean {
-  const toks = codeTokens(expr);
-  return !!toks && toks.some((t, i) => isWordToken(t, ...AGG_WORDS) && isPunct(toks[i + 1], '('));
-}
-
-/**
- * Start indexes in `toks` where the name chain `rendered` (`Алиас.Путь`, compared
- * case-sensitively) begins as whole names — not a tail of a longer chain (`X.` before
- * it). `whole` also requires the chain to end there (no `.` after it).
- */
-function fieldChainStarts(toks: Token[], rendered: string, whole: boolean): number[] {
-  const segs = rendered.split('.');
-  const starts: number[] = [];
-  for (let i = 0; i < toks.length; i++) {
-    if (isPunct(toks[i - 1], '.')) continue;
-    let ok = true;
-    for (let k = 0; k < segs.length && ok; k++) {
-      const name = toks[i + 2 * k];
-      ok = isNameToken(name) && name.text === segs[k] && (k === 0 || isPunct(toks[i + 2 * k - 1], '.'));
-    }
-    if (ok && (!whole || !isPunct(toks[i + 2 * segs.length - 1], '.'))) starts.push(i);
-  }
-  return starts;
-}
 
 /** `ЗНАЧЕНИЕ ( ВидДвиженияНакопления|ВидДвиженияБухгалтерии .` starts at `toks[i]`. */
 function isMovementValueAt(toks: Token[], i: number): boolean {
@@ -103,14 +74,8 @@ export function dropRedundantGroupDerefs(model: QueryModel, resolver?: MetadataR
   }
   // Ключи простых НЕагрегатных полей ВЫБРАТЬ (выбранное поле сохраняется в группировке).
   const selectKeys = new Set<string>();
-  // Тексты НЕагрегатных выражений выборки: ссылка, чьё ЗНАЧЕНИЕ потребляется такой
-  // выборкой (стоит в РЕЗУЛЬТАТЕ ТОГДА/ИНАЧЕ), оракулом СОХРАНЯЕТСЯ (Взаимозачет bsl_21).
-  const nonAggSelectExprs: string[] = [];
   for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
-    if (f.expression !== undefined) {
-      if (f.func === undefined && !hasAggregateCall(f.expression)) nonAggSelectExprs.push(f.expression);
-      continue;
-    }
+    if (f.expression !== undefined) continue;
     if (f.func !== undefined) continue;
     if (!f.tableId || !f.path) continue;
     selectKeys.add(keyOf(f.tableId, f.path));
@@ -123,13 +88,6 @@ export function dropRedundantGroupDerefs(model: QueryModel, resolver?: MetadataR
     if (selectKeys.has(keyOf(f.tableId, f.path))) continue; // выбранное поле — сохраняем
     const segs = f.path.split('.');
     if (segs.length < 2) continue; // не многосегментная навигация
-    // Ссылка, чьё ЗНАЧЕНИЕ стоит в РЕЗУЛЬТАТЕ (после ТОГДА/ИНАЧЕ) НЕагрегатного выражения
-    // выборки, потребляется им — оракул её НЕ дропает (Взаимозачет bsl_21).
-    {
-      const t = aliasToTable.get(f.tableId);
-      const rendered = (t ? defaultTableAlias(t) : f.tableId) + '.' + f.path;
-      if (nonAggSelectExprs.some(e => derefInResultPosition(e, rendered))) continue;
-    }
     // Ищем СОБСТВЕННЫЙ префикс пути среди ПРЕДШЕСТВУЮЩИХ элементов группировки.
     let prefixGrouped = '';
     for (let k = segs.length - 1; k >= 1; k--) {
@@ -154,212 +112,8 @@ export function dropRedundantGroupDerefs(model: QueryModel, resolver?: MetadataR
   grouping.explicitGroupCount = explicitCount - droppedBeforeExplicit;
 }
 
-/**
- * Перенос в КОНЕЦ явного списка СГРУППИРОВАТЬ ПО многосегментной ссылки `Алиас.A.B`,
- * которая стоит ПЕРЕД своим префиксом `Алиас.A` (тоже сгруппированным ссылочным
- * реквизитом) и НЕ выбрана отдельной колонкой, НО участвует в АГРЕГАТНОМ выражении
- * выборки (`ВЫБОР … СУММА(…) … ИНАЧЕ Алиас.A.B КОНЕЦ`). Сверено живым оракулом
- * (validate_query) и корпусом (ФормированиеПартийЗЕРНО bsl_5):
- *   - `Алиас.A.B` ПЕРЕД `Алиас.A`, `A` — ссылочный реквизит, `Алиас.A.B` не в ВЫБРАТЬ,
- *     но текст `Алиас.A.B` есть внутри агрегатного выражения выборки → элемент
- *     СОХРАНЯЕТСЯ и СТАВИТСЯ ПОСЛЕДНИМ в явной части (после префикса).
- * Без агрегатного выражения-потребителя оракул такую ссылку отбрасывает (этот
- * подслучай корпусом не затронут и здесь НЕ трогается — нулевые регрессии).
- *
- * Применяется ПОСЛЕ dropRedundantGroupDerefs. Без резолвера не работает.
- */
-export function moveBeforePrefixGroupDerefToEnd(model: QueryModel, resolver?: MetadataResolver): void {
-  if (!resolver) return;
-  const grouping = model.grouping;
-  if (!grouping || grouping.multiple) return;
-  const fields = grouping.groupFields;
-  if (fields.length < 2) return;
-  const explicitCount = grouping.explicitGroupCount ?? fields.length;
-  if (explicitCount < 2) return;
-
-  const aliasToTable = new Map<string, SelectedTable>();
-  for (const t of model.tables) aliasToTable.set(t.id, t);
-
-  // Самый РАННИЙ индекс каждого простого поля группировки (для поиска префикса).
-  const groupKeyIdx = new Map<string, number>();
-  for (let gi = 0; gi < explicitCount && gi < fields.length; gi++) {
-    const f = fields[gi];
-    if (f.expression !== undefined || !f.tableId || !f.path) continue;
-    const gk = keyOf(f.tableId, f.path);
-    if (!groupKeyIdx.has(gk)) groupKeyIdx.set(gk, gi);
-  }
-  // Выбранные простые поля — сохраняются как есть (отдельная колонка результата).
-  const selectKeys = new Set<string>();
-  for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
-    if (f.expression !== undefined || f.func !== undefined) continue;
-    if (!f.tableId || !f.path) continue;
-    selectKeys.add(keyOf(f.tableId, f.path));
-  }
-  // Тексты агрегатных выражений выборки (для проверки «потребителя» ссылки).
-  const aggExprTexts: string[] = [];
-  for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
-    if (f.expression !== undefined && hasAggregateCall(f.expression)) aggExprTexts.push(f.expression);
-  }
-  if (aggExprTexts.length === 0) return;
-
-  let moveIdx = -1;
-  for (let i = 0; i < explicitCount && i < fields.length; i++) {
-    const f = fields[i];
-    if (f.expression !== undefined || !f.tableId || !f.path) continue;
-    if (selectKeys.has(keyOf(f.tableId, f.path))) continue;
-    const segs = f.path.split('.');
-    if (segs.length < 2) continue;
-    // Префикс должен быть сгруппирован ПОЗЖЕ (ссылка стоит ПЕРЕД префиксом).
-    let prefixGrouped = '';
-    for (let k = segs.length - 1; k >= 1; k--) {
-      const prefix = segs.slice(0, k).join('.');
-      const pidx = groupKeyIdx.get(keyOf(f.tableId, prefix));
-      if (pidx !== undefined && pidx > i) { prefixGrouped = prefix; break; }
-    }
-    if (!prefixGrouped) continue;
-    if (!prefixResolvesToReference(aliasToTable.get(f.tableId), prefixGrouped, resolver)) continue;
-    // Ссылка должна употребляться в каком-либо агрегатном выражении выборки.
-    const table = aliasToTable.get(f.tableId);
-    const alias = table ? defaultTableAlias(table) : f.tableId;
-    const rendered = alias + '.' + f.path;
-    // A further navigation through the reference (`Алиас.Путь.X`) is a use too.
-    const used = aggExprTexts.some(t => {
-      const toks = codeTokens(t);
-      return !!toks && fieldChainStarts(toks, rendered, false).length > 0;
-    });
-    if (!used) continue;
-    moveIdx = i;
-    break; // переносим ровно одну такую ссылку (корпус: единственный случай)
-  }
-  if (moveIdx < 0) return;
-
-  const moved = fields[moveIdx];
-  const explicit = fields.slice(0, explicitCount);
-  const rest = fields.slice(explicitCount);
-  explicit.splice(moveIdx, 1);
-  explicit.push(moved);
-  grouping.groupFields = [...explicit, ...rest];
-  // explicitGroupCount не меняется — перестановка внутри явной части.
-}
-
 function keyOf(tableId: string, path: string): string {
   return tableId + '' + path;
-}
-
-/**
- * Ключ выражения для сравнения «уже в группировке»: его токены через пробел —
- * раскладка и комментарии не важны, литералы сравниваются байт-в-байт.
- * `undefined`, если лексер выражение не читает: такое выражение ни с чем не сравнимо.
- */
-function normExpr(s: string): string | undefined {
-  return codeTokens(s)?.map(t => t.text).join(' ');
-}
-
-/** `expr` is not grouped yet; one the lexer cannot read never qualifies. */
-function isNewGroupExpr(expr: string, grouped: ReadonlySet<string>): boolean {
-  const key = normExpr(expr);
-  return key !== undefined && !grouped.has(key);
-}
-
-/** `expr` содержит ссылку `rendered` (`Алиас.Путь`) как ЦЕЛУЮ токен-цепочку. */
-function containsFieldRef(expr: string, rendered: string): boolean {
-  const toks = codeTokens(expr);
-  return !!toks && fieldChainStarts(toks, rendered, true).length > 0;
-}
-
-/**
- * Замена ПРОСТОГО поля группировки `Алиас.Имя` выражением-CASE выборки `ВЫБОР…КОНЕЦ
- * КАК Имя` (с переносом в КОНЕЦ явной части СГРУППИРОВАТЬ ПО). Конструктор 1С требует,
- * чтобы каждое НЕагрегатное выражение выборки присутствовало в группировке; когда
- * разработчик сгруппировал по ЛИСТУ выражения (`Алиас.Имя`), а не по самому выражению,
- * 1С заменяет лист выражением. Сверено живым оракулом (validate_query) и ПОЛНЫМ
- * корпусом accept:oracle (17933).
- *
- * ГЛАВНЫЙ различитель (0 регрессий на полном корпусе 17933): ТОЛЬКО во ВЛОЖЕННОМ
- * подзапросе-источнике `ИЗ (ВЫБРАТЬ …)` — ВЕРХНЕУРОВНЕВУЮ группировку конструктор 1С
- * сохраняет дословно (top-level лист НЕ заменяется: ЗаполнениеОбъектов, РаспределениеЗатрат,
- * АвансовыйОтчет — все сверены полным accept:oracle), а группировку подзапроса реконструирует
- * из схемы. Доп. узкий гейт: E — `ВЫБОР…КОНЕЦ` БЕЗ агрегата (агрегатный `ВЫБОР…СУММА…` сохраняет
- * лист, НаборыСервер bsl_5), псевдоним == пути поля, лист-вхождение `Алиас.Имя`, есть поле-якорь
- * раньше, и E ЕЩЁ НЕ в группировке (дубль не плодим). Заменяется РОВНО ОДНО поле.
- */
-export function substituteGroupFieldWithSelectExpr(model: QueryModel, resolver?: MetadataResolver, isSubquery = false): void {
-  if (!resolver) return;
-  // ТОЛЬКО во вложенном подзапросе-источнике: верхнеуровневую группировку конструктор
-  // 1С сохраняет дословно (ЗаполнениеОбъектов/РаспределениеЗатрат/АвансовыйОтчет —
-  // top-level, лист НЕ заменяется), а в подзапросе — реконструирует из схемы.
-  if (!isSubquery) return;
-  const grouping = model.grouping;
-  if (!grouping || grouping.multiple) return;
-  const fields = grouping.groupFields;
-  if (fields.length < 2) return;
-  const explicitCount = grouping.explicitGroupCount ?? fields.length;
-  if (explicitCount < 2) return;
-
-  const aliasToTable = new Map<string, SelectedTable>();
-  for (const t of model.tables) aliasToTable.set(t.id, t);
-
-  const selectKeys = new Set<string>();
-  const exprCols: { alias: string; expression: string }[] = [];
-  for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
-    if (f.expression !== undefined) {
-      if (
-        f.func === undefined && f.alias &&
-        /^ВЫБОР(?![\p{L}\p{N}_])/iu.test(f.expression.trim()) &&
-        !hasAggregateCall(f.expression)
-      ) {
-        exprCols.push({ alias: f.alias, expression: f.expression });
-      }
-      continue;
-    }
-    if (f.func !== undefined || !f.tableId || !f.path) continue;
-    selectKeys.add(keyOf(f.tableId, f.path));
-  }
-  if (exprCols.length === 0) return;
-
-  // Выражения, УЖЕ присутствующие в группировке (нормализованные) — лист не заменяем.
-  // A grouped expression the lexer cannot read could not be compared: no substitution.
-  const groupedExprNorm = new Set<string>();
-  for (const g of fields) {
-    if (g.expression === undefined) continue;
-    const key = normExpr(g.expression);
-    if (key === undefined) return;
-    groupedExprNorm.add(key);
-  }
-
-  const anchorBefore: boolean[] = [];
-  let seenAnchor = false;
-  for (let i = 0; i < explicitCount && i < fields.length; i++) {
-    anchorBefore.push(seenAnchor);
-    const f = fields[i];
-    if (f.expression === undefined && f.tableId && f.path && selectKeys.has(keyOf(f.tableId, f.path))) {
-      seenAnchor = true;
-    }
-  }
-
-  for (let i = 0; i < explicitCount && i < fields.length; i++) {
-    const f = fields[i];
-    if (f.expression !== undefined || !f.tableId || !f.path) continue;
-    if (selectKeys.has(keyOf(f.tableId, f.path))) continue; // backs колонку — сохраняем
-    if (!anchorBefore[i]) continue;
-    const table = aliasToTable.get(f.tableId);
-    const nameUp = f.path.toUpperCase();
-    const alias = table ? defaultTableAlias(table) : f.tableId;
-    const rendered = alias + '.' + f.path;
-    const expr = exprCols.find(
-      e => e.alias.toUpperCase() === nameUp &&
-        containsFieldRef(e.expression, rendered) &&
-        isNewGroupExpr(e.expression, groupedExprNorm)
-    );
-    if (!expr) continue;
-    const explicit = fields.slice(0, explicitCount);
-    const rest = fields.slice(explicitCount);
-    explicit.splice(i, 1);
-    explicit.push({ tableId: '', path: '', expression: expr.expression });
-    grouping.groupFields = [...explicit, ...rest];
-    grouping.explicitGroupCount = explicitCount;
-    return; // ровно одна замена
-  }
 }
 
 /**
@@ -524,17 +278,6 @@ function extractFieldRefs(expr: string, aliasUp: Set<string>): Set<string> {
     }
   }
   return refs;
-}
-
-/**
- * Ссылка `rendered` стоит в РЕЗУЛЬТАТЕ выражения: непосредственно после `ТОГДА`/`ИНАЧЕ`,
- * как ЦЕЛАЯ токен-цепочка. Условие `КОГДА … rendered …` под предикат НЕ подпадает.
- */
-function derefInResultPosition(expr: string, rendered: string): boolean {
-  const toks = codeTokens(expr);
-  // An expression the lexer cannot read counts as a consumer: the reference stays.
-  if (!toks) return true;
-  return fieldChainStarts(toks, rendered, true).some(i => isWordToken(toks[i - 1], 'ТОГДА', 'ИНАЧЕ'));
 }
 
 /**
