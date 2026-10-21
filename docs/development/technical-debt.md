@@ -14,11 +14,11 @@ one place, ordered by priority.
 
 ## Open items
 
-19 items: P1 — 1, P2 — 13, P3 — 5. No item is P0.
+23 items: P1 — 1, P2 — 14, P3 — 8. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
-| V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 (34 probes, 96 forms on a live base) is not run yet; the only known gap is C36, deliberate. |
+| V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C36–C40 remain open. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
 | A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple literals and numeric arithmetic over constants/direct metadata fields; other compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
@@ -32,9 +32,13 @@ one place, ordered by priority.
 | UX-C6 | OPEN · P2 | Canvas UX | Advanced field-to-field JOIN drag, shortcuts and find/focus helpers. |
 | UX-C8 | OPEN · P2 | Canvas UX | Canvas cache refresh and lazy reference-field expansion parity. |
 | UX-C9 | OPEN · P2 | Canvas UX | Full positional UNION mapping for tabular/trailing projections. |
+| C40 | OPEN · P2 | Correctness | Scalar comparison subquery rejected by 8.3.15.1489 is allowed by Apply; modern-platform verdict pending. |
 | R11 | PARTIAL · P3 | Correctness | Three GROUP BY rewrites of the constructor-parity mode differ from СхемаЗапроса for some shapes; the Designer keeps GROUP BY as written. |
 | C34 | OPEN · P3 | Correctness | English names of calculation registers, charts of calculation types and sequences are not mapped (no such objects in SL_kza). |
 | C36 | OPEN · P3 | Correctness | The Designer keeps `*` where the 1C constructor expands it — deliberate until metadata completeness can be proven. |
+| C37 | OPEN · P3 | Correctness | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. |
+| C38 | OPEN · P3 | Correctness | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. |
+| C39 | OPEN · P3 | Correctness | English standard field names remain English in Russian output; platform canonical text translates them. |
 | V2 | OPEN · P3 · dev tooling | Verification | Optional external grammar oracle for development (never a verdict, not in CI or release). |
 | UX-C10 | OPEN · P3 · DEFERRED | Canvas UX | Global stable Query/Scope ID proposal. |
 
@@ -46,6 +50,10 @@ one place, ordered by priority.
 | R11 | PARTIAL · P3 | Three GROUP BY rewrites of the constructor-parity mode differ from СхемаЗапроса for some shapes; the Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
 | C34 | OPEN · P3 | English names of calculation registers, charts of calculation types and sequences are not mapped (no such objects in SL_kza). [Details](#c34-english-sdbl-leftovers). |
 | C36 | OPEN · P3 | The Designer keeps `*` where the 1C constructor expands it — deliberate until metadata completeness can be proven. [Details](#c36-kept--versus-the-constructor-canonical-text). |
+| C37 | OPEN · P3 | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
+| C38 | OPEN · P3 | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
+| C39 | OPEN · P3 | English standard field names remain English in Russian output; platform canonical text translates them. [Evidence](audits/v5-phase5-2026-10-21.md). |
+| C40 | OPEN · P2 | Scalar comparison subquery rejected by 8.3.15.1489 is allowed by Apply; modern-platform verdict pending. [Evidence](audits/v5-phase5-2026-10-21.md). |
 
 The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
 comment handling and recovery limits. No outstanding correctness item is P0.
@@ -155,6 +163,31 @@ The Designer keeps `*` over configuration tables where the 1C constructor's cano
 
 **Next boundary:** A completeness/provenance signal for the metadata (extensions loaded, dump freshness) before any automatic expansion or exact metadata-based UNION width validation — or accept the divergence and unknown width permanently.
 
+### C37–C40. Phase 5 findings
+
+**C37 / C38 / C39: OPEN · P3; C40: OPEN · P2.**
+[Audit and exact probes](audits/v5-phase5-2026-10-21.md), 2026-10-21,
+platform 8.3.15.1489 (build confirmed by the user).
+
+- **C37:** `PQ-join.kinds.3`: platform rewrites RIGHT JOIN as a swapped LEFT JOIN;
+  ours keeps RIGHT JOIN. Open, reopen and Apply pass; platform canonicalization
+  of our generated text equals canonicalization of the original.
+- **C38:** `PQ-totals.clause.2`: platform emits `ПЕРИОДАМИ(ДЕКАДА, , )`;
+  ours keeps `ПЕРИОДАМИ(ДЕКАДА)`. Same successful platform equivalence check.
+- **C39:** `PQ-language.english`: ours preserves qualified `Code`, `Description`,
+  `Ref`, `DeletionMark`; platform emits their Russian standard-field names.
+  Generated output remains platform-valid with identical platform canonical text.
+  Do not globally translate arbitrary identifiers: metadata/alias context matters.
+- **C40:** `PQ-expression.scalar-subquery`: platform rejects a SELECT used as the
+  right operand of `=`; ours opens and permits Apply in both measured metadata
+  modes. Text is preserved, not silently corrupted. The new test explicitly
+  expects failure of the desired refusal; a modern-platform reprobe is needed
+  before changing the accepted grammar. This is not covered by the old C5 cases.
+
+**Next boundary:** separate bounded fixes or explicit canonical-policy decisions
+for C37–C39; modern-version evidence and a bounded safety decision for C40.
+No production code or golden output changed in this audit.
+
 ## Architecture
 
 | ID | Status / priority | Remaining work and evidence | Next boundary |
@@ -185,7 +218,7 @@ partial, as recorded in the architecture table above.
 
 | ID | Status / priority | Summary |
 |---|---|---|
-| V5 | OPEN · P1 | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 (34 probes, 96 forms on a live base) is not run yet; the only known gap is C36, deliberate. [Details](#v5-grammar-parity-gate-query-core-v1). |
+| V5 | OPEN · P1 | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C36–C40 remain open. [Details](#v5-grammar-parity-gate-query-core-v1). |
 | V1 | PARTIAL · P2 | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. [Details](#v1-corpus-attestation). |
 | V3 | PARTIAL · P2 | The Apply gate never compares input and output semantics. [Details](#v3-apply-semantic-preservation). |
 | V2 | OPEN · P3 · dev tooling | Optional external grammar oracle for development (never a verdict, not in CI or release). [Details](#v2-external-grammar-oracle). |
@@ -199,9 +232,9 @@ It does not certify every UI action, live-platform equivalence or release readin
 
 Query Core v1 blocker, not a defect of the current product. [Grammar parity](grammar-parity.md) gate: 0 known platform-valid grammar gaps across the reviewed SDBL construct catalog, every entry with source/provenance and platform evidence where required, reported with coverage confidence. Core v1 = ordinary SDBL / Query Designer; DCS `{…}` is out of scope.
 
-The [catalog](../../test/fixtures/grammar-parity/catalog.jsonl) holds 153 entries (RP01–RP25 and 128 golden-attested forms, build unknown); known gaps: C36, a deliberate divergence (C2 fixed 2026-10-17, C24 fixed 2026-10-18). [Proposal](audits/sdbl-grammar-parity-proposal-2026-10-04.md).
+The [catalog](../../test/fixtures/grammar-parity/catalog.jsonl) holds 153 entries (RP01–RP25 and 128 golden-attested forms, build unknown); catalog gap: C36, a deliberate divergence (C2 fixed 2026-10-17, C24 fixed 2026-10-18). The Phase 5 evidence adds C37–C39 canonical differences and C40 safety evidence pending catalog promotion. [Proposal](audits/sdbl-grammar-parity-proposal-2026-10-04.md).
 
-**Next boundary:** Phase 3 review done: 70 areas = 35 covered + 34 pending + 1 out of scope; known gap C36, deliberate (C2 and C24 fixed). Phase 5: run the 34-probe queue (96 forms) on a live base, recording the platform build. Gates G2/G3/G5 run in the unit suite.
+**Next boundary:** Phase 3 inventory remains 70 areas = 35 covered + 34 pending + 1 out of scope. [Phase 5 partial audit](audits/v5-phase5-2026-10-21.md) records 88 adapted cases addressing 80 form IDs across 31 queued areas; this is not full coverage of those forms. 53 full platform verdicts have stable local round trips and platform-equivalent generated output. The original queue/catalog remain unchanged pending reviewed promotion. Finish modern-version and missing-metadata probes, resolve the incomplete characteristics probe, and review C36–C40 before claiming the gate. Gates G2/G3/G5 run in the unit suite.
 
 ### V1. Corpus attestation
 

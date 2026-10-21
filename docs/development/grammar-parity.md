@@ -13,8 +13,8 @@ reasoning and phases; the [ledger](technical-debt.md) (V5) owns status.
 The gate is a Query Core v1 blocker (ledger V5, P1): Core v1 cannot be
 declared until it holds with sufficient coverage confidence. It is not a claim
 that the current product is unsafe; concrete known gaps are separate C items
-(currently C36, a deliberate divergence; C2 and C24 were fixed on
-2026-10-17/18).
+(C36 is deliberate; the partial Phase 5 audit adds canonical differences C37–C39
+and the version-qualified safety finding C40; C2 and C24 were fixed on 2026-10-17/18).
 
 The claim is bounded: it never says the whole 1C grammar is proven, and it is
 always reported with coverage confidence:
@@ -256,6 +256,12 @@ forms are the exception: their examples keep the `*`.
   the task-by-performer table has a platform verdict.
 
 ### Probe queue
+
+The [2026-10-21 partial Phase 5 audit](audits/v5-phase5-2026-10-21.md) records
+88 adapted cases on 8.3.15.1489 (user-confirmed build), including 53 fully accepted
+cases whose generated output was independently revalidated. It does not complete
+the queue: modern-version/metadata coverage and catalog promotion remain pending.
+New findings are tracked as C37–C40; the known deliberate wildcard divergence is C36.
 
 [`probe-queue.jsonl`](../../test/fixtures/grammar-parity/probe-queue.jsonl)
 holds one executable probe per pending area (34 probes over 96 forms). The debt

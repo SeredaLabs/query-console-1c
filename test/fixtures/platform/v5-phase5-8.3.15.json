@@ -1,0 +1,3420 @@
+{
+  "platformBuild": "8.3.15.1489",
+  "platformBuildSource": "User confirmation in this session; MCP does not return build.",
+  "platformDate": "2026-10-21",
+  "platformMethod": "SmartLogistic DEV validate_query; no query execution.",
+  "repositoryHead": "31a312ba4a2689a12358386d46b763fecc40c03e",
+  "measurement": "tryOpenDesignerBatch → generateBatch → reopen → decideApply; constructor canonical measured separately. Each case/mode in a child process with 10-second timeout. corpus mode uses committed BSP metadata, NOT this live database.",
+  "cases": [
+    {
+      "id": "PQ-order.nested-tables",
+      "area": "order.nested-tables",
+      "forms": [
+        "order-nested-table"
+      ],
+      "text": "ВЫБРАТЬ\n\tД.Ссылка КАК Ссылка,\n\tД.Участники.(НомерСтроки КАК НомерСтроки) КАК Участники\nИЗ\n\tДокумент.Встреча КАК Д\nУПОРЯДОЧИТЬ ПО\n\tД.Участники.НомерСтроки УБЫВ,\n\tСсылка",
+      "adaptation": " Queue document Анкета/section Вопросы replaced with live Встреча/Участники.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Ссылка",
+            "Участники"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tД.Ссылка КАК Ссылка,\n\tД.Участники.(\n\t\tНомерСтроки КАК НомерСтроки\n\t) КАК Участники\nИЗ\n\tДокумент.Встреча КАК Д\n\nУПОРЯДОЧИТЬ ПО\n\tД.Участники.НомерСтроки УБЫВ,\n\tСсылка"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "cf6e156a8d0f6640130070dbca056a87af74471c3bfd756415a02083b2751cfc",
+          "canonicalSha256": "cf6e156a8d0f6640130070dbca056a87af74471c3bfd756415a02083b2751cfc"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "cf6e156a8d0f6640130070dbca056a87af74471c3bfd756415a02083b2751cfc",
+          "canonicalSha256": "cf6e156a8d0f6640130070dbca056a87af74471c3bfd756415a02083b2751cfc"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "cf6e156a8d0f6640130070dbca056a87af74471c3bfd756415a02083b2751cfc",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-select.tabular-section",
+      "area": "select.tabular-section",
+      "forms": [
+        "nested-all"
+      ],
+      "text": "ВЫБРАТЬ\n\tД.Ссылка КАК Ссылка,\n\tД.Участники.* КАК Участники\nИЗ\n\tДокумент.Встреча КАК Д",
+      "adaptation": " Queue document Анкета/section Вопросы replaced with live Встреча/Участники.",
+      "platform": {
+        "valid": false,
+        "error": "{(3, 16)}: Syntax error \"КАК\"\nД.Участники.* <<?>>КАК Участники\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": false,
+          "error": "Звёздочка \"Д.Участники.*\" не может иметь псевдоним \"Участники\""
+        },
+        "corpus": {
+          "open": false,
+          "error": "Звёздочка \"Д.Участники.*\" не может иметь псевдоним \"Участники\""
+        }
+      }
+    },
+    {
+      "id": "PQ-source.aliases",
+      "area": "source.aliases",
+      "forms": [
+        "source-alias-without-kak"
+      ],
+      "text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты Вал",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Код"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "c90f805350efa1250aaefc032ee028fd0dbc1135e6bb2c6c6da105ca8ba149be",
+          "canonicalSha256": "c90f805350efa1250aaefc032ee028fd0dbc1135e6bb2c6c6da105ca8ba149be"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "c90f805350efa1250aaefc032ee028fd0dbc1135e6bb2c6c6da105ca8ba149be",
+          "canonicalSha256": "c90f805350efa1250aaefc032ee028fd0dbc1135e6bb2c6c6da105ca8ba149be"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "c90f805350efa1250aaefc032ee028fd0dbc1135e6bb2c6c6da105ca8ba149be",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-source.filter-criterion",
+      "area": "source.filter-criterion",
+      "forms": [
+        "filter-criterion"
+      ],
+      "text": "ВЫБРАТЬ\n\tК.Ссылка КАК Ссылка\nИЗ\n\tКритерийОтбора.СвязанныеДокументы(&Значение) КАК К",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Ссылка"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tК.Ссылка КАК Ссылка\nИЗ\n\tКритерийОтбора.СвязанныеДокументы(&Значение) КАК К"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "e66d49b87c82a2d9fffd0b4f039442f0b23a289f57c4978e06dfe53ddbf3b448",
+          "canonicalSha256": "e66d49b87c82a2d9fffd0b4f039442f0b23a289f57c4978e06dfe53ddbf3b448"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "e66d49b87c82a2d9fffd0b4f039442f0b23a289f57c4978e06dfe53ddbf3b448",
+          "canonicalSha256": "e66d49b87c82a2d9fffd0b4f039442f0b23a289f57c4978e06dfe53ddbf3b448"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "e66d49b87c82a2d9fffd0b4f039442f0b23a289f57c4978e06dfe53ddbf3b448",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-join.kinds.1",
+      "area": "join.kinds",
+      "forms": [
+        "bare-join"
+      ],
+      "text": "ВЫБРАТЬ А.Код КАК Код ИЗ Справочник.Валюты КАК А СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО А.Ссылка = Б.Ссылка",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Код"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tА.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК А\n\t\tВНУТРЕННЕЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б\n\t\tПО А.Ссылка = Б.Ссылка"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b2395f5d5820b0c42f5e0ecf4689e62c6d39671adaa48707824ac09228d202f7",
+          "canonicalSha256": "b2395f5d5820b0c42f5e0ecf4689e62c6d39671adaa48707824ac09228d202f7"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b2395f5d5820b0c42f5e0ecf4689e62c6d39671adaa48707824ac09228d202f7",
+          "canonicalSha256": "b2395f5d5820b0c42f5e0ecf4689e62c6d39671adaa48707824ac09228d202f7"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "b2395f5d5820b0c42f5e0ecf4689e62c6d39671adaa48707824ac09228d202f7",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-join.kinds.2",
+      "area": "join.kinds",
+      "forms": [
+        "left-outer"
+      ],
+      "text": "ВЫБРАТЬ А.Код КАК Код ИЗ Справочник.Валюты КАК А ЛЕВОЕ ВНЕШНЕЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО А.Ссылка = Б.Ссылка",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Код"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tА.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК А\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б\n\t\tПО А.Ссылка = Б.Ссылка"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "4126393cc7142351f0bde979a0657336712b7b2a1826c7c63cc65d77444ad920",
+          "canonicalSha256": "4126393cc7142351f0bde979a0657336712b7b2a1826c7c63cc65d77444ad920"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "4126393cc7142351f0bde979a0657336712b7b2a1826c7c63cc65d77444ad920",
+          "canonicalSha256": "4126393cc7142351f0bde979a0657336712b7b2a1826c7c63cc65d77444ad920"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "4126393cc7142351f0bde979a0657336712b7b2a1826c7c63cc65d77444ad920",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-join.kinds.3",
+      "area": "join.kinds",
+      "forms": [
+        "right-outer"
+      ],
+      "text": "ВЫБРАТЬ А.Код КАК Код ИЗ Справочник.Валюты КАК А ПРАВОЕ ВНЕШНЕЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО А.Ссылка = Б.Ссылка",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Код"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tА.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Б\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК А\n\t\tПО А.Ссылка = Б.Ссылка"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b739bb7b140c024ee3b332b4b8ef8b27c2018f79b24648ebb6340d3c6085e8d0",
+          "canonicalSha256": "b739bb7b140c024ee3b332b4b8ef8b27c2018f79b24648ebb6340d3c6085e8d0"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b739bb7b140c024ee3b332b4b8ef8b27c2018f79b24648ebb6340d3c6085e8d0",
+          "canonicalSha256": "b739bb7b140c024ee3b332b4b8ef8b27c2018f79b24648ebb6340d3c6085e8d0"
+        }
+      },
+      "canonicalMatches": false,
+      "generatedText": "ВЫБРАТЬ\n\tА.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК А\n\t\tПРАВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б\n\t\tПО А.Ссылка = Б.Ссылка",
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "28abec2d1152cfa73ce6110bed1d05be4be85a8c2e879b451e10729d7c014aaf",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-join.kinds.4",
+      "area": "join.kinds",
+      "forms": [
+        "full-outer"
+      ],
+      "text": "ВЫБРАТЬ А.Код КАК Код ИЗ Справочник.Валюты КАК А ПОЛНОЕ ВНЕШНЕЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО А.Ссылка = Б.Ссылка",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Код"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tА.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК А\n\t\tПОЛНОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б\n\t\tПО А.Ссылка = Б.Ссылка"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "79c14eab3173949bc8f513e50df0f39664c8a9357c146fc4210b48c153c3dc18",
+          "canonicalSha256": "79c14eab3173949bc8f513e50df0f39664c8a9357c146fc4210b48c153c3dc18"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "79c14eab3173949bc8f513e50df0f39664c8a9357c146fc4210b48c153c3dc18",
+          "canonicalSha256": "79c14eab3173949bc8f513e50df0f39664c8a9357c146fc4210b48c153c3dc18"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "79c14eab3173949bc8f513e50df0f39664c8a9357c146fc4210b48c153c3dc18",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-join.structure",
+      "area": "join.structure",
+      "forms": [
+        "nested-on-order"
+      ],
+      "text": "ВЫБРАТЬ\n\tА.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК А\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б\n\t\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК В1\n\t\t\tПО Б.Ссылка = В1.Ссылка\n\t\tПО А.Ссылка = Б.Ссылка",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Код"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tА.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК А\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б\n\t\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК В1\n\t\t\tПО Б.Ссылка = В1.Ссылка\n\t\tПО А.Ссылка = Б.Ссылка"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "1cf47da5b72efc768d789bf225a7a0091590a2b7daf9e2c4b3a6339e37ab2e36",
+          "canonicalSha256": "1cf47da5b72efc768d789bf225a7a0091590a2b7daf9e2c4b3a6339e37ab2e36"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "1cf47da5b72efc768d789bf225a7a0091590a2b7daf9e2c4b3a6339e37ab2e36",
+          "canonicalSha256": "1cf47da5b72efc768d789bf225a7a0091590a2b7daf9e2c4b3a6339e37ab2e36"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "1cf47da5b72efc768d789bf225a7a0091590a2b7daf9e2c4b3a6339e37ab2e36",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-totals.clause.1",
+      "area": "totals.clause",
+      "forms": [
+        "periods"
+      ],
+      "text": "ВЫБРАТЬ\n\tК.Период КАК Период,\n\tК.Курс КАК Курс\nИЗ\n\tРегистрСведений.КурсыВалют КАК К\nИТОГИ\n\tСУММА(Курс)\nПО\n\tПериод ПЕРИОДАМИ(МЕСЯЦ, ДАТАВРЕМЯ(2024, 1, 1), ДАТАВРЕМЯ(2024, 12, 31))",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Период",
+            "Курс"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tК.Период КАК Период,\n\tК.Курс КАК Курс\nИЗ\n\tРегистрСведений.КурсыВалют КАК К\nИТОГИ\n\tСУММА(Курс)\nПО\n\tПериод ПЕРИОДАМИ(МЕСЯЦ, ДАТАВРЕМЯ(2024, 1, 1), ДАТАВРЕМЯ(2024, 12, 31))"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "0a12e2a9fd8a11cbbe5b6c263a60adf19907298bcf2c6b2e4240e08c34b16d5b",
+          "canonicalSha256": "0a12e2a9fd8a11cbbe5b6c263a60adf19907298bcf2c6b2e4240e08c34b16d5b"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "0a12e2a9fd8a11cbbe5b6c263a60adf19907298bcf2c6b2e4240e08c34b16d5b",
+          "canonicalSha256": "0a12e2a9fd8a11cbbe5b6c263a60adf19907298bcf2c6b2e4240e08c34b16d5b"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "0a12e2a9fd8a11cbbe5b6c263a60adf19907298bcf2c6b2e4240e08c34b16d5b",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-totals.clause.2",
+      "area": "totals.clause",
+      "forms": [
+        "periods"
+      ],
+      "text": "ВЫБРАТЬ\n\tК.Период КАК Период,\n\tК.Курс КАК Курс\nИЗ\n\tРегистрСведений.КурсыВалют КАК К\nИТОГИ\n\tСУММА(Курс)\nПО\n\tПериод ПЕРИОДАМИ(ДЕКАДА)",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Период",
+            "Курс"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tК.Период КАК Период,\n\tК.Курс КАК Курс\nИЗ\n\tРегистрСведений.КурсыВалют КАК К\nИТОГИ\n\tСУММА(Курс)\nПО\n\tПериод ПЕРИОДАМИ(ДЕКАДА, , )"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "0c8bee1d729041a0d95faa46f7257e3a56afb72ed57345b53ef0e18682142ae3",
+          "canonicalSha256": "0c8bee1d729041a0d95faa46f7257e3a56afb72ed57345b53ef0e18682142ae3"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "0c8bee1d729041a0d95faa46f7257e3a56afb72ed57345b53ef0e18682142ae3",
+          "canonicalSha256": "0c8bee1d729041a0d95faa46f7257e3a56afb72ed57345b53ef0e18682142ae3"
+        }
+      },
+      "canonicalMatches": false,
+      "generatedText": "ВЫБРАТЬ\n\tК.Период КАК Период,\n\tК.Курс КАК Курс\nИЗ\n\tРегистрСведений.КурсыВалют КАК К\nИТОГИ\n\tСУММА(Курс)\nПО\n\tПериод ПЕРИОДАМИ(ДЕКАДА)",
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "ff30b0ae81d6e33a969b453219c3ae734bbad2258c1b3744c2e4847a8db79023",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-package.index-by.1",
+      "area": "package.index-by",
+      "forms": [
+        "index-by-sets"
+      ],
+      "text": "ВЫБРАТЬ\n\tВал.Код КАК Код,\n\tВал.Наименование КАК Наименование\nПОМЕСТИТЬ ВТ1\nИЗ\n\tСправочник.Валюты КАК Вал\nИНДЕКСИРОВАТЬ ПО НАБОРАМ ((Код), (Код, Наименование))",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(7, 18)}: Syntax error\nИНДЕКСИРОВАТЬ ПО <<?>>НАБОРАМ ((Код), (Код, Наименование))\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "4d58cffdfba448926aa09dc2d4b9b30e6b3b9d146c41b886da29c3709bd94227",
+          "canonicalSha256": "4d58cffdfba448926aa09dc2d4b9b30e6b3b9d146c41b886da29c3709bd94227"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "4d58cffdfba448926aa09dc2d4b9b30e6b3b9d146c41b886da29c3709bd94227",
+          "canonicalSha256": "4d58cffdfba448926aa09dc2d4b9b30e6b3b9d146c41b886da29c3709bd94227"
+        }
+      }
+    },
+    {
+      "id": "PQ-package.index-by.2",
+      "area": "package.index-by",
+      "forms": [
+        "index-by-unique"
+      ],
+      "text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nПОМЕСТИТЬ ВТ2\nИЗ\n\tСправочник.Валюты КАК Вал\nИНДЕКСИРОВАТЬ ПО\n\tКод УНИКАЛЬНО",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(7, 6)}: Syntax error \"УНИКАЛЬНО\"\nКод <<?>>УНИКАЛЬНО\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": false,
+          "error": "Ошибка разбора 7:6 — после конца запроса остались нераспознанные данные (получено «УНИКАЛЬНО»)"
+        },
+        "corpus": {
+          "open": false,
+          "error": "Ошибка разбора 7:6 — после конца запроса остались нераспознанные данные (получено «УНИКАЛЬНО»)"
+        }
+      }
+    },
+    {
+      "id": "PQ-package.for-update.1",
+      "area": "package.for-update",
+      "forms": [
+        "for-update"
+      ],
+      "text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал\nДЛЯ ИЗМЕНЕНИЯ",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Код"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал\n\nДЛЯ ИЗМЕНЕНИЯ"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "40dc2f0e7d48365a6659e7b8f9db45c1f061889634ebe8942622817b40ea53a8",
+          "canonicalSha256": "40dc2f0e7d48365a6659e7b8f9db45c1f061889634ebe8942622817b40ea53a8"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "40dc2f0e7d48365a6659e7b8f9db45c1f061889634ebe8942622817b40ea53a8",
+          "canonicalSha256": "40dc2f0e7d48365a6659e7b8f9db45c1f061889634ebe8942622817b40ea53a8"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "40dc2f0e7d48365a6659e7b8f9db45c1f061889634ebe8942622817b40ea53a8",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-package.for-update.2",
+      "area": "package.for-update",
+      "forms": [
+        "for-update-of"
+      ],
+      "text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал\nДЛЯ ИЗМЕНЕНИЯ\n\tСправочник.Валюты",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Код"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал\n\nДЛЯ ИЗМЕНЕНИЯ\n\tСправочник.Валюты"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "504094f73eed4aba9f7e475472985600c9b3c75ac022ab831461456f07348b0e",
+          "canonicalSha256": "504094f73eed4aba9f7e475472985600c9b3c75ac022ab831461456f07348b0e"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "504094f73eed4aba9f7e475472985600c9b3c75ac022ab831461456f07348b0e",
+          "canonicalSha256": "504094f73eed4aba9f7e475472985600c9b3c75ac022ab831461456f07348b0e"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "504094f73eed4aba9f7e475472985600c9b3c75ac022ab831461456f07348b0e",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-order.autoorder.1",
+      "area": "order.autoorder",
+      "forms": [
+        "autoorder"
+      ],
+      "text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал\nАВТОУПОРЯДОЧИВАНИЕ",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Код"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал\nАВТОУПОРЯДОЧИВАНИЕ"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "54851a3515ba716b18e78ff3b852960682570e224cfcbbef01d2c7f26ba08d9b",
+          "canonicalSha256": "54851a3515ba716b18e78ff3b852960682570e224cfcbbef01d2c7f26ba08d9b"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "54851a3515ba716b18e78ff3b852960682570e224cfcbbef01d2c7f26ba08d9b",
+          "canonicalSha256": "54851a3515ba716b18e78ff3b852960682570e224cfcbbef01d2c7f26ba08d9b"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "54851a3515ba716b18e78ff3b852960682570e224cfcbbef01d2c7f26ba08d9b",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-order.autoorder.2",
+      "area": "order.autoorder",
+      "forms": [
+        "autoorder"
+      ],
+      "text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал\nУПОРЯДОЧИТЬ ПО\n\tКод\nАВТОУПОРЯДОЧИВАНИЕ",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Код"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал\n\nУПОРЯДОЧИТЬ ПО\n\tКод\nАВТОУПОРЯДОЧИВАНИЕ"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b23bfbe38531b5b51772da68029fb8d20ed964c248d33adefdadca7505175850",
+          "canonicalSha256": "b23bfbe38531b5b51772da68029fb8d20ed964c248d33adefdadca7505175850"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b23bfbe38531b5b51772da68029fb8d20ed964c248d33adefdadca7505175850",
+          "canonicalSha256": "b23bfbe38531b5b51772da68029fb8d20ed964c248d33adefdadca7505175850"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "b23bfbe38531b5b51772da68029fb8d20ed964c248d33adefdadca7505175850",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-select.fields-aliases",
+      "area": "select.fields-aliases",
+      "forms": [
+        "alias-without-kak"
+      ],
+      "text": "ВЫБРАТЬ\n\tВал.Код КодВалюты\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "КодВалюты"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК КодВалюты\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "3f6a0c469c30d58be3cdb111ecea64084f1ecbb873f2d2034414ebdeadf52889",
+          "canonicalSha256": "3f6a0c469c30d58be3cdb111ecea64084f1ecbb873f2d2034414ebdeadf52889"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "3f6a0c469c30d58be3cdb111ecea64084f1ecbb873f2d2034414ebdeadf52889",
+          "canonicalSha256": "3f6a0c469c30d58be3cdb111ecea64084f1ecbb873f2d2034414ebdeadf52889"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "3f6a0c469c30d58be3cdb111ecea64084f1ecbb873f2d2034414ebdeadf52889",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-select.empty-table",
+      "area": "select.empty-table",
+      "forms": [
+        "empty-table-empty-list"
+      ],
+      "text": "ВЫБРАТЬ\n\tВал.Ссылка КАК Ссылка,\n\tПУСТАЯТАБЛИЦА.() КАК Таблица\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Ссылка",
+            "Таблица"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tВал.Ссылка КАК Ссылка,\n\tПУСТАЯТАБЛИЦА.( КАК Поле1) КАК Таблица\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "a8564335ed4a49b56c374b9eb40d2cc15eb71f01107f16a7503251a57e19a719",
+          "canonicalSha256": "a8564335ed4a49b56c374b9eb40d2cc15eb71f01107f16a7503251a57e19a719"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "a8564335ed4a49b56c374b9eb40d2cc15eb71f01107f16a7503251a57e19a719",
+          "canonicalSha256": "a8564335ed4a49b56c374b9eb40d2cc15eb71f01107f16a7503251a57e19a719"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "a8564335ed4a49b56c374b9eb40d2cc15eb71f01107f16a7503251a57e19a719",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-group.by",
+      "area": "group.by",
+      "forms": [
+        "group-by-expression"
+      ],
+      "text": "ВЫБРАТЬ\n\tПОДСТРОКА(Вал.Наименование, 1, 3) КАК Префикс,\n\tКОЛИЧЕСТВО(*) КАК Количество\nИЗ\n\tСправочник.Валюты КАК Вал\nСГРУППИРОВАТЬ ПО\n\tПОДСТРОКА(Вал.Наименование, 1, 3)",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Префикс",
+            "Количество"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tПОДСТРОКА(Вал.Наименование, 1, 3) КАК Префикс,\n\tКОЛИЧЕСТВО(*) КАК Количество\nИЗ\n\tСправочник.Валюты КАК Вал\n\nСГРУППИРОВАТЬ ПО\n\tПОДСТРОКА(Вал.Наименование, 1, 3)"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "200985732a6a25472420126c262eed94e08d160ccb042f9c535ecd89bcdd6b47",
+          "canonicalSha256": "200985732a6a25472420126c262eed94e08d160ccb042f9c535ecd89bcdd6b47"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "200985732a6a25472420126c262eed94e08d160ccb042f9c535ecd89bcdd6b47",
+          "canonicalSha256": "200985732a6a25472420126c262eed94e08d160ccb042f9c535ecd89bcdd6b47"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "200985732a6a25472420126c262eed94e08d160ccb042f9c535ecd89bcdd6b47",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-group.grouping-sets.1",
+      "area": "group.grouping-sets",
+      "forms": [
+        "grouping-sets"
+      ],
+      "text": "ВЫБРАТЬ\n\tВал.Код КАК Код,\n\tВал.Наименование КАК Наименование,\n\tКОЛИЧЕСТВО(*) КАК Количество\nИЗ\n\tСправочник.Валюты КАК Вал\nСГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ ((Вал.Код), (Вал.Наименование))",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(7, 31)}: Syntax error \"НАБОРАМ\"\nСГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ <<?>>НАБОРАМ ((Вал.Код), (Вал.Наименование))\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "e47c1e8a01c64f41a0722c0c37be8355077eb37c3469a3ae90fd9a454229d3eb",
+          "canonicalSha256": "e47c1e8a01c64f41a0722c0c37be8355077eb37c3469a3ae90fd9a454229d3eb"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "e47c1e8a01c64f41a0722c0c37be8355077eb37c3469a3ae90fd9a454229d3eb",
+          "canonicalSha256": "e47c1e8a01c64f41a0722c0c37be8355077eb37c3469a3ae90fd9a454229d3eb"
+        }
+      }
+    },
+    {
+      "id": "PQ-group.grouping-sets.2",
+      "area": "group.grouping-sets",
+      "forms": [
+        "grouping-sets-all"
+      ],
+      "text": "ВЫБРАТЬ\n\tВал.Код КАК Код,\n\tКОЛИЧЕСТВО(*) КАК Количество\nИЗ\n\tСправочник.Валюты КАК Вал\nСГРУППИРОВАТЬ ВСЕ ПО ГРУППИРУЮЩИМ НАБОРАМ ((Вал.Код))",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(6, 15)}: Expression expected \"ПО\"\nСГРУППИРОВАТЬ <<?>>ВСЕ ПО ГРУППИРУЮЩИМ НАБОРАМ ((Вал.Код))\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": false,
+          "error": "Ошибка разбора 6:15 — ожидалось ключевое слово «ПО» (получено «ВСЕ»)"
+        },
+        "corpus": {
+          "open": false,
+          "error": "Ошибка разбора 6:15 — ожидалось ключевое слово «ПО» (получено «ВСЕ»)"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.string-functions.string-length",
+      "area": "expression.string-functions",
+      "forms": [
+        "string-length"
+      ],
+      "text": "ВЫБРАТЬ\n\tДЛИНАСТРОКИ(Вал.Наименование) КАК Ф1\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>ДЛИНАСТРОКИ(Вал.Наименование) КАК Ф1\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "96236a69dfe783c10ef904a95e8cbd8aab3bac5a73f78cc7d763bfb1172fce1f",
+          "canonicalSha256": "96236a69dfe783c10ef904a95e8cbd8aab3bac5a73f78cc7d763bfb1172fce1f"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "96236a69dfe783c10ef904a95e8cbd8aab3bac5a73f78cc7d763bfb1172fce1f",
+          "canonicalSha256": "96236a69dfe783c10ef904a95e8cbd8aab3bac5a73f78cc7d763bfb1172fce1f"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.string-functions.trim-l",
+      "area": "expression.string-functions",
+      "forms": [
+        "trim-l"
+      ],
+      "text": "ВЫБРАТЬ\n\tСОКРЛ(Вал.Наименование) КАК Ф2\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>СОКРЛ(Вал.Наименование) КАК Ф2\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "0cd882861d81639979db0be798ac4ddeff7e2e3ad40480555d8a2df02fead848",
+          "canonicalSha256": "0cd882861d81639979db0be798ac4ddeff7e2e3ad40480555d8a2df02fead848"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "0cd882861d81639979db0be798ac4ddeff7e2e3ad40480555d8a2df02fead848",
+          "canonicalSha256": "0cd882861d81639979db0be798ac4ddeff7e2e3ad40480555d8a2df02fead848"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.string-functions.trim-r",
+      "area": "expression.string-functions",
+      "forms": [
+        "trim-r"
+      ],
+      "text": "ВЫБРАТЬ\n\tСОКРП(Вал.Наименование) КАК Ф3\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>СОКРП(Вал.Наименование) КАК Ф3\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "d497b18dcbf1476ad71ac8d3e624cf54261394ab61580be15186582d5d3a7a47",
+          "canonicalSha256": "d497b18dcbf1476ad71ac8d3e624cf54261394ab61580be15186582d5d3a7a47"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "d497b18dcbf1476ad71ac8d3e624cf54261394ab61580be15186582d5d3a7a47",
+          "canonicalSha256": "d497b18dcbf1476ad71ac8d3e624cf54261394ab61580be15186582d5d3a7a47"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.string-functions.trim-all",
+      "area": "expression.string-functions",
+      "forms": [
+        "trim-all"
+      ],
+      "text": "ВЫБРАТЬ\n\tСОКРЛП(Вал.Наименование) КАК Ф4\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>СОКРЛП(Вал.Наименование) КАК Ф4\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "6466fdb1fd62bc75f46c8c9d93c1a231c9dcb64c75e670dbfdc00a964b7f1f07",
+          "canonicalSha256": "6466fdb1fd62bc75f46c8c9d93c1a231c9dcb64c75e670dbfdc00a964b7f1f07"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "6466fdb1fd62bc75f46c8c9d93c1a231c9dcb64c75e670dbfdc00a964b7f1f07",
+          "canonicalSha256": "6466fdb1fd62bc75f46c8c9d93c1a231c9dcb64c75e670dbfdc00a964b7f1f07"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.string-functions.left",
+      "area": "expression.string-functions",
+      "forms": [
+        "left"
+      ],
+      "text": "ВЫБРАТЬ\n\tЛЕВ(Вал.Наименование, 2) КАК Ф5\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>ЛЕВ(Вал.Наименование, 2) КАК Ф5\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "a8986303fddc1e87f345743a22525ea763632dc400acdb7eb580280e240e3ce5",
+          "canonicalSha256": "a8986303fddc1e87f345743a22525ea763632dc400acdb7eb580280e240e3ce5"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "a8986303fddc1e87f345743a22525ea763632dc400acdb7eb580280e240e3ce5",
+          "canonicalSha256": "a8986303fddc1e87f345743a22525ea763632dc400acdb7eb580280e240e3ce5"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.string-functions.right",
+      "area": "expression.string-functions",
+      "forms": [
+        "right"
+      ],
+      "text": "ВЫБРАТЬ\n\tПРАВ(Вал.Наименование, 2) КАК Ф6\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>ПРАВ(Вал.Наименование, 2) КАК Ф6\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "67a17635728ec0087e1e35dede2f67c92ea2a50f8faeb29af2f7ec71431a636a",
+          "canonicalSha256": "67a17635728ec0087e1e35dede2f67c92ea2a50f8faeb29af2f7ec71431a636a"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "67a17635728ec0087e1e35dede2f67c92ea2a50f8faeb29af2f7ec71431a636a",
+          "canonicalSha256": "67a17635728ec0087e1e35dede2f67c92ea2a50f8faeb29af2f7ec71431a636a"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.string-functions.str-find",
+      "area": "expression.string-functions",
+      "forms": [
+        "str-find"
+      ],
+      "text": "ВЫБРАТЬ\n\tСТРНАЙТИ(Вал.Наименование, \"а\") КАК Ф7\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>СТРНАЙТИ(Вал.Наименование, \"а\") КАК Ф7\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "794d399df94f419132594cc98c40ec1cfd48147ccbcbb99e578add88c721aca8",
+          "canonicalSha256": "794d399df94f419132594cc98c40ec1cfd48147ccbcbb99e578add88c721aca8"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "794d399df94f419132594cc98c40ec1cfd48147ccbcbb99e578add88c721aca8",
+          "canonicalSha256": "794d399df94f419132594cc98c40ec1cfd48147ccbcbb99e578add88c721aca8"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.string-functions.upper",
+      "area": "expression.string-functions",
+      "forms": [
+        "upper"
+      ],
+      "text": "ВЫБРАТЬ\n\tВРЕГ(Вал.Наименование) КАК Ф8\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>ВРЕГ(Вал.Наименование) КАК Ф8\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "458c8fb3f70443f74b4c40fd032b5e3ebb40397de4ca57bcaab6df3d94352eb7",
+          "canonicalSha256": "458c8fb3f70443f74b4c40fd032b5e3ebb40397de4ca57bcaab6df3d94352eb7"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "458c8fb3f70443f74b4c40fd032b5e3ebb40397de4ca57bcaab6df3d94352eb7",
+          "canonicalSha256": "458c8fb3f70443f74b4c40fd032b5e3ebb40397de4ca57bcaab6df3d94352eb7"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.string-functions.lower",
+      "area": "expression.string-functions",
+      "forms": [
+        "lower"
+      ],
+      "text": "ВЫБРАТЬ\n\tНРЕГ(Вал.Наименование) КАК Ф9\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>НРЕГ(Вал.Наименование) КАК Ф9\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "adcdd03572c8580e6385118f2be897e20f37c98c530b4359a0427ada8021a0d2",
+          "canonicalSha256": "adcdd03572c8580e6385118f2be897e20f37c98c530b4359a0427ada8021a0d2"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "adcdd03572c8580e6385118f2be897e20f37c98c530b4359a0427ada8021a0d2",
+          "canonicalSha256": "adcdd03572c8580e6385118f2be897e20f37c98c530b4359a0427ada8021a0d2"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.string-functions.str-replace",
+      "area": "expression.string-functions",
+      "forms": [
+        "str-replace"
+      ],
+      "text": "ВЫБРАТЬ\n\tСТРЗАМЕНИТЬ(Вал.Наименование, \"а\", \"б\") КАК Ф10\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>СТРЗАМЕНИТЬ(Вал.Наименование, \"а\", \"б\") КАК Ф10\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "2e8c10405da08eb480120ea9715934055d2182e8c5a19aa12143df03081c2ba1",
+          "canonicalSha256": "2e8c10405da08eb480120ea9715934055d2182e8c5a19aa12143df03081c2ba1"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "2e8c10405da08eb480120ea9715934055d2182e8c5a19aa12143df03081c2ba1",
+          "canonicalSha256": "2e8c10405da08eb480120ea9715934055d2182e8c5a19aa12143df03081c2ba1"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.date-functions.day-of-year",
+      "area": "expression.date-functions",
+      "forms": [
+        "day-of-year"
+      ],
+      "text": "ВЫБРАТЬ\n\tДЕНЬГОДА(К.Период) КАК Ф1\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Ф1"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tДЕНЬГОДА(К.Период) КАК Ф1\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "3c7d153a0d830f32f35e5c3f23229efd1fb8d36e25b99116eb0c5024f9c0ad61",
+          "canonicalSha256": "3c7d153a0d830f32f35e5c3f23229efd1fb8d36e25b99116eb0c5024f9c0ad61"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "3c7d153a0d830f32f35e5c3f23229efd1fb8d36e25b99116eb0c5024f9c0ad61",
+          "canonicalSha256": "3c7d153a0d830f32f35e5c3f23229efd1fb8d36e25b99116eb0c5024f9c0ad61"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "3c7d153a0d830f32f35e5c3f23229efd1fb8d36e25b99116eb0c5024f9c0ad61",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-expression.date-functions.day",
+      "area": "expression.date-functions",
+      "forms": [
+        "day"
+      ],
+      "text": "ВЫБРАТЬ\n\tДЕНЬ(К.Период) КАК Ф2\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Ф2"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tДЕНЬ(К.Период) КАК Ф2\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "e40da7907705058fb1eb07e1911b9d95e3397ff69a8e5fc8a86fed779cabaf8a",
+          "canonicalSha256": "e40da7907705058fb1eb07e1911b9d95e3397ff69a8e5fc8a86fed779cabaf8a"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "e40da7907705058fb1eb07e1911b9d95e3397ff69a8e5fc8a86fed779cabaf8a",
+          "canonicalSha256": "e40da7907705058fb1eb07e1911b9d95e3397ff69a8e5fc8a86fed779cabaf8a"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "e40da7907705058fb1eb07e1911b9d95e3397ff69a8e5fc8a86fed779cabaf8a",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-expression.date-functions.week",
+      "area": "expression.date-functions",
+      "forms": [
+        "week"
+      ],
+      "text": "ВЫБРАТЬ\n\tНЕДЕЛЯ(К.Период) КАК Ф3\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Ф3"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tНЕДЕЛЯ(К.Период) КАК Ф3\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "953f0ddb9395115240e34e40ba4416203f42851d714845cac1d7d636b329e15d",
+          "canonicalSha256": "953f0ddb9395115240e34e40ba4416203f42851d714845cac1d7d636b329e15d"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "953f0ddb9395115240e34e40ba4416203f42851d714845cac1d7d636b329e15d",
+          "canonicalSha256": "953f0ddb9395115240e34e40ba4416203f42851d714845cac1d7d636b329e15d"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "953f0ddb9395115240e34e40ba4416203f42851d714845cac1d7d636b329e15d",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-expression.date-functions.hour",
+      "area": "expression.date-functions",
+      "forms": [
+        "hour"
+      ],
+      "text": "ВЫБРАТЬ\n\tЧАС(К.Период) КАК Ф4\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Ф4"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tЧАС(К.Период) КАК Ф4\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "d6a05fbe80e5dc6299da74c1fa73671e2cd3db7d0a496ec54060f4b2c1925a74",
+          "canonicalSha256": "d6a05fbe80e5dc6299da74c1fa73671e2cd3db7d0a496ec54060f4b2c1925a74"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "d6a05fbe80e5dc6299da74c1fa73671e2cd3db7d0a496ec54060f4b2c1925a74",
+          "canonicalSha256": "d6a05fbe80e5dc6299da74c1fa73671e2cd3db7d0a496ec54060f4b2c1925a74"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "d6a05fbe80e5dc6299da74c1fa73671e2cd3db7d0a496ec54060f4b2c1925a74",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-expression.date-functions.minute",
+      "area": "expression.date-functions",
+      "forms": [
+        "minute"
+      ],
+      "text": "ВЫБРАТЬ\n\tМИНУТА(К.Период) КАК Ф5\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Ф5"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tМИНУТА(К.Период) КАК Ф5\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "e81cb692dc67dea33efb57d05042968ecfc1187f32891fabb2b27ce247f58b1d",
+          "canonicalSha256": "e81cb692dc67dea33efb57d05042968ecfc1187f32891fabb2b27ce247f58b1d"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "e81cb692dc67dea33efb57d05042968ecfc1187f32891fabb2b27ce247f58b1d",
+          "canonicalSha256": "e81cb692dc67dea33efb57d05042968ecfc1187f32891fabb2b27ce247f58b1d"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "e81cb692dc67dea33efb57d05042968ecfc1187f32891fabb2b27ce247f58b1d",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-expression.date-functions.second",
+      "area": "expression.date-functions",
+      "forms": [
+        "second"
+      ],
+      "text": "ВЫБРАТЬ\n\tСЕКУНДА(К.Период) КАК Ф6\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Ф6"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tСЕКУНДА(К.Период) КАК Ф6\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "42581897171973362e93e643482a28224bbd8005481416b304f08f15c9757861",
+          "canonicalSha256": "42581897171973362e93e643482a28224bbd8005481416b304f08f15c9757861"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "42581897171973362e93e643482a28224bbd8005481416b304f08f15c9757861",
+          "canonicalSha256": "42581897171973362e93e643482a28224bbd8005481416b304f08f15c9757861"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "42581897171973362e93e643482a28224bbd8005481416b304f08f15c9757861",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-expression.math-functions.acos",
+      "area": "expression.math-functions",
+      "forms": [
+        "acos"
+      ],
+      "text": "ВЫБРАТЬ\n\tACOS(0.5) КАК Ф1\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>ACOS(0.5) КАК Ф1\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "974297d88011b9046c3e7e7d458e0092f3d7ee479bbbefbd7e084a30588ccc67",
+          "canonicalSha256": "974297d88011b9046c3e7e7d458e0092f3d7ee479bbbefbd7e084a30588ccc67"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "974297d88011b9046c3e7e7d458e0092f3d7ee479bbbefbd7e084a30588ccc67",
+          "canonicalSha256": "974297d88011b9046c3e7e7d458e0092f3d7ee479bbbefbd7e084a30588ccc67"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.math-functions.asin",
+      "area": "expression.math-functions",
+      "forms": [
+        "asin"
+      ],
+      "text": "ВЫБРАТЬ\n\tASIN(0.5) КАК Ф2\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>ASIN(0.5) КАК Ф2\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "766da4f19e2e22ac766dcd5bbf977c35cdac1242c71fcec9ba6f82ec120d267d",
+          "canonicalSha256": "766da4f19e2e22ac766dcd5bbf977c35cdac1242c71fcec9ba6f82ec120d267d"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "766da4f19e2e22ac766dcd5bbf977c35cdac1242c71fcec9ba6f82ec120d267d",
+          "canonicalSha256": "766da4f19e2e22ac766dcd5bbf977c35cdac1242c71fcec9ba6f82ec120d267d"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.math-functions.atan",
+      "area": "expression.math-functions",
+      "forms": [
+        "atan"
+      ],
+      "text": "ВЫБРАТЬ\n\tATAN(1) КАК Ф3\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>ATAN(1) КАК Ф3\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "540059195b226e30c0dbe6b50ac62bbd5931222f3c3a883e9d36034faacf9fd6",
+          "canonicalSha256": "540059195b226e30c0dbe6b50ac62bbd5931222f3c3a883e9d36034faacf9fd6"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "540059195b226e30c0dbe6b50ac62bbd5931222f3c3a883e9d36034faacf9fd6",
+          "canonicalSha256": "540059195b226e30c0dbe6b50ac62bbd5931222f3c3a883e9d36034faacf9fd6"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.math-functions.cos",
+      "area": "expression.math-functions",
+      "forms": [
+        "cos"
+      ],
+      "text": "ВЫБРАТЬ\n\tCOS(0) КАК Ф4\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>COS(0) КАК Ф4\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "a84c09fa2f11ef3e8eaf206b11b40387ac4eaaf66231b3faac6d80acf7af4b77",
+          "canonicalSha256": "a84c09fa2f11ef3e8eaf206b11b40387ac4eaaf66231b3faac6d80acf7af4b77"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "a84c09fa2f11ef3e8eaf206b11b40387ac4eaaf66231b3faac6d80acf7af4b77",
+          "canonicalSha256": "a84c09fa2f11ef3e8eaf206b11b40387ac4eaaf66231b3faac6d80acf7af4b77"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.math-functions.sin",
+      "area": "expression.math-functions",
+      "forms": [
+        "sin"
+      ],
+      "text": "ВЫБРАТЬ\n\tSIN(0) КАК Ф5\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>SIN(0) КАК Ф5\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "abcb885247f42738370fb6a48f73a1e609c2e230cc204d5f8ac8336db2155ec4",
+          "canonicalSha256": "abcb885247f42738370fb6a48f73a1e609c2e230cc204d5f8ac8336db2155ec4"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "abcb885247f42738370fb6a48f73a1e609c2e230cc204d5f8ac8336db2155ec4",
+          "canonicalSha256": "abcb885247f42738370fb6a48f73a1e609c2e230cc204d5f8ac8336db2155ec4"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.math-functions.exp",
+      "area": "expression.math-functions",
+      "forms": [
+        "exp"
+      ],
+      "text": "ВЫБРАТЬ\n\tEXP(1) КАК Ф6\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>EXP(1) КАК Ф6\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "8379b14ab2b693be5b30f4fadd86a80db122db4ec6c4e154a541dc04622d1c8f",
+          "canonicalSha256": "8379b14ab2b693be5b30f4fadd86a80db122db4ec6c4e154a541dc04622d1c8f"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "8379b14ab2b693be5b30f4fadd86a80db122db4ec6c4e154a541dc04622d1c8f",
+          "canonicalSha256": "8379b14ab2b693be5b30f4fadd86a80db122db4ec6c4e154a541dc04622d1c8f"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.math-functions.log",
+      "area": "expression.math-functions",
+      "forms": [
+        "log"
+      ],
+      "text": "ВЫБРАТЬ\n\tLOG(10) КАК Ф7\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>LOG(10) КАК Ф7\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "fb899c5db03e01636392d26efcff067116eec8fb2869f8bd78b5c04f6576c8e9",
+          "canonicalSha256": "fb899c5db03e01636392d26efcff067116eec8fb2869f8bd78b5c04f6576c8e9"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "fb899c5db03e01636392d26efcff067116eec8fb2869f8bd78b5c04f6576c8e9",
+          "canonicalSha256": "fb899c5db03e01636392d26efcff067116eec8fb2869f8bd78b5c04f6576c8e9"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.math-functions.log10",
+      "area": "expression.math-functions",
+      "forms": [
+        "log10"
+      ],
+      "text": "ВЫБРАТЬ\n\tLOG10(100) КАК Ф8\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>LOG10(100) КАК Ф8\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "a6e19570bd8fc4c3ccefa73a26af43cac00e77a56da39b0fc24050eaa98f05a7",
+          "canonicalSha256": "a6e19570bd8fc4c3ccefa73a26af43cac00e77a56da39b0fc24050eaa98f05a7"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "a6e19570bd8fc4c3ccefa73a26af43cac00e77a56da39b0fc24050eaa98f05a7",
+          "canonicalSha256": "a6e19570bd8fc4c3ccefa73a26af43cac00e77a56da39b0fc24050eaa98f05a7"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.math-functions.pow",
+      "area": "expression.math-functions",
+      "forms": [
+        "pow"
+      ],
+      "text": "ВЫБРАТЬ\n\tPOW(2, 3) КАК Ф9\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>POW(2, 3) КАК Ф9\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "6f12c1659b790ef214c416194b0ef58712a24d879e90d7b1441b983c1fbe862d",
+          "canonicalSha256": "6f12c1659b790ef214c416194b0ef58712a24d879e90d7b1441b983c1fbe862d"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "6f12c1659b790ef214c416194b0ef58712a24d879e90d7b1441b983c1fbe862d",
+          "canonicalSha256": "6f12c1659b790ef214c416194b0ef58712a24d879e90d7b1441b983c1fbe862d"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.math-functions.sqrt",
+      "area": "expression.math-functions",
+      "forms": [
+        "sqrt"
+      ],
+      "text": "ВЫБРАТЬ\n\tSQRT(4) КАК Ф10\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>SQRT(4) КАК Ф10\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "9b4d4c4274f1422b0938616a34c6f100caee1f77fef268dcef3933ea639996a6",
+          "canonicalSha256": "9b4d4c4274f1422b0938616a34c6f100caee1f77fef268dcef3933ea639996a6"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "9b4d4c4274f1422b0938616a34c6f100caee1f77fef268dcef3933ea639996a6",
+          "canonicalSha256": "9b4d4c4274f1422b0938616a34c6f100caee1f77fef268dcef3933ea639996a6"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.math-functions.round",
+      "area": "expression.math-functions",
+      "forms": [
+        "round"
+      ],
+      "text": "ВЫБРАТЬ\n\tОКР(К.Курс, 2) КАК Ф11\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>ОКР(К.Курс, 2) КАК Ф11\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "991d37bd239b78f92bd4f3496d062b0696c872b577b15b1f6170b6a8a8183d66",
+          "canonicalSha256": "991d37bd239b78f92bd4f3496d062b0696c872b577b15b1f6170b6a8a8183d66"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "991d37bd239b78f92bd4f3496d062b0696c872b577b15b1f6170b6a8a8183d66",
+          "canonicalSha256": "991d37bd239b78f92bd4f3496d062b0696c872b577b15b1f6170b6a8a8183d66"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.math-functions.int",
+      "area": "expression.math-functions",
+      "forms": [
+        "int"
+      ],
+      "text": "ВЫБРАТЬ\n\tЦЕЛ(К.Курс) КАК Ф12\nИЗ\n\tРегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>ЦЕЛ(К.Курс) КАК Ф12\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b64630829778abfee39a3938ad8b7efd817970d96f864bc479a90ee45852f6da",
+          "canonicalSha256": "b64630829778abfee39a3938ad8b7efd817970d96f864bc479a90ee45852f6da"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b64630829778abfee39a3938ad8b7efd817970d96f864bc479a90ee45852f6da",
+          "canonicalSha256": "b64630829778abfee39a3938ad8b7efd817970d96f864bc479a90ee45852f6da"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.value-functions.1",
+      "area": "expression.value-functions",
+      "forms": [
+        "record-auto-number"
+      ],
+      "text": "ВЫБРАТЬ\n\tАВТОНОМЕРЗАПИСИ() КАК Номер,\n\tВал.Ссылка КАК Ссылка\nПОМЕСТИТЬ ВТ\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Номер",
+            "Ссылка"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tАВТОНОМЕРЗАПИСИ() КАК Номер,\n\tВал.Ссылка КАК Ссылка\nПОМЕСТИТЬ ВТ\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "bf2328ad7543bd7031b4ccab69b0eaa13f03c47ecb1cf9356c249f17e4c64677",
+          "canonicalSha256": "bf2328ad7543bd7031b4ccab69b0eaa13f03c47ecb1cf9356c249f17e4c64677"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "bf2328ad7543bd7031b4ccab69b0eaa13f03c47ecb1cf9356c249f17e4c64677",
+          "canonicalSha256": "bf2328ad7543bd7031b4ccab69b0eaa13f03c47ecb1cf9356c249f17e4c64677"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "bf2328ad7543bd7031b4ccab69b0eaa13f03c47ecb1cf9356c249f17e4c64677",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-expression.value-functions.2",
+      "area": "expression.value-functions",
+      "forms": [
+        "unique-identifier"
+      ],
+      "text": "ВЫБРАТЬ\n\tУНИКАЛЬНЫЙИДЕНТИФИКАТОР(Вал.Ссылка) КАК Ид\nИЗ\n\tСправочник.Валюты КАК Вал",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 2)}: Syntax error\n<<?>>УНИКАЛЬНЫЙИДЕНТИФИКАТОР(Вал.Ссылка) КАК Ид\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "a178ed98ff3986ffd6ba82cddd4568212d8661a4352de8f8fd7afebc514a6fc7",
+          "canonicalSha256": "a178ed98ff3986ffd6ba82cddd4568212d8661a4352de8f8fd7afebc514a6fc7"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "a178ed98ff3986ffd6ba82cddd4568212d8661a4352de8f8fd7afebc514a6fc7",
+          "canonicalSha256": "a178ed98ff3986ffd6ba82cddd4568212d8661a4352de8f8fd7afebc514a6fc7"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.grouped-by",
+      "area": "expression.grouped-by",
+      "forms": [
+        "grouped-by"
+      ],
+      "text": "ВЫБРАТЬ\n\tВал.Код КАК Код,\n\tСГРУППИРОВАНОПО(Вал.Код) КАК ПоКоду,\n\tКОЛИЧЕСТВО(*) КАК Количество\nИЗ\n\tСправочник.Валюты КАК Вал\nСГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ ((Вал.Код), ())",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(7, 31)}: Syntax error \"НАБОРАМ\"\nСГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ <<?>>НАБОРАМ ((Вал.Код), ())\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": false,
+          "error": "Ошибка разбора 7:52 — ожидалась ссылка на поле группировки (получено «)»)"
+        },
+        "corpus": {
+          "open": false,
+          "error": "Ошибка разбора 7:52 — ожидалась ссылка на поле группировки (получено «)»)"
+        }
+      }
+    },
+    {
+      "id": "PQ-expression.scalar-subquery",
+      "area": "expression.scalar-subquery",
+      "forms": [
+        "scalar-subquery-condition"
+      ],
+      "text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал\nГДЕ\n\tВал.Ссылка = (ВЫБРАТЬ ПЕРВЫЕ 1 Б.Ссылка ИЗ Справочник.Валюты КАК Б)",
+      "adaptation": "Reserved alias В replaced with Вал.",
+      "platform": {
+        "valid": false,
+        "error": "{(6, 16)}: Syntax error \"ВЫБРАТЬ\"\nВал.Ссылка = (<<?>>ВЫБРАТЬ ПЕРВЫЕ 1 Б.Ссылка ИЗ Справочник.Валюты КАК Б)\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "2f2e14f059bb23efd2409e4f0558980a111c3a7caf2cad8fda6fdf36241cd1e3",
+          "canonicalSha256": "2f2e14f059bb23efd2409e4f0558980a111c3a7caf2cad8fda6fdf36241cd1e3"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "2f2e14f059bb23efd2409e4f0558980a111c3a7caf2cad8fda6fdf36241cd1e3",
+          "canonicalSha256": "2f2e14f059bb23efd2409e4f0558980a111c3a7caf2cad8fda6fdf36241cd1e3"
+        }
+      }
+    },
+    {
+      "id": "PQ-keyword.spelling",
+      "area": "keyword.spelling",
+      "forms": [
+        "lowercase"
+      ],
+      "text": "выбрать первые 1\n\tв1.Код как Код\nиз\n\tСправочник.Валюты как в1\nгде\n\tв1.Код <> \"\" И в1.ПометкаУдаления = ложь\nупорядочить по\n\tКод убыв",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Код"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ ПЕРВЫЕ 1\n\tв1.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК в1\nГДЕ\n\tв1.Код <> \"\"\n\tИ в1.ПометкаУдаления = ЛОЖЬ\n\nУПОРЯДОЧИТЬ ПО\n\tКод УБЫВ"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "86697bc7c84454f461ff051a19281118bb5a2ddc1b633e13469adabe55a2f3f3",
+          "canonicalSha256": "86697bc7c84454f461ff051a19281118bb5a2ddc1b633e13469adabe55a2f3f3"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "86697bc7c84454f461ff051a19281118bb5a2ddc1b633e13469adabe55a2f3f3",
+          "canonicalSha256": "86697bc7c84454f461ff051a19281118bb5a2ddc1b633e13469adabe55a2f3f3"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "86697bc7c84454f461ff051a19281118bb5a2ddc1b633e13469adabe55a2f3f3",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-language.english",
+      "area": "language.english",
+      "forms": [
+        "english-full-table"
+      ],
+      "text": "SELECT ALLOWED DISTINCT TOP 10\n\tV.Code AS Code,\n\tCASE WHEN V.Code LIKE \"1%\" ESCAPE \"~\" THEN TRUE ELSE FALSE END AS F1,\n\tISNULL(V.Description, \"\") AS F2,\n\tSUBSTRING(V.Description, 1, 2) AS F3,\n\tCAST(V.Code AS STRING(10)) AS F4,\n\tVALUETYPE(V.Ref) AS F5,\n\tPRESENTATION(V.Ref) AS F6\nINTO TT\nFROM\n\tCatalog.Валюты AS V\n\t\tLEFT JOIN Catalog.Валюты AS W\n\t\tON V.Ref = W.Ref\nWHERE\n\tV.Ref IN HIERARCHY (&List)\n\tAND NOT V.DeletionMark\n\tAND V.Code BETWEEN \"0\" AND \"9\"\n\tAND V.Ref REFS Catalog.Валюты\n\tAND W.Ref IS NOT NULL\nINDEX BY\n\tCode\n;\nSELECT\n\tT.Code AS Code,\n\tCOUNT(*) AS N\nFROM\n\tTT AS T\nGROUP BY\n\tT.Code\nHAVING\n\tCOUNT(*) > 0\nUNION ALL\nSELECT\n\t\"\",\n\t0\nORDER BY\n\tCode DESC\nAUTOORDER\nTOTALS\n\tSUM(N)\nBY\n\tOVERALL\n;\nDROP TT",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Code",
+            "F1",
+            "F2",
+            "F3",
+            "F4",
+            "F5",
+            "F6"
+          ],
+          [
+            "Code",
+            "N"
+          ],
+          []
+        ],
+        "query_text": "ВЫБРАТЬ РАЗРЕШЕННЫЕ РАЗЛИЧНЫЕ ПЕРВЫЕ 10\n\tV.Код КАК Code,\n\tВЫБОР\n\t\tКОГДА V.Код ПОДОБНО \"1%\" СПЕЦСИМВОЛ \"~\"\n\t\t\tТОГДА ИСТИНА\n\t\tИНАЧЕ ЛОЖЬ\n\tКОНЕЦ КАК F1,\n\tЕСТЬNULL(V.Наименование, \"\") КАК F2,\n\tПОДСТРОКА(V.Наименование, 1, 2) КАК F3,\n\tВЫРАЗИТЬ(V.Код КАК СТРОКА(10)) КАК F4,\n\tТИПЗНАЧЕНИЯ(V.Ссылка) КАК F5,\n\tПРЕДСТАВЛЕНИЕ(V.Ссылка) КАК F6\nПОМЕСТИТЬ TT\nИЗ\n\tСправочник.Валюты КАК V\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК W\n\t\tПО V.Ссылка = W.Ссылка\nГДЕ\n\tV.Ссылка В ИЕРАРХИИ(&List)\n\tИ НЕ V.ПометкаУдаления\n\tИ V.Код МЕЖДУ \"0\" И \"9\"\n\tИ V.Ссылка ССЫЛКА Справочник.Валюты\n\tИ W.Ссылка ЕСТЬ НЕ NULL \n\nИНДЕКСИРОВАТЬ ПО\n\tCode\n;\n\n////////////////////////////////////////////////////////////////////////////////\nВЫБРАТЬ\n\tT.Code КАК Code,\n\tКОЛИЧЕСТВО(*) КАК N\nИЗ\n\tTT КАК T\n\nСГРУППИРОВАТЬ ПО\n\tT.Code\n\nИМЕЮЩИЕ\n\tКОЛИЧЕСТВО(*) > 0\n\nОБЪЕДИНИТЬ ВСЕ\n\nВЫБРАТЬ\n\t\"\",\n\t0\n\nУПОРЯДОЧИТЬ ПО\n\tCode УБЫВ\nИТОГИ\n\tСУММА(N)\nПО\n\tОБЩИЕ\nАВТОУПОРЯДОЧИВАНИЕ\n;\n\n////////////////////////////////////////////////////////////////////////////////\nУНИЧТОЖИТЬ TT"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "defa40dbcef507df70cdff54b36357336ed40bd3fd8f2019d95d99b3f4c62532",
+          "canonicalSha256": "defa40dbcef507df70cdff54b36357336ed40bd3fd8f2019d95d99b3f4c62532"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "defa40dbcef507df70cdff54b36357336ed40bd3fd8f2019d95d99b3f4c62532",
+          "canonicalSha256": "defa40dbcef507df70cdff54b36357336ed40bd3fd8f2019d95d99b3f4c62532"
+        }
+      },
+      "canonicalMatches": false,
+      "generatedText": "ВЫБРАТЬ РАЗРЕШЕННЫЕ РАЗЛИЧНЫЕ ПЕРВЫЕ 10\n\tV.Code КАК Code,\n\tВЫБОР\n\t\tКОГДА V.Code ПОДОБНО \"1%\" СПЕЦСИМВОЛ \"~\"\n\t\t\tТОГДА ИСТИНА\n\t\tИНАЧЕ ЛОЖЬ\n\tКОНЕЦ КАК F1,\n\tЕСТЬNULL(V.Description, \"\") КАК F2,\n\tПОДСТРОКА(V.Description, 1, 2) КАК F3,\n\tВЫРАЗИТЬ(V.Code КАК СТРОКА(10)) КАК F4,\n\tТИПЗНАЧЕНИЯ(V.Ref) КАК F5,\n\tПРЕДСТАВЛЕНИЕ(V.Ref) КАК F6\nПОМЕСТИТЬ TT\nИЗ\n\tСправочник.Валюты КАК V\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК W\n\t\tПО V.Ref = W.Ref\nГДЕ\n\tV.Ref В ИЕРАРХИИ(&List)\n\tИ НЕ V.DeletionMark\n\tИ V.Code МЕЖДУ \"0\" И \"9\"\n\tИ V.Ref ССЫЛКА Справочник.Валюты\n\tИ W.Ref ЕСТЬ НЕ NULL \n\nИНДЕКСИРОВАТЬ ПО\n\tCode\n;\n\n////////////////////////////////////////////////////////////////////////////////\nВЫБРАТЬ\n\tT.Code КАК Code,\n\tКОЛИЧЕСТВО(*) КАК N\nИЗ\n\tTT КАК T\n\nСГРУППИРОВАТЬ ПО\n\tT.Code\n\nИМЕЮЩИЕ\n\tКОЛИЧЕСТВО(*) > 0\n\nОБЪЕДИНИТЬ ВСЕ\n\nВЫБРАТЬ\n\t\"\",\n\t0\n\nУПОРЯДОЧИТЬ ПО\n\tCode УБЫВ\nИТОГИ\n\tСУММА(N)\nПО\n\tОБЩИЕ\nАВТОУПОРЯДОЧИВАНИЕ\n;\n\n////////////////////////////////////////////////////////////////////////////////\nУНИЧТОЖИТЬ TT",
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "b0ff46c8fd181b23fcf4bcecce4f39a88491c6346d3d28da049be854f425864b",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.balance.1",
+      "area": "virtual-table.balance",
+      "forms": [
+        "balance-accumulation"
+      ],
+      "text": "ВЫБРАТЬ О.Агент КАК Поле ИЗ РегистрНакопления.ВзаиморасчетыСАгентамиОстатки.Остатки(&Период, ИСТИНА) КАК О",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tО.Агент КАК Поле\nИЗ\n\tРегистрНакопления.ВзаиморасчетыСАгентамиОстатки.Остатки(&Период, ИСТИНА) КАК О"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "62f01c0a302b820ec8283801529a77cf29e58491b4cb4fcadc2a35ba43476f57",
+          "canonicalSha256": "62f01c0a302b820ec8283801529a77cf29e58491b4cb4fcadc2a35ba43476f57"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "62f01c0a302b820ec8283801529a77cf29e58491b4cb4fcadc2a35ba43476f57",
+          "canonicalSha256": "62f01c0a302b820ec8283801529a77cf29e58491b4cb4fcadc2a35ba43476f57"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "62f01c0a302b820ec8283801529a77cf29e58491b4cb4fcadc2a35ba43476f57",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.balance.2",
+      "area": "virtual-table.balance",
+      "forms": [
+        "balance-accounting"
+      ],
+      "text": "ВЫБРАТЬ О.Счет КАК Поле ИЗ РегистрБухгалтерии.Хозрасчетный.Остатки(&Период, , , ИСТИНА) КАК О",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tО.Счет КАК Поле\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.Остатки(&Период, , , ИСТИНА) КАК О"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "8f9e728071dcdae1ee20f3260f6e4ca7d3cc610f37e55abf7952b625a7b48273",
+          "canonicalSha256": "8f9e728071dcdae1ee20f3260f6e4ca7d3cc610f37e55abf7952b625a7b48273"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "8f9e728071dcdae1ee20f3260f6e4ca7d3cc610f37e55abf7952b625a7b48273",
+          "canonicalSha256": "8f9e728071dcdae1ee20f3260f6e4ca7d3cc610f37e55abf7952b625a7b48273"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "8f9e728071dcdae1ee20f3260f6e4ca7d3cc610f37e55abf7952b625a7b48273",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.turnovers.1",
+      "area": "virtual-table.turnovers",
+      "forms": [
+        "turnovers-accumulation"
+      ],
+      "text": "ВЫБРАТЬ О.Склад КАК Поле ИЗ РегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Обороты(&Начало, &Конец, Месяц, ИСТИНА) КАК О",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tО.Склад КАК Поле\nИЗ\n\tРегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Обороты(&Начало, &Конец, Месяц, ИСТИНА) КАК О"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "4c13983739db16fe727214527e03309662c2b6152fbc510faf067c885c0d6efa",
+          "canonicalSha256": "4c13983739db16fe727214527e03309662c2b6152fbc510faf067c885c0d6efa"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "4c13983739db16fe727214527e03309662c2b6152fbc510faf067c885c0d6efa",
+          "canonicalSha256": "4c13983739db16fe727214527e03309662c2b6152fbc510faf067c885c0d6efa"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "4c13983739db16fe727214527e03309662c2b6152fbc510faf067c885c0d6efa",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.turnovers.2",
+      "area": "virtual-table.turnovers",
+      "forms": [
+        "turnovers-accounting"
+      ],
+      "text": "ВЫБРАТЬ О.Счет КАК Поле ИЗ РегистрБухгалтерии.Хозрасчетный.Обороты(&Начало, &Конец, Месяц, , , ИСТИНА, , ) КАК О",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tО.Счет КАК Поле\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.Обороты(&Начало, &Конец, Месяц, , , ИСТИНА, , ) КАК О"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "9e70b345b25870e586d005307ee64852ac637f863ca5572df31fa7bfe0a127f2",
+          "canonicalSha256": "9e70b345b25870e586d005307ee64852ac637f863ca5572df31fa7bfe0a127f2"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "9e70b345b25870e586d005307ee64852ac637f863ca5572df31fa7bfe0a127f2",
+          "canonicalSha256": "9e70b345b25870e586d005307ee64852ac637f863ca5572df31fa7bfe0a127f2"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "9e70b345b25870e586d005307ee64852ac637f863ca5572df31fa7bfe0a127f2",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.balance-and-turnovers.1",
+      "area": "virtual-table.balance-and-turnovers",
+      "forms": [
+        "bt-accumulation"
+      ],
+      "text": "ВЫБРАТЬ О.Агент КАК Поле ИЗ РегистрНакопления.ВзаиморасчетыСАгентамиОстатки.ОстаткиИОбороты(&Начало, &Конец, Месяц, ДвиженияИГраницыПериода, ИСТИНА) КАК О",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tО.Агент КАК Поле\nИЗ\n\tРегистрНакопления.ВзаиморасчетыСАгентамиОстатки.ОстаткиИОбороты(&Начало, &Конец, Месяц, ДвиженияИГраницыПериода, ИСТИНА) КАК О"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "8b05180dbac2fe42b309fda98f8298275ba476e524b2ba46ec6e25aa475eb02a",
+          "canonicalSha256": "8b05180dbac2fe42b309fda98f8298275ba476e524b2ba46ec6e25aa475eb02a"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "8b05180dbac2fe42b309fda98f8298275ba476e524b2ba46ec6e25aa475eb02a",
+          "canonicalSha256": "8b05180dbac2fe42b309fda98f8298275ba476e524b2ba46ec6e25aa475eb02a"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "8b05180dbac2fe42b309fda98f8298275ba476e524b2ba46ec6e25aa475eb02a",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.balance-and-turnovers.2",
+      "area": "virtual-table.balance-and-turnovers",
+      "forms": [
+        "bt-accounting"
+      ],
+      "text": "ВЫБРАТЬ О.Счет КАК Поле ИЗ РегистрБухгалтерии.Хозрасчетный.ОстаткиИОбороты(&Начало, &Конец, Месяц, ДвиженияИГраницыПериода, , , ИСТИНА) КАК О",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tО.Счет КАК Поле\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.ОстаткиИОбороты(&Начало, &Конец, Месяц, ДвиженияИГраницыПериода, , , ИСТИНА) КАК О"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "c4a3db2ee9bac412c12272028aa2d6d787a4624cbb3ca215885ab241e0c3e0b6",
+          "canonicalSha256": "c4a3db2ee9bac412c12272028aa2d6d787a4624cbb3ca215885ab241e0c3e0b6"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "c4a3db2ee9bac412c12272028aa2d6d787a4624cbb3ca215885ab241e0c3e0b6",
+          "canonicalSha256": "c4a3db2ee9bac412c12272028aa2d6d787a4624cbb3ca215885ab241e0c3e0b6"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "c4a3db2ee9bac412c12272028aa2d6d787a4624cbb3ca215885ab241e0c3e0b6",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.slices.1",
+      "area": "virtual-table.slices",
+      "forms": [
+        "slice-first"
+      ],
+      "text": "ВЫБРАТЬ\n\tК.Валюта КАК Валюта\nИЗ\n\tРегистрСведений.КурсыВалют.СрезПервых(&Период, Валюта = &Валюта) КАК К",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Валюта"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tК.Валюта КАК Валюта\nИЗ\n\tРегистрСведений.КурсыВалют.СрезПервых(&Период, Валюта = &Валюта) КАК К"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "77ba46e479a15be09d2d228dc8e9075d10e7f9d03ca7935a8cb479ebc6cd0db2",
+          "canonicalSha256": "77ba46e479a15be09d2d228dc8e9075d10e7f9d03ca7935a8cb479ebc6cd0db2"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "77ba46e479a15be09d2d228dc8e9075d10e7f9d03ca7935a8cb479ebc6cd0db2",
+          "canonicalSha256": "77ba46e479a15be09d2d228dc8e9075d10e7f9d03ca7935a8cb479ebc6cd0db2"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "77ba46e479a15be09d2d228dc8e9075d10e7f9d03ca7935a8cb479ebc6cd0db2",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.accounting.1",
+      "area": "virtual-table.accounting",
+      "forms": [
+        "ext-dimensions"
+      ],
+      "text": "ВЫБРАТЬ С.Значение КАК Поле ИЗ РегистрБухгалтерии.Хозрасчетный.Субконто КАК С",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tС.Значение КАК Поле\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.Субконто КАК С"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "85477234a7b7531e8f618976382209b1c09f8c0360e36cc032e2009a8a288cc6",
+          "canonicalSha256": "85477234a7b7531e8f618976382209b1c09f8c0360e36cc032e2009a8a288cc6"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "85477234a7b7531e8f618976382209b1c09f8c0360e36cc032e2009a8a288cc6",
+          "canonicalSha256": "85477234a7b7531e8f618976382209b1c09f8c0360e36cc032e2009a8a288cc6"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "85477234a7b7531e8f618976382209b1c09f8c0360e36cc032e2009a8a288cc6",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.accounting.2",
+      "area": "virtual-table.accounting",
+      "forms": [
+        "records-with-ext-dimensions"
+      ],
+      "text": "ВЫБРАТЬ Д.Регистратор КАК Поле ИЗ РегистрБухгалтерии.Хозрасчетный.ДвиженияССубконто(&Начало, &Конец, ИСТИНА, , ) КАК Д",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tД.Регистратор КАК Поле\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.ДвиженияССубконто(&Начало, &Конец, ИСТИНА, , ) КАК Д"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b467895d80ca944608f396b8df38fac9e64dd089862b737f06f98a691892ed11",
+          "canonicalSha256": "b467895d80ca944608f396b8df38fac9e64dd089862b737f06f98a691892ed11"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b467895d80ca944608f396b8df38fac9e64dd089862b737f06f98a691892ed11",
+          "canonicalSha256": "b467895d80ca944608f396b8df38fac9e64dd089862b737f06f98a691892ed11"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "b467895d80ca944608f396b8df38fac9e64dd089862b737f06f98a691892ed11",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.accounting.3",
+      "area": "virtual-table.accounting",
+      "forms": [
+        "dr-cr-turnovers"
+      ],
+      "text": "ВЫБРАТЬ О.СчетДт КАК Поле ИЗ РегистрБухгалтерии.Хозрасчетный.ОборотыДтКт(&Начало, &Конец, Месяц, , , , , ИСТИНА) КАК О",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tО.СчетДт КАК Поле\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.ОборотыДтКт(&Начало, &Конец, Месяц, , , , , ИСТИНА) КАК О"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "a2a0253d1e7bcf39b2debdc6b0ba1cc42186d02dc97a1acb959db3e2735bf74b",
+          "canonicalSha256": "a2a0253d1e7bcf39b2debdc6b0ba1cc42186d02dc97a1acb959db3e2735bf74b"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "a2a0253d1e7bcf39b2debdc6b0ba1cc42186d02dc97a1acb959db3e2735bf74b",
+          "canonicalSha256": "a2a0253d1e7bcf39b2debdc6b0ba1cc42186d02dc97a1acb959db3e2735bf74b"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "a2a0253d1e7bcf39b2debdc6b0ba1cc42186d02dc97a1acb959db3e2735bf74b",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.argument-shape.1",
+      "area": "virtual-table.argument-shape",
+      "forms": [
+        "periodicity"
+      ],
+      "text": "ВЫБРАТЬ О.Склад КАК Поле ИЗ РегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Обороты(, , Авто, ) КАК О",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tО.Склад КАК Поле\nИЗ\n\tРегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Обороты(, , Авто, ) КАК О"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "08668d267cd2b6889510fdc1f234c7c7fe7df97bba366f4c4c1d74fc5ef97546",
+          "canonicalSha256": "08668d267cd2b6889510fdc1f234c7c7fe7df97bba366f4c4c1d74fc5ef97546"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "08668d267cd2b6889510fdc1f234c7c7fe7df97bba366f4c4c1d74fc5ef97546",
+          "canonicalSha256": "08668d267cd2b6889510fdc1f234c7c7fe7df97bba366f4c4c1d74fc5ef97546"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "08668d267cd2b6889510fdc1f234c7c7fe7df97bba366f4c4c1d74fc5ef97546",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.argument-shape.2",
+      "area": "virtual-table.argument-shape",
+      "forms": [
+        "periodicity"
+      ],
+      "text": "ВЫБРАТЬ О.Склад КАК Поле ИЗ РегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Обороты(, , Регистратор, ) КАК О",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tО.Склад КАК Поле\nИЗ\n\tРегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Обороты(, , Регистратор, ) КАК О"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "f8beedaccb6f78c1c10665077e987ee18c0e6b7dd271b14c63be9079bfd9b8ef",
+          "canonicalSha256": "f8beedaccb6f78c1c10665077e987ee18c0e6b7dd271b14c63be9079bfd9b8ef"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "f8beedaccb6f78c1c10665077e987ee18c0e6b7dd271b14c63be9079bfd9b8ef",
+          "canonicalSha256": "f8beedaccb6f78c1c10665077e987ee18c0e6b7dd271b14c63be9079bfd9b8ef"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "f8beedaccb6f78c1c10665077e987ee18c0e6b7dd271b14c63be9079bfd9b8ef",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.argument-shape.3",
+      "area": "virtual-table.argument-shape",
+      "forms": [
+        "periodicity"
+      ],
+      "text": "ВЫБРАТЬ О.Склад КАК Поле ИЗ РегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Обороты(, , Запись, ) КАК О",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tО.Склад КАК Поле\nИЗ\n\tРегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Обороты(, , Запись, ) КАК О"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b512d03e5dac97e7d75c9e5d1b9541114b921012a490480b81ba6095e36d50e8",
+          "canonicalSha256": "b512d03e5dac97e7d75c9e5d1b9541114b921012a490480b81ba6095e36d50e8"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b512d03e5dac97e7d75c9e5d1b9541114b921012a490480b81ba6095e36d50e8",
+          "canonicalSha256": "b512d03e5dac97e7d75c9e5d1b9541114b921012a490480b81ba6095e36d50e8"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "b512d03e5dac97e7d75c9e5d1b9541114b921012a490480b81ba6095e36d50e8",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.argument-shape.4",
+      "area": "virtual-table.argument-shape",
+      "forms": [
+        "periodicity"
+      ],
+      "text": "ВЫБРАТЬ О.Склад КАК Поле ИЗ РегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Обороты(, , Декада, ) КАК О",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tО.Склад КАК Поле\nИЗ\n\tРегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Обороты(, , Декада, ) КАК О"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "5e1624f2eb64e18f449c31502e137417ecd28777fbae6ca1dc199985d130a25a",
+          "canonicalSha256": "5e1624f2eb64e18f449c31502e137417ecd28777fbae6ca1dc199985d130a25a"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "5e1624f2eb64e18f449c31502e137417ecd28777fbae6ca1dc199985d130a25a",
+          "canonicalSha256": "5e1624f2eb64e18f449c31502e137417ecd28777fbae6ca1dc199985d130a25a"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "5e1624f2eb64e18f449c31502e137417ecd28777fbae6ca1dc199985d130a25a",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-virtual-table.argument-shape.5",
+      "area": "virtual-table.argument-shape",
+      "forms": [
+        "periodicity"
+      ],
+      "text": "ВЫБРАТЬ О.Склад КАК Поле ИЗ РегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Обороты(, , Период, ) КАК О",
+      "adaptation": "Live register names; projection uses a dimension available independently of periodicity.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tО.Склад КАК Поле\nИЗ\n\tРегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Обороты(, , Период, ) КАК О"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "5cb09326218573203f38ab154a017883ca4476686fce671b99adcccce671fc6a",
+          "canonicalSha256": "5cb09326218573203f38ab154a017883ca4476686fce671b99adcccce671fc6a"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "5cb09326218573203f38ab154a017883ca4476686fce671b99adcccce671fc6a",
+          "canonicalSha256": "5cb09326218573203f38ab154a017883ca4476686fce671b99adcccce671fc6a"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "5cb09326218573203f38ab154a017883ca4476686fce671b99adcccce671fc6a",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-source.metadata-table.constants",
+      "area": "source.metadata-table",
+      "forms": [
+        "constants"
+      ],
+      "text": "ВЫБРАТЬ К.DeleteFL_AppIdentifier КАК Поле ИЗ Константы КАК К",
+      "adaptation": "Existing live object names.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tК.DeleteFL_AppIdentifier КАК Поле\nИЗ\n\tКонстанты КАК К"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "8a806a20a4ed20189385917336e79ebbab271fbbc08dca35a1a3759229ff018e",
+          "canonicalSha256": "8a806a20a4ed20189385917336e79ebbab271fbbc08dca35a1a3759229ff018e"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "8a806a20a4ed20189385917336e79ebbab271fbbc08dca35a1a3759229ff018e",
+          "canonicalSha256": "8a806a20a4ed20189385917336e79ebbab271fbbc08dca35a1a3759229ff018e"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "8a806a20a4ed20189385917336e79ebbab271fbbc08dca35a1a3759229ff018e",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-source.metadata-table.enum",
+      "area": "source.metadata-table",
+      "forms": [
+        "enum"
+      ],
+      "text": "ВЫБРАТЬ П.Ссылка КАК Поле ИЗ Перечисление.CC_ShippingType КАК П",
+      "adaptation": "Existing live object names.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tП.Ссылка КАК Поле\nИЗ\n\tПеречисление.CC_ShippingType КАК П"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "0cf624309c879f938437f9ac96b0b27980e3a44f1f5a57a7ac7e2ba82a51ce0e",
+          "canonicalSha256": "0cf624309c879f938437f9ac96b0b27980e3a44f1f5a57a7ac7e2ba82a51ce0e"
+        },
+        "corpus": {
+          "open": false,
+          "error": "{(1, 30)}: Таблица не найдена \"Перечисление.CC_ShippingType\""
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "0cf624309c879f938437f9ac96b0b27980e3a44f1f5a57a7ac7e2ba82a51ce0e",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-source.metadata-table.chart-of-accounts",
+      "area": "source.metadata-table",
+      "forms": [
+        "chart-of-accounts"
+      ],
+      "text": "ВЫБРАТЬ П.Ссылка КАК Поле ИЗ ПланСчетов.Хозрасчетный КАК П",
+      "adaptation": "Existing live object names.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tП.Ссылка КАК Поле\nИЗ\n\tПланСчетов.Хозрасчетный КАК П"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "08eaf8039c86e1e23ad980da0ece109a4e3a1a9c84f1044d00217aa123887a12",
+          "canonicalSha256": "08eaf8039c86e1e23ad980da0ece109a4e3a1a9c84f1044d00217aa123887a12"
+        },
+        "corpus": {
+          "open": false,
+          "error": "{(1, 30)}: Таблица не найдена \"ПланСчетов.Хозрасчетный\""
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "08eaf8039c86e1e23ad980da0ece109a4e3a1a9c84f1044d00217aa123887a12",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-source.metadata-table.accumulation-register",
+      "area": "source.metadata-table",
+      "forms": [
+        "accumulation-register"
+      ],
+      "text": "ВЫБРАТЬ Р.Регистратор КАК Поле ИЗ РегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам КАК Р",
+      "adaptation": "Existing live object names.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tР.Регистратор КАК Поле\nИЗ\n\tРегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам КАК Р"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "a43ecc977c4ba38525ad9a3d520f391d85bfbc7218dd9cd4806dc385f9fd991e",
+          "canonicalSha256": "a43ecc977c4ba38525ad9a3d520f391d85bfbc7218dd9cd4806dc385f9fd991e"
+        },
+        "corpus": {
+          "open": false,
+          "error": "{(1, 35)}: Таблица не найдена \"РегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам\""
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "a43ecc977c4ba38525ad9a3d520f391d85bfbc7218dd9cd4806dc385f9fd991e",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-source.metadata-table.accounting-register",
+      "area": "source.metadata-table",
+      "forms": [
+        "accounting-register"
+      ],
+      "text": "ВЫБРАТЬ Р.Регистратор КАК Поле ИЗ РегистрБухгалтерии.Хозрасчетный КАК Р",
+      "adaptation": "Existing live object names.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tР.Регистратор КАК Поле\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный КАК Р"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "c3270168144d61722c0c0db3a70fdf55818e38579c854017641c7bbb5d076369",
+          "canonicalSha256": "c3270168144d61722c0c0db3a70fdf55818e38579c854017641c7bbb5d076369"
+        },
+        "corpus": {
+          "open": false,
+          "error": "{(1, 35)}: Таблица не найдена \"РегистрБухгалтерии.Хозрасчетный\""
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "c3270168144d61722c0c0db3a70fdf55818e38579c854017641c7bbb5d076369",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-source.metadata-table.business-process",
+      "area": "source.metadata-table",
+      "forms": [
+        "business-process"
+      ],
+      "text": "ВЫБРАТЬ Б.Ссылка КАК Поле ИЗ БизнесПроцесс.Задание КАК Б",
+      "adaptation": "Existing live object names.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Поле"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tБ.Ссылка КАК Поле\nИЗ\n\tБизнесПроцесс.Задание КАК Б"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "00f435e469ff3538dd4a29ba4e34b10818ed39b851d24e663b225845dae93124",
+          "canonicalSha256": "00f435e469ff3538dd4a29ba4e34b10818ed39b851d24e663b225845dae93124"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "00f435e469ff3538dd4a29ba4e34b10818ed39b851d24e663b225845dae93124",
+          "canonicalSha256": "00f435e469ff3538dd4a29ba4e34b10818ed39b851d24e663b225845dae93124"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "00f435e469ff3538dd4a29ba4e34b10818ed39b851d24e663b225845dae93124",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-source.metadata-table.business-process-points",
+      "area": "source.metadata-table",
+      "forms": [
+        "business-process-points"
+      ],
+      "text": "ВЫБРАТЬ Т.Ссылка КАК Поле ИЗ БизнесПроцесс.Задание.ТочкиМаршрута КАК Т",
+      "adaptation": "Existing live object names.",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 30)}: Table not found \"БизнесПроцесс.Задание.ТочкиМаршрута\"\nВЫБРАТЬ Т.Ссылка КАК Поле ИЗ <<?>>БизнесПроцесс.Задание.ТочкиМаршрута КАК Т\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "f34ffef13bfed1b34151e241e482e7517965cd99a3ef8292ec8576a7d1b22ebe",
+          "canonicalSha256": "f34ffef13bfed1b34151e241e482e7517965cd99a3ef8292ec8576a7d1b22ebe"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "f34ffef13bfed1b34151e241e482e7517965cd99a3ef8292ec8576a7d1b22ebe",
+          "canonicalSha256": "f34ffef13bfed1b34151e241e482e7517965cd99a3ef8292ec8576a7d1b22ebe"
+        }
+      }
+    },
+    {
+      "id": "PQ-source.change-tables.document",
+      "area": "source.change-tables",
+      "forms": [
+        "document"
+      ],
+      "text": "ВЫБРАТЬ Изм.Узел КАК Узел ИЗ Документ.Встреча.Изменения КАК Изм",
+      "adaptation": "Live object names; reserved alias И replaced with Изм. Exchange-plan participation not independently attested. Queue document Анкета/section Вопросы replaced with live Встреча/Участники.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Узел"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tИзм.Узел КАК Узел\nИЗ\n\tДокумент.Встреча.Изменения КАК Изм"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "28912e903c45e6f866e5ea04917d1e627b0e3080e516a1ccfe5abc53b034d257",
+          "canonicalSha256": "28912e903c45e6f866e5ea04917d1e627b0e3080e516a1ccfe5abc53b034d257"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "28912e903c45e6f866e5ea04917d1e627b0e3080e516a1ccfe5abc53b034d257",
+          "canonicalSha256": "28912e903c45e6f866e5ea04917d1e627b0e3080e516a1ccfe5abc53b034d257"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "28912e903c45e6f866e5ea04917d1e627b0e3080e516a1ccfe5abc53b034d257",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-source.change-tables.chart-of-characteristic-types",
+      "area": "source.change-tables",
+      "forms": [
+        "chart-of-characteristic-types"
+      ],
+      "text": "ВЫБРАТЬ Изм.Узел КАК Узел ИЗ ПланВидовХарактеристик.ВидыХарактеристик.Изменения КАК Изм",
+      "adaptation": "Live object names; reserved alias И replaced with Изм. Exchange-plan participation not independently attested.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Узел"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tИзм.Узел КАК Узел\nИЗ\n\tПланВидовХарактеристик.ВидыХарактеристик.Изменения КАК Изм"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b6975c0cc3a881b515328ae83d743967caa81e4c64ce4cd8e4f263d89b034e30",
+          "canonicalSha256": "b6975c0cc3a881b515328ae83d743967caa81e4c64ce4cd8e4f263d89b034e30"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "b6975c0cc3a881b515328ae83d743967caa81e4c64ce4cd8e4f263d89b034e30",
+          "canonicalSha256": "b6975c0cc3a881b515328ae83d743967caa81e4c64ce4cd8e4f263d89b034e30"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "b6975c0cc3a881b515328ae83d743967caa81e4c64ce4cd8e4f263d89b034e30",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-source.change-tables.accumulation-register",
+      "area": "source.change-tables",
+      "forms": [
+        "accumulation-register"
+      ],
+      "text": "ВЫБРАТЬ Изм.Узел КАК Узел ИЗ РегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Изменения КАК Изм",
+      "adaptation": "Live object names; reserved alias И replaced with Изм. Exchange-plan participation not independently attested.",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 30)}: Table not found \"РегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Изменения\"\nВЫБРАТЬ Изм.Узел КАК Узел ИЗ <<?>>РегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Изменения КАК Изм\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "aad15a6985feeb4ff3c2b4382e1a0ad57a8d3c5420943ef528327d25e67660f4",
+          "canonicalSha256": "aad15a6985feeb4ff3c2b4382e1a0ad57a8d3c5420943ef528327d25e67660f4"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "aad15a6985feeb4ff3c2b4382e1a0ad57a8d3c5420943ef528327d25e67660f4",
+          "canonicalSha256": "aad15a6985feeb4ff3c2b4382e1a0ad57a8d3c5420943ef528327d25e67660f4"
+        }
+      }
+    },
+    {
+      "id": "PQ-source.change-tables.chart-of-accounts",
+      "area": "source.change-tables",
+      "forms": [
+        "chart-of-accounts"
+      ],
+      "text": "ВЫБРАТЬ Изм.Узел КАК Узел ИЗ ПланСчетов.Хозрасчетный.Изменения КАК Изм",
+      "adaptation": "Live object names; reserved alias И replaced with Изм. Exchange-plan participation not independently attested.",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 30)}: Table not found \"ПланСчетов.Хозрасчетный.Изменения\"\nВЫБРАТЬ Изм.Узел КАК Узел ИЗ <<?>>ПланСчетов.Хозрасчетный.Изменения КАК Изм\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "34acf0b030ecfda3ed4936aedd3c841f90e92ebcc65533bb75e693d85ac0011d",
+          "canonicalSha256": "34acf0b030ecfda3ed4936aedd3c841f90e92ebcc65533bb75e693d85ac0011d"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "34acf0b030ecfda3ed4936aedd3c841f90e92ebcc65533bb75e693d85ac0011d",
+          "canonicalSha256": "34acf0b030ecfda3ed4936aedd3c841f90e92ebcc65533bb75e693d85ac0011d"
+        }
+      }
+    },
+    {
+      "id": "PQ-source.change-tables.accounting-register",
+      "area": "source.change-tables",
+      "forms": [
+        "accounting-register"
+      ],
+      "text": "ВЫБРАТЬ Изм.Узел КАК Узел ИЗ РегистрБухгалтерии.Хозрасчетный.Изменения КАК Изм",
+      "adaptation": "Live object names; reserved alias И replaced with Изм. Exchange-plan participation not independently attested.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Узел"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tИзм.Узел КАК Узел\nИЗ\n\tРегистрБухгалтерии.Хозрасчетный.Изменения КАК Изм"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "861c808938bdc94011c7f4f3e7c2e568fa48f013ec83c7c452f05a8379c8a583",
+          "canonicalSha256": "861c808938bdc94011c7f4f3e7c2e568fa48f013ec83c7c452f05a8379c8a583"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "861c808938bdc94011c7f4f3e7c2e568fa48f013ec83c7c452f05a8379c8a583",
+          "canonicalSha256": "861c808938bdc94011c7f4f3e7c2e568fa48f013ec83c7c452f05a8379c8a583"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "861c808938bdc94011c7f4f3e7c2e568fa48f013ec83c7c452f05a8379c8a583",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-source.change-tables.business-process",
+      "area": "source.change-tables",
+      "forms": [
+        "business-process"
+      ],
+      "text": "ВЫБРАТЬ Изм.Узел КАК Узел ИЗ БизнесПроцесс.Задание.Изменения КАК Изм",
+      "adaptation": "Live object names; reserved alias И replaced with Изм. Exchange-plan participation not independently attested.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Узел"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tИзм.Узел КАК Узел\nИЗ\n\tБизнесПроцесс.Задание.Изменения КАК Изм"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "3ad196619f73019a61c08df7da612609355e703892a1ded0af3e2f49689d6a68",
+          "canonicalSha256": "3ad196619f73019a61c08df7da612609355e703892a1ded0af3e2f49689d6a68"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "3ad196619f73019a61c08df7da612609355e703892a1ded0af3e2f49689d6a68",
+          "canonicalSha256": "3ad196619f73019a61c08df7da612609355e703892a1ded0af3e2f49689d6a68"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "3ad196619f73019a61c08df7da612609355e703892a1ded0af3e2f49689d6a68",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-source.change-tables.task",
+      "area": "source.change-tables",
+      "forms": [
+        "task"
+      ],
+      "text": "ВЫБРАТЬ Изм.Узел КАК Узел ИЗ Задача.ЗадачаИсполнителя.Изменения КАК Изм",
+      "adaptation": "Live object names; reserved alias И replaced with Изм. Exchange-plan participation not independently attested.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Узел"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tИзм.Узел КАК Узел\nИЗ\n\tЗадача.ЗадачаИсполнителя.Изменения КАК Изм"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "f4a0b804232730b7660215727f58416cd70750968570c459bff1f661cadf0409",
+          "canonicalSha256": "f4a0b804232730b7660215727f58416cd70750968570c459bff1f661cadf0409"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "f4a0b804232730b7660215727f58416cd70750968570c459bff1f661cadf0409",
+          "canonicalSha256": "f4a0b804232730b7660215727f58416cd70750968570c459bff1f661cadf0409"
+        }
+      },
+      "canonicalMatches": true,
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "f4a0b804232730b7660215727f58416cd70750968570c459bff1f661cadf0409",
+        "matchesOriginalCanonical": true
+      }
+    },
+    {
+      "id": "PQ-characteristics.block.braces",
+      "area": "characteristics.block",
+      "forms": [
+        "characteristics"
+      ],
+      "text": "ВЫБРАТЬ\n\tН.Ссылка КАК Ссылка\nИЗ\n\tСправочник.Валюты КАК Н\n{ХАРАКТЕРИСТИКИ\n\tТИП(Справочник.Валюты)\n\tВИДЫХАРАКТЕРИСТИК ПланВидовХарактеристик.ВидыХарактеристик\n\tПОЛЕКЛЮЧА Ссылка\n\tПОЛЕИМЕНИ Наименование\n\tПОЛЕТИПАЗНАЧЕНИЯ ТипЗначения}",
+      "adaptation": "Characteristic type ВопросыДляАнкетирования replaced with live ВидыХарактеристик; the unbraced control removes only braces.",
+      "platform": {
+        "valid": true,
+        "schemaError": "{Обработка.mcp_УправлениеСервером.МодульМенеджера(1253)}: Error calling context method (УстановитьТекстЗапроса): {(10, 30)}: Expression expected \"ЗНАЧЕНИЯХАРАКТЕРИСТИК\"\nПОЛЕТИПАЗНАЧЕНИЯ ТипЗначения<<?>>}"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "463ed6d3e21fbd2563ca42a0e3b087270493960e06898a3845e8f81d4dea08de",
+          "canonicalSha256": "463ed6d3e21fbd2563ca42a0e3b087270493960e06898a3845e8f81d4dea08de"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "463ed6d3e21fbd2563ca42a0e3b087270493960e06898a3845e8f81d4dea08de",
+          "canonicalSha256": "463ed6d3e21fbd2563ca42a0e3b087270493960e06898a3845e8f81d4dea08de"
+        }
+      }
+    },
+    {
+      "id": "PQ-characteristics.block.no-braces",
+      "area": "characteristics.block",
+      "forms": [
+        "characteristics"
+      ],
+      "text": "ВЫБРАТЬ\n\tН.Ссылка КАК Ссылка\nИЗ\n\tСправочник.Валюты КАК Н\nХАРАКТЕРИСТИКИ\n\tТИП(Справочник.Валюты)\n\tВИДЫХАРАКТЕРИСТИК ПланВидовХарактеристик.ВидыХарактеристик\n\tПОЛЕКЛЮЧА Ссылка\n\tПОЛЕИМЕНИ Наименование\n\tПОЛЕТИПАЗНАЧЕНИЯ ТипЗначения",
+      "adaptation": "Characteristic type ВопросыДляАнкетирования replaced with live ВидыХарактеристик; the unbraced control removes only braces.",
+      "platform": {
+        "valid": false,
+        "error": "{(5, 1)}: Syntax error \"ХАРАКТЕРИСТИКИ\"\n<<?>>ХАРАКТЕРИСТИКИ\n\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр)."
+      },
+      "ours": {
+        "none": {
+          "open": false,
+          "error": "Ошибка разбора 5:1 — после конца запроса остались нераспознанные данные (получено «ХАРАКТЕРИСТИКИ»)"
+        },
+        "corpus": {
+          "open": false,
+          "error": "Ошибка разбора 5:1 — после конца запроса остались нераспознанные данные (получено «ХАРАКТЕРИСТИКИ»)"
+        }
+      }
+    },
+    {
+      "id": "PQ-select.tabular-section.no-alias",
+      "area": "select.tabular-section",
+      "forms": [
+        "nested-all"
+      ],
+      "text": "ВЫБРАТЬ\n\tД.Ссылка КАК Ссылка,\n\tД.Участники.*\nИЗ\n\tДокумент.Встреча КАК Д",
+      "adaptation": "Control without alias on nested wildcard. Queue document Анкета/section Вопросы replaced with live Встреча/Участники.",
+      "platform": {
+        "valid": true,
+        "columns": [
+          [
+            "Ссылка",
+            "Участники"
+          ]
+        ],
+        "query_text": "ВЫБРАТЬ\n\tД.Ссылка КАК Ссылка,\n\tД.Участники.(\n\t\tСсылка КАК Ссылка,\n\t\tНомерСтроки КАК НомерСтроки,\n\t\tКонтакт КАК Контакт,\n\t\tПредставлениеКонтакта КАК ПредставлениеКонтакта,\n\t\tКакСвязаться КАК КакСвязаться\n\t) КАК Участники\nИЗ\n\tДокумент.Встреча КАК Д"
+      },
+      "ours": {
+        "none": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "64866f469d4b6ef9259236c71eac9f8a4c54accc9154113b94c64af3ba080262",
+          "canonicalSha256": "64866f469d4b6ef9259236c71eac9f8a4c54accc9154113b94c64af3ba080262"
+        },
+        "corpus": {
+          "open": true,
+          "stable": true,
+          "apply": {
+            "ok": true
+          },
+          "generatedSha256": "64866f469d4b6ef9259236c71eac9f8a4c54accc9154113b94c64af3ba080262",
+          "canonicalSha256": "64866f469d4b6ef9259236c71eac9f8a4c54accc9154113b94c64af3ba080262"
+        }
+      },
+      "canonicalMatches": false,
+      "generatedText": "ВЫБРАТЬ\n\tД.Ссылка КАК Ссылка,\n\tД.Участники.*\nИЗ\n\tДокумент.Встреча КАК Д",
+      "generatedPlatform": {
+        "valid": true,
+        "canonicalSha256": "fc32e7e111a2a4b457c4d89eec9c587a4bd4fc4ae5ffe951bf4efffdc313c964",
+        "matchesOriginalCanonical": true
+      }
+    }
+  ]
+}
