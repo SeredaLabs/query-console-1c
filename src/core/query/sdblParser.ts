@@ -74,7 +74,7 @@ import { dropUnlimitedStringConditions } from './dropUnlimitedStringConditions';
 import { qualifyBareFields, qualifyBareSectionFields, setSubqueryParser, sourceInfosOf, correlatedOuterAlias, isCorrelatedAliasHead } from './qualifyBareFields';
 import type { SourceInfo } from './qualifyBareFields';
 import { resolveBuilderStar } from './resolveBuilderStar';
-import { dropRedundantGroupDerefs, moveLeadingMovementCaseToEnd, moveBeforePrefixGroupDerefToEnd, substituteGroupFieldWithSelectExpr, dropFunctionallyDeterminedMovementCase, relocateKeptMovementCase } from './dropRedundantGroupDerefs';
+import { dropRedundantGroupDerefs, moveLeadingMovementCaseToEnd, dropFunctionallyDeterminedMovementCase, relocateKeptMovementCase } from './dropRedundantGroupDerefs';
 import { canonicalizeFieldCasing } from './canonicalizeFieldCasing';
 import { LITERAL_WORDS, PERIOD_WORDS } from './sdblKeywordSets';
 
@@ -99,16 +99,9 @@ let sourceResolver: MetadataResolver | undefined;
 let keepArgComments = false;
 /** C24 step 1a: wildcard policy of the current parse; nested parses inherit it. */
 let wildcardPolicy: WildcardPolicy = 'preserve';
-// Глубина вложенности подзапроса-источника `ИЗ (ВЫБРАТЬ …)`. >0 при разборе тела
-// такого подзапроса — конструктор 1С реконструирует его СГРУППИРОВАТЬ ПО из схемы
-// (подстановка листа выражением, фаза 6.19), тогда как ВЕРХНЕУРОВНЕВУЮ группировку
-// сохраняет дословно. Используется substituteGroupFieldWithSelectExpr.
-let subquerySourceDepth = 0;
 
 /**
- * Глубина рекурсии разбора вложенных подзапросов (`ИЗ (…)`, `В (…)`) — НЕ путать с
- * `subquerySourceDepth` выше (тот про семантику СГРУППИРОВАТЬ ПО, не про безопасность
- * стека). Без этого счётчика патологически глубокая вложенность роняла процесс по
+ * Глубина рекурсии разбора вложенных подзапросов (`ИЗ (…)`, `В (…)`). Без этого счётчика патологически глубокая вложенность роняла процесс по
  * памяти (`heap out of memory`, не перехватывается никаким try/catch), а не просто
  * бросала обычную ошибку — каждый уровень заново токенизирует и разбирает почти весь
  * остаток текста. Максимум по золотому корпусу — 3; лимит взят с 10-кратным запасом.
@@ -2086,7 +2079,6 @@ function parseTableSource(cur: Cursor, index: number): SelectedTable {
     // таблицам, вложенным в `ИЗ (ВЫБРАТЬ … ИЗ РегистрБухгалтерии.X.Обороты(…))`.
     // Без этого раскладка позиций РБ оставалась с захардкоженным субконто, и
     // условие могло потеряться/сместиться (фаза 6.16.70).
-    subquerySourceDepth++;
     let subquery: QueryDocument;
     // sourceMap пробрасывается и в подзапрос. Промежуточный sink
     // собирает диапазоны ОТНОСИТЕЛЬНО `innerText`; каждый транслируется в
@@ -2104,8 +2096,6 @@ function parseTableSource(cur: Cursor, index: number): SelectedTable {
     } catch (e) {
       if (e instanceof SubqueryRecursionLimitError) throw cur.error(e.message, open);
       throw e;
-    } finally {
-      subquerySourceDepth--;
     }
     if (innerSink) {
       const offset = open.pos + 1;
@@ -5309,10 +5299,6 @@ function parseDocumentInner(
       // (фаза 6.18, по метаданным): когда префикс `Алиас.A` (ссылочное поле) тоже в
       // группировке и `Алиас.A.B` не выбрано отдельной колонкой — оракул его отбрасывает.
       dropRedundantGroupDerefs(model, resolver);
-      // Перенос ссылки `Алиас.A.B` (стоящей ПЕРЕД сгруппированным префиксом `Алиас.A`,
-      // потребляемой агрегатным выражением выборки) в конец явной группировки (фаза
-      // 6.18, корпус ФормированиеПартийЗЕРНО bsl_5). После прямого дропа.
-      moveBeforePrefixGroupDerefToEnd(model, resolver);
       // Перенос ведущего `ВЫБОР` с результатом-видом движения регистра в конец
       // СГРУППИРОВАТЬ ПО (фаза 6.18): конструктор 1С ставит такой элемент последним.
       moveLeadingMovementCaseToEnd(model);
@@ -5320,9 +5306,6 @@ function parseDocumentInner(
       // Взаимозачет). Только вид-движения; различитель keep/drop — сгруппирована ли голая ссылка.
       dropFunctionallyDeterminedMovementCase(model, resolver);
       relocateKeptMovementCase(model, resolver);
-      // Замена простого поля группировки `Алиас.Имя` НЕагрегатным выражением-CASE выборки
-      // `… КАК Имя`, ещё не присутствующим в группировке (фаза 6.19, ЗависшиеЗадачи).
-      substituteGroupFieldWithSelectExpr(model, resolver, subquerySourceDepth > 0);
     }
     // Пометка иерархических источников (для суффикса ИЕРАРХИЯ в УПОРЯДОЧИТЬ ПО,
     // фаза 6.16.6). undefined означает отсутствие метаданных, а не false.

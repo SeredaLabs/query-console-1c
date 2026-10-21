@@ -60,6 +60,13 @@ export const ENGLISH_METADATA_KINDS: ReadonlyMap<string, string> = new Map([
   ['INFORMATIONREGISTER', 'РегистрСведений'], ['ACCUMULATIONREGISTER', 'РегистрНакопления'],
   ['ACCOUNTINGREGISTER', 'РегистрБухгалтерии'], ['DOCUMENTJOURNAL', 'ЖурналДокументов'],
   ['FILTERCRITERION', 'КритерийОтбора'],
+  // C34: not attested on a platform base (SL_kza has no such objects, and the platform
+  // answers `Table not found` alike for a known and an unknown kind).
+  // Official 1C source (developer guide, lesson 18): CalculationRegister.
+  // Third-party only (1c-syntax/bsl-parser SDBLLexer.g4 @ d446af2, not a platform
+  // verdict): ChartOfCalculationTypes, Sequence.
+  ['CALCULATIONREGISTER', 'РегистрРасчета'], ['CHARTOFCALCULATIONTYPES', 'ПланВидовРасчета'],
+  ['SEQUENCE', 'Последовательность'],
 ]);
 
 /**
@@ -78,6 +85,12 @@ export const ENGLISH_SUBTABLES: ReadonlyMap<string, ReadonlyMap<string, string>>
     ['RECORDSWITHEXTDIMENSIONS', 'ДвиженияССубконто'], ['EXTDIMENSIONS', 'Субконто'],
   ])],
   ['ПланСчетов', new Map([['EXTDIMENSIONTYPES', 'ВидыСубконто']])],
+  // C34. Official 1C source (developer guide, lesson 18): ScheduleData. Third-party only
+  // (bsl-parser, as above): ActualActionPeriod, Boundaries. The base table
+  // `База<Регистр>` is NOT mapped from `Base…`: a recalculation is also a third segment
+  // of a calculation register, and renaming it would change a valid query.
+  ['РегистрРасчета', new Map([['ACTUALACTIONPERIOD', 'ФактическийПериодДействия'], ['SCHEDULEDATA', 'ДанныеГрафика']])],
+  ['Последовательность', new Map([['BOUNDARIES', 'Границы']])],
 ]);
 
 /**

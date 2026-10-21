@@ -13,8 +13,9 @@ reasoning and phases; the [ledger](technical-debt.md) (V5) owns status.
 The gate is a Query Core v1 blocker (ledger V5, P1): Core v1 cannot be
 declared until it holds with sufficient coverage confidence. It is not a claim
 that the current product is unsafe; concrete known gaps are separate C items
-(C36 is deliberate; the partial Phase 5 audit adds canonical differences C37–C39
-and the version-qualified safety finding C40; C2 and C24 were fixed on 2026-10-17/18).
+(C36 is an accepted divergence since 2026-10-21; the partial Phase 5 audit adds
+canonical differences C37–C39 and the version-qualified safety finding C40; C2 and
+C24 were fixed on 2026-10-17/18).
 
 The claim is bounded: it never says the whole 1C grammar is proven, and it is
 always reported with coverage confidence:
@@ -50,7 +51,7 @@ Core v1 is ordinary SDBL as opened by the 1C Query Designer.
 | DCS braces `{…}` | Out of scope for Core v1 grammar parity: a data-composition extension over the query model. A future DCS layer gets its own coverage contract. |
 | Template markers `#Имя` (U1) | Syntax in scope: ours must not fail only because of `#Имя`. Syntax/preservation confirmed locally (open → stable round trip → Apply); substitution semantics checked on the platform (2026-10-15): the Designer's synthesized `КАК` on an unaliased marker source breaks substituted templates (U1 defect); nothing is interpreted or transformed; current Apply behavior retained pending platform evidence. U1 must answer whether Query Core editing/generation can change the value or scope of `#Имя`: if yes, a safety gate is required; if it stays opaque preserved syntax, no Apply block is needed. |
 | Reference gaps | Absence from the 8.3.20 reference is not evidence of invalidity or exclusion. A construct is in scope if the ordinary 1C Query Designer accepts and preserves it as part of the query, whatever its origin; it is out of scope only if it exists solely in the DCS query layer, like `{…}`. Until probed, such areas stay pending with a concrete question. |
-| English SDBL (C2) | Implemented 2026-10-17 (release 0.2.0): one bilingual word table, English metadata names, Apply writes Russian words; leftovers in C34. |
+| English SDBL (C2) | Implemented 2026-10-17 (release 0.2.0): one bilingual word table, English metadata names, Apply writes Russian words; leftovers in C34 (names mapped 2026-10-21 from documentation, not platform-attested). |
 
 Also out of scope:
 - dynamic BSL text assembly;
@@ -248,7 +249,7 @@ forms are the exception: their examples keep the `*`.
   [fixture](../../test/fixtures/platform/c24-completion.json)); the Designer has
   not written them since C24 step 0 and keeps `*` as written. The platform
   canonical text expands the star; that difference is deliberate (no proof of
-  metadata completeness) and is owned by C36.
+  metadata completeness) and is owned by C36, accepted on 2026-10-21.
 - **Example selection matters.** Golden `ИЗ`-source and `Источник.Таблица.*`
   hits inside DCS braces do not attest the ordinary form. The tabular `.*`
   form is therefore pending.
@@ -364,7 +365,7 @@ query console, plus the wizard canonical text, on a modern 8.3 web client.
 date not recorded).
 - All 128 open with a stable second pass and Apply allowed.
 - The canonical `query_text` matches for 122.
-- It differs for 2: the `*` forms, which the Designer keeps (C36).
+- It differs for 2: the `*` forms, which the Designer keeps (C36, accepted).
 - It is not compared for 4, whose only examples carry comments, templates or
   no recorded text.
 

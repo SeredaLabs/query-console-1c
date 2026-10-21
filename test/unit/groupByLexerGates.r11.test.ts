@@ -1,13 +1,16 @@
 /**
- * R11 step 2: the GROUP BY rewrites of the constructor-parity mode
- * (`dropRedundantGroupDerefs.ts`) decide on code, not on text — a string literal that
- * looks like an aggregate call, a field reference, `ТОГДА <ссылка>` or a movement-kind
- * value no longer changes the GROUP BY, and literals are compared exactly.
+ * R11: the GROUP BY rewrites of the constructor-parity mode (`dropRedundantGroupDerefs.ts`).
  *
- * Seven gates: `hasAggregateCall` (former AGG_RE, three rules), the aggregate-consumer
- * check of `moveBeforePrefixGroupDerefToEnd` (former `includes`), `containsFieldRef`,
- * `derefInResultPosition`, `normExpr`, `isMovementCaseExpr`, `isMovementResultExpr`
- * (former MOVEMENT_RE). Before the change each payload below changed the GROUP BY.
+ * Step 2: the rules decide on code, not on text — a string literal that looks like a
+ * movement-kind value no longer changes the GROUP BY (gates `isMovementCaseExpr`,
+ * `isMovementResultExpr`, former MOVEMENT_RE).
+ *
+ * Rule removal (2026-10-21, R11 stays PARTIAL): `substituteGroupFieldWithSelectExpr`,
+ * `moveBeforePrefixGroupDerefToEnd` and the result-position exemption of
+ * `dropRedundantGroupDerefs` over-fired on every comparison recorded in this repository
+ * and were removed; the constructor GROUP BY now equals the platform's for all 15 direct
+ * comparisons below. Historical positive witnesses from the unavailable private corpus
+ * are listed in the ledger; do not restore the rules without a reproducible one.
  *
  * Platform (СхемаЗапроса via validate_query, SL_kza, `test/fixtures/platform/r11-group-by.json`):
  * the platform reads a neutral and a code-like literal alike (S2, S3b, S6, L1–L4), and
@@ -19,7 +22,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { generateBatch } from '../../src/core/query/sdblGenerator';
-import { substituteGroupFieldWithSelectExpr } from '../../src/core/query/dropRedundantGroupDerefs';
 import { buildYamlResolver } from '../../src/core/metadata/buildYamlResolver';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
 import type { MetaTable } from '../../src/core/metadata/types';
@@ -80,23 +82,20 @@ function groupItems(text: string, masked = false): string[][] {
 }
 
 const F = 'ИЗ Справочник.Валюты КАК Т';
-const D = 'Т.ОсновнаяВалюта.Код';
 
-describe('R11 substitution: direct platform parity (known open gap)', () => {
+describe('R11 substitution: direct platform parity', () => {
   const cases = [
     ...['S1_subst_real__orig', 'L1_agg_subst__neutral', 'L1_agg_subst__payload',
       'L4_norm_literal__neutral', 'L4_norm_literal__payload'].map(name => ({ name, ...platform(name) })),
     ...substitutionProbes.cases,
   ];
 
-  // Evaluate outside it.fails: a parse/generation exception must fail collection,
-  // not masquerade as the expected parity failure. Remove .fails with the fix.
   const comparisons = cases.map(c => ({
     name: c.name,
     actual: groupItems(constructor(c.query, platformShape)),
     expected: groupItems(c.platform),
   }));
-  it.fails.each(comparisons)('$name: constructor GROUP BY equals the recorded platform result', c => {
+  it.each(comparisons)('$name: constructor GROUP BY equals the recorded platform result', c => {
     expect(c.actual).toEqual(c.expected);
   });
 
@@ -108,19 +107,18 @@ describe('R11 substitution: direct platform parity (known open gap)', () => {
   });
 });
 
-describe('R11 drop/move: direct platform parity (known open gaps)', () => {
+describe('R11 drop/move: direct platform parity', () => {
   const cases = [
     ...['L1_agg_drop__neutral', 'L1_agg_drop__payload', 'L2b_same_name']
       .map(name => ({ name, ...platform(name) })),
     ...moveProbes.cases,
   ];
-  // Only equality is an expected failure; parser errors must fail collection.
   const comparisons = cases.map(c => ({
     name: c.name,
     actual: groupItems(constructor(c.query, platformShape)),
     expected: groupItems(c.platform),
   }));
-  it.fails.each(comparisons)('$name: constructor GROUP BY equals the recorded platform result', c => {
+  it.each(comparisons)('$name: constructor GROUP BY equals the recorded platform result', c => {
     expect(c.actual).toEqual(c.expected);
   });
   it.each(cases)('$name: preserve and analysis retain the authored GROUP BY', c => {
@@ -134,58 +132,11 @@ describe('R11 drop/move: direct platform parity (known open gaps)', () => {
 describe('R11 step 2: a string literal does not steer a GROUP BY rewrite', () => {
   // [gate, template ($ = the literal), neutral literal, code-like literal]
   it.each([
-    ['hasAggregateCall: dropRedundantGroupDerefs', `ВЫБРАТЬ Т.ОсновнаяВалюта, ВЫБОР КОГДА Т.Код = $ ТОГДА ${D} ИНАЧЕ "" КОНЕЦ КАК Ф, КОЛИЧЕСТВО(*) КАК К ${F} СГРУППИРОВАТЬ ПО Т.ОсновнаяВалюта, ${D}`, '"x"', '"СУММА("'],
-    ['hasAggregateCall: moveBeforePrefixGroupDerefToEnd', `ВЫБРАТЬ Т.Код, ВЫБОР КОГДА Т.Код = $ ТОГДА ${D} ИНАЧЕ "" КОНЕЦ КАК С ${F} СГРУППИРОВАТЬ ПО Т.Код, ${D}, Т.ОсновнаяВалюта`, '"x"', '"СУММА("'],
-    ['hasAggregateCall: substituteGroupFieldWithSelectExpr', `ВЫБРАТЬ П.Код ИЗ (ВЫБРАТЬ Т.Код КАК Код, ВЫБОР КОГДА Т.Наименование = $ ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Наименование, КОЛИЧЕСТВО(*) КАК К ${F} СГРУППИРОВАТЬ ПО Т.Код, Т.Наименование) КАК П`, '"x"', '"СУММА("'],
-    ['aggregate consumer (former includes)', `ВЫБРАТЬ Т.Код, СУММА(ВЫБОР КОГДА Т.Код = $ ТОГДА 1 ИНАЧЕ 0 КОНЕЦ) КАК С ${F} СГРУППИРОВАТЬ ПО Т.Код, ${D}, Т.ОсновнаяВалюта`, '"x"', `"${D}"`],
-    ['containsFieldRef', `ВЫБРАТЬ П.Код ИЗ (ВЫБРАТЬ Т.Код КАК Код, ВЫБОР КОГДА Т.Код = $ ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Наименование, КОЛИЧЕСТВО(*) КАК К ${F} СГРУППИРОВАТЬ ПО Т.Код, Т.Наименование) КАК П`, '"x"', '"Т.Наименование"'],
-    ['derefInResultPosition', `ВЫБРАТЬ Т.ОсновнаяВалюта, ВЫБОР КОГДА Т.Код = $ ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Ф, КОЛИЧЕСТВО(*) КАК К ${F} СГРУППИРОВАТЬ ПО Т.ОсновнаяВалюта, ${D}`, '"x"', `"ТОГДА ${D}"`],
     ['isMovementCaseExpr', `ВЫБРАТЬ Т.Код, ВЫБОР КОГДА Т.Код = $ ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Вид, КОЛИЧЕСТВО(*) КАК К ${F} СГРУППИРОВАТЬ ПО ВЫБОР КОГДА Т.Код = $ ТОГДА 1 ИНАЧЕ 0 КОНЕЦ, Т.Код`, '"x"', '"ЗНАЧЕНИЕ(ВидДвиженияНакопления.Приход)"'],
     ['isMovementResultExpr (former MOVEMENT_RE)', `ВЫБРАТЬ Т.Код, ВЫБОР КОГДА Т.Код = "1" ТОГДА $ ИНАЧЕ Т.Наименование КОНЕЦ КАК Вид, КОЛИЧЕСТВО(*) КАК К ${F} СГРУППИРОВАТЬ ПО Т.Код, Т.Наименование, ВЫБОР КОГДА Т.Код = "1" ТОГДА $ ИНАЧЕ Т.Наименование КОНЕЦ`, '"x"', '"ТОГДА ЗНАЧЕНИЕ(ВидДвиженияНакопления.Приход)"'],
   ])('%s', (_gate, template, neutral, payload) => {
     const out = (literal: string) => groupItems(constructor(template.split('$').join(literal), corpus), true);
     expect(out(payload)).toEqual(out(neutral));
-  });
-
-  it('normExpr: literals are compared exactly ("a  b" is not "a b")', () => {
-    // The select CASE (with "a  b") is not the grouped one (with "a b"): the rule may
-    // substitute it exactly as it does for any other different literal.
-    const q = (literal: string) => `ВЫБРАТЬ П.Код ИЗ (ВЫБРАТЬ Т.Код КАК Код, ВЫБОР КОГДА Т.Наименование = "a  b" ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Наименование, КОЛИЧЕСТВО(*) КАК К ${F} СГРУППИРОВАТЬ ПО Т.Код, Т.Наименование, ВЫБОР КОГДА Т.Наименование = ${literal} ТОГДА 1 ИНАЧЕ 0 КОНЕЦ) КАК П`;
-    expect(groupItems(constructor(q('"a b"'), corpus), true)).toEqual(groupItems(constructor(q('"a  c"'), corpus), true));
-    // The same expression laid out differently is still "already grouped".
-    const same = `ВЫБРАТЬ П.Код ИЗ (ВЫБРАТЬ Т.Код КАК Код, ВЫБОР КОГДА Т.Наименование = "a  b" ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Наименование, КОЛИЧЕСТВО(*) КАК К ${F} СГРУППИРОВАТЬ ПО Т.Код, Т.Наименование, ВЫБОР КОГДА Т.Наименование = "a  b"\n\tТОГДА 1 ИНАЧЕ 0 КОНЕЦ) КАК П`;
-    expect(groupItems(constructor(same, corpus))[0]).toContain('Т . Наименование');
-  });
-
-  it('normExpr: an expression the lexer cannot read is never "the same" and never substituted', () => {
-    // Parsed without the rewrites (preserve), then the rule is applied directly.
-    const model = () => parseBatch(`ВЫБРАТЬ Т.Код КАК Код, ВЫБОР КОГДА Т.Наименование = "x" ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Наименование, КОЛИЧЕСТВО(*) КАК К ${F} СГРУППИРОВАТЬ ПО Т.Код, Т.Наименование`)
-      .members[0].members[0].model;
-    const groupTexts = (m: ReturnType<typeof model>) => m.grouping!.groupFields.map(g => g.expression ?? `${g.tableId}:${g.path}`);
-    // Control: a readable model gets the substitution.
-    const control = model();
-    substituteGroupFieldWithSelectExpr(control, corpus, true);
-    expect(groupTexts(control).some(t => t.startsWith('ВЫБОР'))).toBe(true);
-    // An unreadable grouped expression (unterminated literal): nothing changes.
-    const grouped = model();
-    grouped.grouping!.groupFields.push({ tableId: '', path: '', expression: '"не закрыт' });
-    grouped.grouping!.explicitGroupCount = grouped.grouping!.groupFields.length;
-    const before = groupTexts(grouped);
-    substituteGroupFieldWithSelectExpr(grouped, corpus, true);
-    expect(groupTexts(grouped)).toEqual(before);
-    // An unreadable select CASE: not substituted either.
-    const selected = model();
-    const field = selected.fields.find(f => f.alias === 'Наименование')!;
-    field.expression = 'ВЫБОР КОГДА Т.Наименование = "x ТОГДА 1 ИНАЧЕ 0 КОНЕЦ';
-    const selectedBefore = groupTexts(selected);
-    substituteGroupFieldWithSelectExpr(selected, corpus, true);
-    expect(groupTexts(selected)).toEqual(selectedBefore);
-  });
-
-  it('field names still match case-sensitively (unchanged)', () => {
-    const q = `ВЫБРАТЬ П.Код ИЗ (ВЫБРАТЬ Т.Код КАК Код, ВЫБОР КОГДА т.наименование = "x" ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Наименование, КОЛИЧЕСТВО(*) КАК К ${F} СГРУППИРОВАТЬ ПО Т.Код, Т.Наименование) КАК П`;
-    // `т.наименование` is not `Т.Наименование` for containsFieldRef: no substitution.
-    expect(groupItems(constructor(q, corpus))[0].slice(0, 2)).toEqual(['Т . Код', 'Т . Наименование']);
   });
 });
 
@@ -204,9 +155,7 @@ describe('R11 step 2: the platform GROUP BY', () => {
     expect(groupItems(constructor(c.query, platformShape))).toEqual(groupItems(c.platform));
   });
 
-  // These rules differ from the platform for the neutral literal too (a rule-level
-  // parity gap, R11 remaining, constructor mode only); a code-like literal no longer
-  // changes them, as it does not change the platform.
+  // A code-like literal changes neither the platform nor us.
   it.each(['L1_agg_drop', 'L1_agg_subst', 'L4_norm_literal'])('%s: the literal changes neither the platform nor us', name => {
     const [n, p] = [platform(`${name}__neutral`), platform(`${name}__payload`)];
     expect(groupItems(p.platform, true)).toEqual(groupItems(n.platform, true));

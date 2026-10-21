@@ -1,10 +1,11 @@
 /**
  * R11 step 1: Designer → Apply keeps the meaning of СГРУППИРОВАТЬ ПО.
  *
- * Six GROUP BY rewrites copy what the 1C query constructor prints
+ * Six GROUP BY rewrites copied what the 1C query constructor prints
  * (`dropRedundantGroupDerefs`, `moveBeforePrefixGroupDerefToEnd`,
  * `moveLeadingMovementCaseToEnd`, `dropFunctionallyDeterminedMovementCase`,
- * `relocateKeptMovementCase`, `substituteGroupFieldWithSelectExpr`). They ran in the
+ * `relocateKeptMovementCase`, `substituteGroupFieldWithSelectExpr`; the second and the
+ * last were removed at the R11 closure, 2026-10-21). They ran in the
  * Designer whenever the batch had a temp table (the temp-table resolver passed their
  * `if (!resolver)` gate), and one of them changes the result:
  *

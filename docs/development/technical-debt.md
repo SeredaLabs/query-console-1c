@@ -10,15 +10,15 @@ Each area below starts with a one-line table; long evidence follows under the
 item's own heading. The [open items](#open-items) table lists all unfinished work in
 one place, ordered by priority.
 
-**Status and priority.** OPEN = confirmed work; PARTIAL = capability exists with a defined gap; UNKNOWN = platform evidence is insufficient; CLOSED = resolved within the stated scope; REOPENED = a closed item with new confirmed cases. P0 = ordinary editing can crash/hang the host; P1 = meaningful capability loss or preservation risk; P2 = bounded behavior/verification gap; P3 = cosmetic, hardening or maintenance. Historic severity labels do not set current priority.
+**Status and priority.** OPEN = confirmed work; PARTIAL = capability exists with a defined gap; UNKNOWN = platform evidence is insufficient; CLOSED = no further work within the stated scope — a closed row names its kind: fixed (the default), superseded (another mechanism does the job) or declined (no consumer or deliberately not done); ACCEPTED = a deliberate, documented divergence from the platform's canonical text, kept by decision (not work; the grammar-parity gate accepts only the constructs listed for it in `ACCEPTED_DIVERGENCES`); REOPENED = a closed item with new confirmed cases. P0 = ordinary editing can crash/hang the host; P1 = meaningful capability loss or preservation risk; P2 = bounded behavior/verification gap; P3 = cosmetic, hardening or maintenance. Historic severity labels do not set current priority.
 
 ## Open items
 
-23 items: P1 — 1, P2 — 14, P3 — 8. No item is P0.
+20 items: P1 — 1, P2 — 14, P3 — 5. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
-| V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C36–C40 remain open. |
+| V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C37–C40 remain open; C36 is an accepted divergence. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
 | A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple literals and numeric arithmetic over constants/direct metadata fields; other compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
@@ -33,23 +33,19 @@ one place, ordered by priority.
 | UX-C8 | OPEN · P2 | Canvas UX | Canvas cache refresh and lazy reference-field expansion parity. |
 | UX-C9 | OPEN · P2 | Canvas UX | Full positional UNION mapping for tabular/trailing projections. |
 | C40 | OPEN · P2 | Correctness | Scalar comparison subquery rejected by 8.3.15.1489 is allowed by Apply; modern-platform verdict pending. |
-| R11 | PARTIAL · P3 | Correctness | Three GROUP BY rewrites of the constructor-parity mode differ from СхемаЗапроса for some shapes; the Designer keeps GROUP BY as written. |
-| C34 | OPEN · P3 | Correctness | English names of calculation registers, charts of calculation types and sequences are not mapped (no such objects in SL_kza). |
-| C36 | OPEN · P3 | Correctness | The Designer keeps `*` where the 1C constructor expands it — deliberate until metadata completeness can be proven. |
+| R11 | PARTIAL · P3 | Correctness | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. |
+| C34 | PARTIAL · P3 | Correctness | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. |
 | C37 | OPEN · P3 | Correctness | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. |
 | C38 | OPEN · P3 | Correctness | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. |
 | C39 | OPEN · P3 | Correctness | English standard field names remain English in Russian output; platform canonical text translates them. |
-| V2 | OPEN · P3 · dev tooling | Verification | Optional external grammar oracle for development (never a verdict, not in CI or release). |
-| UX-C10 | OPEN · P3 · DEFERRED | Canvas UX | Global stable Query/Scope ID proposal. |
 
 ## Correctness
 
 | ID | Status / priority | Summary |
 |---|---|---|
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
-| R11 | PARTIAL · P3 | Three GROUP BY rewrites of the constructor-parity mode differ from СхемаЗапроса for some shapes; the Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
-| C34 | OPEN · P3 | English names of calculation registers, charts of calculation types and sequences are not mapped (no such objects in SL_kza). [Details](#c34-english-sdbl-leftovers). |
-| C36 | OPEN · P3 | The Designer keeps `*` where the 1C constructor expands it — deliberate until metadata completeness can be proven. [Details](#c36-kept--versus-the-constructor-canonical-text). |
+| R11 | PARTIAL · P3 | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
+| C34 | PARTIAL · P3 | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. [Details](#c34-english-sdbl-leftovers). |
 | C37 | OPEN · P3 | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C38 | OPEN · P3 | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C39 | OPEN · P3 | English standard field names remain English in Russian output; platform canonical text translates them. [Evidence](audits/v5-phase5-2026-10-21.md). |
@@ -135,13 +131,73 @@ the dereference; `ФормированиеПартийЗЕРНО bsl_5` for movi
 to test a distinguishing condition. These experiments do not justify removing
 either rule or claim coverage of the unavailable private corpus.
 
+**Rule removal (2026-10-21).** Three constructor-parity rewrites were removed:
+`substituteGroupFieldWithSelectExpr`, `moveBeforePrefixGroupDerefToEnd` and the
+result-position exemption of `dropRedundantGroupDerefs`.
+
+- *Evidence against them:* every comparison recorded in this repository (15 direct
+  comparisons: S1, L1, L2b, L4 and the substitution and move probes) shows the rule
+  firing where the platform keeps the GROUP BY. After the removal the constructor
+  GROUP BY equals the platform's in all 15 (the former `it.fails` tests are ordinary
+  regressions).
+- *Not evidence either way:* the committed corpus — 0 of 7,904 outputs changed
+  (1,976 inputs × constructor/preserve × with/without metadata) only shows that the
+  rules never fire there.
+- *Historical positive witnesses (not reproducible now):* the rules were added to
+  match the live `validate_query` oracle on the private 17,933-query corpus —
+  `ЗависшиеЗадачи_1` for the substitution (`2593a0e2`, `b1b1f4c7`, then
+  `accept:oracle` 17,932/17,933), `Взаимозачет_21` for the exemption (`9fae78ca`,
+  17,933/17,933) and `ФормированиеПартийЗЕРНО bsl_5` for the move (cited in the rule's
+  comment, `c9549f1e`). Their inputs, outputs and metadata are not in the repository
+  and the private corpus is unavailable, so constructor parity for those shapes is
+  now expected to be lost. The platform build of that oracle is not recorded.
+- *Open question:* `L1_agg_drop` shows the platform rebuilding a top-level GROUP BY
+  (dropping `Т.ВалютаКонтрагента.Код`, grouping the `ВЫБОР`), against `b1b1f4c7`'s
+  "the top-level GROUP BY is kept verbatim". The distinguishing condition may be the
+  platform build or base rather than the query shape (hypothesis, not checked).
+
+The Designer (`preserve`) and hover (`analysis`) never ran these rules: product
+behaviour is unchanged. The remaining constructor rules (`dropRedundantGroupDerefs`
+without the exemption, `moveLeadingMovementCaseToEnd`,
+`dropFunctionallyDeterminedMovementCase`, `relocateKeptMovementCase`) are unchanged.
+
+**Next boundary:** model the platform's GROUP BY reconstruction from reproducible
+witnesses (input, metadata, platform build and canonical output). Do not restore the
+removed rules without such a witness.
+
 ### C34. English SDBL leftovers
 
-**Status:** OPEN · P3
+**Status:** PARTIAL · P3
 
-C2 leftovers (2026-10-17): English names of `РегистрРасчета`, `ПланВидовРасчета` and `Последовательность` (and their virtual tables) are not mapped, because the probe base SL_kza has no such objects to attest them. No product query changes silently: an unmapped English kind is kept as written. The CLI corpus extractor now uses `queryDialect.ts` like the editor (2026-10-17).
+C2 leftovers (2026-10-17): English names of `РегистрРасчета`, `ПланВидовРасчета` and
+`Последовательность` and their virtual tables were not mapped, because the probe base
+SL_kza has none of these objects. The CLI corpus extractor uses `queryDialect.ts` like
+the editor since 2026-10-17.
 
-**Next boundary:** Attest the names on a base with these objects and add them to `sdblEnglish.ts`.
+Platform attestation is not possible on SL_kza: `validate_query` answers
+`Table not found` alike for `CalculationRegister.Тест`, `Catalog.НетТакого` and an
+invented `Blabla.Тест` (2026-10-21). By the user's decision of 2026-10-21 the names are
+mapped in `sdblEnglish.ts` from non-platform sources, kept apart:
+
+- official 1C developer guide, lesson 18: `CalculationRegister`, `ScheduleData`
+  (`CalculationRegister.Accruals.ScheduleData(…)`);
+- third-party only, the bilingual SDBL lexer of 1c-syntax/bsl-parser
+  (`SDBLLexer.g4` @ `d446af2`): `ChartOfCalculationTypes`, `Sequence`,
+  `ActualActionPeriod`, `Boundaries`. This is a deliberate exception to the V2 rule
+  that external grammars are not a verdict, limited to these names.
+
+Not mapped: the base table `Base<Register>` (the guide shows `….BaseAccruals(…)`,
+but a recalculation is also a third segment of a calculation register, so renaming
+`Base…` could change a valid query; such a name stays as written), standard attribute
+names of these kinds (`RegistrationPeriod`, `CalculationType`, …) — English standard fields in output in general are C39 — and the standard tabular sections of a chart of
+calculation types. Editor diagnostics are parse-only, so an unmapped name gives no
+false error. [Regressions](../../test/unit/englishCalculation.c34.test.ts): each mapped
+source parses as its Russian twin; recalculation and base-table names, including
+`Base…` in any letter case, are kept through Designer → Apply.
+
+**Next boundary:** attest the six names on a base that has these objects; map
+`Base<Register>` only where the source has a parameter list and the platform confirms
+the printed name.
 
 ### C35. UNION column count with a kept wildcard
 
@@ -154,14 +210,6 @@ Both scalar and tabular/trailing UNION generation preserve each member's select 
 The initial validator-only experiment was reverted after Classic and Canvas added `NULL КАК Поле2` to `Т.* ОБЪЕДИНИТЬ ВСЕ Б.Код, Б.Наименование`. The coordinated fix covers that regression with exact output assertions and Apply/reopen in both UIs. [Unit regressions](../../test/unit/c35UnionWildcardCount.test.ts); [browser regressions](../../test/e2e/c24Union.spec.ts). The 1,976-query corpus has zero byte changes in both preserve and constructor modes (3,952 comparisons).
 
 **Boundary:** Unknown wildcard widths remain unvalidated; platform-invalid `mixed_*` inputs in the fixture can still pass local validation. Resolving a source in the catalog does not prove metadata completeness. Exact metadata-based width validation depends on the C36 completeness/provenance decision. Full positional mapping UI (UX-C9) is separate.
-
-### C36. Kept `*` versus the constructor canonical text
-
-**Status:** OPEN · P3
-
-The Designer keeps `*` over configuration tables where the 1C constructor's canonical text expands it — a deliberate divergence since the C24 step 1b decision (2026-10-18): metadata completeness (extensions, a stale dump) cannot be proven, so no automatic expansion; the explicit "Expand `*`" command exists. Owns the grammar-parity entries `select.star-star` / `select.star-source-star` (canonical text differs).
-
-**Next boundary:** A completeness/provenance signal for the metadata (extensions loaded, dump freshness) before any automatic expansion or exact metadata-based UNION width validation — or accept the divergence and unknown width permanently.
 
 ### C37–C40. Phase 5 findings
 
@@ -218,10 +266,9 @@ partial, as recorded in the architecture table above.
 
 | ID | Status / priority | Summary |
 |---|---|---|
-| V5 | OPEN · P1 | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C36–C40 remain open. [Details](#v5-grammar-parity-gate-query-core-v1). |
+| V5 | OPEN · P1 | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C37–C40 remain open; C36 is an accepted divergence. [Details](#v5-grammar-parity-gate-query-core-v1). |
 | V1 | PARTIAL · P2 | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. [Details](#v1-corpus-attestation). |
 | V3 | PARTIAL · P2 | The Apply gate never compares input and output semantics. [Details](#v3-apply-semantic-preservation). |
-| V2 | OPEN · P3 · dev tooling | Optional external grammar oracle for development (never a verdict, not in CI or release). [Details](#v2-external-grammar-oracle). |
 
 V4 is CLOSED for the bounded [Canvas browser/real-host gate](testing-and-release.md#canvas-verification).
 It does not certify every UI action, live-platform equivalence or release readiness.
@@ -232,9 +279,9 @@ It does not certify every UI action, live-platform equivalence or release readin
 
 Query Core v1 blocker, not a defect of the current product. [Grammar parity](grammar-parity.md) gate: 0 known platform-valid grammar gaps across the reviewed SDBL construct catalog, every entry with source/provenance and platform evidence where required, reported with coverage confidence. Core v1 = ordinary SDBL / Query Designer; DCS `{…}` is out of scope.
 
-The [catalog](../../test/fixtures/grammar-parity/catalog.jsonl) holds 153 entries (RP01–RP25 and 128 golden-attested forms, build unknown); catalog gap: C36, a deliberate divergence (C2 fixed 2026-10-17, C24 fixed 2026-10-18). The Phase 5 evidence adds C37–C39 canonical differences and C40 safety evidence pending catalog promotion. [Proposal](audits/sdbl-grammar-parity-proposal-2026-10-04.md).
+The [catalog](../../test/fixtures/grammar-parity/catalog.jsonl) holds 153 entries (RP01–RP25 and 128 golden-attested forms, build unknown); no open catalog gap; C36 is an accepted divergence (its two listed constructs only) (C2 fixed 2026-10-17, C24 fixed 2026-10-18). The Phase 5 evidence adds C37–C39 canonical differences and C40 safety evidence pending catalog promotion. [Proposal](audits/sdbl-grammar-parity-proposal-2026-10-04.md).
 
-**Next boundary:** Phase 3 inventory remains 70 areas = 35 covered + 34 pending + 1 out of scope. [Phase 5 partial audit](audits/v5-phase5-2026-10-21.md) records 88 adapted cases addressing 80 form IDs across 31 queued areas; this is not full coverage of those forms. 53 full platform verdicts have stable local round trips and platform-equivalent generated output. The original queue/catalog remain unchanged pending reviewed promotion. Finish modern-version and missing-metadata probes, resolve the incomplete characteristics probe, and review C36–C40 before claiming the gate. Gates G2/G3/G5 run in the unit suite.
+**Next boundary:** Phase 3 inventory remains 70 areas = 35 covered + 34 pending + 1 out of scope. [Phase 5 partial audit](audits/v5-phase5-2026-10-21.md) records 88 adapted cases addressing 80 form IDs across 31 queued areas; this is not full coverage of those forms. 53 full platform verdicts have stable local round trips and platform-equivalent generated output. The original queue/catalog remain unchanged pending reviewed promotion. Finish modern-version and missing-metadata probes, resolve the incomplete characteristics probe, and review C37–C40 before claiming the gate. Gates G2/G3/G5 run in the unit suite.
 
 ### V1. Corpus attestation
 
@@ -251,18 +298,6 @@ Positive recorded golden cases have no per-entry platform-build/metadata attesta
 Shared Apply gate validates structure/selected semantics and malformed generated output, but never compares input/output semantics. Structural acceptor ignores precedence; Boolean truth tables cover a subset. [Apply regressions](../../test/unit/applyGeneratedOutput.test.ts).
 
 **Next boundary:** Bounded transformation-preservation checks and reviewed canonical evidence over A1; no mandatory live execution or theorem prover.
-
-### V2. External grammar oracle
-
-**Status:** OPEN · P3 · dev tooling
-
-Optional external grammar oracle. 1C Platform / Query Designer is authoritative for platform acceptance and canonicalization; external grammars (tree-sitter-bsl, bsl-parser ANTLR, Lezer) are development-only differential signals, never a verdict, and no extension runtime, build, normal CI, package or release step depends on them. Not a prerequisite for Query Core v1; grammar parity gaps are correctness items (e.g. C2), not V2.
-
-Without the uncommitted grammar WASM the [helper](../../test/helpers/assertValidSdbl.ts) is a no-op, and tests whose only assertion is the oracle report *skipped*.
-
-The working differential is the pinned Stage 0 CLI probe ([differential.ts](audits/stage-0/probes/differential.ts)): 5 packages tree-sitter-only, 4 constructs, all platform-checked: 2 valid (RP08 → C3 closed, RP06 → C2), 2 over-accepted (RP09, RP10). `build-wasm.sh` is unpinned; its ABI compatibility with web-tree-sitter 0.22.6 is unverified.
-
-**Next boundary:** Opt-in pinned runner (grammar sha, CLI version, checksum) that reports disagreements when available and exits SKIP with an explicit reason when not; disagreements go to platform reprobe, never directly to code or canonical output.
 
 ## Canvas UX and release work
 
@@ -282,7 +317,7 @@ not missing critical baseline work or a continuation of phase numbering.
 | UX-C7 | CLOSED | Sort-priority buttons in Classic and Canvas (2026-10-19). | Shared `MOVE_ORDER_FIELD` moves whole entries by index; direction, hierarchy, expressions, aliases and section comments survive. UNION tail routing and filtered Canvas indices are covered by [unit](../../test/unit/orderPriority.uxc7.test.ts) and [browser](../../test/e2e/orderPriority.spec.ts) regressions. |
 | UX-C8 | OPEN · P2 | Canvas cache refresh and lazy reference-field expansion parity. | Classic has refresh/ref message handling and SET_REF_FIELDS; Canvas lacks controls/response wiring. Reuse host/session; loaded navigation already works. |
 | UX-C9 | OPEN · P2 | Full positional UNION mapping for tabular/trailing projections. | Scalar-only deriveUnionColumns differs from generator orderedSelectElements. Preserve-only guard suppresses partial mapping. Shared alignment plus safe alias/reorder contract; coordinate A2 without requiring full A2 completion first. |
-| UX-C10 | OPEN · P3 · DEFERRED | Global stable Query/Scope ID proposal. | No current consumer needs persistent cross-tree identity. Local recursive drafts work with parent source IDs; this is not a baseline or release prerequisite. |
+| UX-C10 | CLOSED (declined) | Global stable Query/Scope ID proposal: not needed (2026-10-21). | No current consumer needs persistent cross-tree identity. Local recursive drafts work with parent source IDs; this is not a baseline or release prerequisite. Closed by decision: reopen when a concrete consumer needs cross-tree identity. |
 
 EXISTS/NOT EXISTS, scalar SELECT subqueries and structured JOIN subqueries remain
 unsupported shared grammar/model ideas, not promised Canvas features. Raw JOIN
@@ -341,6 +376,7 @@ and [audit index](audits/README.md).
 | C31 | CLOSED | A parameter used as a BSL template placeholder survives Designer → Apply as written. [Details](#c31-bsl-query-template-parameters). |
 | C32 | CLOSED | OK / Save without a change no longer rewrites the query. [Details](#c32-safe--no-op-apply). |
 | C33 | CLOSED | An unaliased `#Имя` source gets no synthesized `КАК` in the Designer (2026-10-18). [Details](#c33-unaliased-template-marker-source). |
+| C36 | ACCEPTED | The Designer keeps `*` where the 1C constructor expands it; accepted permanently (2026-10-21). [Details](#c36-kept--versus-the-constructor-canonical-text). |
 | D1 | CLOSED | Corrected stale source-contract comments; reconciliation/near-term reports. |
 | N1 | CLOSED | A `КАК` inside a DCS-brace literal no longer counts as an alias (`aliasDcsBraceExprs`, `wrapDcsBraceParam`) (`d562339`); dcsBraceAlias.n1.test.ts. |
 | N3 | CLOSED | `reindentVtCondition` counts group parentheses by code ranges; reproduced (8 multi-line literal cases) and fixed (`f628dbf`); vtConditionParens.n3.test.ts. |
@@ -357,6 +393,7 @@ and [audit index](audits/README.md).
 | S3 | CLOSED | Removed unused semantic maps/partial state; semanticSnapshot tests. |
 | U1 | CLOSED | `#Имя` template markers: Apply is refused when a marker's neighbouring code changes. [Details](#u1-template-markers). |
 | U3 | CLOSED | A join condition sees only its own comma-root chain, as on the platform. [Details](#u3-comma-separated-from-roots). |
+| V2 | CLOSED (superseded) | External grammar oracle superseded by the live platform oracle (2026-10-21). [Details](#v2-external-grammar-oracle). |
 | V4 | CLOSED | Bounded Canvas browser/host regression gate; testing-and-release. |
 | Canvas baseline | CLOSED | Current capability matrix; archived baseline and full history reconciliation. |
 
@@ -594,6 +631,42 @@ Joins without chain positions (created in the UI) keep the previous all-visible 
 Bare-name qualification (analysis/constructor) now matches the platform (`Т3.Символ`); a name only in another root is no longer bound to it.
 
 Corpus and Designer round trip unchanged (0 of 23,712 outputs, 0 of 1,976). [Regressions](../../test/unit/commaJoinVisibility.u3.test.ts), [chain rules](../../test/unit/joinVisibility.test.ts).
+
+#### C36. Kept `*` versus the constructor canonical text
+
+**Status:** ACCEPTED (2026-10-21)
+
+The Designer keeps `*` over configuration tables where the 1C constructor's canonical text expands it — a deliberate divergence since the C24 step 1b decision (2026-10-18): metadata completeness (extensions, a stale dump) cannot be proven, so no automatic expansion; the explicit "Expand `*`" command exists. Owns the grammar-parity entries `select.star-star` / `select.star-source-star` (canonical text differs).
+
+**Former next boundary:** A completeness/provenance signal for the metadata (extensions loaded, dump freshness) before any automatic expansion or exact metadata-based UNION width validation — or accept the divergence and unknown width permanently.
+
+**Decision (2026-10-21):** the divergence is accepted permanently. Metadata
+completeness (extensions, a stale dump) stays unprovable, so the Designer keeps `*`
+as written and wildcard widths stay unknown; "Expand `*`" remains the explicit way
+to get the constructor's columns. The grammar-parity gate accepts exactly the two
+listed constructs, `select.star-star` and `select.star-source-star`
+(`ACCEPTED_DIVERGENCES` in `grammarParity.catalog.test.ts`): any other canonical
+difference fails even under C36, and every other gap still needs an open item. A provenance signal for the metadata (extensions loaded, dump
+freshness) would be a new item, not a reopening of C36.
+
+#### V2. External grammar oracle
+
+**Status:** CLOSED (2026-10-21, superseded)
+
+Optional external grammar oracle. 1C Platform / Query Designer is authoritative for platform acceptance and canonicalization; external grammars (tree-sitter-bsl, bsl-parser ANTLR, Lezer) are development-only differential signals, never a verdict, and no extension runtime, build, normal CI, package or release step depends on them. Not a prerequisite for Query Core v1; grammar parity gaps are correctness items (e.g. C2), not V2.
+
+Without the uncommitted grammar WASM the [helper](../../test/helpers/assertValidSdbl.ts) is a no-op, and tests whose only assertion is the oracle report *skipped*.
+
+The working differential is the pinned Stage 0 CLI probe ([differential.ts](audits/stage-0/probes/differential.ts)): 5 packages tree-sitter-only, 4 constructs, all platform-checked: 2 valid (RP08 → C3 closed, RP06 → C2), 2 over-accepted (RP09, RP10). `build-wasm.sh` is unpinned; its ABI compatibility with web-tree-sitter 0.22.6 is unverified.
+
+**Former next boundary:** Opt-in pinned runner (grammar sha, CLI version, checksum) that reports disagreements when available and exits SKIP with an explicit reason when not; disagreements go to platform reprobe, never directly to code or canonical output.
+
+**Decision (2026-10-21):** closed as superseded, not implemented. The live platform
+oracle (`validate_query` on SL_kza, recorded in `test/fixtures/platform/*.json` and
+the grammar-parity catalog) gives the verdicts V2 could only hint at, and it already
+settled the four tree-sitter disagreements. The optional helper and the Stage 0
+probe stay as they are. Reopen only if a pinned external grammar becomes useful for
+a concrete question the platform oracle cannot answer.
 
 #### C21 ORDER expression evidence
 

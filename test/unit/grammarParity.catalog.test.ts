@@ -95,6 +95,16 @@ const areaProbes = probes.filter(p => p.kind === 'area');
 const ledger = new Map<string, string>();
 for (const m of fs.readFileSync(LEDGER, 'utf8').matchAll(/^\| ([A-Z]+(?:-[A-Z]+)?\d+) \| ([A-Z]+)/gm)) ledger.set(m[1], m[2]);
 const isOpenDebt = (id: string | null) => !!id && ['OPEN', 'PARTIAL', 'UNKNOWN'].includes(ledger.get(id) ?? '');
+/**
+ * Deliberate divergences from the platform's canonical text, kept by decision: the
+ * ledger item must be ACCEPTED and the construct must be listed here. A new canonical
+ * difference never passes on its own, even under an ACCEPTED item.
+ */
+const ACCEPTED_DIVERGENCES: Readonly<Record<string, readonly string[]>> = {
+  C36: ['select.star-star', 'select.star-source-star'],
+};
+const isAcceptedDivergence = (id: string | null, constructId: string) =>
+  !!id && ledger.get(id) === 'ACCEPTED' && (ACCEPTED_DIVERGENCES[id] ?? []).includes(constructId);
 
 /** `path#id` → the JSONL row with that `id` (platform reprobe) or `file` (golden corpus). */
 function evidenceRow(ref: string): any {
@@ -245,6 +255,17 @@ describe('grammar parity catalog: G5 integrity', () => {
     }
   });
 
+  it('every listed accepted divergence is an ACCEPTED item and a recorded canonical difference', () => {
+    for (const [id, constructIds] of Object.entries(ACCEPTED_DIVERGENCES)) {
+      expect(ledger.get(id), id).toBe('ACCEPTED');
+      for (const constructId of constructIds) {
+        const e = entries.find(x => x.constructId === constructId);
+        expect(e, constructId).toBeDefined();
+        expect([e!.debtId, e!.platformStatus, e!.canonicalStatus], constructId).toEqual([id, 'valid', 'differs']);
+      }
+    }
+  });
+
   it.each(entries.map(e => [e.constructId, e] as const))('%s: enums, provenance and status consistency', (_id, e) => {
     for (const [field, values] of Object.entries(ENUMS)) expect(values, `${field}`).toContain((e as any)[field]);
     expect(e.title.trim()).not.toBe('');
@@ -280,9 +301,14 @@ describe('grammar parity catalog: G5 integrity', () => {
 
     if (e.debtId !== null) expect(ledger.has(e.debtId), `${e.debtId} must be a ledger item`).toBe(true);
     // A platform-valid construct that ours does not fully support is a gap and needs an open debt item.
+    // A canonical-text difference alone may instead be an accepted divergence.
     const gap = e.platformStatus === 'valid' && (e.oursStatus === 'rejects' || e.roundTripStatus === 'unstable'
-      || e.applyStatus === 'blocked' || e.canonicalStatus === 'differs');
+      || e.applyStatus === 'blocked');
     if (gap) expect(isOpenDebt(e.debtId), `gap without open debt: ${e.debtId}`).toBe(true);
+    if (e.platformStatus === 'valid' && e.canonicalStatus === 'differs') {
+      expect(isOpenDebt(e.debtId) || isAcceptedDivergence(e.debtId, e.constructId),
+        `canonical difference without an open debt or a listed accepted divergence: ${e.constructId} (${e.debtId})`).toBe(true);
+    }
     // Platform-invalid text that opens must never be writable (safety contract).
     if (e.platformStatus === 'invalid' && e.oursStatus === 'accepts') expect(e.applyStatus).toBe('blocked');
     if (e.platformStatus === 'unknown') {
