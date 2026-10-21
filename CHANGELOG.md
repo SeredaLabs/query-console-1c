@@ -3,6 +3,34 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## 0.3.0 - 2026-10-21
+
+### Added
+
+- Sorting tab (Classic and Canvas): buttons to move a sort field up or down,
+  changing its priority. Direction, hierarchy, expressions and comments move
+  with the field.
+- Expression editor: the result type is shown for more expressions — string,
+  number and Boolean literals, arithmetic over numbers and numeric fields
+  (`Число`), and `ПОДСТРОКА` / `SUBSTRING` over a string literal or a string
+  field (`Строка`). Where the type cannot be proven it stays "unknown"; the
+  hint is informational only and does not affect validation or Apply.
+- English queries: `CalculationRegister`, `ChartOfCalculationTypes` and
+  `Sequence`, and the virtual tables `ScheduleData`, `ActualActionPeriod` and
+  `Boundaries`, are recognised and opened in the designer, written in Russian.
+
+### Fixed
+
+- A union where one member keeps `*` and another lists its columns
+  (`ВЫБРАТЬ Т.* … ОБЪЕДИНИТЬ ВСЕ ВЫБРАТЬ Б.Код, Б.Наименование …`) opens in
+  the designer again instead of being refused for a column-count mismatch;
+  each member's list is kept as written.
+- A subquery used as a value — compared with `=` or `<>`, inside `ВЫБОР`, in
+  a join condition or as a function argument — is rejected by 1C (checked on
+  8.3.15) but was written back by OK / Save. The designer now refuses to apply
+  such a query and the editor marks it; `В (ВЫБРАТЬ …)` and `НЕ В (ВЫБРАТЬ …)`
+  work as before.
+
 ## 0.2.1 - 2026-10-18
 
 ### Added
