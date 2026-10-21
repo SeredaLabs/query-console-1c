@@ -242,6 +242,36 @@ test.describe('Canvas editing and save guards', () => {
   });
 });
 
+test.describe('C40: a platform-rejected scalar subquery disables Apply in both editors', () => {
+  const CLASSIC_REASON = 'Произвольное условие или выражение выглядит синтаксически некорректным. Применение заблокировано';
+  const CANVAS_REASON = 'Произвольное условие или выражение выглядит синтаксически некорректным. Сохранение заблокировано';
+  const SUBQUERY = '(ВЫБРАТЬ ПЕРВЫЕ 1 Б.Ссылка ИЗ Справочник.Валюты КАК Б)';
+  for (const surface of ['classic', 'canvas'] as const) {
+    test(`${surface}: = (ВЫБРАТЬ …) stays disabled with a reason and no insertText`, async ({ page }) => {
+      await open(page, surface, `ВЫБРАТЬ Вал.Код КАК Код ИЗ Справочник.Валюты КАК Вал ГДЕ Вал.Ссылка = ${SUBQUERY}`);
+      if (surface === 'classic') {
+        await expect(page.locator('[data-testid="ok-error"]')).toContainText(CLASSIC_REASON);
+        await expect(page.getByRole('button', { name: 'ОК', exact: true })).toBeDisabled();
+      } else {
+        const saveBtn = page.getByRole('button', { name: 'Сохранить', exact: true });
+        await expect(saveBtn).toBeDisabled();
+        await expect(saveBtn).toHaveAttribute('title', new RegExp(CANVAS_REASON));
+      }
+      expect(await insertions(page)).toEqual([]);
+    });
+
+    test(`${surface}: В (ВЫБРАТЬ …) still applies`, async ({ page }) => {
+      await open(page, surface, `ВЫБРАТЬ Вал.Код КАК Код ИЗ Справочник.Валюты КАК Вал ГДЕ Вал.Ссылка В ${SUBQUERY}`);
+      if (surface === 'classic') {
+        await expect(page.locator('[data-testid="ok-error"]')).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'ОК', exact: true })).toBeEnabled();
+      } else {
+        await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toBeEnabled();
+      }
+    });
+  }
+});
+
 test.describe('C11: malformed VT and ПЕРИОДАМИ slots disable Apply with an explanation', () => {
   const CLASSIC_REASON = 'Произвольное условие или выражение выглядит синтаксически некорректным. Применение заблокировано';
   const CANVAS_REASON = 'Произвольное условие или выражение выглядит синтаксически некорректным. Сохранение заблокировано';
