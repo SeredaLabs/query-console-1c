@@ -13,8 +13,9 @@ reasoning and phases; the [ledger](technical-debt.md) (V5) owns status.
 The gate is a Query Core v1 blocker (ledger V5, P1): Core v1 cannot be
 declared until it holds with sufficient coverage confidence. It is not a claim
 that the current product is unsafe; concrete known gaps are separate C items
-(C36 is deliberate; the partial Phase 5 audit adds canonical differences C37–C39
-and the version-qualified safety finding C40; C2 and C24 were fixed on 2026-10-17/18).
+(C36 is an accepted divergence since 2026-10-21; the partial Phase 5 audit adds
+canonical differences C37–C39 and the version-qualified safety finding C40; C2 and
+C24 were fixed on 2026-10-17/18).
 
 The claim is bounded: it never says the whole 1C grammar is proven, and it is
 always reported with coverage confidence:
@@ -248,7 +249,7 @@ forms are the exception: their examples keep the `*`.
   [fixture](../../test/fixtures/platform/c24-completion.json)); the Designer has
   not written them since C24 step 0 and keeps `*` as written. The platform
   canonical text expands the star; that difference is deliberate (no proof of
-  metadata completeness) and is owned by C36.
+  metadata completeness) and is owned by C36, accepted on 2026-10-21.
 - **Example selection matters.** Golden `ИЗ`-source and `Источник.Таблица.*`
   hits inside DCS braces do not attest the ordinary form. The tabular `.*`
   form is therefore pending.
@@ -364,7 +365,7 @@ query console, plus the wizard canonical text, on a modern 8.3 web client.
 date not recorded).
 - All 128 open with a stable second pass and Apply allowed.
 - The canonical `query_text` matches for 122.
-- It differs for 2: the `*` forms, which the Designer keeps (C36).
+- It differs for 2: the `*` forms, which the Designer keeps (C36, accepted).
 - It is not compared for 4, whose only examples carry comments, templates or
   no recorded text.
 
