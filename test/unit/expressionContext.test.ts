@@ -151,7 +151,21 @@ describe('analyzeExpression', () => {
     });
   });
 
-  it.each(['1 + 2', '"a" + "b"', '&Параметр', 'NULL', 'НЕОПРЕДЕЛЕНО',
+  it.each(['1 + 2', '(10 - 3) * 2', '-6 / 4', '1 + 2 * 3',
+    '((1.5))', '-(1 + 2)', '1 + // comment\n 2'])
+  ('shows a numeric type for constant arithmetic %s', text => {
+    expect(analyzeExpression(text, { sources: [], qualified: true })).toMatchObject({
+      syntaxValid: true, issues: [], resultType: 'Число',
+    });
+  });
+
+  it.each(['1 +', '(1 + 2', '1 2', '1 * / 2', '(1)(2)'])
+  ('does not type structurally malformed arithmetic %s', text => {
+    expect(analyzeExpression(text, ctx)).toMatchObject({ syntaxValid: false, resultType: undefined });
+  });
+
+  it.each(['()', '1 + ()', 'Остатки.КоличествоОстаток + 1', 'ВТ.Колонка + 1', '1 + NULL', '1 + &П',
+    '1 = 2', '1 И 2', 'СУММА(1)', '"1 + 2" + 3', '"a" + "b"', '&Параметр', 'NULL', 'НЕОПРЕДЕЛЕНО',
     'ВЫБОР КОГДА ИСТИНА ТОГДА 1 ИНАЧЕ 2 КОНЕЦ', '1 +', '"незакрыто', '-'])
   ('does not guess a result type for %s', text => {
     expect(analyzeExpression(text, ctx).resultType).toBeUndefined();

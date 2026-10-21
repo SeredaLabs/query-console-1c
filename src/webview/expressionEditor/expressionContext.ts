@@ -92,7 +92,7 @@ export interface ExpressionAnalysis {
    * конструктора для custom-виразів (PR-14). */
   syntaxValid: boolean;
   issues: ExpressionIssue[];
-  /** Підпис для UI: тип одного поля з метаданих або простого літерала; не валідація. */
+  /** Підпис для UI: поле, літерал або числова арифметика констант; не валідація. */
   resultType?: string;
 }
 
@@ -133,15 +133,20 @@ function lexicalIssue(text: string, e: unknown): ExpressionIssue {
   return { from, to: Math.min(text.length, from + 1), severity: 'error', kind: 'lexical', message };
 }
 
-/** Only complete literal tokens; no expression grammar or guessed qualifiers. */
-function literalResultType(tokens: Token[]): string | undefined {
+/** Display facts only; the existing structural check owns expression grammar. */
+function constantResultType(tokens: Token[]): string | undefined {
   if (tokens.length === 1) {
     if (tokens[0].type === 'string') return 'Строка';
     if (tokens[0].type === 'number') return 'Число';
     if (isWordToken(tokens[0], 'ИСТИНА', 'ЛОЖЬ')) return 'Булево';
   }
-  if (tokens.length === 2 && tokens[0].type === 'punct'
-    && (tokens[0].value === '+' || tokens[0].value === '-') && tokens[1].type === 'number') return 'Число';
+  // Every operand must be numeric. Precedence cannot change the primitive type;
+  // no evaluation, precision inference, or field compatibility markers are used.
+  // The structural acceptor allows empty parentheses in some contexts: those
+  // provide no operand type and must not contribute a numeric fact.
+  if (tokens.some(t => t.type === 'number') && tokens.every((t, i) =>
+    t.type === 'number' || (t.type === 'punct' && ['+', '-', '*', '/', '(', ')'].includes(t.value)
+      && !(t.value === ')' && tokens[i - 1]?.value === '(')))) return 'Число';
   return undefined;
 }
 
@@ -173,7 +178,7 @@ export function analyzeExpression(text: string, ctx: ExpressionContext, cursor?:
   const resolver = ctx.resolver ?? EMPTY_RESOLVER;
   const hasSubquery = tokens.some(t => t.type === 'keyword' && t.value === 'ВЫБРАТЬ');
   const chains = collectChains(tokens);
-  let resultType = literalResultType(tokens);
+  let resultType = constantResultType(tokens);
 
   for (const chain of chains) {
     const names = chain.segments.map(s => s.text);
