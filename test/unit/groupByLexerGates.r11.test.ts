@@ -28,6 +28,12 @@ import { tokenize } from '../../src/core/query/sdblLexer';
 
 const evidence = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'platform', 'r11-group-by.json'), 'utf8'));
 const platform = (name: string): { query: string; platform: string } => evidence.cases.find((c: { name: string }) => c.name === name);
+const substitutionProbes: { cases: { name: string; query: string; platform: string }[] } = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '../fixtures/platform/r11-substitution-probes.json'), 'utf8'),
+);
+const moveProbes: { cases: { name: string; query: string; platform: string }[] } = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '../fixtures/platform/r11-move-probes.json'), 'utf8'),
+);
 
 const corpus = buildYamlResolver(path.join(__dirname, '../fixtures/corpus/metadata/cf'));
 /** The platform database's shape: `Справочник.Контрагенты.ВалютаКонтрагента` → `Справочник.Валюты`. */
@@ -75,6 +81,55 @@ function groupItems(text: string, masked = false): string[][] {
 
 const F = 'ИЗ Справочник.Валюты КАК Т';
 const D = 'Т.ОсновнаяВалюта.Код';
+
+describe('R11 substitution: direct platform parity (known open gap)', () => {
+  const cases = [
+    ...['S1_subst_real__orig', 'L1_agg_subst__neutral', 'L1_agg_subst__payload',
+      'L4_norm_literal__neutral', 'L4_norm_literal__payload'].map(name => ({ name, ...platform(name) })),
+    ...substitutionProbes.cases,
+  ];
+
+  // Evaluate outside it.fails: a parse/generation exception must fail collection,
+  // not masquerade as the expected parity failure. Remove .fails with the fix.
+  const comparisons = cases.map(c => ({
+    name: c.name,
+    actual: groupItems(constructor(c.query, platformShape)),
+    expected: groupItems(c.platform),
+  }));
+  it.fails.each(comparisons)('$name: constructor GROUP BY equals the recorded platform result', c => {
+    expect(c.actual).toEqual(c.expected);
+  });
+
+  it.each(cases)('$name: preserve and analysis retain the platform GROUP BY', c => {
+    for (const wildcardPolicy of ['preserve', 'analysis'] as const) {
+      const actual = generateBatch(parseBatch(c.query, platformShape, { wildcardPolicy }), { wildcardPolicy });
+      expect(groupItems(actual)).toEqual(groupItems(c.platform));
+    }
+  });
+});
+
+describe('R11 drop/move: direct platform parity (known open gaps)', () => {
+  const cases = [
+    ...['L1_agg_drop__neutral', 'L1_agg_drop__payload', 'L2b_same_name']
+      .map(name => ({ name, ...platform(name) })),
+    ...moveProbes.cases,
+  ];
+  // Only equality is an expected failure; parser errors must fail collection.
+  const comparisons = cases.map(c => ({
+    name: c.name,
+    actual: groupItems(constructor(c.query, platformShape)),
+    expected: groupItems(c.platform),
+  }));
+  it.fails.each(comparisons)('$name: constructor GROUP BY equals the recorded platform result', c => {
+    expect(c.actual).toEqual(c.expected);
+  });
+  it.each(cases)('$name: preserve and analysis retain the authored GROUP BY', c => {
+    for (const wildcardPolicy of ['preserve', 'analysis'] as const) {
+      const actual = generateBatch(parseBatch(c.query, platformShape, { wildcardPolicy }), { wildcardPolicy });
+      expect(groupItems(actual)).toEqual(groupItems(c.query));
+    }
+  });
+});
 
 describe('R11 step 2: a string literal does not steer a GROUP BY rewrite', () => {
   // [gate, template ($ = the literal), neutral literal, code-like literal]

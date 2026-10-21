@@ -88,6 +88,45 @@ Remaining (constructor parity only, the Designer keeps the GROUP BY): the rules 
 
 **First bounded slice (triaged 2026-10-19):** Start with `substituteGroupFieldWithSelectExpr` in `dropRedundantGroupDerefs.ts`, using S1, `L1_agg_subst` and `L4_norm_literal` from the existing platform fixture. The latter two currently have neutral/payload invariance assertions in `groupByLexerGates.r11.test.ts`, not direct assertions that our GROUP BY equals the platform's. Green tests therefore do not close this parity gap. Add direct platform-result regressions first, identify the distinguishing condition against the existing corpus, then narrow this one rule. Keep the other two rules and the preserve/analysis policy unchanged. Validate with both R11 suites and a reviewed before/after corpus comparison in both modes; do not update golden output merely to make the suite pass. This triage does not establish the missing condition or close R11.
 
+**Slice investigation (2026-10-20):** Direct platform comparisons now cover S1,
+both L1 substitution variants and both L4 variants, plus four fresh
+[`validate_query` probes](../../test/fixtures/platform/r11-substitution-probes.json)
+(no execution; the tool did not report the platform build). All nine constructor
+comparisons fail on the current implementation; they are explicitly `it.fails`
+in `groupByLexerGates.r11.test.ts`, with parsing/generation outside the expected-failure
+assertions. The same nine cases pass in preserve and analysis. A field in the CASE
+result rather than its condition, and removing the aggregate column, do not by
+themselves make the platform substitute it.
+
+An instrumented temporary build found **zero substitutions across the 1,976
+committed corpus inputs with metadata in constructor mode**. That corpus cannot
+distinguish a correct narrowing from disabling the rule. A control run on the four
+new probes recorded four substitutions, confirming the instrumentation observes
+the rule (checked 2026-10-21). Historical commits
+`2593a0e2` and `b1b1f4c7` cite a positive `ЗависшиеЗадачи` case in the private
+17,933-query corpus, but do not include its query/expected output; that case is
+absent from the committed corpus and the default local `tmp/` corpus is absent.
+No production rule was changed. Next prerequisite: obtain a reproducible positive
+platform substitution case (ideally that original input/output and metadata),
+then compare controlled variants before narrowing the rule. R11 remains PARTIAL;
+expected failures are evidence of the gap, not completed parity.
+
+**Other two rules (2026-10-21):** Direct expected-failure comparisons now also
+cover both `L1_agg_drop` variants and `L2b_same_name`. Three fresh
+[move probes](../../test/fixtures/platform/r11-move-probes.json) keep the GROUP BY
+order on the platform whether the dereference appears inside an aggregate,
+outside it, or in both positions; restricting the rule to occurrences outside
+aggregates is therefore insufficient. All six comparisons are explicit
+`it.fails`; preserve/analysis controls compare against the authored GROUP BY,
+not the constructor's rewrite. Temporary bundled-code experiments separately
+disabled the result-position exemption in `dropRedundantGroupDerefs` and the
+entire `moveBeforePrefixGroupDerefToEnd` rule: each changed **0/1,976** committed
+corpus outputs with metadata in constructor mode. No source implementation or
+golden changed. Positive historical witnesses (`Взаимозачет bsl_21` for keeping
+the dereference; `ФормированиеПартийЗЕРНО bsl_5` for moving it) are still needed
+to test a distinguishing condition. These experiments do not justify removing
+either rule or claim coverage of the unavailable private corpus.
+
 ### C34. English SDBL leftovers
 
 **Status:** OPEN · P3
