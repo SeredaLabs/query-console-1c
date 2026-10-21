@@ -8,6 +8,7 @@ import {
 } from '../../src/webview/expressionEditor/expressionContext';
 import * as fieldChain from '../../src/core/query/fieldChain';
 import * as hoverFieldInfo from '../../src/extension/hoverFieldInfo';
+import { expressionSources } from '../../src/webview/expressionSources';
 
 const N = (digits: number, fractionDigits: number) => ({ primitive: 'Число' as const, digits, fractionDigits });
 
@@ -176,6 +177,36 @@ describe('analyzeExpression', () => {
     expect(analyzeExpression('Остатки.Товар.Наименование', ctx).resultType).toBe('Строка(150)');
     expect(analyzeExpression('СУММА(Остатки.СуммаОстаток)', ctx).resultType).toBeUndefined();
     expect(analyzeExpression('НАЧАЛОПЕРИОДА(&Дата, МЕСЯЦ)', ctx).resultType).toBeUndefined();
+  });
+
+  it.each(['Остатки.КоличествоОстаток + 1', '(Остатки.СуммаОстаток - Остатки.КоличествоОстаток) * 2',
+    '-Остатки.КоличествоОстаток', 'Остатки.СуммаОстаток / 2'])
+  ('types arithmetic over direct numeric metadata fields: %s', text => {
+    const sources = expressionSources([{ id: 'r', fullName: BALANCES.fullName, alias: 'Остатки' }], [BALANCES]);
+    expect(analyzeExpression(text, { ...ctx, sources })).toMatchObject({ resultType: 'Число', issues: [] });
+  });
+
+  it('supports unqualified metadata fields without changing their standalone qualifiers', () => {
+    const sources = expressionSources([{ id: 'r', fullName: BALANCES.fullName }], [BALANCES]);
+    const context = { ...unqualified, sources };
+    expect(analyzeExpression('КоличествоОстаток / 2', context).resultType).toBe('Число');
+    expect(analyzeExpression('КоличествоОстаток', context).resultType).toBe('Число(15,3)');
+  });
+
+  it('does not use union, unknown, reference, or synthetic types for arithmetic', () => {
+    const meta: MetaTable = { ...BALANCES, fields: [
+      { name: 'Смешанное', kind: 'attribute', types: [N(10, 0), { primitive: 'Строка' }] },
+      { name: 'Неизвестное', kind: 'attribute', types: [] },
+      ...BALANCES.fields,
+    ] };
+    const sources = expressionSources([{ id: 'r', fullName: meta.fullName, alias: 'Остатки' }], [meta]);
+    for (const text of ['Остатки.Смешанное + 1', 'Остатки.Неизвестное + 1', 'Остатки.Товар + 1',
+      'Остатки.Товар.Наименование + 1', 'СУММА(Остатки.КоличествоОстаток)', 'Остатки.КоличествоОстаток + &П']) {
+      expect(analyzeExpression(text, { ...ctx, sources }).resultType, text).toBeUndefined();
+    }
+    const temp: MetaTable = { ...meta, kind: 'ВременнаяТаблица', fullName: 'ВТ' };
+    const derived = expressionSources([{ id: 't', fullName: 'ВТ', alias: 'Остатки' }], [temp]);
+    expect(analyzeExpression('Остатки.КоличествоОстаток + 1', { ...ctx, sources: derived }).resultType).toBeUndefined();
   });
 
   it('checks bare field paths in unqualified mode', () => {

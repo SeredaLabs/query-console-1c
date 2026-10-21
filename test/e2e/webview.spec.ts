@@ -968,6 +968,27 @@ test.describe('Произвольное выражение (редактор в�
     await expect(page.getByTestId('expr-status')).toContainText('Тип результата: неизвестен');
   });
 
+  test('A3: numeric metadata arithmetic is a display hint and survives reopen', async ({ page }) => {
+    await page.goto(BASE);
+    await expect(page.getByTestId('loading-overlay')).toBeHidden();
+    await page.evaluate(() => window.dispatchEvent(new MessageEvent('message', { data: {
+      type: 'metadataTree', tables: [{ kind: 'Справочник', name: 'Числа', fullName: 'Справочник.Числа', fields: [
+        { name: 'Сумма', kind: 'attribute', types: [{ primitive: 'Число', digits: 15, fractionDigits: 2 }] },
+      ] }],
+    } })));
+    await loadModelText(page, 'ВЫБРАТЬ Т.Сумма ИЗ Справочник.Числа КАК Т');
+    await page.locator('button[title="Добавить поле (произвольное выражение)"]').click();
+    const text = '(Т.Сумма + 1) / 2';
+    await page.locator(EXPR_CONTENT).fill(text);
+    await expect(page.getByTestId('expr-status')).toContainText('Тип результата: Число');
+    await page.getByTestId('expr-ok').click();
+    await page.locator('[data-field-idx="1"]').dblclick();
+    expect(await exprText(page)).toBe(text);
+    await expect(page.getByTestId('expr-status')).toContainText('Тип результата: Число');
+    await page.locator(EXPR_CONTENT).fill('Т.Сумма + &П');
+    await expect(page.getByTestId('expr-status')).toContainText('Тип результата: неизвестен');
+  });
+
   test('open → OK без изменений сохраняет выражение; Отмена не меняет его', async ({ page }) => {
     await openExpressionForNewField(page);
     await page.locator(EXPR_CONTENT).fill('ЕСТЬNULL(Валюты.Код, "-")');

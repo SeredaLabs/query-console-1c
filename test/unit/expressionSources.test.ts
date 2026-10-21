@@ -17,7 +17,16 @@ describe('shared Classic/Canvas expression sources', () => {
   });
   it('keeps the ordinary metadata identity and skips unavailable sources', () => {
     expect(expressionSources([{ ...selected, virtual: undefined }, { id: 'missing', fullName: 'Missing' }], [meta]))
-      .toEqual([{ alias: 'П', meta }]);
+      .toEqual([{ alias: 'П', meta, typeOrigin: 'metadata' }]);
     expect(expressionSources([selected], [])).toEqual([]);
+  });
+  it('marks temp, source-subquery and parameter metadata as derived', () => {
+    const temp: MetaTable = { ...meta, kind: 'ВременнаяТаблица', fullName: 'ВТ' };
+    const parameter: MetaTable = { ...meta, fullName: '&Таблица' };
+    const subquery: SelectedTable = { ...selected, subquery: { members: [] } };
+    const sources = expressionSources([
+      { id: 't', fullName: temp.fullName }, subquery, { id: 'p', fullName: parameter.fullName },
+    ], [temp, meta, parameter]);
+    expect(sources.map(s => s.typeOrigin)).toEqual(['derived', 'derived', 'derived']);
   });
 });
