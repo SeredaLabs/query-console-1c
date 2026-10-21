@@ -5,11 +5,12 @@
  * movement-kind value no longer changes the GROUP BY (gates `isMovementCaseExpr`,
  * `isMovementResultExpr`, former MOVEMENT_RE).
  *
- * Closure (2026-10-21): three rewrites contradicted every recorded platform result and
- * changed none of the 1,976 corpus outputs — `substituteGroupFieldWithSelectExpr`,
+ * Rule removal (2026-10-21, R11 stays PARTIAL): `substituteGroupFieldWithSelectExpr`,
  * `moveBeforePrefixGroupDerefToEnd` and the result-position exemption of
- * `dropRedundantGroupDerefs` were removed; the constructor GROUP BY now equals the
- * platform's for all 15 direct comparisons below.
+ * `dropRedundantGroupDerefs` over-fired on every comparison recorded in this repository
+ * and were removed; the constructor GROUP BY now equals the platform's for all 15 direct
+ * comparisons below. Historical positive witnesses from the unavailable private corpus
+ * are listed in the ledger; do not restore the rules without a reproducible one.
  *
  * Platform (СхемаЗапроса via validate_query, SL_kza, `test/fixtures/platform/r11-group-by.json`):
  * the platform reads a neutral and a code-like literal alike (S2, S3b, S6, L1–L4), and

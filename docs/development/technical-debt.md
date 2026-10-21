@@ -10,11 +10,11 @@ Each area below starts with a one-line table; long evidence follows under the
 item's own heading. The [open items](#open-items) table lists all unfinished work in
 one place, ordered by priority.
 
-**Status and priority.** OPEN = confirmed work; PARTIAL = capability exists with a defined gap; UNKNOWN = platform evidence is insufficient; CLOSED = resolved within the stated scope; ACCEPTED = a deliberate, documented divergence from the platform's canonical text, kept by decision (not work; the grammar-parity gate accepts its `differs` entries); REOPENED = a closed item with new confirmed cases. P0 = ordinary editing can crash/hang the host; P1 = meaningful capability loss or preservation risk; P2 = bounded behavior/verification gap; P3 = cosmetic, hardening or maintenance. Historic severity labels do not set current priority.
+**Status and priority.** OPEN = confirmed work; PARTIAL = capability exists with a defined gap; UNKNOWN = platform evidence is insufficient; CLOSED = no further work within the stated scope — a closed row names its kind: fixed (the default), superseded (another mechanism does the job) or declined (no consumer or deliberately not done); ACCEPTED = a deliberate, documented divergence from the platform's canonical text, kept by decision (not work; the grammar-parity gate accepts only the constructs listed for it in `ACCEPTED_DIVERGENCES`); REOPENED = a closed item with new confirmed cases. P0 = ordinary editing can crash/hang the host; P1 = meaningful capability loss or preservation risk; P2 = bounded behavior/verification gap; P3 = cosmetic, hardening or maintenance. Historic severity labels do not set current priority.
 
 ## Open items
 
-18 items: P1 — 1, P2 — 14, P3 — 3. No item is P0.
+20 items: P1 — 1, P2 — 14, P3 — 5. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
@@ -33,6 +33,8 @@ one place, ordered by priority.
 | UX-C8 | OPEN · P2 | Canvas UX | Canvas cache refresh and lazy reference-field expansion parity. |
 | UX-C9 | OPEN · P2 | Canvas UX | Full positional UNION mapping for tabular/trailing projections. |
 | C40 | OPEN · P2 | Correctness | Scalar comparison subquery rejected by 8.3.15.1489 is allowed by Apply; modern-platform verdict pending. |
+| R11 | PARTIAL · P3 | Correctness | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. |
+| C34 | PARTIAL · P3 | Correctness | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. |
 | C37 | OPEN · P3 | Correctness | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. |
 | C38 | OPEN · P3 | Correctness | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. |
 | C39 | OPEN · P3 | Correctness | English standard field names remain English in Russian output; platform canonical text translates them. |
@@ -42,6 +44,8 @@ one place, ordered by priority.
 | ID | Status / priority | Summary |
 |---|---|---|
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
+| R11 | PARTIAL · P3 | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
+| C34 | PARTIAL · P3 | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. [Details](#c34-english-sdbl-leftovers). |
 | C37 | OPEN · P3 | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C38 | OPEN · P3 | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C39 | OPEN · P3 | English standard field names remain English in Russian output; platform canonical text translates them. [Evidence](audits/v5-phase5-2026-10-21.md). |
@@ -69,6 +73,131 @@ Unverified (not platform parity): a chart of accounts with `OrderLength = 0` hav
 Caches: a YAML generation is rebuilt from XML by the same parsers; an existing YAML dir is read only when both XML builds fail, and it is not versioned by parser: a YAML built by the old parser still shows the old columns on that last-resort path (the stale warning fires only when the XML is newer than the YAML). The committed corpus YAML (`test/fixtures/corpus/metadata/cf`) was generated by the old parser and still lists `ДатаОбмена`; its source XML is not in the repository, so it was not regenerated (corpus output unchanged).
 
 **Next boundary:** Confirm the unverified cases on a configuration that has them before C24 step 1 relies on completeness there.
+
+### R11. GROUP BY semantics
+
+**Status:** PARTIAL · P3
+
+GROUP BY semantics.
+
+Step 1 (2026-10-12): the six GROUP BY rewrites that copy the 1C query constructor (`dropRedundantGroupDerefs`, `moveBeforePrefixGroupDerefToEnd`, `moveLeadingMovementCaseToEnd`, `dropFunctionallyDeterminedMovementCase`, `relocateKeptMovementCase`, `substituteGroupFieldWithSelectExpr`) run only in the constructor-parity mode (oracle/corpus); the Designer (`preserve`) and hover (`analysis`) keep the GROUP BY items and their order.
+
+Fixed production P1: they ran in the Designer whenever the batch had a temp table (the temp-table resolver passed their `if (!resolver)` gate), and `substituteGroupFieldWithSelectExpr` replaced a nested query's `Т.Наименование` by a `ВЫБОР` selecting on it — СхемаЗапроса keeps the GROUP BY; `execute_query` (SL_kza 2026-10-12): 11 rows → 2 after Apply; also when `Т.Наименование` was only inside a string literal ([regression](../../test/unit/groupByPreserve.r11.test.ts), evidence `test/fixtures/platform/r11-group-by.json`). A corpus-wide Designer check (306 runs, with and without a temp table) finds no other GROUP BY change except equivalent parenthesis normalization inside `*`/`/` chains and the parameter case registered as C31.
+
+Step 2 (2026-10-13): the seven raw-text gates of these rules read code through the shared lexer — `hasAggregateCall` (former `AGG_RE`, three rules; English names stay for C2), the aggregate-consumer check of `moveBeforePrefixGroupDerefToEnd` (former `includes`, also matched inside a longer name), `containsFieldRef`, `derefInResultPosition`, `normExpr` (literals compared exactly), `isMovementCaseExpr`, `isMovementResultExpr` (former `MOVEMENT_RE`); field names still match case-sensitively. A code-like literal no longer changes the GROUP BY, as on the platform (S2, S3b, S6 now as СхемаЗапроса; new L1–L4 neutral/code-like pairs and L2b in `r11-group-by.json`, [regression](../../test/unit/groupByLexerGates.r11.test.ts)); corpus unchanged in both modes.
+
+Remaining (constructor parity only, the Designer keeps the GROUP BY): the rules themselves differ from СхемаЗапроса for some shapes, also with a neutral literal — `substituteGroupFieldWithSelectExpr` replaces a nested query's field where the platform keeps it (S1, L1_agg_subst, L4), `dropRedundantGroupDerefs` keeps a reference consumed after `ТОГДА` where the platform drops it and groups the `ВЫБОР` (L1_agg_drop), `moveBeforePrefixGroupDerefToEnd` moves a reference used in an aggregate where the platform keeps the order (L2b_same_name).
+
+**Next boundary:** Rule-level parity of these three rules against СхемаЗапроса (corpus accept:oracle evidence and the L/S probes disagree: find the distinguishing condition first); close R11 after it.
+
+**First bounded slice (triaged 2026-10-19):** Start with `substituteGroupFieldWithSelectExpr` in `dropRedundantGroupDerefs.ts`, using S1, `L1_agg_subst` and `L4_norm_literal` from the existing platform fixture. The latter two currently have neutral/payload invariance assertions in `groupByLexerGates.r11.test.ts`, not direct assertions that our GROUP BY equals the platform's. Green tests therefore do not close this parity gap. Add direct platform-result regressions first, identify the distinguishing condition against the existing corpus, then narrow this one rule. Keep the other two rules and the preserve/analysis policy unchanged. Validate with both R11 suites and a reviewed before/after corpus comparison in both modes; do not update golden output merely to make the suite pass. This triage does not establish the missing condition or close R11.
+
+**Slice investigation (2026-10-20):** Direct platform comparisons now cover S1,
+both L1 substitution variants and both L4 variants, plus four fresh
+[`validate_query` probes](../../test/fixtures/platform/r11-substitution-probes.json)
+(no execution; the tool did not report the platform build). All nine constructor
+comparisons fail on the current implementation; they are explicitly `it.fails`
+in `groupByLexerGates.r11.test.ts`, with parsing/generation outside the expected-failure
+assertions. The same nine cases pass in preserve and analysis. A field in the CASE
+result rather than its condition, and removing the aggregate column, do not by
+themselves make the platform substitute it.
+
+An instrumented temporary build found **zero substitutions across the 1,976
+committed corpus inputs with metadata in constructor mode**. That corpus cannot
+distinguish a correct narrowing from disabling the rule. A control run on the four
+new probes recorded four substitutions, confirming the instrumentation observes
+the rule (checked 2026-10-21). Historical commits
+`2593a0e2` and `b1b1f4c7` cite a positive `ЗависшиеЗадачи` case in the private
+17,933-query corpus, but do not include its query/expected output; that case is
+absent from the committed corpus and the default local `tmp/` corpus is absent.
+No production rule was changed. Next prerequisite: obtain a reproducible positive
+platform substitution case (ideally that original input/output and metadata),
+then compare controlled variants before narrowing the rule. R11 remains PARTIAL;
+expected failures are evidence of the gap, not completed parity.
+
+**Other two rules (2026-10-21):** Direct expected-failure comparisons now also
+cover both `L1_agg_drop` variants and `L2b_same_name`. Three fresh
+[move probes](../../test/fixtures/platform/r11-move-probes.json) keep the GROUP BY
+order on the platform whether the dereference appears inside an aggregate,
+outside it, or in both positions; restricting the rule to occurrences outside
+aggregates is therefore insufficient. All six comparisons are explicit
+`it.fails`; preserve/analysis controls compare against the authored GROUP BY,
+not the constructor's rewrite. Temporary bundled-code experiments separately
+disabled the result-position exemption in `dropRedundantGroupDerefs` and the
+entire `moveBeforePrefixGroupDerefToEnd` rule: each changed **0/1,976** committed
+corpus outputs with metadata in constructor mode. No source implementation or
+golden changed. Positive historical witnesses (`Взаимозачет bsl_21` for keeping
+the dereference; `ФормированиеПартийЗЕРНО bsl_5` for moving it) are still needed
+to test a distinguishing condition. These experiments do not justify removing
+either rule or claim coverage of the unavailable private corpus.
+
+**Rule removal (2026-10-21).** Three constructor-parity rewrites were removed:
+`substituteGroupFieldWithSelectExpr`, `moveBeforePrefixGroupDerefToEnd` and the
+result-position exemption of `dropRedundantGroupDerefs`.
+
+- *Evidence against them:* every comparison recorded in this repository (15 direct
+  comparisons: S1, L1, L2b, L4 and the substitution and move probes) shows the rule
+  firing where the platform keeps the GROUP BY. After the removal the constructor
+  GROUP BY equals the platform's in all 15 (the former `it.fails` tests are ordinary
+  regressions).
+- *Not evidence either way:* the committed corpus — 0 of 7,904 outputs changed
+  (1,976 inputs × constructor/preserve × with/without metadata) only shows that the
+  rules never fire there.
+- *Historical positive witnesses (not reproducible now):* the rules were added to
+  match the live `validate_query` oracle on the private 17,933-query corpus —
+  `ЗависшиеЗадачи_1` for the substitution (`2593a0e2`, `b1b1f4c7`, then
+  `accept:oracle` 17,932/17,933), `Взаимозачет_21` for the exemption (`9fae78ca`,
+  17,933/17,933) and `ФормированиеПартийЗЕРНО bsl_5` for the move (cited in the rule's
+  comment, `c9549f1e`). Their inputs, outputs and metadata are not in the repository
+  and the private corpus is unavailable, so constructor parity for those shapes is
+  now expected to be lost. The platform build of that oracle is not recorded.
+- *Open question:* `L1_agg_drop` shows the platform rebuilding a top-level GROUP BY
+  (dropping `Т.ВалютаКонтрагента.Код`, grouping the `ВЫБОР`), against `b1b1f4c7`'s
+  "the top-level GROUP BY is kept verbatim". The distinguishing condition may be the
+  platform build or base rather than the query shape (hypothesis, not checked).
+
+The Designer (`preserve`) and hover (`analysis`) never ran these rules: product
+behaviour is unchanged. The remaining constructor rules (`dropRedundantGroupDerefs`
+without the exemption, `moveLeadingMovementCaseToEnd`,
+`dropFunctionallyDeterminedMovementCase`, `relocateKeptMovementCase`) are unchanged.
+
+**Next boundary:** model the platform's GROUP BY reconstruction from reproducible
+witnesses (input, metadata, platform build and canonical output). Do not restore the
+removed rules without such a witness.
+
+### C34. English SDBL leftovers
+
+**Status:** PARTIAL · P3
+
+C2 leftovers (2026-10-17): English names of `РегистрРасчета`, `ПланВидовРасчета` and
+`Последовательность` and their virtual tables were not mapped, because the probe base
+SL_kza has none of these objects. The CLI corpus extractor uses `queryDialect.ts` like
+the editor since 2026-10-17.
+
+Platform attestation is not possible on SL_kza: `validate_query` answers
+`Table not found` alike for `CalculationRegister.Тест`, `Catalog.НетТакого` and an
+invented `Blabla.Тест` (2026-10-21). By the user's decision of 2026-10-21 the names are
+mapped in `sdblEnglish.ts` from non-platform sources, kept apart:
+
+- official 1C developer guide, lesson 18: `CalculationRegister`, `ScheduleData`
+  (`CalculationRegister.Accruals.ScheduleData(…)`);
+- third-party only, the bilingual SDBL lexer of 1c-syntax/bsl-parser
+  (`SDBLLexer.g4` @ `d446af2`): `ChartOfCalculationTypes`, `Sequence`,
+  `ActualActionPeriod`, `Boundaries`. This is a deliberate exception to the V2 rule
+  that external grammars are not a verdict, limited to these names.
+
+Not mapped: the base table `Base<Register>` (the guide shows `….BaseAccruals(…)`,
+but a recalculation is also a third segment of a calculation register, so renaming
+`Base…` could change a valid query; such a name stays as written), standard attribute
+names of these kinds (`RegistrationPeriod`, `CalculationType`, …) — English standard fields in output in general are C39 — and the standard tabular sections of a chart of
+calculation types. Editor diagnostics are parse-only, so an unmapped name gives no
+false error. [Regressions](../../test/unit/englishCalculation.c34.test.ts): each mapped
+source parses as its Russian twin; recalculation and base-table names, including
+`Base…` in any letter case, are kept through Designer → Apply.
+
+**Next boundary:** attest the six names on a base that has these objects; map
+`Base<Register>` only where the source has a parameter list and the platform confirms
+the printed name.
 
 ### C35. UNION column count with a kept wildcard
 
@@ -188,7 +317,7 @@ not missing critical baseline work or a continuation of phase numbering.
 | UX-C7 | CLOSED | Sort-priority buttons in Classic and Canvas (2026-10-19). | Shared `MOVE_ORDER_FIELD` moves whole entries by index; direction, hierarchy, expressions, aliases and section comments survive. UNION tail routing and filtered Canvas indices are covered by [unit](../../test/unit/orderPriority.uxc7.test.ts) and [browser](../../test/e2e/orderPriority.spec.ts) regressions. |
 | UX-C8 | OPEN · P2 | Canvas cache refresh and lazy reference-field expansion parity. | Classic has refresh/ref message handling and SET_REF_FIELDS; Canvas lacks controls/response wiring. Reuse host/session; loaded navigation already works. |
 | UX-C9 | OPEN · P2 | Full positional UNION mapping for tabular/trailing projections. | Scalar-only deriveUnionColumns differs from generator orderedSelectElements. Preserve-only guard suppresses partial mapping. Shared alignment plus safe alias/reorder contract; coordinate A2 without requiring full A2 completion first. |
-| UX-C10 | CLOSED | Global stable Query/Scope ID proposal: not needed (2026-10-21). | No current consumer needs persistent cross-tree identity. Local recursive drafts work with parent source IDs; this is not a baseline or release prerequisite. Closed by decision: reopen when a concrete consumer needs cross-tree identity. |
+| UX-C10 | CLOSED (declined) | Global stable Query/Scope ID proposal: not needed (2026-10-21). | No current consumer needs persistent cross-tree identity. Local recursive drafts work with parent source IDs; this is not a baseline or release prerequisite. Closed by decision: reopen when a concrete consumer needs cross-tree identity. |
 
 EXISTS/NOT EXISTS, scalar SELECT subqueries and structured JOIN subqueries remain
 unsupported shared grammar/model ideas, not promised Canvas features. Raw JOIN
@@ -247,7 +376,6 @@ and [audit index](audits/README.md).
 | C31 | CLOSED | A parameter used as a BSL template placeholder survives Designer → Apply as written. [Details](#c31-bsl-query-template-parameters). |
 | C32 | CLOSED | OK / Save without a change no longer rewrites the query. [Details](#c32-safe--no-op-apply). |
 | C33 | CLOSED | An unaliased `#Имя` source gets no synthesized `КАК` in the Designer (2026-10-18). [Details](#c33-unaliased-template-marker-source). |
-| C34 | CLOSED | English calculation-register, chart-of-calculation-types and sequence names mapped from documentation (2026-10-21). [Details](#c34-english-sdbl-leftovers). |
 | C36 | ACCEPTED | The Designer keeps `*` where the 1C constructor expands it; accepted permanently (2026-10-21). [Details](#c36-kept--versus-the-constructor-canonical-text). |
 | D1 | CLOSED | Corrected stale source-contract comments; reconciliation/near-term reports. |
 | N1 | CLOSED | A `КАК` inside a DCS-brace literal no longer counts as an alias (`aliasDcsBraceExprs`, `wrapDcsBraceParam`) (`d562339`); dcsBraceAlias.n1.test.ts. |
@@ -258,7 +386,6 @@ and [audit index](audits/README.md).
 | R6 | CLOSED | Period units in `EXPR_STOP_WORDS` come from `PERIOD_WORDS`; `НАЧАЛОПЕРИОДА(Т.Дата, ПОЛУГОДИЕ)` no longer becomes `Т.ПОЛУГОДИЕ` (was Designer → Apply ok; platform keeps every unit) (`9c3f8d7`); periodUnits.r6.test.ts. |
 | R7 | CLOSED | Template markers (`%`, `#`, `@`, `[`, `]`) count only in code, so `Т.А + "50%" +` is malformed like `Т.А + "x" +`; the lifted bypass also exposed and fixed infix `НЕ ПОДОБНО` / `НЕ МЕЖДУ` false rejections and an ИТОГИ alias false Apply block (`ВЫБОР … КОНЕЦ КАК Код`; ИТОГИ check applyBlocked 45096 → 0) (`2cad5d7`, `a74ce68`); templateMarkerLiterals.r7, totalsAliasApply tests. |
 | R8 | CLOSED | `nestingPad` skips lines that start inside a literal; a literal line starting with a section word no longer moves the nested query (`18f1d49`); nestingPadLiterals.r8.test.ts. |
-| R11 | CLOSED | Constructor-parity GROUP BY rewrites that contradicted every platform result were removed; the Designer never ran them (2026-10-21). [Details](#r11-group-by-semantics). |
 | R12 | CLOSED | Dead Cyrillic `\b` guards removed (they never fired on query text; they misfired only between ASCII word characters such as `_ВЫБРАТЬ_`) (`5bc9473`); deadWordBoundary.r12.test.ts. |
 | R13 | CLOSED | JOIN single-CASE reflow (`renderJoinConjunct`) read `ВЫБОР` at a line end and the `КОНЕЦ` count from raw text, so literal content switched the layout (Designer → Apply ok, layout only). Found by the post-A1 residual audit; checks now count only code (`d525c7c`); joinCaseGate.r13.test.ts. |
 | S1 | CLOSED | Structured condition-subquery scopes; conditionSubqueryScope.test.ts. Opaque conditions remain unindexed. |
@@ -266,7 +393,7 @@ and [audit index](audits/README.md).
 | S3 | CLOSED | Removed unused semantic maps/partial state; semanticSnapshot tests. |
 | U1 | CLOSED | `#Имя` template markers: Apply is refused when a marker's neighbouring code changes. [Details](#u1-template-markers). |
 | U3 | CLOSED | A join condition sees only its own comma-root chain, as on the platform. [Details](#u3-comma-separated-from-roots). |
-| V2 | CLOSED | External grammar oracle superseded by the live platform oracle (2026-10-21). [Details](#v2-external-grammar-oracle). |
+| V2 | CLOSED (superseded) | External grammar oracle superseded by the live platform oracle (2026-10-21). [Details](#v2-external-grammar-oracle). |
 | V4 | CLOSED | Bounded Canvas browser/host regression gate; testing-and-release. |
 | Canvas baseline | CLOSED | Current capability matrix; archived baseline and full history reconciliation. |
 
@@ -505,105 +632,6 @@ Bare-name qualification (analysis/constructor) now matches the platform (`Т3.С
 
 Corpus and Designer round trip unchanged (0 of 23,712 outputs, 0 of 1,976). [Regressions](../../test/unit/commaJoinVisibility.u3.test.ts), [chain rules](../../test/unit/joinVisibility.test.ts).
 
-#### R11. GROUP BY semantics
-
-**Status:** CLOSED (2026-10-21)
-
-GROUP BY semantics.
-
-Step 1 (2026-10-12): the six GROUP BY rewrites that copy the 1C query constructor (`dropRedundantGroupDerefs`, `moveBeforePrefixGroupDerefToEnd`, `moveLeadingMovementCaseToEnd`, `dropFunctionallyDeterminedMovementCase`, `relocateKeptMovementCase`, `substituteGroupFieldWithSelectExpr`) run only in the constructor-parity mode (oracle/corpus); the Designer (`preserve`) and hover (`analysis`) keep the GROUP BY items and their order.
-
-Fixed production P1: they ran in the Designer whenever the batch had a temp table (the temp-table resolver passed their `if (!resolver)` gate), and `substituteGroupFieldWithSelectExpr` replaced a nested query's `Т.Наименование` by a `ВЫБОР` selecting on it — СхемаЗапроса keeps the GROUP BY; `execute_query` (SL_kza 2026-10-12): 11 rows → 2 after Apply; also when `Т.Наименование` was only inside a string literal ([regression](../../test/unit/groupByPreserve.r11.test.ts), evidence `test/fixtures/platform/r11-group-by.json`). A corpus-wide Designer check (306 runs, with and without a temp table) finds no other GROUP BY change except equivalent parenthesis normalization inside `*`/`/` chains and the parameter case registered as C31.
-
-Step 2 (2026-10-13): the seven raw-text gates of these rules read code through the shared lexer — `hasAggregateCall` (former `AGG_RE`, three rules; English names stay for C2), the aggregate-consumer check of `moveBeforePrefixGroupDerefToEnd` (former `includes`, also matched inside a longer name), `containsFieldRef`, `derefInResultPosition`, `normExpr` (literals compared exactly), `isMovementCaseExpr`, `isMovementResultExpr` (former `MOVEMENT_RE`); field names still match case-sensitively. A code-like literal no longer changes the GROUP BY, as on the platform (S2, S3b, S6 now as СхемаЗапроса; new L1–L4 neutral/code-like pairs and L2b in `r11-group-by.json`, [regression](../../test/unit/groupByLexerGates.r11.test.ts)); corpus unchanged in both modes.
-
-Remaining (constructor parity only, the Designer keeps the GROUP BY): the rules themselves differ from СхемаЗапроса for some shapes, also with a neutral literal — `substituteGroupFieldWithSelectExpr` replaces a nested query's field where the platform keeps it (S1, L1_agg_subst, L4), `dropRedundantGroupDerefs` keeps a reference consumed after `ТОГДА` where the platform drops it and groups the `ВЫБОР` (L1_agg_drop), `moveBeforePrefixGroupDerefToEnd` moves a reference used in an aggregate where the platform keeps the order (L2b_same_name).
-
-**Next boundary:** Rule-level parity of these three rules against СхемаЗапроса (corpus accept:oracle evidence and the L/S probes disagree: find the distinguishing condition first); close R11 after it.
-
-**First bounded slice (triaged 2026-10-19):** Start with `substituteGroupFieldWithSelectExpr` in `dropRedundantGroupDerefs.ts`, using S1, `L1_agg_subst` and `L4_norm_literal` from the existing platform fixture. The latter two currently have neutral/payload invariance assertions in `groupByLexerGates.r11.test.ts`, not direct assertions that our GROUP BY equals the platform's. Green tests therefore do not close this parity gap. Add direct platform-result regressions first, identify the distinguishing condition against the existing corpus, then narrow this one rule. Keep the other two rules and the preserve/analysis policy unchanged. Validate with both R11 suites and a reviewed before/after corpus comparison in both modes; do not update golden output merely to make the suite pass. This triage does not establish the missing condition or close R11.
-
-**Slice investigation (2026-10-20):** Direct platform comparisons now cover S1,
-both L1 substitution variants and both L4 variants, plus four fresh
-[`validate_query` probes](../../test/fixtures/platform/r11-substitution-probes.json)
-(no execution; the tool did not report the platform build). All nine constructor
-comparisons fail on the current implementation; they are explicitly `it.fails`
-in `groupByLexerGates.r11.test.ts`, with parsing/generation outside the expected-failure
-assertions. The same nine cases pass in preserve and analysis. A field in the CASE
-result rather than its condition, and removing the aggregate column, do not by
-themselves make the platform substitute it.
-
-An instrumented temporary build found **zero substitutions across the 1,976
-committed corpus inputs with metadata in constructor mode**. That corpus cannot
-distinguish a correct narrowing from disabling the rule. A control run on the four
-new probes recorded four substitutions, confirming the instrumentation observes
-the rule (checked 2026-10-21). Historical commits
-`2593a0e2` and `b1b1f4c7` cite a positive `ЗависшиеЗадачи` case in the private
-17,933-query corpus, but do not include its query/expected output; that case is
-absent from the committed corpus and the default local `tmp/` corpus is absent.
-No production rule was changed. Next prerequisite: obtain a reproducible positive
-platform substitution case (ideally that original input/output and metadata),
-then compare controlled variants before narrowing the rule. R11 remains PARTIAL;
-expected failures are evidence of the gap, not completed parity.
-
-**Other two rules (2026-10-21):** Direct expected-failure comparisons now also
-cover both `L1_agg_drop` variants and `L2b_same_name`. Three fresh
-[move probes](../../test/fixtures/platform/r11-move-probes.json) keep the GROUP BY
-order on the platform whether the dereference appears inside an aggregate,
-outside it, or in both positions; restricting the rule to occurrences outside
-aggregates is therefore insufficient. All six comparisons are explicit
-`it.fails`; preserve/analysis controls compare against the authored GROUP BY,
-not the constructor's rewrite. Temporary bundled-code experiments separately
-disabled the result-position exemption in `dropRedundantGroupDerefs` and the
-entire `moveBeforePrefixGroupDerefToEnd` rule: each changed **0/1,976** committed
-corpus outputs with metadata in constructor mode. No source implementation or
-golden changed. Positive historical witnesses (`Взаимозачет bsl_21` for keeping
-the dereference; `ФормированиеПартийЗЕРНО bsl_5` for moving it) are still needed
-to test a distinguishing condition. These experiments do not justify removing
-either rule or claim coverage of the unavailable private corpus.
-
-**Closure (2026-10-21):** the three disputed rewrites were removed instead of
-narrowed — `substituteGroupFieldWithSelectExpr`, `moveBeforePrefixGroupDerefToEnd`
-and the result-position exemption of `dropRedundantGroupDerefs`. Every recorded
-platform comparison contradicted them (15 direct comparisons: S1, L1, L2b, L4 and
-the substitution and move probes), and the positive witnesses they were written for
-exist only in the unavailable private corpus. After the removal the constructor
-GROUP BY equals the platform's in all 15 comparisons (the former `it.fails` tests are
-ordinary regressions). Committed corpus: 0 of 7,904 outputs changed (1,976 inputs ×
-constructor/preserve × with/without metadata). The Designer (`preserve`) and hover
-(`analysis`) never ran these rules, so the product is unchanged. The remaining
-constructor rules (`dropRedundantGroupDerefs` without the exemption,
-`moveLeadingMovementCaseToEnd`, `dropFunctionallyDeterminedMovementCase`,
-`relocateKeptMovementCase`) are unchanged. Accepted risk: a shape from the private
-corpus where 1C does rewrite the GROUP BY would now differ in constructor parity only;
-such a case would reopen R11 with its input and platform output.
-
-#### C34. English SDBL leftovers
-
-**Status:** CLOSED (2026-10-21, documentation-attested)
-
-C2 leftovers (2026-10-17): English names of `РегистрРасчета`, `ПланВидовРасчета` and
-`Последовательность` and their virtual tables were not mapped, because the probe base
-SL_kza has none of these objects. The CLI corpus extractor uses `queryDialect.ts` like
-the editor since 2026-10-17.
-
-Closure: the names cannot be attested on SL_kza — `validate_query` answers
-`Table not found` alike for `CalculationRegister.Тест`, `Catalog.НетТакого` and an
-invented `Blabla.Тест` (2026-10-21), so a kind is not recognisable without an object.
-They are mapped from documentation instead (user decision 2026-10-21): the bilingual
-SDBL lexer of 1c-syntax/bsl-parser (`SDBLLexer.g4` @ `d446af2`) and the 1C developer
-guide, lesson 18 (`CalculationRegister.Accruals.ScheduleData(…)`, `….BaseAccruals(…)`).
-`sdblEnglish.ts` now maps `CalculationRegister`, `ChartOfCalculationTypes`, `Sequence`,
-`ActualActionPeriod`, `ScheduleData`, `Boundaries` and the `Base<Register>` prefix.
-[Regressions](../../test/unit/englishCalculation.c34.test.ts): each English source
-parses as its Russian twin.
-
-Boundary: not platform-attested; standard attribute names of these kinds
-(`RegistrationPeriod`, `CalculationType`, …) and the standard tabular sections of a
-chart of calculation types have no source and stay as written. Editor diagnostics are
-parse-only, so an unmapped name gives no false error. A base with these objects
-reopens C34 only if it contradicts the mapping.
-
 #### C36. Kept `*` versus the constructor canonical text
 
 **Status:** ACCEPTED (2026-10-21)
@@ -615,9 +643,10 @@ The Designer keeps `*` over configuration tables where the 1C constructor's cano
 **Decision (2026-10-21):** the divergence is accepted permanently. Metadata
 completeness (extensions, a stale dump) stays unprovable, so the Designer keeps `*`
 as written and wildcard widths stay unknown; "Expand `*`" remains the explicit way
-to get the constructor's columns. The grammar-parity gate accepts the two
-`select.star-*` `differs` entries only because C36 is ACCEPTED; any other gap still
-needs an open item. A provenance signal for the metadata (extensions loaded, dump
+to get the constructor's columns. The grammar-parity gate accepts exactly the two
+listed constructs, `select.star-star` and `select.star-source-star`
+(`ACCEPTED_DIVERGENCES` in `grammarParity.catalog.test.ts`): any other canonical
+difference fails even under C36, and every other gap still needs an open item. A provenance signal for the metadata (extensions loaded, dump
 freshness) would be a new item, not a reopening of C36.
 
 #### V2. External grammar oracle

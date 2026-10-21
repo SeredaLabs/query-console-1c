@@ -18,7 +18,7 @@ Canvas phase numbers. The ledger owns status/priority and exit boundaries;
    [grammar parity](grammar-parity.md) phases: attested suites and catalog
    consistency gate, then the catalog from independent sources, fuzz, a
    deduplicated live 1C batch and bounded per-construct fixes. C2 (English SDBL)
-   shipped in 0.2.0; its leftovers (C34) were closed on 2026-10-21. Improve V1 provenance/negative coverage and add bounded V3
+   shipped in 0.2.0; its leftovers are C34 (names mapped on 2026-10-21 from documentation, not platform-attested). Improve V1 provenance/negative coverage and add bounded V3
    transformation checks. U1 and U3 were settled on the platform and fixed
    (2026-10-15/17); U2 still needs a base with sequences. Do not treat
    local tests as platform verdicts. The first phases need no live 1C and can
