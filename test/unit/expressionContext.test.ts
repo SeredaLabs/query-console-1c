@@ -179,6 +179,43 @@ describe('analyzeExpression', () => {
     expect(analyzeExpression('НАЧАЛОПЕРИОДА(&Дата, МЕСЯЦ)', ctx).resultType).toBeUndefined();
   });
 
+  it.each(['ПОДСТРОКА("abcdef", 2, 3)', 'substring("a,b)", 1, 2)',
+    'подстрока(// before\n "abc", 1, 0) // after'])
+  ('types a complete substring call without metadata: %s', text => {
+    expect(analyzeExpression(text, { sources: [], qualified: true })).toMatchObject({
+      syntaxValid: true, issues: [], resultType: 'Строка',
+    });
+  });
+
+  it('types substring of a direct string metadata field in both addressing modes', () => {
+    const sources = expressionSources([{ id: 'g', fullName: GOODS.fullName, alias: 'Т' }], [GOODS]);
+    expect(analyzeExpression('ПОДСТРОКА(Т.Наименование, 1, 3)', { ...ctx, sources }).resultType).toBe('Строка');
+    expect(analyzeExpression('ПОДСТРОКА(Наименование, 1, 3)', { sources, qualified: false }).resultType).toBe('Строка');
+    expect(analyzeExpression('Т.Наименование', { ...ctx, sources }).resultType).toBe('Строка(150)');
+  });
+
+  it.each(['ПОДСТРОКА()', 'ПОДСТРОКА("abc", 1)', 'ПОДСТРОКА("abc", 1, 2, 3)',
+    'ПОДСТРОКА("abc", 1,)', 'ПОДСТРОКА("abc", 1, 2', 'ПОДСТРОКА(NULL, 1, 2)',
+    'ПОДСТРОКА(&Текст, 1, 2)', 'ПОДСТРОКА("abc", &Начало, 2)', 'ПОДСТРОКА(1, 1, 2)',
+    'ПОДСТРОКА(Т.Наименование, 1, 2)', 'ПОДСТРОКА(ВТ.Колонка, 1, 2)',
+    'ПОДСТРОКА(ПОДСТРОКА("abc", 1, 2), 1, 1)', 'ПОДСТРОКА("abc", 1, 2) = "ab"',
+    'ПОДСТРОКА("abc", 1, 2) + "d"', 'ДругаяПОДСТРОКА("abc", 1, 2)'])
+  ('does not infer a substring type outside the attested shape: %s', text => {
+    expect(analyzeExpression(text, ctx).resultType).toBeUndefined();
+  });
+
+  it('does not infer substring from derived, composite or reference-path types', () => {
+    const mixed: MetaTable = { ...GOODS, fields: [{ name: 'Поле', kind: 'attribute',
+      types: [{ primitive: 'Строка' }, { primitive: 'Число' }] }] };
+    expect(analyzeExpression('ПОДСТРОКА(Т.Поле, 1, 2)', { ...ctx,
+      sources: [{ alias: 'Т', meta: mixed, typeOrigin: 'metadata' }] }).resultType).toBeUndefined();
+    expect(analyzeExpression('ПОДСТРОКА(Т.Наименование, 1, 2)', { ...ctx,
+      sources: [{ alias: 'Т', meta: GOODS, typeOrigin: 'derived' }] }).resultType).toBeUndefined();
+    expect(analyzeExpression('ПОДСТРОКА(Остатки.Товар.Наименование, 1, 2)', { ...ctx,
+      sources: [{ alias: 'Остатки', meta: BALANCES, typeOrigin: 'metadata' }] }).resultType).toBeUndefined();
+    expect(analyzeExpression('ПОДСТРОКА(Т.Нет, 1, 2)', ctx).issues).toMatchObject([{ kind: 'fieldNotFound', field: 'Нет' }]);
+  });
+
   it.each(['Остатки.КоличествоОстаток + 1', '(Остатки.СуммаОстаток - Остатки.КоличествоОстаток) * 2',
     '-Остатки.КоличествоОстаток', 'Остатки.СуммаОстаток / 2'])
   ('types arithmetic over direct numeric metadata fields: %s', text => {
