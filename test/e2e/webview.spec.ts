@@ -939,6 +939,21 @@ async function exprText(page: Page): Promise<string> {
 }
 
 test.describe('Произвольное выражение (редактор выражений)', () => {
+  test('A3: substring type hint preserves text through save and reopen', async ({ page }) => {
+    await openExpressionForNewField(page);
+    const text = 'ПОДСТРОКА("abcdef", 2, 3)';
+    await page.locator(EXPR_CONTENT).fill(text);
+    await expect(page.getByTestId('expr-status')).toContainText('Тип результата: Строка');
+    await page.getByTestId('expr-ok').click();
+    await page.locator('[data-field-idx="0"]').dblclick();
+    expect(await exprText(page)).toBe(text);
+    await expect(page.getByTestId('expr-status')).toContainText('Тип результата: Строка');
+    await page.locator(EXPR_CONTENT).fill('ПОДСТРОКА(NULL, 2, 3)');
+    await expect(page.getByTestId('expr-status')).toContainText('Тип результата: неизвестен');
+    await page.locator(EXPR_CONTENT).fill('SUBSTRING("abcdef", 2, 3)');
+    await expect(page.getByTestId('expr-status')).toContainText('Тип результата: Строка');
+  });
+
   test('A3: literal type updates without changing the saved expression', async ({ page }) => {
     await openExpressionForNewField(page);
     const status = page.getByTestId('expr-status');

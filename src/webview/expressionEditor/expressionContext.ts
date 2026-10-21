@@ -14,7 +14,7 @@ import { isStructurallyValidExpression } from '../../core/query/expressionSyntax
 export interface ExpressionSource {
   alias: string;
   meta: MetaTable;
-  /** Origin of field types for arithmetic hints; omitted means unproven. */
+  /** Origin of field types for expression hints; omitted means unproven. */
   typeOrigin?: 'metadata' | 'derived';
 }
 
@@ -94,7 +94,7 @@ export interface ExpressionAnalysis {
    * конструктора для custom-виразів (PR-14). */
   syntaxValid: boolean;
   issues: ExpressionIssue[];
-  /** Підпис для UI: поле, літерал або доведена числова арифметика; не валідація. */
+  /** Підпис для UI з доведених фактів про тип; не валідація. */
   resultType?: string;
 }
 
@@ -163,6 +163,19 @@ function numericArithmeticType(tokens: Token[], fields: ReadonlyMap<number, numb
   return hasOperand ? 'Число' : undefined;
 }
 
+/** Only a whole SUBSTRING call with a proven string operand and literal numeric
+ * positions. Unknown expressions, NULL operands and nested calls need separate facts;
+ * this does not validate argument values or infer a result-length qualifier. */
+function substringResultType(tokens: Token[], stringFields: ReadonlyMap<number, number>): string | undefined {
+  if (!isWordToken(tokens[0], 'ПОДСТРОКА', 'SUBSTRING') || tokens[1]?.value !== '(') return undefined;
+  const end = tokens[2]?.type === 'string' ? 2 : stringFields.get(2);
+  if (end === undefined || tokens.length !== end + 6) return undefined;
+  const punct = (offset: number, value: string) => tokens[end + offset]?.type === 'punct' && tokens[end + offset].value === value;
+  return punct(1, ',') && tokens[end + 2]?.type === 'number'
+    && punct(3, ',') && tokens[end + 4]?.type === 'number' && punct(5, ')')
+    ? 'Строка' : undefined;
+}
+
 /**
  * Діагностика довільного виразу для статус-рядка й маркерів редактора. Не блокує OK
  * (поточна форма не має блокуючих правил — Apply конструктора перевіряє вирази сам).
@@ -193,6 +206,7 @@ export function analyzeExpression(text: string, ctx: ExpressionContext, cursor?:
   const chains = collectChains(tokens);
   let resultType = constantResultType(tokens);
   const numericFields = new Map<number, number>();
+  const stringFields = new Map<number, number>();
 
   for (const chain of chains) {
     const names = chain.segments.map(s => s.text);
@@ -209,8 +223,9 @@ export function analyzeExpression(text: string, ctx: ExpressionContext, cursor?:
       // Direct fields only: composite reference navigation and derived-column
       // compatibility types do not prove an arithmetic operand's type.
       if (loc.source.typeOrigin === 'metadata' && loc.path.length === 1 && last
-        && last.field.types.length === 1 && last.field.types[0].primitive === 'Число') {
-        numericFields.set(chain.start, chain.end);
+        && last.field.types.length === 1) {
+        if (last.field.types[0].primitive === 'Число') numericFields.set(chain.start, chain.end);
+        if (last.field.types[0].primitive === 'Строка') stringFields.set(chain.start, chain.end);
       }
       continue;
     }
@@ -231,6 +246,7 @@ export function analyzeExpression(text: string, ctx: ExpressionContext, cursor?:
   }
 
   resultType ??= numericArithmeticType(tokens, numericFields);
+  resultType ??= substringResultType(tokens, stringFields);
   return { empty: false, syntaxValid, issues, resultType: syntaxValid ? resultType : undefined };
 }
 
