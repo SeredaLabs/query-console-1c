@@ -20,7 +20,7 @@ one place, ordered by priority.
 |---|---|---|---|
 | V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 (34 probes, 96 forms on a live base) is not run yet; the only known gap is C36, deliberate. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
-| A3 | PARTIAL · P2 | Architecture | The expression editor types only a lone resolved field; other expressions stay untyped. |
+| A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple string/number/Boolean literals; compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
 | V3 | PARTIAL · P2 | Verification | The Apply gate never compares input and output semantics. |
 | U2 | UNKNOWN · P2 | Platform unknowns | Sequence `Границы` argument layout unconfirmed (no base with sequences); such queries are Apply-blocked. |
@@ -159,7 +159,9 @@ The Designer keeps `*` over configuration tables where the 1C constructor's cano
 
 | ID | Status / priority | Remaining work and evidence | Next boundary |
 |---|---|---|---|
-| A3 | PARTIAL · P2 | [Expression context](../../src/webview/expressionEditor/expressionContext.ts) types a lone resolved field; arbitrary expressions remain unknown ([tests](../../test/unit/expressionContext.test.ts)). [Audit type boundary](audits/query-core-edt-2026-10-01.md#semantictype-model): parser temp-table `Строка` markers also cover number/Boolean literals and mean non-reference, not their actual result type. | Display-only inference using A1 representation and attested result types; keep type facts separate from validation and do not infer types from compatibility markers. The old independent walker proposal is obsolete; no separate grammar. |
+| A3 | PARTIAL · P2 | [Expression context](../../src/webview/expressionEditor/expressionContext.ts) types a lone resolved field and simple string/number/Boolean literals; compound expressions remain unknown ([tests](../../test/unit/expressionContext.test.ts)). [Audit type boundary](audits/query-core-edt-2026-10-01.md#semantictype-model): parser temp-table `Строка` markers also cover number/Boolean literals and mean non-reference, not their actual result type. | Display-only inference using A1 representation and attested result types; keep type facts separate from validation and do not infer types from compatibility markers. The old independent walker proposal is obsolete; no separate grammar. |
+
+A3 literal slice (2026-10-21): display-only primitive labels reuse SDBL lexer tokens, including signed numbers and English Boolean spelling. No precision/length qualifiers are guessed; NULL, parameters, functions and compound expressions remain unknown. Field metadata qualifiers and validation are unchanged. Live SmartLogistic DEV `execute_query` over constants only confirmed `ПРЕДСТАВЛЕНИЕ(ТИПЗНАЧЕНИЯ(...))`: `42` and `-1.25` → `Number`, `"текст"` → `String`, `ИСТИНА` → `Boolean`; platform build was not reported. Unit regressions and the Classic expression-editor status/save/reopen test cover the slice. A3 remains PARTIAL.
 
 The [2026-10-01 EDT audit](audits/query-core-edt-2026-10-01.md) confirms the
 existing A1/A2/A3 direction without new debt IDs or status/priority changes.

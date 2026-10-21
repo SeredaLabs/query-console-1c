@@ -939,6 +939,22 @@ async function exprText(page: Page): Promise<string> {
 }
 
 test.describe('Произвольное выражение (редактор выражений)', () => {
+  test('A3: literal type updates without changing the saved expression', async ({ page }) => {
+    await openExpressionForNewField(page);
+    const status = page.getByTestId('expr-status');
+    for (const [text, type] of [['42', 'Число'], ['"текст"', 'Строка'], ['ИСТИНА', 'Булево'], ['1 + 2', 'неизвестен']]) {
+      await page.locator(EXPR_CONTENT).fill(text);
+      await expect(status).toContainText(`Тип результата: ${type}`);
+    }
+    await page.locator(EXPR_CONTENT).fill('-1.25');
+    await expect(status).toContainText('Тип результата: Число');
+    await page.getByTestId('expr-ok').click();
+    await expect(page.locator('[data-field-idx="0"]')).toContainText('-1.25');
+    await page.locator('[data-field-idx="0"]').dblclick();
+    expect(await exprText(page)).toBe('-1.25');
+    await expect(status).toContainText('Тип результата: Число');
+  });
+
   test('open → OK без изменений сохраняет выражение; Отмена не меняет его', async ({ page }) => {
     await openExpressionForNewField(page);
     await page.locator(EXPR_CONTENT).fill('ЕСТЬNULL(Валюты.Код, "-")');

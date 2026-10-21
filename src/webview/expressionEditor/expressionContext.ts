@@ -2,7 +2,7 @@ import type { MetaField, MetaTable } from '../../core/metadata/types';
 import type { MetadataResolver } from '../../core/query/metadataResolver';
 import { resolveFieldPath } from '../../core/query/fieldPathResolver';
 import { describeFieldTypes } from '../../core/metadata/describeType';
-import { tokenize, SdblLexError, type Token } from '../../core/query/sdblLexer';
+import { tokenize, isWordToken, SdblLexError, type Token } from '../../core/query/sdblLexer';
 import { isStructurallyValidExpression } from '../../core/query/expressionSyntaxCheck';
 
 /**
@@ -92,7 +92,7 @@ export interface ExpressionAnalysis {
    * конструктора для custom-виразів (PR-14). */
   syntaxValid: boolean;
   issues: ExpressionIssue[];
-  /** Тип результату, лише коли він доведений метаданими (вираз — одне поле). */
+  /** Підпис для UI: тип одного поля з метаданих або простого літерала; не валідація. */
   resultType?: string;
 }
 
@@ -133,6 +133,18 @@ function lexicalIssue(text: string, e: unknown): ExpressionIssue {
   return { from, to: Math.min(text.length, from + 1), severity: 'error', kind: 'lexical', message };
 }
 
+/** Only complete literal tokens; no expression grammar or guessed qualifiers. */
+function literalResultType(tokens: Token[]): string | undefined {
+  if (tokens.length === 1) {
+    if (tokens[0].type === 'string') return 'Строка';
+    if (tokens[0].type === 'number') return 'Число';
+    if (isWordToken(tokens[0], 'ИСТИНА', 'ЛОЖЬ')) return 'Булево';
+  }
+  if (tokens.length === 2 && tokens[0].type === 'punct'
+    && (tokens[0].value === '+' || tokens[0].value === '-') && tokens[1].type === 'number') return 'Число';
+  return undefined;
+}
+
 /**
  * Діагностика довільного виразу для статус-рядка й маркерів редактора. Не блокує OK
  * (поточна форма не має блокуючих правил — Apply конструктора перевіряє вирази сам).
@@ -161,7 +173,7 @@ export function analyzeExpression(text: string, ctx: ExpressionContext, cursor?:
   const resolver = ctx.resolver ?? EMPTY_RESOLVER;
   const hasSubquery = tokens.some(t => t.type === 'keyword' && t.value === 'ВЫБРАТЬ');
   const chains = collectChains(tokens);
-  let resultType: string | undefined;
+  let resultType = literalResultType(tokens);
 
   for (const chain of chains) {
     const names = chain.segments.map(s => s.text);

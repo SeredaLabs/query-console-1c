@@ -140,7 +140,24 @@ describe('analyzeExpression', () => {
     expect(analyzeExpression(text, ctx).issues).toHaveLength(1);
   });
 
-  it('infers the result type only for a lone resolved field', () => {
+  it.each([
+    ['42', 'Число'], ['-1.25', 'Число'], ['+2', 'Число'],
+    ['"текст"', 'Строка'], ['""', 'Строка'], ['"a""b"', 'Строка'],
+    ['ИСТИНА', 'Булево'], ['ложь', 'Булево'], ['TRUE', 'Булево'], ['false', 'Булево'],
+    [' // before\n - 1.25 // after', 'Число'],
+  ])('shows the primitive type of literal %s without metadata', (text, resultType) => {
+    expect(analyzeExpression(text, { sources: [], qualified: true })).toMatchObject({
+      syntaxValid: true, issues: [], resultType,
+    });
+  });
+
+  it.each(['1 + 2', '"a" + "b"', '&Параметр', 'NULL', 'НЕОПРЕДЕЛЕНО',
+    'ВЫБОР КОГДА ИСТИНА ТОГДА 1 ИНАЧЕ 2 КОНЕЦ', '1 +', '"незакрыто', '-'])
+  ('does not guess a result type for %s', text => {
+    expect(analyzeExpression(text, ctx).resultType).toBeUndefined();
+  });
+
+  it('keeps metadata qualifiers for a lone resolved field', () => {
     expect(analyzeExpression('Остатки.КоличествоОстаток', ctx).resultType).toBe('Число(15,3)');
     expect(analyzeExpression('Остатки.Товар.Наименование', ctx).resultType).toBe('Строка(150)');
     expect(analyzeExpression('СУММА(Остатки.СуммаОстаток)', ctx).resultType).toBeUndefined();
