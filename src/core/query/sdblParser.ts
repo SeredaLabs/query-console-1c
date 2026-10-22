@@ -3119,7 +3119,7 @@ function segmentConditionTokens(tokens: Token[]): Token[][] {
       // C31: `(&Условие)` stays one segment with its parentheses outside the
       // constructor-parity mode (BSL code may replace the parameter with `А ИЛИ Б`).
       const placeholder = inner.length === 1 && inner[0].type === 'param' && wildcardPolicy !== 'constructor';
-      if (inner.length > 0 && !placeholder && !hasTopLevelOr(inner)) {
+      if (inner.length > 0 && !placeholder && !hasTopLevelOr(inner) && splitConjunctsOrNull(inner) !== null) {
         out.push(...segmentConditionTokens(inner));
         continue;
       }
@@ -3190,7 +3190,9 @@ function interpretCondition(
   // Объединённый ИЛИ-блок (фаза 6.14): сегмент с верхнеуровневым `ИЛИ` — всегда
   // произвольное условие целиком. Без этой проверки trySimpleCondition «съедал» бы
   // хвост `… ИЛИ …` в param простого условия (`a = ЛОЖЬ ИЛИ &П` → param `ЛОЖЬ ИЛИ &П`).
-  if (hasTopLevelOr(tokens)) {
+  // C45: то же для сегмента с пустым конъюнктом (`И В.Код = 1`) — иначе ведущее `И`
+  // разбиралось бы как поле.
+  if (hasTopLevelOr(tokens) || splitConjunctsOrNull(tokens) === null) {
     return { custom: true, expression: customText() };
   }
   // Отрицание условия-подзапроса (`НЕ <поле> В [ИЕРАРХИИ] (ВЫБРАТЬ …)`): снимаем
@@ -3580,24 +3582,38 @@ const STD_JOIN_OPERATORS = new Set<string>(['=', '<>', '>', '>=', '<', '<=']);
  * КОНЕЦ`; `И` диапазона `МЕЖДУ a И b` не разделитель). Возвращает список сегментов-
  * конъюнктов. Аналог `splitConditionSegments`, но работает над готовым массивом
  * токенов условия соединения (фаза 6.13).
+ *
+ * C45: `И` без операнда (в начале, `И И`, в конце) не делит поток — он остаётся
+ * ОДНИМ сегментом с исходным текстом (как при верхнеуровневом `ИЛИ`), чтобы
+ * произвольное условие не теряло `И` молча, а `malformedCustom` его отклонил.
  */
 function splitJoinConjuncts(tokens: Token[]): Token[][] {
+  return splitConjunctsOrNull(tokens) ?? [tokens];
+}
+
+/** Деление по верхнеуровневым `И`; `null`, если какой-то конъюнкт пуст (C45). */
+function splitConjunctsOrNull(tokens: Token[]): Token[][] | null {
   const segments: Token[][] = [];
   let current: Token[] = [];
   let depth = 0;
   let caseDepth = 0;
   let betweenPending = 0;
+  let emptyConjunct = false;
+  let endsWithAnd = false;
   const flush = (): void => {
     if (current.length > 0) segments.push(current);
     current = [];
   };
   for (const t of tokens) {
+    endsWithAnd = false;
     if (depth === 0 && caseDepth === 0) {
       if (t.type === 'keyword' && t.value === 'И') {
         if (betweenPending > 0) {
           betweenPending--;
         } else {
+          if (current.length === 0) emptyConjunct = true;
           flush();
+          endsWithAnd = true;
           continue;
         }
       }
@@ -3610,7 +3626,7 @@ function splitJoinConjuncts(tokens: Token[]): Token[][] {
     current.push(t);
   }
   flush();
-  return segments;
+  return emptyConjunct || endsWithAnd ? null : segments;
 }
 
 /**
