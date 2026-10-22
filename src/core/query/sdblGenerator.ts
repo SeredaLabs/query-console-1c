@@ -3468,9 +3468,14 @@ function buildConditionStrings(
     if (c.leftExpr && c.subquery) {
       // C51: the base of a raw leaf (above). The printed text is not compact, so it
       // re-parses as a raw leaf; another base moved it on the second Save.
-      const subBase = (slot === 'where' && !inConditionSubquery ? 3 : 2) + (c.negated ? 1 : 0);
+      // C53: a left side split over lines is printed on one line, as a raw leaf is.
+      const lhs = normalizeLeafCase(flattenMultilineLeaf(c.leftExpr));
+      // C52: as on a raw leaf, each leading `НЕ` kept in the left side (`НЕ НЕ X В`)
+      // adds a tab too, not only the `negated` one.
+      const lhsNots = /^((?:НЕ\s+)+)/iu.exec(lhs)?.[1].match(/НЕ/giu)?.length ?? 0;
+      const subBase = (slot === 'where' && !inConditionSubquery ? 3 : 2) + (c.negated ? 1 : 0) + lhsNots;
       const negPrefix = c.negated ? 'НЕ ' : '';
-      push(`${negPrefix}${normalizeLeafCase(c.leftExpr)} В\n${renderConditionSubquery(c.subquery, subBase, c.negated)}`);
+      push(`${negPrefix}${lhs} В\n${renderConditionSubquery(c.subquery, subBase, c.negated)}`);
       continue;
     }
     if (!c.path) continue;
