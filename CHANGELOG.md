@@ -3,7 +3,7 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.4.0 - 2026-10-22
 
 ### Changed
 
@@ -17,6 +17,31 @@ All notable changes are recorded here. The project uses
 
 - The legacy Query text dialog and the `queryConsole.queryTextEditorV2` setting.
   An existing value in `settings.json` is ignored and can be deleted.
+
+### Fixed
+
+- Switching between the Classic and Canvas designers is refused while the query
+  has anything that blocks Apply (for example an unclosed condition or a virtual
+  table with arguments the designer cannot keep). Before, the switch could clear
+  the block, and the other designer could then save a changed query.
+- A field reached through a reference to several types is found if any of those
+  types has it; such queries are no longer refused on open, on Apply or in the
+  editor's diagnostics.
+- Query text: an incomplete condition (`ГДЕ В.Код =`) is no longer shown as
+  valid and applied; it is refused, as OK / Save refuses it.
+- Query text in Ukrainian: applying an empty query shows its own message
+  instead of a generic error.
+- An empty `И` in a condition (`ГДЕ В.Код = 1 И`) no longer disappears on Save;
+  the query is refused with an error instead. An English condition ending in a
+  keyword (`… AND`) is no longer cut short.
+- A broken condition inside a subquery that is kept as text (for example in an
+  `ИЛИ` condition) is refused, like one in any other subquery.
+- Opening a query with deeply nested subqueries inside `ИЛИ` or `ВЫБОР` no
+  longer takes tens of seconds.
+- `В (ВЫБРАТЬ …)` with a tuple or another non-field left side: the first Save
+  now gives the final text. Before, the second Save changed it again in
+  `ИМЕЮЩИЕ`, with `(a, b) НЕ В`, `НЕ НЕ`, fields without an alias, or a left
+  side split over lines.
 
 ## 0.3.0 - 2026-10-21
 
