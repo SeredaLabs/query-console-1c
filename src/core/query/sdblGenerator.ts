@@ -3466,7 +3466,9 @@ function buildConditionStrings(
     // печатаем сам текст LHS перед `В`, дальше — структурный подзапрос как обычно.
     // path при этом не задан; обрабатываем до гейта `!c.path`.
     if (c.leftExpr && c.subquery) {
-      const subBase = (inConditionSubquery ? 2 : 3) + (c.negated ? 1 : 0);
+      // C51: the base of a raw leaf (above). The printed text is not compact, so it
+      // re-parses as a raw leaf; another base moved it on the second Save.
+      const subBase = (slot === 'where' && !inConditionSubquery ? 3 : 2) + (c.negated ? 1 : 0);
       const negPrefix = c.negated ? 'НЕ ' : '';
       push(`${negPrefix}${normalizeLeafCase(c.leftExpr)} В\n${renderConditionSubquery(c.subquery, subBase, c.negated)}`);
       continue;
