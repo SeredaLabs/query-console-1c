@@ -26,6 +26,12 @@ function finalApplyBlocker(text: string) {
   return findStaticApplyBlocker(reducer(initialState(), { type: 'LOAD_BATCH', doc: r.doc }));
 }
 
+const T = 'ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ';
+const TWO = 'ВЫБРАТЬ А.Код КАК Код ИЗ Справочник.Валюты КАК А, Справочник.Валюты КАК Б ';
+
+/** Standalone `И` words: none may disappear between the input and the generated text. */
+const andCount = (text: string) => (text.match(/(?<![\p{L}\p{N}_.])И(?![\p{L}\p{N}_])/gu) ?? []).length;
+
 /** [input, text the generated query must still contain] */
 const emptyConjunct: [string, string][] = [
   [`${F}ГДЕ В.Код = 1 И`, 'В.Код = 1 И'],
@@ -39,18 +45,31 @@ const emptyConjunct: [string, string][] = [
   [`${F}ГДЕ В.Код МЕЖДУ 1 И 2 И`, 'В.Код МЕЖДУ 1 И 2 И'],
   [`${F}ГДЕ В.Код = 1 И // c\n`, 'В.Код = 1 И'],
   [`${G}ИМЕЮЩИЕ КОЛИЧЕСТВО(В.Код) > 1 И`, 'КОЛИЧЕСТВО(В.Код) > 1 И'],
-  [`${J}И А.Код = Б.Код`, 'И А.Код = Б.Код'],
-  // The generator re-splits a custom join expression on `И` (currently `И ()` for the
-  // empty operand; generator unchanged, see C45) — only the kept `И` and refusal are pinned.
-  [`${J}А.Код = Б.Код И И А.Код = 1`, 'А.Код = Б.Код И'],
-  [`${J}А.Код = Б.Код И`, 'А.Код = Б.Код И'],
+  // A condition of `И` alone is not a field: no `Т.И` is invented for the sole source.
+  [`${T}ГДЕ И`, 'ГДЕ И'],
+  [`${T}ГДЕ И;`, 'ГДЕ И'],
+  [`${T}ГДЕ НЕ И`, 'ГДЕ НЕ И'],
+  [`${TWO}ГДЕ И`, 'ГДЕ И'],
+  [`${T}ГДЕ Т.Код = 1 И И`, 'Т.Код = 1 И И'],
+  [`${T}ГДЕ Т.Код = 1 И НЕ И`, 'Т.Код = 1 И НЕ И'],
+  [`${T}ГДЕ (И)`, 'ГДЕ И'],
+  [`${T}ГДЕ Т.Код = 1 И (И)`, 'Т.Код = 1 И И'],
+  [`${T}ГДЕ (И) И Т.Код = 1`, 'И Т.Код = 1'],
+  [`${G}ИМЕЮЩИЕ И`, 'ИМЕЮЩИЕ И'],
+  // English: `parseBatch` keeps `AND` as written (the designer translates it to `И`);
+  // the kept slice is the whole token, not the length of its Russian form (`A`).
+  ['SELECT Т.Код AS Код FROM Catalog.Валюты AS Т WHERE AND', 'ГДЕ AND'],
+  ['SELECT Т.Код AS Код FROM Catalog.Валюты AS Т WHERE Т.Код = 1 AND', 'Т.Код = 1 AND'],
 ];
 
 describe('C45: an empty conjunct keeps its text and is refused', () => {
   for (const [input, kept] of emptyConjunct) {
-    it(JSON.stringify(input.replace(/^ВЫБРАТЬ .*? (ГДЕ|ИМЕЮЩИЕ|ПО) /, '$1 ')), () => {
+    it(JSON.stringify(input.replace(/^(ВЫБРАТЬ|SELECT) .*? (ГДЕ|ИМЕЮЩИЕ|WHERE) /, '$2 ')), () => {
       const doc = parse(input);
-      expect(flat(generateBatch(doc))).toContain(kept);
+      const output = generateBatch(doc);
+      expect(flat(output)).toContain(kept);
+      expect(output).not.toMatch(/\.И(?![\p{L}\p{N}_])/u);
+      if (!input.startsWith('SELECT')) expect(andCount(output)).toBe(andCount(input));
       expect(findMalformedCustomExpressions(doc).length).toBeGreaterThan(0);
       expect(finalApplyBlocker(input)).toEqual({ kind: 'malformedCustom' });
       expect(analyze(input).diagnostics).toEqual([{ message: MALFORMED_CUSTOM_EXPRESSION }]);
@@ -62,6 +81,33 @@ describe('C45: an empty conjunct keeps its text and is refused', () => {
     expect(output).toContain('// c');
     expect(output.split('// c')).toHaveLength(2);
   });
+
+  // Source alias `И` (platform-invalid, catalog `source.alias-reserved-word-i`): the
+  // condition stays as written and the `И` qualifier keeps Apply refused.
+  it('keeps a condition on the alias И and refuses it', () => {
+    const input = 'ВЫБРАТЬ И.Код КАК Код ИЗ Справочник.Валюты КАК И ГДЕ И.Код = 1 И И.Код = 2';
+    expect(flat(generateBatch(parse(input)))).toContain('ГДЕ И.Код = 1 И И.Код = 2');
+    expect(finalApplyBlocker(input)).toEqual({ kind: 'malformedCustom' });
+  });
+});
+
+// Join `ПО`: the parser keeps the condition as one custom expression, but the generator
+// splits it again and prints the empty operand as `()` (C46, generator unchanged). Only
+// the refusal is guaranteed here — the generated join text is NOT the authored one.
+describe('C45: an empty join conjunct is refused (text: C46)', () => {
+  for (const input of [
+    `${J}И А.Код = Б.Код`,
+    `${J}А.Код = Б.Код И И А.Код = 1`,
+    `${J}А.Код = Б.Код И`,
+    `${J}(А.Код = Б.Код И)`,
+    `${J}И`,
+  ]) {
+    it(JSON.stringify(input.replace(/^ВЫБРАТЬ .*? ПО /, 'ПО ')), () => {
+      const doc = parse(input);
+      expect(findMalformedCustomExpressions(doc).length).toBeGreaterThan(0);
+      expect(finalApplyBlocker(input)).toEqual({ kind: 'malformedCustom' });
+    });
+  }
 });
 
 describe('C45: valid conjunctions are split exactly as before', () => {

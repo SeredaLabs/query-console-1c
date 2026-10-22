@@ -1793,7 +1793,7 @@ function stripLineComments(text: string): string {
 function sliceSource(source: string, bodyTokens: Token[]): string {
   const first = bodyTokens[0];
   const last = bodyTokens[bodyTokens.length - 1];
-  const end = last.pos + last.value.length;
+  const end = last.pos + last.text.length;
   return stripLineComments(source.slice(first.pos, end));
 }
 
@@ -2904,7 +2904,7 @@ function qualifyBareFieldsInExpression(
   }
   const start = tokens[0].pos;
   const last = tokens[tokens.length - 1];
-  const end = last.pos + last.value.length;
+  const end = last.pos + last.text.length;
   let out = '';
   let p = start;
   for (const e of edits) {
@@ -3144,7 +3144,10 @@ function interpretCondition(
   // Ведущий префикс полного имени источника (`Справочник.Валюты.ПометкаУдаления`)
   // — ссылка НА таблицу: снимаем его, как в bareLhsRef, иначе двойная квалификация
   // `Валюты.Справочник.Валюты.ПометкаУдаления` (live 1C RP01-RP03).
-  if (soleSource) {
+  // C45: сегмент с пустым конъюнктом (`И`, `НЕ И`, `И В.Код = 1`) — произвольный
+  // текст как есть, до разбора голого поля: иначе само `И` стало бы полем `Т.И`.
+  const emptyConjunct = splitConjunctsOrNull(tokens) === null;
+  if (soleSource && !emptyConjunct) {
     const bare = tryBareField(tokens, aliasToId);
     if (bare) {
       if (bare.path.includes('.') && soleSource.outerAliasHead?.(bare.head)) return { custom: true, expression: bare.path };
@@ -3190,9 +3193,9 @@ function interpretCondition(
   // Объединённый ИЛИ-блок (фаза 6.14): сегмент с верхнеуровневым `ИЛИ` — всегда
   // произвольное условие целиком. Без этой проверки trySimpleCondition «съедал» бы
   // хвост `… ИЛИ …` в param простого условия (`a = ЛОЖЬ ИЛИ &П` → param `ЛОЖЬ ИЛИ &П`).
-  // C45: то же для сегмента с пустым конъюнктом (`И В.Код = 1`) — иначе ведущее `И`
-  // разбиралось бы как поле.
-  if (hasTopLevelOr(tokens) || splitConjunctsOrNull(tokens) === null) {
+  // C45: то же для сегмента с пустым конъюнктом — иначе ведущее `И` разбиралось бы
+  // как поле простого условия.
+  if (hasTopLevelOr(tokens) || emptyConjunct) {
     return { custom: true, expression: customText() };
   }
   // Отрицание условия-подзапроса (`НЕ <поле> В [ИЕРАРХИИ] (ВЫБРАТЬ …)`): снимаем
