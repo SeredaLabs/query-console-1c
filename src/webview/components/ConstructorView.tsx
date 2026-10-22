@@ -36,6 +36,8 @@ import { computeBatchTextSafe } from '../computeBatchText';
 import { deriveUnionColumns } from '../../core/query/unionModel';
 import type { QueryDocument } from '../../core/query/unionModel';
 import { tryOpenDesignerBatch } from '../openDesignerBatch';
+import { findMalformedCustomExpressions } from '../../core/query/semanticValidator';
+import { MALFORMED_CUSTOM_EXPRESSION } from '../../core/query/queryAnalysisService';
 import { buildResolverFromTables } from '../../core/metadata/buildModelResolver';
 import type { RefreshState } from '../App';
 import { BTN, BTN_SECONDARY, GLOBAL_FORM_CSS } from '../sharedStyles';
@@ -152,6 +154,13 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
   function handleApplyQueryEdit() {
     if (queryModalText === null) return;
     const r = tryOpenDesignerBatch(queryModalText, queryModalResolver);
+    // C44: та же проверка, что у статус-бара (`analyze`) и финального ОК — текст
+    // остаётся в редакторе для исправления, модель не меняется.
+    const candidate = r.ok ? r.doc : 'commentLossDoc' in r ? r.commentLossDoc : null;
+    if (candidate && findMalformedCustomExpressions(candidate).length > 0) {
+      setQueryModalError(MALFORMED_CUSTOM_EXPRESSION);
+      return;
+    }
     if (!r.ok) {
       if ('commentLossDoc' in r) setCommentLoss({ doc: r.commentLossDoc, lost: r.lost });
       else setQueryModalError(r.error);
