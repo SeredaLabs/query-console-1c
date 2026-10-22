@@ -13,7 +13,10 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # TEMPORARY: ubuntu-latest now also lands on Ubuntu 26.04, where Playwright 1.60
+    # cannot install Chromium ("Playwright does not support chromium on
+    # ubuntu26.04-x64"). Return to ubuntu-latest once Playwright supports it.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -44,7 +47,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write   # требуется для создания Release и загрузки asset
-    runs-on: ubuntu-latest
+    # TEMPORARY: pinned together with verify (see above).
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
