@@ -198,7 +198,7 @@ try {
     await caption(9);
     await button('common.query').click();
     await expect(editor).toContainText('Справочник.Валюты');
-    // Fail recording if it ever falls back to the simple query-text dialog.
+    // The status bar confirms the dialog finished validating the generated text.
     await expect(app.getByTestId('query-text-status')).toContainText(ui['status.valid']);
     await toolbar('dialog.queryText.structure').click();
     await expect(app.getByTestId('query-text-structure-panel')).toContainText(customExpression);

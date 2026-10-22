@@ -83,7 +83,7 @@ readiness, so Preview remains enabled only by choice.
 ![Classic Query Designer with English UI and captions](../images/query-constructor-demo.gif)
 
 [Watch the video (WebM)](../videos/query-constructor-demo.en.webm).
-The recording uses the current Classic WebView and the small E2E metadata fixture,
+The recording uses the current Classic WebView and the small E2E metadata fixture.
 It does not require a private configuration.
 
 1. Search for `Валюты Наим`: words can match both a table and its field.
@@ -97,7 +97,7 @@ It does not require a private configuration.
    argument. An unfinished expression shows a syntax error and disables formatting;
    diagnostics do not disable **OK** in this dialog. Correct the expression to
    `ЕСТЬNULL(Валюты.Наименование, "-")` and save it as an output field.
-5. Open **Query** in the enhanced text editor. **Structure** shows output fields
+5. Open **Query** in the **Query text** editor. **Structure** shows output fields
    and sources next to the SDBL. Add `ГДЕ Валюты.Код = &Код` and descending order,
    then use **Format** and **Validate** on the toolbar.
 6. Open **Parameters** to see `&Код` and its use count. Click the parameter to
@@ -111,5 +111,4 @@ It does not require a private configuration.
 
 The interface and captions follow the documentation language. Metadata identifiers
 and SDBL keywords remain unchanged. Experimental Canvas is not enabled in this
-recording. Query text v2 is explicitly enabled for every text-editing scene; the
-custom expression editor is available without that setting.
+recording; no other setting is needed.
