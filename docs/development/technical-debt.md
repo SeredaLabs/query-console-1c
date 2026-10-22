@@ -21,7 +21,7 @@ one place, ordered by priority.
 | V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C37–C40 remain open; C36 is an accepted divergence. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
 | C41 | OPEN · P2 | Correctness | Metadata validation (open, Apply, editor diagnostics) skips field paths kept as raw expression text: `ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions. |
-| C48 | OPEN · P2 | Correctness | An empty `И` conjunct inside a condition subquery (`ГДЕ Т.Код В (ВЫБРАТЬ … ГДЕ Х.Код = 1 И)`) is kept as text but not refused: the Designer state does not pass the subquery model to `malformedCustom`. |
+| C49 | OPEN · P2 | Correctness | Bare-field qualification rewrites `ГРУППИРУЮЩИМ НАБОРАМ` inside a raw-text subquery (`Х.ГРУППИРУЮЩИМ`); since C48 Apply refuses such valid queries, before it wrote them corrupted. |
 | A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple literals, numeric arithmetic over constants/direct metadata fields, and bounded SUBSTRING calls; other compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
 | V3 | PARTIAL · P2 | Verification | The Apply gate never compares input and output semantics. |
@@ -48,7 +48,7 @@ one place, ordered by priority.
 |---|---|---|
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
 | C41 | OPEN · P2 | Metadata validation skips field paths kept as raw expression text (`ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions). [Details](#c41-metadata-validation-of-raw-expressions). |
-| C48 | OPEN · P2 | An empty `И` conjunct inside a condition subquery `В (ВЫБРАТЬ …)` is not refused on OK / Save. [Details](#c48-empty-conjunct-in-a-condition-subquery-not-refused). |
+| C49 | OPEN · P2 | `ГРУППИРУЮЩИМ НАБОРАМ` inside a raw-text subquery is qualified as a field (`Х.ГРУППИРУЮЩИМ`); Apply now refuses the valid query. [Details](#c49-grouping-sets-qualified-in-a-raw-text-subquery). |
 | R11 | PARTIAL · P3 | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
 | C34 | PARTIAL · P3 | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. [Details](#c34-english-sdbl-leftovers). |
 | C37 | OPEN · P3 | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
@@ -319,25 +319,72 @@ only the refusal.
 **Next boundary:** make the AND-chain expansion leave an expression with an empty
 conjunct unsplit; add a regression next to the C45 suite. Generator change.
 
-### C48. Empty conjunct in a condition subquery not refused
+### C48. Broken condition in a raw-text subquery not refused
 
-**Status:** OPEN · P2 · recorded 2026-10-22 (found in the C45 review; the same on
+**Status:** CLOSED (2026-10-22; recorded the same day in the C45 review, the same on
 `main` before C45)
 
+The recorded cause was wrong. A plain condition subquery
+`ГДЕ Т.Код В (ВЫБРАТЬ … ГДЕ Х.Код = 1 И)` gets a subquery model
+(`Condition.subquery`), `findMalformedCustomExpressions` walks it, and OK / Save was
+already refused. The review's reproduction used the outer alias `В`
+(`ГДЕ В.Код В (ВЫБРАТЬ …)`): there, and whenever the whole condition stays one custom
+text, there is no subquery model. Such forms are a top-level `ИЛИ`, `НЕ (… ИЛИ … В (…))`,
+`ВЫБОР КОГДА … В (…)` in a field and a join `ПО … И А.Код В (…)`. The structural
+acceptor (`isStructurallyValidExpression`) skips a `(ВЫБРАТЬ …)` group by bracket
+balance only, so `Х.Код = 1 И`, `Х.Код = `, a lone `И` or a broken subquery
+(`ВЫБРАТЬ Х.Код ИЗ`) inside it passed the static Apply blocker and Query Text, and
+OK / Save wrote a platform-invalid query (text kept as typed). An unclosed
+parenthesis, HAVING and source subqueries were already refused.
+
+`findMalformedCustomExpressions` now takes the top-level `(ВЫБРАТЬ …)` / `(SELECT …)`
+groups of every accepted custom text (`embeddedSubqueryTexts`,
+`expressionSyntaxCheck.ts`: lexer tokens, so brackets in strings and comments do
+not count; text with a template marker is not judged, as by the acceptor). It
+parses each group with `parseDocument` and walks it like `Condition.subquery`; a
+parse error is a hit. Each group is a strict substring of its parent, so the
+recursion ends, and sibling groups do not overlap. A group nested in raw text is
+parsed at its own level again (its parent's parse only tokenized it). The check is
+structural and needs no metadata: an unknown table or a reference to the outer
+alias is not refused. It refuses what the parser refuses at the top level (for
+example DCS braces in `ГДЕ`, `ИНДЕКСИРОВАТЬ` in a subquery) and inherits its
+tolerance (an empty trailing `ГДЕ`, a trailing comma in the select list are still
+accepted, as in a modelled subquery). The result for each subquery text is kept
+until the next call, because the static blocker runs on every model change; a
+call on another document (`decideApply` checks the generated text) replaces it.
+
+Golden corpus (3,941 texts, 558 embedded `(ВЫБРАТЬ …)` groups): 0 new hits, 0
+blocked; grammar-parity unchanged. Static blocker over the 2,871 distinct corpus
+texts: repeated calls (editing) 235 → 247 ms in total, worst text unchanged
+(4.0 ms); the first call 250 → 335 ms, worst text 4.2 → 33 ms (13 nested raw
+subqueries; opening that text costs about the same). Parsing nested raw `ИЛИ … В
+(…)` subqueries is already exponential on `main` (about ×2 per level: depth 12 opens
+in 0.8 s); an uncached check costs about the same again. Parser, generator, recovery
+and the Apply gate's logic are unchanged. Found in the review: a raw subquery with
+`ГРУППИРУЮЩИМ НАБОРАМ` is now refused because its text was already corrupted by the
+parser ([C49](#c49-grouping-sets-qualified-in-a-raw-text-subquery)).
+[Regressions](../../test/unit/subqueryMalformed.c48.test.ts) (7 raw-text forms ×
+4 broken inner queries refused, × 7 valid inner queries not refused, token
+boundaries, deep nesting, template marker), e2e in `queryText.spec.ts`.
+
+### C49. Grouping sets qualified in a raw-text subquery
+
+**Status:** OPEN · P2 · recorded 2026-10-22 (found in the C48 review; the same on
+`main` before C48)
+
 ```text
-ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код В (ВЫБРАТЬ Х.Код ИЗ Справочник.Валюты КАК Х ГДЕ Х.Код = 1 И)
+ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 ИЛИ Т.Код В (ВЫБРАТЬ Х.Код ИЗ Справочник.Валюты КАК Х СГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ ((Х.Код), (Х.Наименование)))
 ```
 
-`parseBatch` keeps the inner condition as custom text `Х.Код = 1 И` and
-`findMalformedCustomExpressions` on the parsed document finds it, but after
-`LOAD_BATCH` the Designer state passes the condition with its subquery text only,
-so `findStaticApplyBlocker` returns no blocker and OK / Save writes the query as
-typed (text kept, platform-invalid). The same for `ГДЕ И Х.Код = 1` inside the
-subquery.
+The condition stays raw custom text, and the sole-source bare-field qualification
+(`qualifyBareFieldsInExpression`, `sdblParser.ts`) treats `ГРУППИРУЮЩИМ` as a field:
+on `main` OK / Save wrote `СГРУППИРОВАТЬ ПО Х.ГРУППИРУЮЩИМ НАБОРАМ (Х.Код,
+(Х.Наименование)), Х.Код` (platform-invalid) without a block. Since C48 the
+subquery is checked and Apply is refused, so nothing corrupted is written, but a
+valid query cannot be applied.
 
-**Next boundary:** check whether the assembled model keeps the condition
-subquery's document and let the static blocker walk it; regression next to the
-C45 suite. Designer state / Apply gate change.
+**Next boundary:** keep `ГРУППИРУЮЩИМ НАБОРАМ` out of bare-field qualification in
+raw text; regression next to the C48 suite. Parser change.
 
 ### C45. Trailing И dropped from a condition
 
@@ -367,7 +414,7 @@ keep every `И` and are refused; join forms refused; English; alias `И`; 8 unch
 controls), [acceptor cases](../../test/unit/expressionSyntaxCheck.test.ts), e2e in
 `queryText.spec.ts`. No platform verdict was collected (the input is not valid
 SDBL). Join text: [C46](#c46-empty-join-conjunct-printed-as-и-); a condition
-subquery: [C48](#c48-empty-conjunct-in-a-condition-subquery-not-refused).
+subquery: [C48](#c48-broken-condition-in-a-raw-text-subquery-not-refused).
 
 ### C47. English last token cut to its Russian length
 
@@ -586,6 +633,7 @@ and [audit index](audits/README.md).
 | C43 | CLOSED | A field reached through a composite reference is found if any target has it; open/Apply/diagnostics no longer refuse it (2026-10-22). [Details](#c43-composite-reference-fields). |
 | C44 | CLOSED | Query Text no longer shows "✓" or applies an incomplete custom condition that OK / Save refuses: the status bar and Apply use the same `malformedCustom` check (2026-10-22). [Details](#c44-query-text-accepted-an-incomplete-condition). |
 | C45 | CLOSED | An empty `И` conjunct in WHERE/HAVING/join no longer disappears on Save: the condition keeps its text and `malformedCustom` refuses it (2026-10-22). [Details](#c45-trailing-и-dropped-from-a-condition). |
+| C48 | CLOSED | A broken condition inside a `(ВЫБРАТЬ …)` kept in raw custom text (outer alias `В`, `ИЛИ`, `ВЫБОР`, join) is refused like one in a modelled subquery (2026-10-22). [Details](#c48-broken-condition-in-a-raw-text-subquery-not-refused). |
 | C47 | CLOSED | A custom condition/expression slice ending in an English keyword is no longer cut to the length of its Russian form (`… AND` → `… A`): `sliceSource` and `qualifyBareFieldsInExpression` use the token text (2026-10-22, within C45). [Details](#c47-english-last-token-cut-to-its-russian-length). |
 | C36 | ACCEPTED | The Designer keeps `*` where the 1C constructor expands it; accepted permanently (2026-10-21). [Details](#c36-kept--versus-the-constructor-canonical-text). |
 | D1 | CLOSED | Corrected stale source-contract comments; reconciliation/near-term reports. |
