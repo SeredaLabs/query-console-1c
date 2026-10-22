@@ -329,6 +329,7 @@ test.describe('Query Constructor Webview', () => {
 
   test('Текст запроса: закрытие без «Применить» не меняет модель конструктора', async ({ page }) => {
     await page.goto(BASE);
+    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -337,8 +338,11 @@ test.describe('Query Constructor Webview', () => {
     const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
     await editor.fill('ВЫБРАТЬ\n\tВалюты.Наименование КАК Наименование\nИЗ\n\tСправочник.Валюты КАК Валюты');
 
-    // Закрываем крестиком, НЕ применяя правку.
+    // Закрываем крестиком, НЕ применяя правку: v2 сначала спрашивает подтверждение.
     await page.locator('button[title="Закрыть"]').click();
+    const confirm = page.locator('[data-testid="query-text-close-confirm"]');
+    await expect(confirm).toBeVisible();
+    await confirm.locator('button:has-text("Закрыть без сохранения")').click();
     await expect(page.locator('text=Текст запроса')).toHaveCount(0);
 
     // Поле в конструкторе осталось прежним (Код) — правка не применилась.
