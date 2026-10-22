@@ -319,6 +319,37 @@ only the refusal.
 **Next boundary:** make the AND-chain expansion leave an expression with an empty
 conjunct unsplit; add a regression next to the C45 suite. Generator change.
 
+### C50. Nested raw subqueries parsed 2^depth times
+
+**Status:** CLOSED (2026-10-22; found while measuring C48, the same on `main` before it)
+
+A subquery kept in raw condition or field text (`… ИЛИ Х.Код В (ВЫБРАТЬ …)`, outer
+alias `В`, `ВЫБОР КОГДА … В (…)`) is parsed for bare-field qualification
+(`qualifySubquerySpan`, `qualifyBareFields.ts`): once by `parseDocument`, whose own
+qualification pass reaches the next nested level, and once more by the
+`qualifyExpression` walk over the same text. Each nested raw subquery was
+therefore parsed twice per level — 2^depth `parseDocument` calls (8, 16, 32 at
+depth 3, 4, 5). Opening such a query took 0.1 s at depth 10, 2.9 s at depth 14 and
+25–47 s at depth 18, on the extension host (diagnostics, hover) as well as in the
+Designer. Modelled subqueries (`В (…)`, `И … В (…)`, `ИЗ (…)`) were linear.
+
+The injected subquery parser (`setSubqueryParser`, `sdblParser.ts`) now shares
+these parses within one outer `parseDocument`, keyed by subquery text and the
+current subquery recursion depth (the recursion-limit error depends on it; a
+text-only key changed the model of queries near the limit). Parse errors are kept
+too; a different resolver bypasses the cache, and it is dropped when the outer
+call returns. Only qualification uses these parses; the model, the generator and
+Apply are unchanged. Growth is now polynomial (about depth³) instead of 2^depth:
+`ИЛИ` form depth 10: 103 → 6 ms, depth 30: about 0.5 s; join `ПО` depth 10:
+11.7 s → about 0.1 s. Golden corpus, classification and grammar-parity gates are
+unchanged; the review compared 4,064 texts × 3 parse modes (with and without the
+corpus metadata, with and without comments) against `main`: byte-identical
+output. The C48 check on deep nesting is no longer exponential either (depth 16:
+32 ms).
+[Regressions](../../test/unit/nestedSubqueryParse.c50.test.ts) (three raw forms at
+depth 18 under a generous bound with a stable round trip; qualification per level,
+across recursion depths and of a repeated subquery text).
+
 ### C48. Broken condition in a raw-text subquery not refused
 
 **Status:** CLOSED (2026-10-22; recorded the same day in the C45 review, the same on
@@ -358,8 +389,9 @@ blocked; grammar-parity unchanged. Static blocker over the 2,871 distinct corpus
 texts: repeated calls (editing) 235 → 247 ms in total, worst text unchanged
 (4.0 ms); the first call 250 → 335 ms, worst text 4.2 → 33 ms (13 nested raw
 subqueries; opening that text costs about the same). Parsing nested raw `ИЛИ … В
-(…)` subqueries is already exponential on `main` (about ×2 per level: depth 12 opens
-in 0.8 s); an uncached check costs about the same again. Parser, generator, recovery
+(…)` subqueries was exponential (about ×2 per level), and an uncached check cost
+about the same again; fixed by [C50](#c50-nested-raw-subqueries-parsed-2depth-times).
+Parser, generator, recovery
 and the Apply gate's logic are unchanged. Found in the review: a raw subquery with
 `ГРУППИРУЮЩИМ НАБОРАМ` is now refused because its text was already corrupted by the
 parser ([C49](#c49-grouping-sets-qualified-in-a-raw-text-subquery)).
@@ -633,6 +665,7 @@ and [audit index](audits/README.md).
 | C43 | CLOSED | A field reached through a composite reference is found if any target has it; open/Apply/diagnostics no longer refuse it (2026-10-22). [Details](#c43-composite-reference-fields). |
 | C44 | CLOSED | Query Text no longer shows "✓" or applies an incomplete custom condition that OK / Save refuses: the status bar and Apply use the same `malformedCustom` check (2026-10-22). [Details](#c44-query-text-accepted-an-incomplete-condition). |
 | C45 | CLOSED | An empty `И` conjunct in WHERE/HAVING/join no longer disappears on Save: the condition keeps its text and `malformedCustom` refuses it (2026-10-22). [Details](#c45-trailing-и-dropped-from-a-condition). |
+| C50 | CLOSED | Nested subqueries kept in raw text are no longer parsed 2^depth times during bare-field qualification (depth 18: tens of seconds → about 0.1 s) (2026-10-22). [Details](#c50-nested-raw-subqueries-parsed-2depth-times). |
 | C48 | CLOSED | A broken condition inside a `(ВЫБРАТЬ …)` kept in raw custom text (outer alias `В`, `ИЛИ`, `ВЫБОР`, join) is refused like one in a modelled subquery (2026-10-22). [Details](#c48-broken-condition-in-a-raw-text-subquery-not-refused). |
 | C47 | CLOSED | A custom condition/expression slice ending in an English keyword is no longer cut to the length of its Russian form (`… AND` → `… A`): `sliceSource` and `qualifyBareFieldsInExpression` use the token text (2026-10-22, within C45). [Details](#c47-english-last-token-cut-to-its-russian-length). |
 | C36 | ACCEPTED | The Designer keeps `*` where the 1C constructor expands it; accepted permanently (2026-10-21). [Details](#c36-kept--versus-the-constructor-canonical-text). |

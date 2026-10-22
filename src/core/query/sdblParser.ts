@@ -80,7 +80,29 @@ import { LITERAL_WORDS, PERIOD_WORDS } from './sdblKeywordSets';
 
 // Инжектируем разборщик подзапросов в пасс квалификации голых полей (для подзапросов,
 // встроенных в СЫРЫЕ выражения условий/полей), избегая циклического импорта.
-setSubqueryParser((text, r) => parseDocument(text, r));
+/**
+ * C50: разборы подзапросов для квалификации голых полей в пределах одного внешнего
+ * `parseDocument`: тот же текст вложенного подзапроса иначе разбирается заново на
+ * каждом уровне (разбор родителя + рекурсия `qualifyExpression`) — 2^глубины.
+ * Ключ включает `subqueryRecursionDepth`: от неё зависит ошибка предела вложенности.
+ */
+let qualifyParseCache: { resolver: MetadataResolver | undefined; docs: Map<string, QueryDocument | Error> } | undefined;
+setSubqueryParser((text, r) => {
+  const cache = qualifyParseCache;
+  if (!cache || cache.resolver !== r) return parseDocument(text, r);
+  const key = `${subqueryRecursionDepth}:${text}`;
+  const hit = cache.docs.get(key);
+  if (hit instanceof Error) throw hit;
+  if (hit) return hit;
+  try {
+    const doc = parseDocument(text, r);
+    cache.docs.set(key, doc);
+    return doc;
+  } catch (e) {
+    if (e instanceof Error) cache.docs.set(key, e);
+    throw e;
+  }
+});
 
 /**
  * Резолвер метаданных активного разбора `parseDocument` — пробрасывается в
@@ -5206,6 +5228,8 @@ export function parseDocument(
   sourceResolver = resolver;
   if (opts?.preserveComments !== undefined) keepArgComments = opts.preserveComments;
   if (opts?.wildcardPolicy !== undefined) wildcardPolicy = opts.wildcardPolicy;
+  const outermost = qualifyParseCache === undefined;
+  if (outermost) qualifyParseCache = { resolver, docs: new Map() };
   try {
     const doc = parseDocumentInner(text, resolver, opts?.sourceMap);
     const pad = nestingPad(text);
@@ -5217,6 +5241,7 @@ export function parseDocument(
     }
     return doc;
   } finally {
+    if (outermost) qualifyParseCache = undefined;
     sourceResolver = prevSourceResolver;
     keepArgComments = prevKeepArgComments;
     wildcardPolicy = prevWildcardPolicy;
