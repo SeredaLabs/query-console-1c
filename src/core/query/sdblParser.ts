@@ -3225,7 +3225,9 @@ function interpretCondition(
   // генератор печатает `НЕ ` и сдвигает блок подзапроса (фаза 6.15.NN). Только
   // для подзапросного результата; обычные негативы остаются произвольным текстом.
   if (tokens.length > 1 && isWordToken(tokens[0], 'НЕ')) {
-    const inner = trySimpleCondition(tokens.slice(1), source, aliasToId, soleSource, aliasSpelling);
+    // C51: `НЕ (a, b) НЕ В` keeps the inner `НЕ` in `leftExpr` (one `negated` flag
+    // cannot hold both negations).
+    const inner = trySimpleCondition(tokens.slice(1), source, aliasToId, soleSource, aliasSpelling, false);
     if (inner && inner.subquery) return { ...inner, negated: true };
   }
   const simple = trySimpleCondition(tokens, source, aliasToId, soleSource, aliasSpelling);
@@ -3248,7 +3250,8 @@ function trySimpleCondition(
   source: string,
   aliasToId: Map<string, string>,
   soleSource?: SoleSource,
-  aliasSpelling?: Map<string, string>
+  aliasSpelling?: Map<string, string>,
+  hoistTupleNot = true
 ): Condition | undefined {
   // Найти первый оператор сравнения верхнего уровня.
   let opIdx = -1;
@@ -3321,6 +3324,10 @@ function trySimpleCondition(
           const owned = new Set<number>();
           if (!legacyStructured) rememberNestedConditionComments(owned, inner, 0, sub);
           if (legacyStructured || comments.every(t => owned.has(t.pos))) {
+            // C51: `(a, b) НЕ В (…)` is `НЕ (a, b) В (…)`; the raw path prints it so
+            // (moveNotBeforeTuple), and the generator prints `negated` the same way.
+            const notIn = hoistTupleNot && lhs.length > 1 && isWordToken(lhs[lhs.length - 1], 'НЕ') && isTupleTokens(lhs.slice(0, -1));
+            if (notIn) return { custom: true, leftExpr: sliceSource(source, lhs.slice(0, -1)), subquery: sub, negated: true };
             return { custom: true, leftExpr: sliceSource(source, lhs), subquery: sub };
           }
         }
@@ -6066,4 +6073,17 @@ function augmentResolverWithTempTables(
     canonicalFullName: (fullName: string): string | undefined =>
       tempTables.get(fullName.toUpperCase())?.name ?? base?.canonicalFullName?.(fullName),
   };
+}
+
+/** `( a, b, … )` — one parenthesized group with a top-level comma. */
+function isTupleTokens(tokens: Token[]): boolean {
+  if (tokens[0]?.value !== '(' || tokens[tokens.length - 1]?.value !== ')') return false;
+  let depth = 0, comma = false;
+  for (let k = 0; k < tokens.length; k++) {
+    const t = tokens[k];
+    if (t.type === 'punct' && t.value === '(') depth++;
+    else if (t.type === 'punct' && t.value === ')') { depth--; if (depth === 0 && k < tokens.length - 1) return false; }
+    else if (depth === 1 && t.type === 'punct' && t.value === ',') comma = true;
+  }
+  return comma;
 }

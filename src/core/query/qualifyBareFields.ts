@@ -605,6 +605,9 @@ function processModel(
     if (c.custom && c.expression !== undefined && c.expression.trim()) {
       c.expression = qualifyExpression(c.expression, ctx);
     }
+    // C51: a non-reference left side of `В (ВЫБРАТЬ …)` (a tuple) follows the same rule as the raw
+    // expression its generated text re-parses into.
+    if (c.custom && c.leftExpr !== undefined && c.subquery) c.leftExpr = qualifyExpression(c.leftExpr, ctx);
   };
   (model.conditions ?? []).forEach(doCond);
   (model.having ?? []).forEach(doCond);
