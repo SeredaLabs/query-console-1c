@@ -82,16 +82,6 @@ async function loadModelText(page: Page, text: string): Promise<void> {
   }, text);
 }
 
-/** Wait for the harness's initial message before overriding the feature flag. */
-async function enableQueryTextV2(page: Page): Promise<void> {
-  await expect(page.locator('[data-testid="loading-overlay"]')).toBeHidden();
-  await page.evaluate(() => {
-    window.dispatchEvent(new MessageEvent('message', {
-      data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true, locale: 'ru' },
-    }));
-  });
-}
-
 test.describe('Query Constructor Webview', () => {
   for (const [locale, catalogs] of [['en', 'Catalogs'], ['uk', 'Довідники'], ['ru', 'Справочники']]) {
     test(`documentation harness starts in ${locale} without translating metadata`, async ({ page }) => {
@@ -109,7 +99,7 @@ test.describe('Query Constructor Webview', () => {
 
     await page.evaluate(() => {
       window.dispatchEvent(new MessageEvent('message', {
-        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: false, locale: 'en' },
+        data: { type: 'init', hasInitialQuery: false, locale: 'en' },
       }));
     });
     await expect(page.getByText('Catalogs', { exact: true })).toBeVisible();
@@ -118,7 +108,7 @@ test.describe('Query Constructor Webview', () => {
 
     await page.evaluate(() => {
       window.dispatchEvent(new MessageEvent('message', {
-        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: false, locale: 'uk' },
+        data: { type: 'init', hasInitialQuery: false, locale: 'uk' },
       }));
     });
     await expect(page.getByText('Довідники', { exact: true })).toBeVisible();
@@ -305,9 +295,8 @@ test.describe('Query Constructor Webview', () => {
     await expect(editor).toContainText(/Валюты/);
   });
 
-  // Стадия 0 плана «Текст запроса v2»: базовый e2e-снимок ТЕКУЩЕГО поведения модалки
-  // редактирования текста запроса — до любых изменений в рамках этой задачи. Служит
-  // страховочной сеткой: новый диалог должен вести себя точно так же.
+  // Базовый e2e-снимок модалки «Текст запроса»: Apply и закрытие без Apply.
+  // Полный регрессионный набор — test/e2e/queryText.spec.ts.
   test('Текст запроса: «Применить» обновляет модель конструктора', async ({ page }) => {
     await page.goto(BASE);
     await page.locator('text=Справочники').click();
@@ -329,7 +318,6 @@ test.describe('Query Constructor Webview', () => {
 
   test('Текст запроса: закрытие без «Применить» не меняет модель конструктора', async ({ page }) => {
     await page.goto(BASE);
-    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -349,34 +337,11 @@ test.describe('Query Constructor Webview', () => {
     await expect(page.locator('[data-field-idx="0"]')).toContainText('Код');
   });
 
-  // Стадия 1 плана «Текст запроса v2»: с включённым флагом рендерится новая раскладка
-  // (QueryTextDialog), но Apply/Close используют ТЕ ЖЕ обработчики, что и старая модалка —
-  // поведение (что происходит по кнопкам) остаётся тем же, что проверяют тесты выше.
-  test('Текст запроса v2: с флагом queryTextEditorV2 — новая раскладка, Apply/Close работают', async ({ page }) => {
-    await page.goto(BASE);
-    await enableQueryTextV2(page);
-    await page.locator('text=Справочники').click();
-    await dragTableToPanel(page, 'Справочник.Валюты');
-    await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
-
-    await page.locator('button:has-text("Запрос")').click();
-    // Новая раскладка — виден тулбар с кнопкой «Структура» (её не было в старой модалке).
-    await expect(page.locator('button:has-text("Структура")')).toBeVisible();
-    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
-    await expect(editor).toContainText(/Код/);
-
-    await editor.fill('ВЫБРАТЬ\n\tВалюты.Наименование КАК Наименование\nИЗ\n\tСправочник.Валюты КАК Валюты');
-    await page.locator('button:has-text("Применить")').click();
-    await expect(page.locator('text=Текст запроса')).toHaveCount(0);
-    await expect(page.locator('[data-field-idx="0"]')).toContainText('Наименование');
-  });
-
   // Стадия 4 плана «Текст запроса v2»: статус-бар и «Проверить» используют один и тот
   // же QueryAnalysisService.analyze() — здесь проверяем видимое поведение статус-бара
   // (design-док, раздел 6/10), а не сам analyze() (уже покрыт queryAnalysisService.test.ts).
   test('Текст запроса v2: статус-бар — ✓ на валидном тексте, ошибка + переход к ней на невалидном', async ({ page }) => {
     await page.goto(BASE);
-    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -401,7 +366,6 @@ test.describe('Query Constructor Webview', () => {
 
   test('Текст запроса v2: невідоме поле показує контекст без хибного маркера на початку', async ({ page }) => {
     await page.goto(BASE);
-    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -421,7 +385,6 @@ test.describe('Query Constructor Webview', () => {
   // строки, и один Ctrl/Cmd+Z полностью откатывает результат (design-док, раздел 5).
   test('Текст запроса v2: «Форматировать» переносит секции, Ctrl/Cmd+Z откатывает одним шагом', async ({ page }) => {
     await page.goto(BASE);
-    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -447,7 +410,6 @@ test.describe('Query Constructor Webview', () => {
   // разделы 7-8; навигация — best-effort поиск по тексту, риск п.0.3).
   test('Текст запроса v2: панель «Структура» показывает поля/источники, клик переводит курсор', async ({ page }) => {
     await page.goto(BASE);
-    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -470,7 +432,6 @@ test.describe('Query Constructor Webview', () => {
   // запрос пакета, временные таблицы — отдельно и свёрнуты по умолчанию.
   test('Текст запроса v2: панель «Структура» на пакетном запросе — Результат = последний блок, ВТ отдельно', async ({ page }) => {
     await page.goto(BASE);
-    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -503,7 +464,6 @@ test.describe('Query Constructor Webview', () => {
   // делят один слот правой панели, а не открываются одновременно (design-док, раздел 2).
   test('Текст запроса v2: панель «Параметры» показывает имя/использования, делит слот со «Структурой»', async ({ page }) => {
     await page.goto(BASE);
-    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -536,7 +496,6 @@ test.describe('Query Constructor Webview', () => {
   // повторный клик должен переходить к СЛЕДУЮЩЕМУ вхождению, а не залипать на первом.
   test('Текст запроса v2: клик по параметру с несколькими вхождениями циклически переходит между ними', async ({ page }) => {
     await page.goto(BASE);
-    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');
@@ -567,7 +526,6 @@ test.describe('Query Constructor Webview', () => {
   // менялся с момента открытия, и закрывать сразу, если нет.
   test('Текст запроса v2: dirty-guard — подтверждение на всех трёх путях закрытия, мгновенное закрытие без правок', async ({ page }) => {
     await page.goto(BASE);
-    await enableQueryTextV2(page);
     await page.locator('text=Справочники').click();
     await dragTableToPanel(page, 'Справочник.Валюты');
     await dragFieldToPanel(page, 'Справочник.Валюты', 'Код');

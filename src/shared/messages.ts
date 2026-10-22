@@ -5,7 +5,7 @@ export type RefId = { kind: TableKind; name: string };
 
 export type HostMsg =
   | {
-      type: 'init'; hasInitialQuery: boolean; queryTextEditorV2: boolean; locale?: SupportedLocale;
+      type: 'init'; hasInitialQuery: boolean; locale?: SupportedLocale;
       /** Classic may offer switching to Canvas (opt-in preview). Absent = no. */
       canvasAvailable?: boolean;
     }

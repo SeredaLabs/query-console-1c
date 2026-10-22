@@ -90,13 +90,6 @@ try {
     const queryText = async () => (await editor.locator('.cm-line').allTextContents()).join('\n');
     await expect(app.getByText(ui['tree.catalogs'], { exact: true })).toBeVisible();
     await expect(app.getByTestId('loading-overlay')).toBeHidden();
-    // Match the host message when queryConsole.queryTextEditorV2 is enabled.
-    // Keep the shared E2E fixture's default unchanged for legacy-editor tests.
-    await app.locator('body').evaluate((_, locale) => {
-      window.dispatchEvent(new MessageEvent('message', {
-        data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true, locale },
-      }));
-    }, locale);
     await app.locator('body').evaluate(body => {
       // VS Code normally supplies the font. Keep the standalone fixture readable.
       body.style.fontFamily = 'Arial, sans-serif';

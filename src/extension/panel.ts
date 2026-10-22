@@ -46,8 +46,6 @@ export interface DesignerPanelKind {
   script: string;
   /** The webview renders the Query Designer icon beside its own title. */
   hasInlineTitleIcon?: boolean;
-  /** `init` message's `queryTextEditorV2` flag, read on every `ready`. */
-  queryTextEditorV2: () => boolean;
 }
 
 /** The two designer UIs served by one panel host; `switchDesigner` swaps them in place. */
@@ -59,14 +57,12 @@ export function designerKind(mode: DesignerMode): DesignerPanelKind {
       title: vscode.l10n.t('1C: Query Builder (Preview)'),
       script: 'canvasApp.js',
       hasInlineTitleIcon: true,
-      queryTextEditorV2: () => false,
     }
     : {
       mode,
       viewType: '1c.queryConstructor',
       title: vscode.l10n.t('1C: Query Designer'),
       script: 'main.js',
-      queryTextEditorV2: () => vscode.workspace.getConfiguration('queryConsole').get<boolean>('queryTextEditorV2', false),
     };
 }
 
@@ -151,7 +147,6 @@ export function createDesignerPanel(
       const initMsg: HostMsg = {
         type: 'init',
         hasInitialQuery: !!queryText,
-        queryTextEditorV2: current.queryTextEditorV2(),
         locale: normalizeLocale(vscode.env.language),
         canvasAvailable: current.mode === 'classic' && isCanvasAvailable(context),
       };

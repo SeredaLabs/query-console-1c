@@ -19,8 +19,6 @@ import { ExpressionBuilder, type ExpressionSource } from './ExpressionBuilder';
 import { compoundSections, dispatchCompoundSection } from '../compoundSections';
 import { TempTableDialog } from './TempTableDialog';
 import { ResizeHandle, clampPaneWidth } from './ResizeHandle';
-import { CodeEditor } from './CodeEditor';
-import { IconButton } from './IconButton';
 import { useExpandWildcards } from './ExpandWildcardsCommand';
 import { CommentLossDialog } from './CommentLossDialog';
 import { DesignerModeToggle } from './DesignerModeToggle';
@@ -40,8 +38,8 @@ import type { QueryDocument } from '../../core/query/unionModel';
 import { tryOpenDesignerBatch } from '../openDesignerBatch';
 import { buildResolverFromTables } from '../../core/metadata/buildModelResolver';
 import type { RefreshState } from '../App';
-import { BTN, BTN_SECONDARY, GLOBAL_FORM_CSS, DIALOG_PANEL, DIALOG_TITLE } from '../sharedStyles';
-import { localizeDiagnostic, t } from '../i18n';
+import { BTN, BTN_SECONDARY, GLOBAL_FORM_CSS } from '../sharedStyles';
+import { t } from '../i18n';
 
 export interface ConstructorViewProps {
   state: QueryState;
@@ -60,8 +58,6 @@ export interface ConstructorViewProps {
   onRefreshCache?: () => void;
   preserveComments?: boolean;
   onSetPreserveComments?: (value: boolean) => void;
-  /** Стадия 1 плана «Текст запроса v2» — см. queryConsole.queryTextEditorV2. */
-  queryTextEditorV2?: boolean;
   /** Top-level designer only: Classic/Canvas toggle. `onSwitch` returns why the
    * switch was refused (the current state is kept), or null once requested. */
   designerSwitch?: { onSwitch: () => string | null; disabled?: boolean };
@@ -70,7 +66,7 @@ export interface ConstructorViewProps {
 export function ConstructorView(props: ConstructorViewProps): React.ReactElement {
   const {
     state, dispatch, onExpandRef, onOk, onCancel, okDisabled, okError, nested, designerSwitch,
-    refreshState, onRefreshCache, preserveComments, onSetPreserveComments, queryTextEditorV2,
+    refreshState, onRefreshCache, preserveComments, onSetPreserveComments,
   } = props;
   const [activeTab, setActiveTab] = useState('Таблицы и поля');
   const [queryModalText, setQueryModalText] = useState<string | null>(null);
@@ -117,7 +113,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
     // PR-05 (ТЗ §28/§30): раньше исключение здесь (клик-обработчик, не рендер)
     // не сносило весь webview, но тихо проваливало открытие диалога без единого
     // сообщения пользователю — тот же класс "controlled failure", что и в App.tsx.
-    // Модалка всё равно открывается (оба рендера ниже завязаны на queryModalText
+    // Модалка всё равно открывается (рендер ниже завязан на queryModalText
     // !== null) — иначе баннеру ошибки негде появиться.
     const { text, error } = computeBatchTextSafe(state, true);
     if (error) {
@@ -708,7 +704,6 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           expandedRefs={state.expandedRefs}
           onExpandRef={onExpandRef}
           initialDoc={subqueryEditor.initialDoc}
-          queryTextEditorV2={queryTextEditorV2}
           onCancel={() => setSubqueryEditor(null)}
           onOk={doc => {
             const columns = deriveUnionColumns(doc.members).map(c => c.alias);
@@ -742,10 +737,6 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
         );
       })()}
 
-      {/* Query preview modal. queryTextEditorV2 (queryConsole.queryTextEditorV2, по
-          умолчанию выключено) переключает на новую раскладку из QueryTextDialog —
-          обе ветки ниже используют один и тот же handleApplyQueryEdit/onClose, так
-          что флаг — чистый UI-свитч, безопасно выключаемый в рантайме без revert кода. */}
       {expandWildcards.dialog}
       {commentLoss && <CommentLossDialog
         lost={commentLoss.lost}
@@ -757,7 +748,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           setQueryModalText(null);
         }}
       />}
-      {queryModalText !== null && queryTextEditorV2 && (
+      {queryModalText !== null && (
         <QueryTextDialog
           text={queryModalText}
           error={queryModalError}
@@ -766,75 +757,6 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
           onApply={handleApplyQueryEdit}
           onClose={() => { setQueryModalText(null); setQueryModalError(null); }}
         />
-      )}
-      {queryModalText !== null && !queryTextEditorV2 && (
-        <div
-          style={{
-            position: 'fixed', inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 100,
-          }}
-          onClick={() => { setQueryModalText(null); setQueryModalError(null); }}
-        >
-          <div
-            style={{
-              ...DIALOG_PANEL,
-              padding: '10px 16px 16px',
-              minWidth: 400,
-              width: '70vw',
-              maxWidth: '70vw',
-              maxHeight: '70vh',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={DIALOG_TITLE}>{t('dialog.queryText.title')}</span>
-              <IconButton
-                icon="close"
-                title={t('actions.close')}
-                onClick={() => { setQueryModalText(null); setQueryModalError(null); }}
-              />
-            </div>
-            <CodeEditor
-              testId="query-text-editor"
-              value={queryModalText ?? ''}
-              onChange={setQueryModalText}
-              spellCheck={false}
-              wrapperStyle={{
-                flex: 1,
-                minHeight: 200,
-                maxHeight: 'calc(70vh - 100px)',
-                // Отличается от фона самой модалки (--vscode-editor-background) —
-                // иначе поле текста запроса визуально сливается с рамкой вокруг
-                // него в один плоский цвет. --qc-frame-bg (тот же приём, что и для
-                // фона всей формы) даёт гарантированно другой тон в любой теме.
-                background: 'var(--qc-frame-bg, var(--vscode-editor-background, #1e1e1e))',
-                border: '1px solid var(--qc-border)',
-                borderRadius: 2,
-              }}
-              textStyle={{
-                fontFamily: 'var(--vscode-editor-font-family, monospace)',
-                fontSize: 13,
-                lineHeight: 1.5,
-                whiteSpace: 'pre',
-                color: 'var(--vscode-editor-foreground, #ccc)',
-                padding: 8,
-              }}
-            />
-            {queryModalError != null && (
-              <div style={{ color: 'var(--vscode-errorForeground, #f44747)', fontSize: 12, whiteSpace: 'pre-wrap' }}>
-                {localizeDiagnostic(queryModalError)}
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button style={BTN} onClick={handleApplyQueryEdit}>{t('actions.apply')}</button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
@@ -848,7 +770,6 @@ interface NestedConstructorModalProps {
   initialDoc?: QueryDocument;
   onOk: (doc: QueryDocument) => void;
   onCancel: () => void;
-  queryTextEditorV2?: boolean;
 }
 
 /**
@@ -856,7 +777,7 @@ interface NestedConstructorModalProps {
  * reducer'ом; метаданные/ссылки приходят сверху (не перезапрашиваются). ОК собирает
  * единый документ объединения и возвращает его через onOk.
  */
-function NestedConstructorModal({ metadataTables, expandedRefs, onExpandRef, initialDoc, onOk, onCancel, queryTextEditorV2 }: NestedConstructorModalProps): React.ReactElement {
+function NestedConstructorModal({ metadataTables, expandedRefs, onExpandRef, initialDoc, onOk, onCancel }: NestedConstructorModalProps): React.ReactElement {
   const [nestedState, nestedDispatch] = useReducer(reducer, undefined, initialState);
 
   // Посев предзаполнения — только на mount. ТЗ §56 P1.7: SET_METADATA больше НЕ
@@ -923,7 +844,6 @@ function NestedConstructorModal({ metadataTables, expandedRefs, onExpandRef, ini
           onCancel={onCancel}
           okDisabled={!nestedBatchText.trim()}
           nested
-          queryTextEditorV2={queryTextEditorV2}
         />
       </div>
     </div>

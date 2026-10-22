@@ -14,7 +14,7 @@ one place, ordered by priority.
 
 ## Open items
 
-21 items: P1 — 1, P2 — 14, P3 — 6. No item is P0.
+22 items: P1 — 1, P2 — 14, P3 — 7. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
@@ -39,6 +39,7 @@ one place, ordered by priority.
 | C37 | OPEN · P3 | Correctness | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. |
 | C38 | OPEN · P3 | Correctness | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. |
 | C39 | OPEN · P3 | Correctness | English standard field names remain English in Russian output; platform canonical text translates them. |
+| C44 | OPEN · P3 | Correctness | Query Text accepts an incomplete condition (`ГДЕ В.Код =`, unclosed `(`) with a "✓" status and Apply; only OK / Save refuses it (`malformedCustom`). |
 
 ## Correctness
 
@@ -52,6 +53,7 @@ one place, ordered by priority.
 | C38 | OPEN · P3 | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C39 | OPEN · P3 | English standard field names remain English in Russian output; platform canonical text translates them. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C40 | PARTIAL · P3 | Apply now refuses scalar subqueries in comparisons, ВЫБОР, join conditions and function arguments (rejected by 8.3.15.1489); only the newer-platform verdict is missing. [Evidence](../../test/fixtures/platform/c40-scalar-subquery.json). |
+| C44 | OPEN · P3 | Query Text accepts an incomplete condition with a "✓" status and Apply; only OK / Save refuses it. [Details](#c44-query-text-accepts-an-incomplete-condition). |
 
 The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
 comment handling and recovery limits. No outstanding correctness item is P0.
@@ -284,6 +286,22 @@ only the plain-field slot.
 false positives (corpus sweep in `semanticValidatorCorpus.test.ts`), then extend
 the existing field-path check; no separate expression grammar. Prerequisite C43
 (composite references) is closed.
+
+### C44. Query Text accepts an incomplete condition
+
+**Status:** OPEN · P3 · recorded 2026-10-22 (found while removing the legacy
+Query Text modal; both former layouts behaved the same, so it is not a
+regression of that migration).
+
+`tryOpenDesignerBatch` keeps an incomplete condition such as `ГДЕ В.Код = ` or
+`ГДЕ (В.Код = 1` as custom text, so the Query Text dialog shows "✓" (`analyze`
+returns no diagnostic) and Apply loads it into the model. The shared static
+blocker (`findStaticApplyBlocker` → `malformedCustom`) then refuses OK / Save and
+the Classic ↔ Canvas switch, so nothing malformed reaches the document; the user
+only learns of the error after leaving the dialog.
+
+**Next boundary:** decide whether Query Text analysis/Apply should report the
+same `malformedCustom` check; no parser or semanticValidator change is implied.
 
 ### C43. Composite reference fields
 

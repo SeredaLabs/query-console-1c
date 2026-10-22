@@ -489,20 +489,17 @@ for (const surface of ['classic', 'canvas'] as const) {
   });
 }
 
-for (const v2 of [false, true]) {
-  test(`Classic text v2=${v2}: C17 WHERE/HAVING Apply preserves comments without consent`, async ({ page }) => {
-    await open(page, 'classic', query);
-    if (v2) await page.evaluate(() => window.dispatchEvent(new MessageEvent('message', { data: { type: 'init', hasInitialQuery: false, queryTextEditorV2: true, locale: 'ru' } })));
-    await page.getByRole('button', { name: 'Запрос', exact: true }).click();
-    const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
-    await editor.fill(conditionCommentQuery);
-    await page.getByRole('button', { name: 'Применить', exact: true }).click();
-    await expect(editor).toBeHidden();
-    await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
-    expect(await insertions(page)).toEqual([]);
-    expect(await save(page, 'classic')).toBe(generateBatch(parseBatch(conditionCommentQuery, undefined, { preserveComments: true })));
-  });
-}
+test('Classic text: C17 WHERE/HAVING Apply preserves comments without consent', async ({ page }) => {
+  await open(page, 'classic', query);
+  await page.getByRole('button', { name: 'Запрос', exact: true }).click();
+  const editor = page.locator('[data-testid="query-text-editor"] .cm-content');
+  await editor.fill(conditionCommentQuery);
+  await page.getByRole('button', { name: 'Применить', exact: true }).click();
+  await expect(editor).toBeHidden();
+  await expect(page.getByTestId('comment-loss-confirm')).toBeHidden();
+  expect(await insertions(page)).toEqual([]);
+  expect(await save(page, 'classic')).toBe(generateBatch(parseBatch(conditionCommentQuery, undefined, { preserveComments: true })));
+});
 
 for (const surface of ['classic', 'canvas'] as const) {
   test(`${surface}: C17 blank raw-condition continuation has no slot whitespace after three Save/reopens`, async ({ page }) => {

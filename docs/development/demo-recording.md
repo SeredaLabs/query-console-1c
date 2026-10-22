@@ -30,10 +30,9 @@ The server binds to a random loopback port and closes when the command finishes.
 The recorder reuses the E2E fixture. Its optional `?locale=` selects the initial
 UI language; without it, existing tests retain Russian. The surrounding title
 strip is for explanatory captions and is not part of the extension UI.
-The recorder then sends the host `init` message with `queryTextEditorV2: true`,
-equivalent to enabling `queryConsole.queryTextEditorV2` in VS Code. This is required
-for every recording: assertions on the v2 status bar and panels fail if the simple
-dialog is shown. The shared E2E harness and extension defaults stay unchanged.
+The Query text editor is the only one in the Classic WebView, so no host flag is
+needed. Existing captions keep the historical name "Query Text v2"; change them
+together with a re-recording.
 
 ## Outputs and review
 
