@@ -19,8 +19,9 @@ current model's generated text, like the text `insertText` would carry but
 without writing it. The host reloads the **same panel** with the other bundle and
 opens that text through the ordinary `loadModel` path; the editor binding and
 its stale-document guards, metadata and window stay. Both UIs send it only after
-`prepareDesignerSwitch` confirms the text reopens through the designer-open gate
-without loss; otherwise the current UI keeps its state and shows why. UI-local
+`prepareDesignerSwitch` confirms the model has no static Apply block and the text
+reopens through the designer-open gate without loss; otherwise the current UI keeps
+its state and shows why. UI-local
 state (active tab, selection, canvas layout) is not carried. Canvas is offered
 only while it is available as a preview (`init.canvasAvailable`, from
 `queryConsole.enableNewBuilderPreview`). The separate Canvas command is
