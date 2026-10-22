@@ -14,7 +14,7 @@ one place, ordered by priority.
 
 ## Open items
 
-25 items: P1 — 1, P2 — 15, P3 — 9. No item is P0.
+24 items: P1 — 1, P2 — 16, P3 — 7. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
@@ -22,6 +22,7 @@ one place, ordered by priority.
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
 | C41 | OPEN · P2 | Correctness | Metadata validation (open, Apply, editor diagnostics) skips field paths kept as raw expression text: `ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions. |
 | C49 | OPEN · P2 | Correctness | Bare-field qualification rewrites `ГРУППИРУЮЩИМ НАБОРАМ` inside a raw-text subquery (`Х.ГРУППИРУЮЩИМ`); since C48 Apply refuses such valid queries, before it wrote them corrupted. |
+| C54 | OPEN · P2 | Correctness | `(НЕ Т.Поле) В (…)` loses its parentheses on Save (`НЕ Т.Поле В (…)`), which negates the membership instead of the operand; needs a platform verdict on the constructor's own output. |
 | A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple literals, numeric arithmetic over constants/direct metadata fields, and bounded SUBSTRING calls; other compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
 | V3 | PARTIAL · P2 | Verification | The Apply gate never compares input and output semantics. |
@@ -41,8 +42,6 @@ one place, ordered by priority.
 | C38 | OPEN · P3 | Correctness | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. |
 | C39 | OPEN · P3 | Correctness | English standard field names remain English in Russian output; platform canonical text translates them. |
 | C46 | OPEN · P3 | Correctness | A custom join condition with an empty conjunct (`ПО И А.Код = Б.Код`, `… И`, `… И И …`) is printed with `()` for the empty operand; Apply stays refused (`malformedCustom`). |
-| C52 | OPEN · P3 | Correctness | A doubled leading `НЕ НЕ` before an IN-subquery condition moves the subquery one tab deeper on the second Save; text and meaning are kept. |
-| C53 | OPEN · P3 | Correctness | A line comment inside a tuple left side of `В (ВЫБРАТЬ …)` is moved in front of the condition, and the tuple is left with a column-0 continuation line until the next Save. |
 
 ## Correctness
 
@@ -51,6 +50,7 @@ one place, ordered by priority.
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
 | C41 | OPEN · P2 | Metadata validation skips field paths kept as raw expression text (`ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions). [Details](#c41-metadata-validation-of-raw-expressions). |
 | C49 | OPEN · P2 | `ГРУППИРУЮЩИМ НАБОРАМ` inside a raw-text subquery is qualified as a field (`Х.ГРУППИРУЮЩИМ`); Apply now refuses the valid query. [Details](#c49-grouping-sets-qualified-in-a-raw-text-subquery). |
+| C54 | OPEN · P2 | `(НЕ Т.Поле) В (…)` is printed as `НЕ Т.Поле В (…)`: the meaning changes for `В`. [Details](#c54-negated-field-operand-loses-its-parentheses). |
 | R11 | PARTIAL · P3 | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
 | C34 | PARTIAL · P3 | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. [Details](#c34-english-sdbl-leftovers). |
 | C37 | OPEN · P3 | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
@@ -366,40 +366,58 @@ shows a root-`ИМЕЮЩИЕ` subquery, so changing it needs a platform probe fi
 [Regressions](../../test/unit/tupleInSubquery.c51.test.ts) (9 forms unstable on
 `main` and a nested `ИМЕЮЩИЕ`; non-tuple `ИМЕЮЩИЕ` left sides; commented subqueries;
 `НЕ В` meaning and double negation; owner ambiguity; controls). Found in the review,
-the same on `main` and not changed: [C52](#c52-doubled-не-before-an-in-subquery-shifts-it-once),
-[C53](#c53-line-comment-inside-a-tuple-left-side).
+the same on `main` and not changed here: [C52](#c52-doubled-не-before-an-in-subquery-shifts-it-once),
+[C53](#c53-line-comment-inside-a-tuple-left-side) (both fixed separately).
 
 ### C52. Doubled НЕ before an IN-subquery shifts it once
 
-**Status:** OPEN · P3 · recorded 2026-10-22 (found in the C51 review; the same on `main`)
+**Status:** CLOSED · P3 (2026-10-22; found in the C51 review, the same on `main`)
 
 ```text
 ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ НЕ НЕ Т.Код В (ВЫБРАТЬ Х.Код ИЗ Справочник.Валюты КАК Х)
 ```
 
-The first Save prints `НЕ НЕ Т.Код В` with `(ВЫБРАТЬ` on 4 tabs, the second on 5,
-then it is stable (also with a tuple left side). The text and meaning are kept.
-
-**Next boundary:** find which parse of `НЕ НЕ` (modelled `negated` versus raw leaf
-with two leading `НЕ`) disagrees on the extra tab; regression next to the C51
-suite. No platform verdict on the canonical layout.
+The first Save printed `НЕ НЕ Т.Код В` with `(ВЫБРАТЬ` on 4 tabs, the second on 5,
+then it was stable (also with a tuple left side, `НЕ НЕ НЕ`, in `ИМЕЮЩИЕ` and in a
+condition subquery). The leading `НЕ` is modelled as `negated` and the second one
+stays in `leftExpr`; the `leftExpr` path added a tab only for `negated`, while the
+raw leaf that the generated text re-parses into adds one per leading `НЕ`
+(`reindentLeafSubquery`). The `leftExpr` path now counts the leading `НЕ` of the
+printed left side too. Not matched (stable after one shift, the same on `main`): the
+raw-leaf rule also counts an `НЕ` right after a leading `(` (`(НЕ Т.Флаг, Т.Код) В`);
+whether that count is right for a tuple element needs a decision first. The first
+Save prints what `main` printed on the second; a single `НЕ` and `НЕ (a, b) НЕ В`
+are unchanged. No platform verdict on the
+layout of a doubled `НЕ` (the raw-leaf rule is kept).
+[Regressions](../../test/unit/inSubqueryLeftSide.c52-c53.test.ts).
 
 ### C53. Line comment inside a tuple left side
 
-**Status:** OPEN · P3 · recorded 2026-10-22 (found in the C51 review; the same on `main`)
+**Status:** CLOSED · P3 (2026-10-22; found in the C51 review, the same on `main`)
 
 ```text
 ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ (Т.Код, // поле
  Т.Наименование) В (ВЫБРАТЬ Х.Код, Х.Наименование ИЗ Справочник.Валюты КАК Х)
 ```
 
-The first Save moves `// поле` in front of the condition and prints the tuple as
-`(Т.Код,` + a column-0 line ` Т.Наименование) В`; the second Save joins it into one
-line. With a commented subquery the broken layout stays. No code is lost; the
-comment leaves its place.
+The first Save printed the tuple as `(Т.Код,` + a column-0 line
+` Т.Наименование) В`; the second Save joined it into one line. With a commented
+subquery, `НЕ В` or a function call (`ЕСТЬNULL(Т.Код,\n 0) В`) the broken layout
+stayed. The cause was not the comment: any left side split over lines kept its
+line break in `leftExpr`, while the raw leaf prints it on one line
+(`flattenMultilineLeaf`). The `leftExpr` path now flattens it the same way. The
+helper refuses subqueries, `ВЫБОР`, `И`/`ИЛИ` and braces, so such a left side
+(`(Т.Код И\n Т.Код, …) В`) keeps its column-0 line, stably, as on `main`.
 
-**Next boundary:** decide where a comment inside a tuple left side belongs (C17
-comment ownership) and keep the tuple layout; regression next to the C51 suite.
+Moving the comment in front of the condition is the existing C17 rule for a
+condition with a modelled subquery (the same for `Т.Код // c` before `В`), not part
+of this item. It never changed syntax or meaning: 13 forms (`ГДЕ`, `ИМЕЮЩИЕ`, join,
+`ВЫБОР`, `И`, `ИЛИ`, `НЕ`, `НЕ В`, nested, English) keep every comment and the
+same code tokens, and the output parses. Changed output for inputs that were stable
+on `main` (no column-0 line any more): `(a, // c\n b) НЕ В`, a tuple with a
+commented subquery, and a multi-line function call left side. Otherwise the first
+Save prints what `main` printed on the second.
+[Regressions](../../test/unit/inSubqueryLeftSide.c52-c53.test.ts).
 
 ### C50. Nested raw subqueries parsed 2^depth times
 
@@ -480,6 +498,28 @@ parser ([C49](#c49-grouping-sets-qualified-in-a-raw-text-subquery)).
 [Regressions](../../test/unit/subqueryMalformed.c48.test.ts) (7 raw-text forms ×
 4 broken inner queries refused, × 7 valid inner queries not refused, token
 boundaries, deep nesting, template marker), e2e in `queryText.spec.ts`.
+
+### C54. Negated field operand loses its parentheses
+
+**Status:** OPEN · P2 · recorded 2026-10-22 (found in the C52/C53 review; the same on `main`)
+
+```text
+ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ (НЕ Т.Пометка) В (&П)
+```
+
+`stripNegatedFieldParens` (`exprFormatter.ts`) removes the parentheses of
+`(НЕ Алиас.Поле)` at the start of a condition leaf and accepts any tail after it, so
+the operand form is rewritten too: Save prints `НЕ Т.Пометка В (&П)`, which is
+`НЕ (Т.Пометка В (&П))`. For `В` (a list, a parameter, a subquery; with a subquery
+on the second Save) the meaning changes: with `&П` = {ИСТИНА, ЛОЖЬ} the condition was
+always true and becomes always false. For `= ИСТИНА`/`= ЛОЖЬ` on a Boolean field
+both forms are equivalent. The helper's rule is documented for the whole condition
+`(НЕ Т.Поле)`; whether the constructor itself also drops the
+parentheses of an operand is unconfirmed.
+
+**Next boundary:** platform probe of `(НЕ Т.Поле) В (&П)` and `… = ИСТИНА`; then
+either keep the parentheses when a tail follows (at least before `В`) or record the
+platform's behaviour. Not changed in C52/C53.
 
 ### C49. Grouping sets qualified in a raw-text subquery
 
@@ -747,6 +787,8 @@ and [audit index](audits/README.md).
 | C43 | CLOSED | A field reached through a composite reference is found if any target has it; open/Apply/diagnostics no longer refuse it (2026-10-22). [Details](#c43-composite-reference-fields). |
 | C44 | CLOSED | Query Text no longer shows "✓" or applies an incomplete custom condition that OK / Save refuses: the status bar and Apply use the same `malformedCustom` check (2026-10-22). [Details](#c44-query-text-accepted-an-incomplete-condition). |
 | C45 | CLOSED | An empty `И` conjunct in WHERE/HAVING/join no longer disappears on Save: the condition keeps its text and `malformedCustom` refuses it (2026-10-22). [Details](#c45-trailing-и-dropped-from-a-condition). |
+| C53 | CLOSED | A non-reference left side of `В (ВЫБРАТЬ …)` split over lines (a line comment or a line break in a tuple) is printed on one line on the first Save, like a raw leaf; left sides the helper does not flatten (`И`/`ИЛИ`, `ВЫБОР`) keep their lines (2026-10-22). [Details](#c53-line-comment-inside-a-tuple-left-side). |
+| C52 | CLOSED | `НЕ НЕ X В (ВЫБРАТЬ …)` no longer moves the subquery one tab on the second Save (2026-10-22). [Details](#c52-doubled-не-before-an-in-subquery-shifts-it-once). |
 | C51 | CLOSED | A tuple left side of `В (ВЫБРАТЬ …)` written compactly no longer changes on the second Save (in `ИМЕЮЩИЕ`, with `НЕ В`, or with bare fields) (2026-10-22). [Details](#c51-tuple-in-subquery-changed-on-the-second-save). |
 | C50 | CLOSED | Nested subqueries kept in raw text are no longer parsed 2^depth times during bare-field qualification (depth 18: tens of seconds → about 0.1 s) (2026-10-22). [Details](#c50-nested-raw-subqueries-parsed-2depth-times). |
 | C48 | CLOSED | A broken condition inside a `(ВЫБРАТЬ …)` kept in raw custom text (outer alias `В`, `ИЛИ`, `ВЫБОР`, join) is refused like one in a modelled subquery (2026-10-22). [Details](#c48-broken-condition-in-a-raw-text-subquery-not-refused). |
