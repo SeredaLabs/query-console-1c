@@ -14,13 +14,14 @@ one place, ordered by priority.
 
 ## Open items
 
-22 items: P1 — 1, P2 — 14, P3 — 7. No item is P0.
+22 items: P1 — 1, P2 — 15, P3 — 6. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
 | V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C37–C40 remain open; C36 is an accepted divergence. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
 | C41 | OPEN · P2 | Correctness | Metadata validation (open, Apply, editor diagnostics) skips field paths kept as raw expression text: `ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions. |
+| C45 | OPEN · P2 | Correctness | A trailing `И` in WHERE/HAVING (`ГДЕ В.Код = 1 И`) is dropped by the parser; the Designer opens, applies and OK writes `ГДЕ В.Код = 1` without any error. |
 | A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple literals, numeric arithmetic over constants/direct metadata fields, and bounded SUBSTRING calls; other compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
 | V3 | PARTIAL · P2 | Verification | The Apply gate never compares input and output semantics. |
@@ -39,7 +40,6 @@ one place, ordered by priority.
 | C37 | OPEN · P3 | Correctness | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. |
 | C38 | OPEN · P3 | Correctness | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. |
 | C39 | OPEN · P3 | Correctness | English standard field names remain English in Russian output; platform canonical text translates them. |
-| C44 | OPEN · P3 | Correctness | Query Text accepts an incomplete condition (`ГДЕ В.Код =`, unclosed `(`) with a "✓" status and Apply; only OK / Save refuses it (`malformedCustom`). |
 
 ## Correctness
 
@@ -47,13 +47,13 @@ one place, ordered by priority.
 |---|---|---|
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
 | C41 | OPEN · P2 | Metadata validation skips field paths kept as raw expression text (`ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions). [Details](#c41-metadata-validation-of-raw-expressions). |
+| C45 | OPEN · P2 | A trailing `И` in WHERE/HAVING is dropped silently; the written query differs from the authored text. [Details](#c45-trailing-и-dropped-from-a-condition). |
 | R11 | PARTIAL · P3 | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
 | C34 | PARTIAL · P3 | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. [Details](#c34-english-sdbl-leftovers). |
 | C37 | OPEN · P3 | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C38 | OPEN · P3 | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C39 | OPEN · P3 | English standard field names remain English in Russian output; platform canonical text translates them. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C40 | PARTIAL · P3 | Apply now refuses scalar subqueries in comparisons, ВЫБОР, join conditions and function arguments (rejected by 8.3.15.1489); only the newer-platform verdict is missing. [Evidence](../../test/fixtures/platform/c40-scalar-subquery.json). |
-| C44 | OPEN · P3 | Query Text accepts an incomplete condition with a "✓" status and Apply; only OK / Save refuses it. [Details](#c44-query-text-accepts-an-incomplete-condition). |
 
 The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
 comment handling and recovery limits. No outstanding correctness item is P0.
@@ -287,21 +287,51 @@ false positives (corpus sweep in `semanticValidatorCorpus.test.ts`), then extend
 the existing field-path check; no separate expression grammar. Prerequisite C43
 (composite references) is closed.
 
-### C44. Query Text accepts an incomplete condition
+### C45. Trailing И dropped from a condition
 
-**Status:** OPEN · P3 · recorded 2026-10-22 (found while removing the legacy
-Query Text modal; both former layouts behaved the same, so it is not a
-regression of that migration).
+**Status:** OPEN · P2 · recorded 2026-10-22 (found during C44; not changed there)
+
+Minimal reproduction (no metadata needed):
+
+```text
+ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = 1 И
+```
+
+`tryOpenBatch` succeeds, `findMalformedCustomExpressions` finds nothing and
+`generateBatch` returns `… ГДЕ В.Код = 1`: the incomplete text opens (from the
+document, Query Text, Canvas), shows "✓" in Query Text and OK / Save writes the
+query without the operator and without any warning. Verified the same for
+`ГДЕ В.Код = 1 И В.Код = 2 И`, `ГДЕ В.Код = 1 И` followed by `УПОРЯДОЧИТЬ ПО` and
+`ИМЕЮЩИЕ КОЛИЧЕСТВО(В.Код) > 1 И`. Not affected: a trailing `ИЛИ` or `НЕ`, and
+`ПО А.Код = Б.Код И` in a join (kept as malformed custom text, refused by
+`malformedCustom`). Where the operand is lost inside the parser/recovery is not
+yet located; no platform verdict was collected (the input is not valid SDBL).
+
+**Next boundary:** locate where the empty operand is dropped, then decide whether
+it must be a parse error or stay custom text that the existing `malformedCustom`
+check refuses; add regressions for WHERE and HAVING. Parser/recovery change.
+
+### C44. Query Text accepted an incomplete condition
+
+**Status:** CLOSED (2026-10-22)
 
 `tryOpenDesignerBatch` keeps an incomplete condition such as `ГДЕ В.Код = ` or
-`ГДЕ (В.Код = 1` as custom text, so the Query Text dialog shows "✓" (`analyze`
-returns no diagnostic) and Apply loads it into the model. The shared static
-blocker (`findStaticApplyBlocker` → `malformedCustom`) then refuses OK / Save and
-the Classic ↔ Canvas switch, so nothing malformed reaches the document; the user
-only learns of the error after leaving the dialog.
+`ГДЕ (В.Код = 1` as custom text, so the Query Text status bar (`analyze`) showed
+"✓" and Apply loaded it into the model; only the shared static blocker
+(`findStaticApplyBlocker` → `malformedCustom`) then refused OK / Save and the
+Classic ↔ Canvas switch. `analyze` and `ConstructorView.handleApplyQueryEdit`
+(top-level and nested designer) now run the same `findMalformedCustomExpressions`
+on the parsed text and report `constructor.malformedCustom`; the text stays in
+the editor and the model is unchanged. The diagnostic has no text position
+(the check does not know one), so there is no lint marker. Grammar, generator,
+recovery and the final Apply gate are unchanged.
+[Regressions](../../test/unit/queryTextMalformed.c44.test.ts) (analysis agrees with
+the final gate for incomplete comparison, unclosed parenthesis, HAVING, a later
+batch statement and a subquery; six valid controls), e2e in `queryText.spec.ts`
+(status and Apply refuse, then the fixed text applies).
 
-**Next boundary:** decide whether Query Text analysis/Apply should report the
-same `malformedCustom` check; no parser or semanticValidator change is implied.
+*Not covered:* a trailing `И` (`ГДЕ В.Код = 1 И`) is not a `malformedCustom`
+case — the parser drops it; tracked as [C45](#c45-trailing-и-dropped-from-a-condition).
 
 ### C43. Composite reference fields
 
@@ -483,6 +513,7 @@ and [audit index](audits/README.md).
 | C33 | CLOSED | An unaliased `#Имя` source gets no synthesized `КАК` in the Designer (2026-10-18). [Details](#c33-unaliased-template-marker-source). |
 | C42 | CLOSED | A Classic ↔ Canvas switch no longer erases an Apply block: a model with a static Apply blocker does not switch (2026-10-22). [Details](#c42-unclosed-condition-closed-by-a-designer-switch). |
 | C43 | CLOSED | A field reached through a composite reference is found if any target has it; open/Apply/diagnostics no longer refuse it (2026-10-22). [Details](#c43-composite-reference-fields). |
+| C44 | CLOSED | Query Text no longer shows "✓" or applies an incomplete custom condition that OK / Save refuses: the status bar and Apply use the same `malformedCustom` check (2026-10-22). [Details](#c44-query-text-accepted-an-incomplete-condition). |
 | C36 | ACCEPTED | The Designer keeps `*` where the 1C constructor expands it; accepted permanently (2026-10-21). [Details](#c36-kept--versus-the-constructor-canonical-text). |
 | D1 | CLOSED | Corrected stale source-contract comments; reconciliation/near-term reports. |
 | N1 | CLOSED | A `КАК` inside a DCS-brace literal no longer counts as an alias (`aliasDcsBraceExprs`, `wrapDcsBraceParam`) (`d562339`); dcsBraceAlias.n1.test.ts. |

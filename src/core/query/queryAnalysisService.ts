@@ -6,7 +6,7 @@ import { collectQueryParameters } from './queryParameters';
 import { getBatchStatementSpans } from './sdblParser';
 import type { QueryModel, Condition } from './queryModel';
 import { lintBatch, type LintWarning } from './queryLinter';
-import type { SemanticErrorDetails } from './semanticValidator';
+import { findMalformedCustomExpressions, type SemanticErrorDetails } from './semanticValidator';
 
 /** Диапазон в СЫРОМ тексте запроса — см. `getBatchStatementSpans`. */
 export interface TextRange {
@@ -97,6 +97,17 @@ export interface QueryAnalysisResult {
 }
 
 const EMPTY_RESULT: QueryAnalysisResult = { diagnostics: [], warnings: [], result: null, tempTables: [], parameters: [] };
+
+/**
+ * C44: `tryOpenBatch` принимает текст, в котором толерантный парсер сохранил
+ * структурно сломанное произвольное выражение (`ГДЕ В.Код = `, незакрытая скобка);
+ * финальный ОК/«Сохранить» такой запрос блокирует (`findStaticApplyBlocker` →
+ * `malformedCustom`). Окно «Текст запроса» использует ТУ ЖЕ проверку, чтобы не
+ * показывать «✓» и не принимать в модель то, что затем нельзя записать.
+ * Локализуется `localizeDiagnostic` (`constructor.malformedCustom`).
+ */
+export const MALFORMED_CUSTOM_EXPRESSION =
+  'Произвольное условие или выражение выглядит синтаксически некорректным. Применение заблокировано, чтобы не записать невалидный запрос.';
 
 /**
  * Compatibility-путь ТОЛЬКО для синтаксических ошибок парсера («Ошибка разбора
@@ -193,6 +204,10 @@ export function analyze(text: string, resolver?: MetadataResolver): QueryAnalysi
         ...(r.diagnostic?.details ? { details: r.diagnostic.details } : {}),
       }],
     };
+  }
+  // Без позиции: проверка не знает места выражения в исходном тексте (см. toCmDiagnostics).
+  if (findMalformedCustomExpressions(r.doc).length > 0) {
+    return { ...EMPTY_RESULT, diagnostics: [{ message: MALFORMED_CUSTOM_EXPRESSION }] };
   }
 
   const spans = getBatchStatementSpans(text);

@@ -126,6 +126,44 @@ test.describe('Query Text', () => {
     expect(await save(page)).toBe(baseline);
   });
 
+  // C44: the parser keeps these as custom text, which OK / Save refuses
+  // (`malformedCustom`); the dialog must not show "✓" or load them into the model.
+  for (const [name, broken, fixed] of [
+    ['incomplete comparison', 'ГДЕ В.Код = ', 'ГДЕ В.Код = &Код'],
+    ['unclosed parenthesis', 'ГДЕ (В.Код = 1', 'ГДЕ (В.Код = 1)'],
+  ] as const) {
+    test(`C44 ${name}: status and Apply refuse it; after the fix Apply works`, async ({ page }) => {
+      const head = 'ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В ';
+      const malformed = 'Произвольное условие или выражение выглядит синтаксически некорректным.';
+      await openClassic(page, query);
+      const baseline = await save(page);
+      const editor = await showQueryText(page);
+      const status = page.getByTestId('query-text-status');
+      await editor.fill(head + broken);
+      await page.getByTitle('Проверить сейчас', { exact: true }).click();
+      await expect(status).toContainText(malformed);
+      await expect(status).not.toContainText('✓');
+      await apply(page);
+      await expect(page.locator('div[style*="white-space: pre-wrap"]').filter({ hasText: malformed })).toBeVisible();
+      await expect(editor).toBeVisible();
+      expect(await editorText(editor)).toBe(head + broken);
+      expect(await messages(page, 'insertText')).toHaveLength(1);
+      // The refused Apply left the Designer model untouched.
+      await discardEdit(page);
+      expect(await save(page)).toBe(baseline);
+
+      await showQueryText(page);
+      await editor.fill(head + fixed);
+      await page.getByTitle('Проверить сейчас', { exact: true }).click();
+      await expect(status).toContainText('✓');
+      await apply(page);
+      await expect(editor).toBeHidden();
+      const output = await save(page);
+      expect(output).not.toBe(baseline);
+      expect(output).toBe(generateBatch(parseBatch(head + fixed, undefined, { preserveComments: true })));
+    });
+  }
+
   test('batch with a temp table, UNION, comments and parameters applies into the model', async ({ page }) => {
     const batch = '// batch head\n' +
       'ВЫБРАТЬ В.Код КАК Код ПОМЕСТИТЬ ВТ ИЗ Справочник.Валюты КАК В ГДЕ В.Код = &Код; // after temp\n' +

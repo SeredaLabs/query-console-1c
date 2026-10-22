@@ -54,6 +54,9 @@ export function localizeDiagnostic(message: string): string {
   if (message === 'Сгенерированный текст запроса содержит некорректное выражение; применение заблокировано') {
     return t('diagnostic.generatedMalformed');
   }
+  if (message === 'Произвольное условие или выражение выглядит синтаксически некорректным. Применение заблокировано, чтобы не записать невалидный запрос.') {
+    return t('constructor.malformedCustom');
+  }
   if (activeLocale !== 'ru' && /[А-Яа-яЁё]/.test(message)) return t('diagnostic.unknownCoreError');
   return message;
 }
