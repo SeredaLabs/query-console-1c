@@ -29,6 +29,14 @@ export function tIfExists(key: string): string | undefined {
   return dictionaries[activeLocale][k] ?? en[k];
 }
 
+/**
+ * Query Text Apply refusal for an empty/whitespace-only text. The Apply banner is
+ * rendered through `localizeDiagnostic`, so it must carry this stable Russian form
+ * rather than an already localized `t('constructor.emptyQuery')`: in `uk` that
+ * Cyrillic text would fall through to `diagnostic.unknownCoreError`.
+ */
+export const EMPTY_QUERY_APPLY_REFUSED = 'Текст запроса пуст — нечего применять.';
+
 /** Translate stable outer forms emitted by the language-independent query core. */
 export function localizeDiagnostic(message: string): string {
   if (message.startsWith('Запрос содержит ошибку: ')) {
@@ -57,6 +65,7 @@ export function localizeDiagnostic(message: string): string {
   if (message === 'Произвольное условие или выражение выглядит синтаксически некорректным. Применение заблокировано, чтобы не записать невалидный запрос.') {
     return t('constructor.malformedCustom');
   }
+  if (message === EMPTY_QUERY_APPLY_REFUSED) return t('constructor.emptyQuery');
   if (activeLocale !== 'ru' && /[А-Яа-яЁё]/.test(message)) return t('diagnostic.unknownCoreError');
   return message;
 }

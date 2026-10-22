@@ -41,7 +41,7 @@ import { MALFORMED_CUSTOM_EXPRESSION } from '../../core/query/queryAnalysisServi
 import { buildResolverFromTables } from '../../core/metadata/buildModelResolver';
 import type { RefreshState } from '../App';
 import { BTN, BTN_SECONDARY, GLOBAL_FORM_CSS } from '../sharedStyles';
-import { t } from '../i18n';
+import { EMPTY_QUERY_APPLY_REFUSED, t } from '../i18n';
 
 export interface ConstructorViewProps {
   state: QueryState;
@@ -171,7 +171,7 @@ export function ConstructorView(props: ConstructorViewProps): React.ReactElement
     // означало бы «Применить» молча стирает всю модель конструктора (проверено вручную:
     // очистить текст и нажать «Применить» — таблицы/поля пропадают без единого
     // предупреждения). Явно блокируем, а не полагаемся на `!r.ok`.
-    if (r.doc.members.length === 0) { setQueryModalError(t('constructor.emptyQuery')); return; }
+    if (r.doc.members.length === 0) { setQueryModalError(EMPTY_QUERY_APPLY_REFUSED); return; }
     dispatch({ type: 'LOAD_BATCH', doc: r.doc });
     setQueryModalError(null);
     setQueryModalText(null);
