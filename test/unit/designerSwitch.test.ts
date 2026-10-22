@@ -9,6 +9,7 @@ import { initialState, reducer } from '../../src/webview/state/queryStore';
 import { computeBatchTextSafe } from '../../src/webview/computeBatchText';
 import { tryOpenDesignerBatch } from '../../src/webview/openDesignerBatch';
 import { prepareDesignerSwitch } from '../../src/webview/designerSwitch';
+import { findStaticApplyBlocker } from '../../src/webview/applyGate';
 import { setLocale } from '../../src/webview/i18n';
 
 const load = (text: string) => reducer(initialState(), { type: 'LOAD_BATCH', doc: parseBatch(text, undefined, { preserveComments: true }) });
@@ -42,6 +43,41 @@ describe('prepareDesignerSwitch', () => {
     } finally {
       setLocale('en');
     }
+  });
+
+  it('D1: refuses a virtual table whose extra arguments the generated text would drop', () => {
+    // Generation keeps only the supported slots, and the reopened text no longer
+    // carries the unsafe mark — the other UI would then Save without &Б/&В.
+    const input = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК Т';
+    const state = load(input);
+    expect(computeBatchTextSafe(state, true).text).not.toContain('&Б');
+    const before = JSON.stringify(state);
+    try {
+      setLocale('uk');
+      expect(prepareDesignerSwitch(state, undefined)).toEqual({
+        ok: false,
+        error: 'Неможливо перемкнути режим конструктора: Віртуальна таблиця "РегистрРасчета.Начисления.ДанныеГрафика" ' +
+          'містить параметри (третій і наступні аргументи), які Конструктор запитів не може зберегти без втрати даних. Застосування заблоковано.',
+      });
+    } finally {
+      setLocale('en');
+    }
+    // The model keeps only the unsafe mark, not the dropped arguments: the document's
+    // text survives because nothing is sent, and the current UI keeps its Apply block.
+    expect(JSON.stringify(state)).toBe(before);
+    expect(JSON.stringify(state)).toContain('"unsafeExtraArgs":true');
+    expect(findStaticApplyBlocker(state)).toEqual({ kind: 'unsafeVirtualTable', name: 'РегистрРасчета.Начисления.ДанныеГрафика' });
+  });
+
+  it('D1: still switches a malformed custom expression, which stays blocked after reopening', () => {
+    // Unlike an unsafe virtual table, this malformed text survives generation, so the
+    // other UI reopens it with the same Apply blocker.
+    const prepared = prepareDesignerSwitch(load('ВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = = &Код'), undefined);
+    expect(prepared.ok).toBe(true);
+    if (!prepared.ok) throw new Error(prepared.error);
+    const reopened = tryOpenDesignerBatch(prepared.text);
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(findStaticApplyBlocker(reducer(initialState(), { type: 'LOAD_BATCH', doc: reopened.doc }))).toEqual({ kind: 'malformedCustom' });
   });
 
   it('carries C21 arithmetic ORDER keys through switching and reopening twice', () => {

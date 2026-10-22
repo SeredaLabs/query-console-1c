@@ -40,7 +40,8 @@ describe('C40: platform-rejected scalar subqueries are never applied', () => {
     // Open keeps the text; only Apply is refused (nothing is written).
     expect(r.opened).toBe(true);
     if (!r.opened) return;
-    expect(r.decision.ok).toBe(false);
+    // Disabled before the click with the shared reason, not a click-time error.
+    expect(r.decision).toEqual({ ok: false, kind: 'blocked' });
   });
 
   it.each(cases.filter(c => !c.platform.valid && c.name !== 'select_list').map(c => [c.name, c] as const))(

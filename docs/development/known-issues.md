@@ -53,7 +53,8 @@ gate, not exhaustive coverage or platform equivalence.
 ## Virtual-table and metadata boundaries
 
 `Последовательность.*.Границы` has an unconfirmed generic two-slot fallback;
-marked extra arguments block Apply (U2). Calculation-register `ДанныеГрафика`/
+marked extra arguments block Apply (U2) and Classic ↔ Canvas switching, whose
+generated text would drop them. Calculation-register `ДанныеГрафика`/
 `ФактическийПериодДействия` have the book-confirmed one-condition layout, and
 `База<Имя>` has four slots. Accounting Субконто argument preservation is supported;
 old blanket unsafe claims are obsolete. Unique signature/book evidence is in the

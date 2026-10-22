@@ -73,6 +73,6 @@ describe('C24 step 0: a wildcard with an alias is not opened or applied', () => 
     const v = validateBatchText(text);
     expect(v.ok).toBe(false);
     expect(tryOpenDesignerBatch(text).ok).toBe(false);
-    expect(decideApply(text, null, null, undefined).ok).toBe(false);
+    expect(decideApply(text, null, null, undefined)).toEqual({ ok: false, kind: 'invalid', error: v.ok ? undefined : v.error });
   });
 });

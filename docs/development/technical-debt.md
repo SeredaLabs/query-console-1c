@@ -14,12 +14,13 @@ one place, ordered by priority.
 
 ## Open items
 
-20 items: P1 — 1, P2 — 13, P3 — 6. No item is P0.
+22 items: P1 — 1, P2 — 14, P3 — 7. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
 | V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C37–C40 remain open; C36 is an accepted divergence. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
+| C41 | OPEN · P2 | Correctness | Metadata validation (open, Apply, editor diagnostics) skips field paths kept as raw expression text: `ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions. |
 | A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple literals, numeric arithmetic over constants/direct metadata fields, and bounded SUBSTRING calls; other compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
 | V3 | PARTIAL · P2 | Verification | The Apply gate never compares input and output semantics. |
@@ -38,17 +39,20 @@ one place, ordered by priority.
 | C37 | OPEN · P3 | Correctness | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. |
 | C38 | OPEN · P3 | Correctness | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. |
 | C39 | OPEN · P3 | Correctness | English standard field names remain English in Russian output; platform canonical text translates them. |
+| C42 | OPEN · P3 | Correctness | A trailing unclosed `(` in a custom condition is closed by generation; Apply refuses it, but a Classic ↔ Canvas switch reopens the closed text unblocked. |
 
 ## Correctness
 
 | ID | Status / priority | Summary |
 |---|---|---|
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
+| C41 | OPEN · P2 | Metadata validation skips field paths kept as raw expression text (`ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions). [Details](#c41-metadata-validation-of-raw-expressions). |
 | R11 | PARTIAL · P3 | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
 | C34 | PARTIAL · P3 | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. [Details](#c34-english-sdbl-leftovers). |
 | C37 | OPEN · P3 | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C38 | OPEN · P3 | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C39 | OPEN · P3 | English standard field names remain English in Russian output; platform canonical text translates them. [Evidence](audits/v5-phase5-2026-10-21.md). |
+| C42 | OPEN · P3 | A trailing unclosed `(` in a custom condition is closed by generation and no longer blocked after a Classic ↔ Canvas switch. [Details](#c42-unclosed-condition-closed-by-a-designer-switch). |
 | C40 | PARTIAL · P3 | Apply now refuses scalar subqueries in comparisons, ВЫБОР, join conditions and function arguments (rejected by 8.3.15.1489); only the newer-platform verdict is missing. [Evidence](../../test/fixtures/platform/c40-scalar-subquery.json). |
 
 The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
@@ -253,6 +257,52 @@ platform 8.3.15.1489 (build confirmed by the user).
 for C37–C39; for C40, a verdict from a current platform build (close C40 if it also
 rejects; otherwise decide how the refusal depends on the target version).
 No production code or golden output changed in this audit.
+
+### C41. Metadata validation of raw expressions
+
+**Status:** OPEN · P2
+
+`validateBatchText` (opening a query, Apply, editor diagnostics) checks field
+paths against metadata only in structured slots: a plain field with its own alias,
+an aggregate over a field, ORDER BY, GROUP BY and structured conditions. A field
+reference kept as raw expression text is not checked, nor is an unknown source
+alias inside it. Probe with a resolver over `Справочник.Валюты` (fields Ссылка, Код,
+Наименование, ЗагружаетсяИзИнтернета), 2026-10-22:
+
+| Query (`… ИЗ Справочник.Валюты КАК В`) | Result |
+|---|---|
+| `ВЫБРАТЬ В.Нет КАК Х`, `СУММА(В.Нет) КАК Х`, `… УПОРЯДОЧИТЬ ПО В.Нет`, `… СГРУППИРОВАТЬ ПО В.Код, В.Нет` | invalid: `Поле "Нет" не найдено` |
+| `ВЫБРАТЬ В.Нет КАК Поле1` (the parser keeps a `Поле{n}`-aliased field as an expression) | accepted |
+| `В.Код + В.Нет`, `ЕСТЬNULL(В.Нет, 0)`, `ВЫБОР КОГДА В.Нет = 1 …`, `В.Код + Ъ.Код` | accepted |
+| `ГДЕ В.Нет = 1`, `ГДЕ В.Нет = &П`, `ГДЕ В.Нет`, `ГДЕ Ъ.Код = 1`, `ЛЕВОЕ СОЕДИНЕНИЕ … ПО В.Нет = Б.Код` | accepted |
+
+Expected: each unknown field is refused like the plain-field case. Effect: Apply
+writes a query the platform rejects (`Field not found`), and editor diagnostics do
+not flag it; no user text is lost. Reachable from the UI: a field added through
+the expression editor gets a `Поле{n}` name. The G1 e2e in `canvas.spec.ts` covers
+only the plain-field slot.
+
+**Next boundary:** decide which raw-expression references can be resolved without
+false positives (corpus sweep in `semanticValidatorCorpus.test.ts`), then extend
+the existing field-path check; no separate expression grammar.
+
+### C42. Unclosed condition closed by a designer switch
+
+**Status:** OPEN · P3
+
+`ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ (Т.Код = &А ИЛИ Т.Наименование = &Б`
+opens with the `malformedCustom` Apply block. Generation writes the condition as
+`(Т.Код = &А ИЛИ Т.Наименование = &Б)`; a Classic ↔ Canvas switch reopens that text
+without the block, so a later edit + Save writes the closed condition. With a
+following clause (`… = &Б УПОРЯДОЧИТЬ ПО Т.Код`) the closed text stays malformed
+and blocked. Found by the D1 probe over 2,915 openable corpus/test queries: 2
+erased cases (both this form); 44 malformed cases stay blocked after the switch
+and 2 are refused. The written text is a guessed repair of a query the platform
+rejects, not a loss of user text. D1 (the switch refuses an unsafe virtual table)
+does not cover it.
+
+**Next boundary:** decide whether the switch should refuse every `malformedCustom`
+model, or generation should keep the unclosed text so the block survives.
 
 ## Architecture
 
