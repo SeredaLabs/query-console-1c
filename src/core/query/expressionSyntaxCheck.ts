@@ -22,9 +22,9 @@
  * - типы значений;
  * - вложенные подзапросы `(ВЫБРАТЬ …)` разбираются не полностью, а
  *   пропускаются целиком по балансу скобок (фаза 1, `hasBalancedDelimiters`) —
- *   их СТРУКТУРНАЯ корректность уже проверяется отдельно, если модель их
- *   распознала как настоящий вложенный QueryDocument (рекурсия в
- *   `findUnbalancedCustomExpressions`/`findMalformedCustomExpressions`).
+ *   их СТРУКТУРНАЯ корректность проверяется отдельно: рекурсией по вложенному
+ *   QueryDocument модели, а подзапрос внутри сырого custom-текста (C48) —
+ *   разбором `embeddedSubqueryTexts` в `findMalformedCustomExpressions`.
  *
  * Важно про лексер (`sdblLexer.ts`): его `KEYWORDS` — рабочий набор для
  * ГРАНИЦ сегментов (см. `collectConditionTokens`), НЕ полный каталог SDBL.
@@ -392,6 +392,38 @@ function hasTemplateMarker(text: string): boolean {
   const ranges = codeRanges(text);
   if (!ranges) return TEMPLATE_MARKER_CHARS.test(text);
   return [...text.matchAll(TEMPLATE_MARKER_CHARS_G)].some(m => isCodeAt(ranges, m.index));
+}
+
+/**
+ * C48: тексты подзапросов `(ВЫБРАТЬ …)` / `(SELECT …)` внешнего уровня внутри
+ * custom-текста — без внешних скобок, в порядке появления. Границы — по токенам
+ * лексера (скобки в строках и комментариях не считаются); вложенные в найденную
+ * группу подзапросы не выдаются отдельно — они часть её текста. Текст с маркером
+ * шаблона или нелексируемый — пусто (о нём не судим, как и акцептор выше);
+ * незакрытая группа не выдаётся (её уже отвергает акцептор).
+ */
+export function embeddedSubqueryTexts(text: string): string[] {
+  if (!/ВЫБРАТЬ|SELECT/i.test(text) || hasTemplateMarker(text)) return [];
+  let tokens: Token[];
+  try {
+    tokens = tokenize(text).filter(t => t.type !== 'eof');
+  } catch {
+    return [];
+  }
+  const texts: string[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    if (!isPunct(tokens[i], '(') || !isWordToken(tokens[i + 1], 'ВЫБРАТЬ', 'SELECT')) continue;
+    let depth = 1;
+    let j = i + 1;
+    for (; j < tokens.length; j++) {
+      if (isPunct(tokens[j], '(')) depth++;
+      else if (isPunct(tokens[j], ')') && --depth === 0) break;
+    }
+    if (j === tokens.length) break;
+    texts.push(text.slice(tokens[i + 1].pos, tokens[j].pos));
+    i = j;
+  }
+  return texts;
 }
 
 /**

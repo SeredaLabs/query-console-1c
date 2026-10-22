@@ -31,7 +31,8 @@ import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable } from '../metadata/types';
 import { tokenize, tryTokenize } from './sdblLexer';
 import type { Token } from './sdblLexer';
-import { isStructurallyValidExpression, parseEmptyTableColumns } from './expressionSyntaxCheck';
+import { embeddedSubqueryTexts, isStructurallyValidExpression, parseEmptyTableColumns } from './expressionSyntaxCheck';
+import { parseDocument } from './sdblParser';
 import { resolveFieldPath } from './fieldPathResolver';
 import { deriveTempTableLifetimes, visibleTempTableAt } from './tempTableSemantics';
 import { hasUnexpandedWildcard, isWildcardExpression } from './expandStarFields';
@@ -654,13 +655,47 @@ function withoutTailAlias(text: string): string {
   return depth === 0 ? text.slice(0, as.pos).trimEnd() : text;
 }
 
+/**
+ * C48: результаты разбора сырых подзапросов предыдущего вызова (`null` — текст не
+ * разбирается). Apply-gate вызывается на каждое изменение модели, а тексты
+ * неизменённых узлов те же; хранится только то, что встретилось в последнем вызове.
+ */
+let previousSubqueryHits = new Map<string, MalformedCustomHit[] | null>();
+
 export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCustomHit[] {
   const hits: MalformedCustomHit[] = [];
+  const subqueryHits = new Map<string, MalformedCustomHit[] | null>();
   const check = (text: string | undefined, kind: MalformedCustomHit['kind']): void => {
-    if (text === undefined || isStructurallyValidExpression(text)) return;
-    // `ПУСТАЯТАБЛИЦА.(<колонки>)` платформа принимает только как поле списка выборки (RP14).
-    if ((kind === 'field' || kind === 'trailingField') && parseEmptyTableColumns(text) !== undefined) return;
-    hits.push({ kind, text });
+    if (text === undefined) return;
+    if (!isStructurallyValidExpression(text)) {
+      // `ПУСТАЯТАБЛИЦА.(<колонки>)` платформа принимает только как поле списка выборки (RP14).
+      if ((kind === 'field' || kind === 'trailingField') && parseEmptyTableColumns(text) !== undefined) return;
+      hits.push({ kind, text });
+      return;
+    }
+    // C48: акцептор пропускает `(ВЫБРАТЬ …)` по балансу скобок, а у сырого текста нет
+    // модели подзапроса — разбираем его тем же парсером и обходим как `c.subquery`.
+    // Каждый текст строго короче родителя, поэтому рекурсия конечна.
+    for (const inner of embeddedSubqueryTexts(text)) {
+      let innerHits = subqueryHits.get(inner) ?? previousSubqueryHits.get(inner);
+      if (innerHits === undefined) {
+        let sub: QueryDocument | undefined;
+        try {
+          sub = parseDocument(inner);
+        } catch {
+          sub = undefined;
+        }
+        if (sub) {
+          const start = hits.length;
+          walkDocument(sub);
+          innerHits = hits.splice(start);
+        } else {
+          innerHits = null;
+        }
+      }
+      subqueryHits.set(inner, innerHits);
+      hits.push(...(innerHits ?? [{ kind, text }]));
+    }
   };
   const checkExpressionSlot = (text: string | undefined, kind: MalformedCustomHit['kind']): void => {
     if (text === undefined || text.trim() === '' || !isOrdinaryExpressionSlot(text)) return;
@@ -751,6 +786,7 @@ export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCus
     for (const member of qdoc.members) walkModel(member.model);
   }
   for (const member of doc.members) walkDocument(member);
+  previousSubqueryHits = subqueryHits;
   return hits;
 }
 

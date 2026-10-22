@@ -139,12 +139,15 @@ test.describe('Query Text', () => {
     expect(await save(page)).toBe(baseline);
   });
 
-  // C44/C45: the parser keeps these as custom text, which OK / Save refuses
+  // C44/C45/C48: the parser keeps these as custom text, which OK / Save refuses
   // (`malformedCustom`); the dialog must not show "✓" or load them into the model.
   for (const [name, broken, fixed] of [
     ['C44 incomplete comparison', 'ГДЕ В.Код = ', 'ГДЕ В.Код = &Код'],
     ['C44 unclosed parenthesis', 'ГДЕ (В.Код = 1', 'ГДЕ (В.Код = 1)'],
     ['C45 trailing И', 'ГДЕ В.Код = 1 И', 'ГДЕ В.Код = 1 И В.Код <> 2'],
+    ['C48 trailing И in a raw-text subquery',
+      'ГДЕ В.Код В (ВЫБРАТЬ Х.Код ИЗ Справочник.Валюты КАК Х ГДЕ Х.Код = 1 И)',
+      'ГДЕ В.Код В (ВЫБРАТЬ Х.Код ИЗ Справочник.Валюты КАК Х ГДЕ Х.Код = 1)'],
   ] as const) {
     test(`${name}: status and Apply refuse it; after the fix Apply works`, async ({ page }) => {
       const head = 'ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В ';
