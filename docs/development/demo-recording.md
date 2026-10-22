@@ -1,9 +1,10 @@
 # Recording localized demos
 
 The README animations and videos show the built Classic WebView, not a recreated
-UI. The current recordings were made for **0.1.89**. They use the public metadata
-fixture in `test/e2e/harness/index.html`, the enhanced Query text v2 editor, and the actual
-`en`, `uk`, and `ru` dictionaries. No database, private metadata, or VS Code window
+UI. The current recordings were made on `main` after **0.3.0** (`ca3ff1d`, after the
+Query text editor migration; the caption strip shows the package version). They
+use the public metadata fixture in `test/e2e/harness/index.html`, the Query text
+editor, and the actual `en`, `uk`, and `ru` dictionaries. No database, private metadata, or VS Code window
 is used. The script checks the final `insertText` message; it does not record the
 Extension Host inserting a BSL string.
 
@@ -30,9 +31,8 @@ The server binds to a random loopback port and closes when the command finishes.
 The recorder reuses the E2E fixture. Its optional `?locale=` selects the initial
 UI language; without it, existing tests retain Russian. The surrounding title
 strip is for explanatory captions and is not part of the extension UI.
-The Query text editor is the only one in the Classic WebView, so no host flag is
-needed. Existing captions keep the historical name "Query Text v2"; change them
-together with a re-recording.
+The Query text editor is the only one in the Classic WebView, so no host flag or
+setting is needed.
 
 ## Outputs and review
 
@@ -55,7 +55,7 @@ The 18 scenes verify multi-word search, adding a source by dragging a field,
 adding all fields with duplicate aliases, the new custom expression editor
 (field search and type, function snippets and inline help, completion, Tab between
 arguments, syntax diagnostics, formatting availability, and saving an expression
-into the generated SDBL), Query text v2 structure, formatting and validation,
+into the generated SDBL), Query text structure, formatting and validation,
 parameters and navigation to uses, applying text edits, condition/order
 synchronization, rejection of an unknown table, confirmation before discarding
 unsaved edits, preservation of
@@ -69,9 +69,7 @@ The scenario corrects the expression before saving and verifies it in the query.
 Update all three captions and the [English walkthrough](../en/query-designer.md)
 with its Ukrainian and Russian translations when changing the scenario. Keep
 metadata identifiers and SDBL keywords intact. Re-record after relevant UI changes
-and update the version above. Query text v2 must remain enabled in this demo and
-explicitly labeled as experimental, with its setting documented in each language.
-Canvas remains disabled.
+and update the version above. Canvas remains disabled.
 
 The three GIFs are packaged for localized README previews. WebM files stay in the
 repository and are excluded from VSIX; Marketplace video links resolve to GitHub.
