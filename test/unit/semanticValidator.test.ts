@@ -563,6 +563,90 @@ describe('validateBatchSemantics (8.4)', () => {
   });
 });
 
+describe('C43: a field through a composite reference exists if any target has it', () => {
+  // `Пользователь` may hold either catalog; `Служебный` exists only in the second
+  // (shape of РегистрСведений.СоставыГруппПользователей in the golden corpus, where
+  // `….Пользователь.Служебный` is platform-valid).
+  const ref = (name: string) => ({ ref: { kind: 'Справочник', name } });
+  const catalog = (name: string, extra: string[]): MetaTable => ({
+    kind: 'Справочник', name, fullName: `Справочник.${name}`,
+    fields: [
+      { name: 'Ссылка', kind: 'standard', types: [ref(name)] },
+      { name: 'Наименование', kind: 'standard', types: [{ primitive: 'Строка' }] },
+      ...extra.map(f => ({ name: f, kind: 'attribute' as const, types: [{ primitive: 'Булево' }] })),
+    ],
+  });
+  const register = (types: ReturnType<typeof ref>[]): MetaTable => ({
+    kind: 'РегистрСведений', name: 'Составы', fullName: 'РегистрСведений.Составы',
+    fields: [{ name: 'Пользователь', kind: 'dimension', types }],
+  });
+  const both = register([ref('ВнешниеПользователи'), ref('Пользователи')]);
+  const r = buildResolverFromTables([both, catalog('ВнешниеПользователи', []), catalog('Пользователи', ['Служебный'])]);
+  const F = 'ИЗ РегистрСведений.Составы КАК С';
+
+  it.each([
+    ['SELECT', `ВЫБРАТЬ С.Пользователь.Служебный КАК Служебный ${F}`],
+    ['ORDER BY', `ВЫБРАТЬ С.Пользователь КАК П ${F} УПОРЯДОЧИТЬ ПО С.Пользователь.Служебный`],
+    ['GROUP BY', `ВЫБРАТЬ С.Пользователь.Служебный КАК Служебный ${F} СГРУППИРОВАТЬ ПО С.Пользователь.Служебный`],
+  ])('%s: present in the second target → no error', (_slot, text) => {
+    expect(errs(text, r)).toEqual([]);
+  });
+
+  it('missing in every target → still an error naming the first target', () => {
+    expect(errs(`ВЫБРАТЬ С.Пользователь.НетТакогоПоля КАК П ${F}`, r))
+      .toMatchObject([{ message: 'Поле "НетТакогоПоля" не найдено в "Справочник.ВнешниеПользователи"' }]);
+  });
+
+  describe('multi-segment paths', () => {
+    const division: MetaTable = {
+      kind: 'Справочник', name: 'Подразделения', fullName: 'Справочник.Подразделения',
+      fields: [{ name: 'Код', kind: 'standard', types: [{ primitive: 'Строка' }] }],
+    };
+    const users = catalog('Пользователи', ['Служебный']);
+    users.fields.push({ name: 'Подразделение', kind: 'attribute', types: [ref('Подразделения')] });
+    const deep = buildResolverFromTables([both, catalog('ВнешниеПользователи', []), users, division]);
+
+    it('continues through the target that has the segment', () => {
+      expect(errs(`ВЫБРАТЬ С.Пользователь.Подразделение.Код КАК Код ${F}`, deep)).toEqual([]);
+    });
+
+    it('missing at the end of every branch → error', () => {
+      expect(errs(`ВЫБРАТЬ С.Пользователь.Подразделение.НетТакогоПоля КАК П ${F}`, deep)).toHaveLength(1);
+    });
+
+    it('a branch whose next target has no metadata stays unknown → no error', () => {
+      const noDivision = buildResolverFromTables([both, catalog('ВнешниеПользователи', []), users]);
+      expect(errs(`ВЫБРАТЬ С.Пользователь.Подразделение.НетТакогоПоля КАК П ${F}`, noDivision)).toEqual([]);
+    });
+
+    it('a composite reached after another reference segment', () => {
+      const holder: MetaTable = {
+        kind: 'РегистрСведений', name: 'Назначения', fullName: 'РегистрСведений.Назначения',
+        fields: [{ name: 'Запись', kind: 'dimension', types: [{ ref: { kind: 'РегистрСведений', name: 'Составы' } }] }],
+      };
+      const viaRef = buildResolverFromTables([holder, both, catalog('ВнешниеПользователи', []), users]);
+      const from = 'ИЗ РегистрСведений.Назначения КАК Н';
+      expect(errs(`ВЫБРАТЬ Н.Запись.Пользователь.Служебный КАК С ${from}`, viaRef)).toEqual([]);
+      expect(errs(`ВЫБРАТЬ Н.Запись.Пользователь.НетТакогоПоля КАК С ${from}`, viaRef)).toHaveLength(1);
+    });
+  });
+
+  it('a primitive alternative adds no target: missing in the only reference target → error', () => {
+    const mixed = buildResolverFromTables([
+      register([ref('ВнешниеПользователи'), { primitive: 'Строка' } as unknown as ReturnType<typeof ref>]),
+      catalog('ВнешниеПользователи', []),
+    ]);
+    expect(errs(`ВЫБРАТЬ С.Пользователь.Служебный КАК Служебный ${F}`, mixed)).toHaveLength(1);
+  });
+
+  it('a target without metadata leaves it unknown → no error', () => {
+    const partial = buildResolverFromTables([
+      register([ref('ВнешниеПользователи'), ref('НетВРезолвере')]), catalog('ВнешниеПользователи', []),
+    ]);
+    expect(errs(`ВЫБРАТЬ С.Пользователь.Служебный КАК Служебный ${F}`, partial)).toEqual([]);
+  });
+});
+
 describe('validateBatchSemantics: package temp-table fields', () => {
   it('validates known fields and reports a missing field from a complete inferred schema', () => {
     const valid =

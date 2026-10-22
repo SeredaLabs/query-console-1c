@@ -284,7 +284,24 @@ only the plain-field slot.
 
 **Next boundary:** decide which raw-expression references can be resolved without
 false positives (corpus sweep in `semanticValidatorCorpus.test.ts`), then extend
-the existing field-path check; no separate expression grammar.
+the existing field-path check; no separate expression grammar. Prerequisite C43
+(composite references) is closed.
+
+### C43. Composite reference fields
+
+**Status:** CLOSED (2026-10-22)
+
+`resolveFieldPath` follows only a field's first reference type, so
+`ВЫБРАТЬ С.Пользователь.Служебный КАК Служебный ИЗ РегистрСведений.СоставыГруппПользователей КАК С`
+was refused on open, Apply and in editor diagnostics with
+`Поле "Служебный" не найдено в "Справочник.ВнешниеПользователи"`, although
+`Пользователь` is `Справочник.ВнешниеПользователи | Справочник.Пользователи` and the
+second catalog has the field (same in ORDER BY / GROUP BY). The golden corpus holds 8
+platform-valid queries with this path in conditions that the check does not read.
+The field-path check now reports a missing field only when every reference target
+proves it missing; a target without metadata stays unknown. `resolveFieldPath` and
+its other consumers are unchanged.
+[Regressions](../../test/unit/semanticValidator.test.ts) (`C43`).
 
 ### C42. Unclosed condition closed by a designer switch
 
@@ -446,6 +463,7 @@ and [audit index](audits/README.md).
 | C31 | CLOSED | A parameter used as a BSL template placeholder survives Designer → Apply as written. [Details](#c31-bsl-query-template-parameters). |
 | C32 | CLOSED | OK / Save without a change no longer rewrites the query. [Details](#c32-safe--no-op-apply). |
 | C33 | CLOSED | An unaliased `#Имя` source gets no synthesized `КАК` in the Designer (2026-10-18). [Details](#c33-unaliased-template-marker-source). |
+| C43 | CLOSED | A field reached through a composite reference is found if any target has it; open/Apply/diagnostics no longer refuse it (2026-10-22). [Details](#c43-composite-reference-fields). |
 | C36 | ACCEPTED | The Designer keeps `*` where the 1C constructor expands it; accepted permanently (2026-10-21). [Details](#c36-kept--versus-the-constructor-canonical-text). |
 | D1 | CLOSED | Corrected stale source-contract comments; reconciliation/near-term reports. |
 | N1 | CLOSED | A `КАК` inside a DCS-brace literal no longer counts as an alias (`aliasDcsBraceExprs`, `wrapDcsBraceParam`) (`d562339`); dcsBraceAlias.n1.test.ts. |

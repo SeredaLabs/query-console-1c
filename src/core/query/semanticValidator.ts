@@ -28,12 +28,31 @@ import type { QueryDocument } from './unionModel';
 import { orderedSelectElements } from './unionModel';
 import type { QueryModel, SelectedTable, Condition, VirtualParams } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
+import type { MetaTable } from '../metadata/types';
 import { tokenize, tryTokenize } from './sdblLexer';
 import type { Token } from './sdblLexer';
 import { isStructurallyValidExpression, parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { resolveFieldPath } from './fieldPathResolver';
 import { deriveTempTableLifetimes, visibleTempTableAt } from './tempTableSemantics';
 import { hasUnexpandedWildcard, isWildcardExpression } from './expandStarFields';
+
+/**
+ * C43: `resolveFieldPath` follows only a field's first reference type, but a
+ * composite reference (`Пользователь`: ВнешниеПользователи | Пользователи) exposes
+ * a field when ANY of its targets has it. A path is missing only when every target
+ * proves it missing; a target without metadata leaves it unknown (fail-open).
+ */
+function missingInEveryTarget(meta: MetaTable, segs: string[], r: MetadataResolver): boolean {
+  const head = resolveFieldPath(meta, segs.slice(0, 1), r);
+  if (head.stoppedReason === 'fieldNotFound') return true;
+  if (segs.length === 1) return false;
+  const targets = head.resolved[0].field.types.flatMap(t => (t.ref ? [t.ref] : []));
+  if (targets.length === 0) return false;
+  return targets.every(ref => {
+    const target = r.tableByFullName(`${ref.kind}.${ref.name}`);
+    return target !== undefined && missingInEveryTarget(target, segs.slice(1), r);
+  });
+}
 
 const EMPTY_METADATA_RESOLVER: MetadataResolver = {
   tableByFullName: () => undefined,
@@ -250,6 +269,7 @@ export function validateBatchSemantics(
       }
       const resolution = resolveFieldPath(base, segs, r);
       if (resolution.stoppedReason !== 'fieldNotFound') return;
+      if (!missingInEveryTarget(base, segs, r)) return;
 
       const badSegment = resolution.unresolvedTail[0];
       if (PSEUDO_FIELDS.has(badSegment.toUpperCase())) return;
