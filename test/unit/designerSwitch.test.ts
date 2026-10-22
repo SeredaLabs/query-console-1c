@@ -45,7 +45,7 @@ describe('prepareDesignerSwitch', () => {
     }
   });
 
-  it('D1: refuses a virtual table whose extra arguments the generated text would drop', () => {
+  it('U2: refuses a virtual table whose extra arguments the generated text would drop', () => {
     // Generation keeps only the supported slots, and the reopened text no longer
     // carries the unsafe mark — the other UI would then Save without &Б/&В.
     const input = 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК Т';
@@ -69,15 +69,33 @@ describe('prepareDesignerSwitch', () => {
     expect(findStaticApplyBlocker(state)).toEqual({ kind: 'unsafeVirtualTable', name: 'РегистрРасчета.Начисления.ДанныеГрафика' });
   });
 
-  it('D1: still switches a malformed custom expression, which stays blocked after reopening', () => {
-    // Unlike an unsafe virtual table, this malformed text survives generation, so the
-    // other UI reopens it with the same Apply blocker.
-    const prepared = prepareDesignerSwitch(load('ВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = = &Код'), undefined);
-    expect(prepared.ok).toBe(true);
-    if (!prepared.ok) throw new Error(prepared.error);
-    const reopened = tryOpenDesignerBatch(prepared.text);
-    expect(reopened.ok).toBe(true);
-    if (reopened.ok) expect(findStaticApplyBlocker(reducer(initialState(), { type: 'LOAD_BATCH', doc: reopened.doc }))).toEqual({ kind: 'malformedCustom' });
+  describe('C42: a malformed custom expression refuses the switch', () => {
+    const reason = 'Неможливо перемкнути режим конструктора: Довільна умова або вираз виглядає синтаксично некоректним. ' +
+      'Застосування заблоковано, щоб не записати невалідний запит.';
+    it.each([
+      // Generation closes the trailing `(`: the reopened text would no longer be blocked.
+      ['closed by generation', 'ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ (Т.Код = &А ИЛИ Т.Наименование = &Б', true],
+      // The malformed text survives generation; refused all the same, so the switch
+      // never depends on how generation renders a malformed expression.
+      ['kept by generation', 'ВЫБРАТЬ В.Код ИЗ Справочник.Валюты КАК В ГДЕ В.Код = = &Код', false],
+    ] as const)('%s', (_name, input, erasedByReopen) => {
+      const state = load(input);
+      expect(findStaticApplyBlocker(state)).toEqual({ kind: 'malformedCustom' });
+      const reopened = tryOpenDesignerBatch(computeBatchTextSafe(state, true).text);
+      expect(reopened.ok).toBe(true);
+      if (reopened.ok) {
+        expect(findStaticApplyBlocker(reducer(initialState(), { type: 'LOAD_BATCH', doc: reopened.doc })))
+          .toEqual(erasedByReopen ? null : { kind: 'malformedCustom' });
+      }
+      const before = JSON.stringify(state);
+      try {
+        setLocale('uk');
+        expect(prepareDesignerSwitch(state, undefined)).toEqual({ ok: false, error: reason });
+      } finally {
+        setLocale('en');
+      }
+      expect(JSON.stringify(state)).toBe(before);
+    });
   });
 
   it('carries C21 arithmetic ORDER keys through switching and reopening twice', () => {
