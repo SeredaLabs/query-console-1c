@@ -139,13 +139,14 @@ test.describe('Query Text', () => {
     expect(await save(page)).toBe(baseline);
   });
 
-  // C44: the parser keeps these as custom text, which OK / Save refuses
+  // C44/C45: the parser keeps these as custom text, which OK / Save refuses
   // (`malformedCustom`); the dialog must not show "✓" or load them into the model.
   for (const [name, broken, fixed] of [
-    ['incomplete comparison', 'ГДЕ В.Код = ', 'ГДЕ В.Код = &Код'],
-    ['unclosed parenthesis', 'ГДЕ (В.Код = 1', 'ГДЕ (В.Код = 1)'],
+    ['C44 incomplete comparison', 'ГДЕ В.Код = ', 'ГДЕ В.Код = &Код'],
+    ['C44 unclosed parenthesis', 'ГДЕ (В.Код = 1', 'ГДЕ (В.Код = 1)'],
+    ['C45 trailing И', 'ГДЕ В.Код = 1 И', 'ГДЕ В.Код = 1 И В.Код <> 2'],
   ] as const) {
-    test(`C44 ${name}: status and Apply refuse it; after the fix Apply works`, async ({ page }) => {
+    test(`${name}: status and Apply refuse it; after the fix Apply works`, async ({ page }) => {
       const head = 'ВЫБРАТЬ В.Код КАК Код ИЗ Справочник.Валюты КАК В ';
       const malformed = 'Произвольное условие или выражение выглядит синтаксически некорректным.';
       await openClassic(page, query);

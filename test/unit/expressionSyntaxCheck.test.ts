@@ -158,3 +158,19 @@ describe('isStructurallyValidExpression — сломанные формы (на�
     expect(isStructurallyValidExpression('Т.Код = &А Т.Имя')).toBe(false);
   });
 });
+
+// C45: a logical operator is never an operand or a qualifier; a field named `И`
+// after a dot stays valid.
+describe('isStructurallyValidExpression — И/ИЛИ as an operand (C45)', () => {
+  it('rejects a lone or dangling logical operator', () => {
+    for (const text of ['И', 'НЕ И', 'ИЛИ', 'AND', 'Т.Код = 1 И И', 'Т.Код = 1 И НЕ И', '(И)', 'И.Код = 1', 'Т.Код = И']) {
+      expect(isStructurallyValidExpression(text), text).toBe(false);
+    }
+  });
+
+  it('keeps fields named like a keyword after a dot and parameters', () => {
+    for (const text of ['Т.И', 'Т.И = 1 И Т.ИЛИ = 2', '&И = 1', 'Т.Имя = "а И б"']) {
+      expect(isStructurallyValidExpression(text), text).toBe(true);
+    }
+  });
+});
