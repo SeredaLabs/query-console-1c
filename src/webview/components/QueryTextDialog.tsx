@@ -71,8 +71,6 @@ function toCmDiagnostics(text: string, diagnostics: QueryDiagnostic[]): Diagnost
  * немедленный вызов вместо ожидания дебаунса. `checked` хранит текст И результат
  * ВМЕСТЕ — `checkPending` это просто `checked.text !== text`, без отдельного флага и
  * race-condition между «что показывает статус» и «для какого текста».
- *
- * `onApply`/`onClose` — ТЕ ЖЕ обработчики, что использовала старая модалка (до v2).
  */
 export function QueryTextDialog({ text, error, resolver, onChange, onApply, onClose }: QueryTextDialogProps): React.ReactElement {
   // Единый слот правой панели — «Структура» и «Параметры» переключают его содержимое
@@ -243,7 +241,7 @@ export function QueryTextDialog({ text, error, resolver, onChange, onApply, onCl
               flex: 1,
               minHeight: 0,
               // Отличается от фона самой модалки — иначе поле текста запроса визуально
-              // сливается с рамкой вокруг него (тот же приём, что был у старой разметки).
+              // сливается с рамкой вокруг него.
               background: 'var(--qc-frame-bg, var(--vscode-editor-background, #1e1e1e))',
             }}
             textStyle={{

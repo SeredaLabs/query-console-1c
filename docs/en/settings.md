@@ -32,7 +32,6 @@ translation_status: canonical
 | `queryConsole.metadataPath` | empty | XML export `cf` directory; empty enables workspace discovery |
 | `queryConsole.parserOutputPath` | `tmp/parser_data` | Directory for derived metadata files and cache |
 | `queryConsole.openInNewWindow` | `true` | Open the designer in a separate VS Code window and enable compact mode when supported |
-| `queryConsole.queryTextEditorV2` | `false` | Enable the experimental Query Text v2 editor |
 | `queryConsole.queryDiagnosticsEnabled` | `true` | Warn on a query-text literal Query Designer cannot parse or would not apply |
 | `queryConsole.enableNewBuilderPreview` | `false` | Show Canvas Preview; functional baseline complete, UX/release review remains |
 

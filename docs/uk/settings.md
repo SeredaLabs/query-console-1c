@@ -32,7 +32,6 @@ translation_status: current
 | `queryConsole.metadataPath` | порожньо | Каталог `cf`; порожнє значення вмикає пошук |
 | `queryConsole.parserOutputPath` | `tmp/parser_data` | Каталог похідних метаданих і кешу |
 | `queryConsole.openInNewWindow` | `true` | Відкрити конструктор в окремому вікні VS Code й увімкнути компактний режим, якщо він підтримується |
-| `queryConsole.queryTextEditorV2` | `false` | Увімкнути експериментальний редактор v2 |
 | `queryConsole.queryDiagnosticsEnabled` | `true` | Попереджати про літерал запиту, який конструктор не розбирає або не застосує |
 | `queryConsole.enableNewBuilderPreview` | `false` | Показати Canvas Preview; функціональний baseline завершено, UX/release review триває |
 

@@ -46,10 +46,10 @@ expressions from fields, operators, functions, and parameters.
 
 ## 🔍 Review generated text
 
-Open **Query text** to inspect generated SDBL. The default editor provides syntax
-highlighting. Enable `queryConsole.queryTextEditorV2` for the enhanced experimental
-editor shown in the demo: formatting, search, validation markers, query structure,
-and parameter panels.
+Open **Query text** to inspect generated SDBL. The editor provides syntax
+highlighting, formatting, search, validation markers, and query structure and
+parameter panels. Closing it with unapplied changes asks for confirmation;
+**Cancel** never changes the designer.
 
 Applying a manual text edit parses it back into the visual `QueryModel`. If the
 text is outside the supported grammar, the designer reports an error and keeps
@@ -84,8 +84,7 @@ readiness, so Preview remains enabled only by choice.
 
 [Watch the video (WebM)](../videos/query-constructor-demo.en.webm).
 The recording uses the current Classic WebView and the small E2E metadata fixture,
-with **Query text v2** enabled (`queryConsole.queryTextEditorV2: true`). It does not
-require a private configuration.
+It does not require a private configuration.
 
 1. Search for `Валюты Наим`: words can match both a table and its field.
 2. Drag `Наименование` into **Fields**. Its source table is added automatically.

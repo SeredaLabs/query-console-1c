@@ -103,11 +103,6 @@
           "default": true,
           "description": "%configuration.openInNewWindow.description%"
         },
-        "queryConsole.queryTextEditorV2": {
-          "type": "boolean",
-          "default": false,
-          "description": "%configuration.queryTextEditorV2.description%"
-        },
         "queryConsole.queryDiagnosticsEnabled": {
           "type": "boolean",
           "default": true,

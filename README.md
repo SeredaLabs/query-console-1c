@@ -44,10 +44,9 @@ connecting to a 1C database or executing the query.
 [Watch the video (WebM)](docs/videos/query-constructor-demo.en.webm) ·
 [Demo walkthrough](docs/en/query-designer.md#-demo-walkthrough)
 
-Recorded from the Classic WebView with demo metadata and the enhanced **Query text
-v2** editor. Enable the experimental `queryConsole.queryTextEditorV2` setting to
-use the text editor shown here. The UI and captions are localized; SDBL keywords
-and metadata names stay unchanged. No query is executed.
+Recorded from the Classic WebView with demo metadata and the **Query text**
+editor. The UI and captions are localized; SDBL keywords and metadata names stay
+unchanged. No query is executed.
 
 ## ✨ What it does
 
@@ -58,7 +57,7 @@ and metadata names stay unchanged. No query is executed.
 | 🗂️ **Metadata-aware workflow** | Search, field types, and relationships from a 1C XML export |
 | 🔍 **Hover, autocomplete & diagnostics** | Field/table/virtual-table/parameter hover, `.`/`&` autocomplete, and parse-warning diagnostics—directly on query text, no designer needed |
 | 🔄 **Round-trip editing** | Parse, validate, format, reopen, and replace supported static SDBL strings |
-| 🧪 **Query text tools** | Comments, expression editing, and optional experimental Query Text v2 |
+| 🧪 **Query text tools** | Comments, expression editing, and the Query text editor with formatting, validation, structure, and parameters |
 | 🌍 **Localized experience** | English, Ukrainian, and Russian UI and documentation |
 
 ## 🚀 Quick start

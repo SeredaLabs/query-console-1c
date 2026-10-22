@@ -3,6 +3,21 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+
+- Classic Query Designer: the **Query text** dialog now always uses the editor
+  formerly enabled by `queryConsole.queryTextEditorV2` — toolbar (undo/redo,
+  format, validate, search), structure and parameter panels, live validation and
+  a **Cancel** button. Closing with unapplied changes asks for confirmation
+  instead of discarding them silently. Apply works as before.
+
+### Removed
+
+- The legacy Query text dialog and the `queryConsole.queryTextEditorV2` setting.
+  An existing value in `settings.json` is ignored and can be deleted.
+
 ## 0.3.0 - 2026-10-21
 
 ### Added

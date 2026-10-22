@@ -67,4 +67,3 @@ protected_terms:
   - queryConsole.metadataPath
   - queryConsole.parserOutputPath
   - queryConsole.openInNewWindow
-  - queryConsole.queryTextEditorV2

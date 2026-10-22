@@ -22,9 +22,6 @@ export function App(): React.ReactElement {
   const [preserveComments, setPreserveComments] = useState(true);
   // 7.8.10: текст ошибки валидации при нажатии ОК (null = нет ошибки).
   const [okError, setOkError] = useState<string | null>(null);
-  // Стадия 1 плана «Текст запроса v2» — прокидывается хостом из настройки
-  // `queryConsole.queryTextEditorV2` (по умолчанию выключено).
-  const [queryTextEditorV2, setQueryTextEditorV2] = useState(false);
   // Canvas is an opt-in preview; the host says whether the toggle may offer it.
   const [canvasAvailable, setCanvasAvailable] = useState(false);
   // Лише примусовий ре-рендер при зміні локалі (повідомлення рахуються в рендері).
@@ -40,7 +37,6 @@ export function App(): React.ReactElement {
         setLocale(msg.locale);
         setLocaleRevision(revision => revision + 1);
       }
-      setQueryTextEditorV2(msg.queryTextEditorV2);
       setCanvasAvailable(msg.canvasAvailable === true);
     } else if (msg.type === 'refFields') {
       dispatch({ type: 'SET_REF_FIELDS', ref: msg.ref, fields: msg.fields });
@@ -93,7 +89,6 @@ export function App(): React.ReactElement {
       <ConstructorView
         state={state}
         dispatch={dispatch}
-        queryTextEditorV2={queryTextEditorV2}
         onExpandRef={ref => postToHost({ type: 'expandRef', ref })}
         refreshState={refreshState}
         onRefreshCache={handleRefreshCache}

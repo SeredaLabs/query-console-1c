@@ -7,7 +7,7 @@ This is a navigation aid, not a specification or a task backlog.
 | Task | Load only this route | First search term |
 |---|---|---|
 | Parser, model, generation, temp tables, IDE semantics | [Query core](query-core.md) | `deriveProducerColumns` |
-| Query Text v2, Designer load/state/Apply | [Designer](designer-query-text.md) | `QueryTextDialog` or `decideApply` |
+| Query Text, Designer load/state/Apply | [Designer](designer-query-text.md) | `QueryTextDialog` or `decideApply` |
 | Commands, host messages, metadata, editor writes | [Extension](extension-metadata.md) | `createPanel` |
 
 Use exact `rg` searches and the source links above, then read the relevant
