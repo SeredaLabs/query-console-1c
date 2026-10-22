@@ -14,7 +14,7 @@ one place, ordered by priority.
 
 ## Open items
 
-22 items: P1 — 1, P2 — 14, P3 — 7. No item is P0.
+21 items: P1 — 1, P2 — 14, P3 — 6. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
@@ -39,7 +39,6 @@ one place, ordered by priority.
 | C37 | OPEN · P3 | Correctness | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. |
 | C38 | OPEN · P3 | Correctness | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. |
 | C39 | OPEN · P3 | Correctness | English standard field names remain English in Russian output; platform canonical text translates them. |
-| C42 | OPEN · P3 | Correctness | A trailing unclosed `(` in a custom condition is closed by generation; Apply refuses it, but a Classic ↔ Canvas switch reopens the closed text unblocked. |
 
 ## Correctness
 
@@ -52,7 +51,6 @@ one place, ordered by priority.
 | C37 | OPEN · P3 | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C38 | OPEN · P3 | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C39 | OPEN · P3 | English standard field names remain English in Russian output; platform canonical text translates them. [Evidence](audits/v5-phase5-2026-10-21.md). |
-| C42 | OPEN · P3 | A trailing unclosed `(` in a custom condition is closed by generation and no longer blocked after a Classic ↔ Canvas switch. [Details](#c42-unclosed-condition-closed-by-a-designer-switch). |
 | C40 | PARTIAL · P3 | Apply now refuses scalar subqueries in comparisons, ВЫБОР, join conditions and function arguments (rejected by 8.3.15.1489); only the newer-platform verdict is missing. [Evidence](../../test/fixtures/platform/c40-scalar-subquery.json). |
 
 The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
@@ -288,21 +286,23 @@ the existing field-path check; no separate expression grammar.
 
 ### C42. Unclosed condition closed by a designer switch
 
-**Status:** OPEN · P3
+**Status:** CLOSED (2026-10-22)
 
 `ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ (Т.Код = &А ИЛИ Т.Наименование = &Б`
 opens with the `malformedCustom` Apply block. Generation writes the condition as
-`(Т.Код = &А ИЛИ Т.Наименование = &Б)`; a Classic ↔ Canvas switch reopens that text
-without the block, so a later edit + Save writes the closed condition. With a
-following clause (`… = &Б УПОРЯДОЧИТЬ ПО Т.Код`) the closed text stays malformed
-and blocked. Found by the D1 probe over 2,915 openable corpus/test queries: 2
-erased cases (both this form); 44 malformed cases stay blocked after the switch
-and 2 are refused. The written text is a guessed repair of a query the platform
-rejects, not a loss of user text. D1 (the switch refuses an unsafe virtual table)
-does not cover it.
+`(Т.Код = &А ИЛИ Т.Наименование = &Б)`; a Classic ↔ Canvas switch reopened that
+text without the block, so a later edit + Save wrote the closed condition (a guessed
+repair of a query the platform rejects; no user text was lost).
 
-**Next boundary:** decide whether the switch should refuse every `malformedCustom`
-model, or generation should keep the unclosed text so the block survives.
+Fix: `prepareDesignerSwitch` refuses every model with a static Apply blocker
+(`findStaticApplyBlocker`: `unsafeVirtualTable`, `malformedCustom`) with that
+blocker's message, so the switch no longer depends on how generation renders a
+malformed expression. Keeping the unclosed text in the generator was rejected: it
+would change generated output in every slot. A model blocked before the switch now
+stays in its UI until fixed (48 malformed cases among 2,916 openable corpus/test
+queries, 2 of them previously erased); the other 2,845 queries switch as before.
+[Regressions](../../test/unit/designerSwitch.test.ts), e2e in `canvas.spec.ts`
+(both directions).
 
 ## Architecture
 
@@ -446,6 +446,7 @@ and [audit index](audits/README.md).
 | C31 | CLOSED | A parameter used as a BSL template placeholder survives Designer → Apply as written. [Details](#c31-bsl-query-template-parameters). |
 | C32 | CLOSED | OK / Save without a change no longer rewrites the query. [Details](#c32-safe--no-op-apply). |
 | C33 | CLOSED | An unaliased `#Имя` source gets no synthesized `КАК` in the Designer (2026-10-18). [Details](#c33-unaliased-template-marker-source). |
+| C42 | CLOSED | A Classic ↔ Canvas switch no longer erases an Apply block: a model with a static Apply blocker does not switch (2026-10-22). [Details](#c42-unclosed-condition-closed-by-a-designer-switch). |
 | C36 | ACCEPTED | The Designer keeps `*` where the 1C constructor expands it; accepted permanently (2026-10-21). [Details](#c36-kept--versus-the-constructor-canonical-text). |
 | D1 | CLOSED | Corrected stale source-contract comments; reconciliation/near-term reports. |
 | N1 | CLOSED | A `КАК` inside a DCS-brace literal no longer counts as an alias (`aliasDcsBraceExprs`, `wrapDcsBraceParam`) (`d562339`); dcsBraceAlias.n1.test.ts. |

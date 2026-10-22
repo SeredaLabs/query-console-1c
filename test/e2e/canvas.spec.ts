@@ -1020,10 +1020,10 @@ test.describe('Classic / Canvas designer toggle', () => {
     expect(await insertions(page)).toEqual([]);
   });
 
-  // D1: the generated text drops the unsafe VT arguments and the reopened UI would
+  // U2: the generated text drops the unsafe VT arguments and the reopened UI would
   // no longer block Save, so the switch itself is refused and nothing leaves the webview.
   for (const surface of ['classic', 'canvas'] as const) {
-    test(`${surface}: D1 an unsafe virtual table refuses the switch without switchDesigner or insertText`, async ({ page }) => {
+    test(`${surface}: U2 an unsafe virtual table refuses the switch without switchDesigner or insertText`, async ({ page }) => {
       await openWithToggle(page, surface, 'ВЫБРАТЬ Т.Период ИЗ РегистрРасчета.Начисления.ДанныеГрафика(&А, &Б, &В) КАК Т');
       const apply = page.getByRole('button', { name: surface === 'canvas' ? 'Сохранить' : 'ОК', exact: true });
       await expect(apply).toBeDisabled();
@@ -1037,6 +1037,28 @@ test.describe('Classic / Canvas designer toggle', () => {
         await expect(apply).toHaveAttribute('title', /Виртуальная таблица содержит параметры \(третий и последующие аргументы\)/);
       } else {
         await expect(page.getByTestId('ok-error')).toContainText('Виртуальная таблица "РегистрРасчета.Начисления.ДанныеГрафика" содержит параметры');
+      }
+      expect(await switches(page)).toEqual([]);
+      expect(await insertions(page)).toEqual([]);
+    });
+  }
+
+  // C42: generation closes the trailing `(`, so the other UI would reopen this text
+  // without the Apply block; the switch is refused in both directions instead.
+  for (const surface of ['classic', 'canvas'] as const) {
+    test(`${surface}: C42 a malformed custom condition refuses the switch without switchDesigner or insertText`, async ({ page }) => {
+      await openWithToggle(page, surface, 'ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ (Т.Код = &А ИЛИ Т.Наименование = &Б');
+      const apply = page.getByRole('button', { name: surface === 'canvas' ? 'Сохранить' : 'ОК', exact: true });
+      await expect(apply).toBeDisabled();
+      await page.getByTestId(surface === 'canvas' ? 'designer-mode-classic' : 'designer-mode-canvas').click();
+      await expect(page.getByTestId(surface === 'canvas' ? 'canvas-save-error' : 'designer-switch-error'))
+        .toContainText('Невозможно переключить режим конструктора: Произвольное условие или выражение выглядит синтаксически некорректным');
+      await expect(page.getByTestId(`designer-mode-${surface}`)).toHaveAttribute('aria-pressed', 'true');
+      await expect(apply).toBeDisabled();
+      if (surface === 'canvas') {
+        await expect(apply).toHaveAttribute('title', /Произвольное условие или выражение выглядит синтаксически некорректным/);
+      } else {
+        await expect(page.getByTestId('ok-error')).toContainText('Произвольное условие или выражение выглядит синтаксически некорректным');
       }
       expect(await switches(page)).toEqual([]);
       expect(await insertions(page)).toEqual([]);

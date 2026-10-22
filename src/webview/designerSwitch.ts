@@ -18,12 +18,15 @@ export function prepareDesignerSwitch(
   const out = computeBatchTextSafe(state, true);
   const blocked = (reason: string) => ({ ok: false as const, error: t('designer.mode.blocked', { reason }) });
   if (out.error !== null) return blocked(localizeDiagnostic(out.error));
-  // D1: generation drops a virtual table's unsupported extra arguments and the
-  // reopened text no longer carries the mark, so the other UI would save the
-  // loss Apply refuses here. Only this blocker is checked: it is the one shown to
-  // lose user text on the switch.
+  // A model Apply refuses here never switches: the other UI reopens the generated
+  // text, which can lose the reason for the block — U2: dropped unsafe virtual-table
+  // arguments; C42: a trailing unclosed `(` closed by generation.
   const blocker = findStaticApplyBlocker(state);
-  if (blocker?.kind === 'unsafeVirtualTable') return blocked(t('constructor.unsafeVirtual', { name: blocker.name }));
+  if (blocker) {
+    return blocked(blocker.kind === 'unsafeVirtualTable'
+      ? t('constructor.unsafeVirtual', { name: blocker.name })
+      : t('constructor.malformedCustom'));
+  }
   if (!out.text.trim()) return { ok: true, text: '' };
   const reopened = tryOpenDesignerBatch(out.text, resolver);
   if (!reopened.ok) return blocked('commentLossDoc' in reopened ? t('designer.mode.commentLoss') : localizeDiagnostic(reopened.error));
