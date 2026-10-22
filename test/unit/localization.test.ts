@@ -77,4 +77,14 @@ describe('localization', () => {
     expect(localizeDiagnostic('Нове повідомлення ядра'))
       .toBe('Під час аналізу запиту отримано непідтримувану діагностику');
   });
+
+  it('localizes the empty-query Apply refusal in every locale', () => {
+    const message = 'Текст запроса пуст — нечего применять.';
+    setLocale('uk');
+    expect(localizeDiagnostic(message)).toBe('Текст запиту порожній — немає чого застосовувати.');
+    setLocale('en');
+    expect(localizeDiagnostic(message)).toBe('The query text is empty; there is nothing to apply.');
+    setLocale('ru');
+    expect(localizeDiagnostic(message)).toBe(message);
+  });
 });

@@ -110,6 +110,19 @@ test.describe('Query Text', () => {
     });
   }
 
+  test('uk: the empty-text Apply banner is localized, not the unsupported-diagnostic fallback', async ({ page }) => {
+    await page.goto(`${BASE}/?surface=classic&locale=uk`);
+    await expect(page.getByTestId('loading-overlay')).toBeHidden();
+    await page.evaluate(t => window.dispatchEvent(new MessageEvent('message', { data: { type: 'loadModel', text: t } })), query);
+    await page.getByRole('button', { name: 'Запит', exact: true }).last().click();
+    const editor = editorOf(page);
+    await editor.fill('');
+    await page.getByRole('button', { name: 'Застосувати', exact: true }).last().click();
+    const banner = page.locator('div[style*="white-space: pre-wrap"]');
+    await expect(banner).toHaveText('Текст запиту порожній — немає чого застосовувати.');
+    await expect(editor).toBeVisible();
+  });
+
   test('invalid text: Apply shows the error, keeps the author text and the model', async ({ page }) => {
     await openClassic(page, query);
     const baseline = await save(page);
