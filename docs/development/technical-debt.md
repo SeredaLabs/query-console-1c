@@ -702,7 +702,8 @@ refuse `ГРУППИРУЮЩИМ НАБОРАМ`; the grammar-parity area `group
 19,769 records changed, all with grouping sets in raw text (refused → applicable,
 same meaning, stable at Save 1); golden, grammar-parity and store gates are unchanged.
 [Regressions](../../test/unit/groupingSetsRaw.c49.test.ts) (8 contexts and 4 set
-forms on three Saves; refused forms; controls; brackets in literals and comments).
+forms on three Saves; refused forms; controls; brackets in literals and comments,
+deep nesting and broken balance at the closing line).
 *Not changed:* `СГРУППИРОВАТЬ ВСЕ ПО` is not read by the parser in any form; other
 second-Save layout changes of compact subqueries (R2).
 

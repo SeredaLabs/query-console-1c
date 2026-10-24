@@ -140,6 +140,33 @@ describe('C49: the closing line of a raw subquery reads brackets in code only', 
     expect(/^\t*\)+$/u.test(lastLine)).toBe(!glued);
   });
 
+  // The rule relies on an earlier check of the same function: from the `(ВЫБРАТЬ` line
+  // the block stays open until the last line, which closes it. So the first `(` of the
+  // body is the subquery's own, and any further open bracket belongs to the body.
+  const nesting: [string, string, string, boolean][] = [
+    ['deep groups closed inside the body', 'Т.Код В',
+      '\tГДЕ\n\t\t((Х.Код = 1) И (Х.Код В (1, (2))))\n\t)', true],
+    ['the closing line also closes the head', '(Т.Код = 1 ИЛИ Т.Код В',
+      '\tГДЕ\n\t\tХ.Код = 1\n\t))', true],
+    ['a set list and the head closed on one line', '(Т.Код = 1 ИЛИ Т.Код В',
+      '\tСГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ\n\t(\n\t\t((Х.Код))\n\t)))', false],
+  ];
+  it.each(nesting)('%s', (_name, lead, tail, glued) => {
+    const out = reindentLeafSubquery(head.replace('Т.Код В', lead) + tail, 1);
+    expect(/^\t*\)+$/u.test(out.split('\n').pop()!)).toBe(!glued);
+  });
+
+  // Broken balance or an unusual opening line: the leaf is kept as written.
+  const unchanged: [string, string][] = [
+    ['the block closes before the last line', `${head}\tГДЕ\n\t\tХ.Код = 1)\n\t)`],
+    ['the block is not closed', `${head}\tГДЕ\n\t\t(Х.Код = 1\n\t)`],
+    ['two brackets before ВЫБРАТЬ', head.replace('\t(ВЫБРАТЬ', '\t((ВЫБРАТЬ') + '\t))'],
+  ];
+  it.each(unchanged)('%s', (_name, leaf) => {
+    const out = reindentLeafSubquery(leaf, 1);
+    expect(out.split('\n').pop()).toBe(leaf.split('\n').pop());
+  });
+
   // A bracket in a comment already stops the reindent before this rule (its bracket
   // balance check counts comments); the leaf is kept as written, as before C49.
   it('a bracket in a comment: the leaf is kept as written', () => {

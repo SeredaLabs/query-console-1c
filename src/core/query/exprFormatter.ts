@@ -809,7 +809,9 @@ export function reindentLeafSubquery(text: string, base: number): string {
 /**
  * C49: whether the subquery body (from its `(ВЫБРАТЬ` line) leaves a bracket of its own
  * open, besides the `(` of `(ВЫБРАТЬ`. Brackets in literals and comments do not count;
- * unknown lexical facts count as open, so nothing is glued.
+ * unknown lexical facts count as open, so nothing is glued. Relies on the balance check
+ * of `reindentLeafSubquery`: the block stays open until the closing line, so the body's
+ * first `(` is the subquery's own (a broken balance never reaches this rule).
  */
 function closesBodyGroup(body: string): boolean {
   const ranges = codeRanges(body);
