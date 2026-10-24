@@ -3,6 +3,15 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+
+- `ГРУППИРУЮЩИМ НАБОРАМ` inside a subquery kept as text (for example in an `ИЛИ`
+  condition) is no longer rewritten as fields (`Х.ГРУППИРУЮЩИМ`), and the parentheses
+  of its sets are kept. Before, OK / Save refused such a query. Grouping sets are
+  not confirmed on the platforms available for testing.
+
 ## 0.4.1 - 2026-10-25
 
 ### Fixed
