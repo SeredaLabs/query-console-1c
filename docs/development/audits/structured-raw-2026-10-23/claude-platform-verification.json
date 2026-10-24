@@ -1,0 +1,240 @@
+{
+  "date": "2026-10-23",
+  "service": "MCP · SmartLogistic DEV",
+  "platformBuild": "unknown; not returned by tools",
+  "validation": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "terminal-not-input",
+        "query": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 И НЕ",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"valid\": false,\r\n\"error\": \"{(1, 60)}: Syntax error\\nВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 И НЕ<<?>>\\n\\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр).\"\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "terminal-not-output",
+        "query": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 И Т.НЕ",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"valid\": false,\r\n\"error\": \"{(1, 60)}: Field not found \\\"Т.НЕ\\\"\\nВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 И Т.<<?>>НЕ\\n\\nHINT: проверь имена таблиц и полей (search_metadata, get_metadata_structure), ключевые слова в псевдонимах (В, И, КАК), ПОДСТРОКА для полей Строка(неогр).\"\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "compact-not-in",
+        "query": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Ссылка НЕ В (ВЫБРАТЬ Ш.Ссылка ИЗ Справочник.Валюты КАК Ш)",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"valid\": true,\r\n\"parameters\": [],\r\n\"columns\": [\r\n[\r\n\"Код\"\r\n]\r\n],\r\n\"query_text\": \"ВЫБРАТЬ\\n\\u0009Т.Код КАК Код\\nИЗ\\n\\u0009Справочник.Валюты КАК Т\\nГДЕ\\n\\u0009НЕ Т.Ссылка В\\n\\u0009\\u0009\\u0009\\u0009(ВЫБРАТЬ\\n\\u0009\\u0009\\u0009\\u0009\\u0009Ш.Ссылка\\n\\u0009\\u0009\\u0009\\u0009ИЗ\\n\\u0009\\u0009\\u0009\\u0009\\u0009Справочник.Валюты КАК Ш)\"\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "double-not-in",
+        "query": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ НЕ т.Ссылка НЕ В (ВЫБРАТЬ Ш.Ссылка ИЗ Справочник.Валюты КАК Ш)",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"valid\": true,\r\n\"parameters\": [],\r\n\"columns\": [\r\n[\r\n\"Код\"\r\n]\r\n],\r\n\"query_text\": \"ВЫБРАТЬ\\n\\u0009Т.Код КАК Код\\nИЗ\\n\\u0009Справочник.Валюты КАК Т\\nГДЕ\\n\\u0009НЕ НЕ Т.Ссылка В\\n\\u0009\\u0009\\u0009\\u0009\\u0009(ВЫБРАТЬ\\n\\u0009\\u0009\\u0009\\u0009\\u0009\\u0009Ш.Ссылка\\n\\u0009\\u0009\\u0009\\u0009\\u0009ИЗ\\n\\u0009\\u0009\\u0009\\u0009\\u0009\\u0009Справочник.Валюты КАК Ш)\"\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "C54-input",
+        "query": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ (НЕ Т.ПометкаУдаления) В (&П)",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"valid\": true,\r\n\"parameters\": [\r\n{\r\n\"name\": \"П\",\r\n\"type\": \"Булево\"\r\n}\r\n],\r\n\"columns\": [\r\n[\r\n\"Код\"\r\n]\r\n],\r\n\"query_text\": \"ВЫБРАТЬ\\n\\u0009Т.Код КАК Код\\nИЗ\\n\\u0009Справочник.Валюты КАК Т\\nГДЕ\\n\\u0009НЕ Т.ПометкаУдаления В (&П)\"\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "C54-output",
+        "query": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ НЕ Т.ПометкаУдаления В (&П)",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"valid\": true,\r\n\"parameters\": [\r\n{\r\n\"name\": \"П\",\r\n\"type\": \"Булево\"\r\n}\r\n],\r\n\"columns\": [\r\n[\r\n\"Код\"\r\n]\r\n],\r\n\"query_text\": \"ВЫБРАТЬ\\n\\u0009Т.Код КАК Код\\nИЗ\\n\\u0009Справочник.Валюты КАК Т\\nГДЕ\\n\\u0009НЕ Т.ПометкаУдаления В (&П)\"\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    }
+  ],
+  "constantValidation": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "C54-constant-input",
+        "query": "ВЫБРАТЬ 1 КАК Результат ИЗ (ВЫБРАТЬ ЛОЖЬ КАК Флаг) КАК Т ГДЕ (НЕ Т.Флаг) В (ИСТИНА, ЛОЖЬ)",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"valid\": true,\r\n\"parameters\": [],\r\n\"columns\": [\r\n[\r\n\"Результат\"\r\n]\r\n],\r\n\"query_text\": \"ВЫБРАТЬ\\n\\u00091 КАК Результат\\nИЗ\\n\\u0009(ВЫБРАТЬ\\n\\u0009\\u0009ЛОЖЬ КАК Флаг) КАК Т\\nГДЕ\\n\\u0009НЕ Т.Флаг В (ИСТИНА, ЛОЖЬ)\"\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "C54-constant-output",
+        "query": "ВЫБРАТЬ 1 КАК Результат ИЗ (ВЫБРАТЬ ЛОЖЬ КАК Флаг) КАК Т ГДЕ НЕ Т.Флаг В (ИСТИНА, ЛОЖЬ)",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"valid\": true,\r\n\"parameters\": [],\r\n\"columns\": [\r\n[\r\n\"Результат\"\r\n]\r\n],\r\n\"query_text\": \"ВЫБРАТЬ\\n\\u00091 КАК Результат\\nИЗ\\n\\u0009(ВЫБРАТЬ\\n\\u0009\\u0009ЛОЖЬ КАК Флаг) КАК Т\\nГДЕ\\n\\u0009НЕ Т.Флаг В (ИСТИНА, ЛОЖЬ)\"\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    }
+  ],
+  "constantExecution": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "C54-constant-input",
+        "query": "ВЫБРАТЬ 1 КАК Результат ИЗ (ВЫБРАТЬ ЛОЖЬ КАК Флаг) КАК Т ГДЕ (НЕ Т.Флаг) В (ИСТИНА, ЛОЖЬ)",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"Колонки\": [\r\n\"Результат\"\r\n],\r\n\"Строки\": [\r\n[\r\n1\r\n]\r\n],\r\n\"Количество\": 1,\r\n\"Обрезано\": false\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "C54-constant-output",
+        "query": "ВЫБРАТЬ 1 КАК Результат ИЗ (ВЫБРАТЬ ЛОЖЬ КАК Флаг) КАК Т ГДЕ НЕ Т.Флаг В (ИСТИНА, ЛОЖЬ)",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"Колонки\": [\r\n\"Результат\"\r\n],\r\n\"Строки\": [],\r\n\"Количество\": 0,\r\n\"Обрезано\": false\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    }
+  ],
+  "subqueryValidation": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "C54-subquery-G1",
+        "query": "ВЫБРАТЬ\n\t1 КАК Результат\nИЗ\n\t(ВЫБРАТЬ\n\t\tЛОЖЬ КАК Флаг) КАК Т\nГДЕ\n\t(НЕ Т.Флаг) В\n\t\t\t(ВЫБРАТЬ\n\t\t\t\tШ.Флаг\n\t\t\tИЗ\n\t\t\t\t(ВЫБРАТЬ\n\t\t\t\t\tИСТИНА КАК Флаг\n\t\t\t\t\n\t\t\t\tОБЪЕДИНИТЬ ВСЕ\n\t\t\t\t\n\t\t\t\tВЫБРАТЬ\n\t\t\t\t\tЛОЖЬ) КАК Ш)",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"valid\": true,\r\n\"parameters\": [],\r\n\"columns\": [\r\n[\r\n\"Результат\"\r\n]\r\n],\r\n\"query_text\": \"ВЫБРАТЬ\\n\\u00091 КАК Результат\\nИЗ\\n\\u0009(ВЫБРАТЬ\\n\\u0009\\u0009ЛОЖЬ КАК Флаг) КАК Т\\nГДЕ\\n\\u0009НЕ Т.Флаг В\\n\\u0009\\u0009\\u0009(ВЫБРАТЬ\\n\\u0009\\u0009\\u0009\\u0009Ш.Флаг\\n\\u0009\\u0009\\u0009ИЗ\\n\\u0009\\u0009\\u0009\\u0009(ВЫБРАТЬ\\n\\u0009\\u0009\\u0009\\u0009\\u0009ИСТИНА КАК Флаг\\n\\u0009\\u0009\\n\\u0009\\u0009\\u0009\\u0009ОБЪЕДИНИТЬ ВСЕ\\n\\u0009\\u0009\\n\\u0009\\u0009\\u0009\\u0009ВЫБРАТЬ\\n\\u0009\\u0009\\u0009\\u0009\\u0009ЛОЖЬ) КАК Ш)\"\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "C54-subquery-G2",
+        "query": "ВЫБРАТЬ\n\t1 КАК Результат\nИЗ\n\t(ВЫБРАТЬ\n\t\tЛОЖЬ КАК Флаг) КАК Т\nГДЕ\n\tНЕ Т.Флаг В\n\t\t\t\t(ВЫБРАТЬ\n\t\t\t\t\tШ.Флаг\n\t\t\t\tИЗ\n\t\t\t\t\t(ВЫБРАТЬ\n\t\t\t\t\t\tИСТИНА КАК Флаг\n\t\t\t\t\t\n\t\t\t\t\tОБЪЕДИНИТЬ ВСЕ\n\t\t\t\t\t\n\t\t\t\t\tВЫБРАТЬ\n\t\t\t\t\t\tЛОЖЬ) КАК Ш)",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"valid\": true,\r\n\"parameters\": [],\r\n\"columns\": [\r\n[\r\n\"Результат\"\r\n]\r\n],\r\n\"query_text\": \"ВЫБРАТЬ\\n\\u00091 КАК Результат\\nИЗ\\n\\u0009(ВЫБРАТЬ\\n\\u0009\\u0009ЛОЖЬ КАК Флаг) КАК Т\\nГДЕ\\n\\u0009НЕ Т.Флаг В\\n\\u0009\\u0009\\u0009\\u0009(ВЫБРАТЬ\\n\\u0009\\u0009\\u0009\\u0009\\u0009Ш.Флаг\\n\\u0009\\u0009\\u0009\\u0009ИЗ\\n\\u0009\\u0009\\u0009\\u0009\\u0009(ВЫБРАТЬ\\n\\u0009\\u0009\\u0009\\u0009\\u0009\\u0009ИСТИНА КАК Флаг\\n\\u0009\\u0009\\n\\u0009\\u0009\\u0009\\u0009\\u0009ОБЪЕДИНИТЬ ВСЕ\\n\\u0009\\u0009\\n\\u0009\\u0009\\u0009\\u0009\\u0009ВЫБРАТЬ\\n\\u0009\\u0009\\u0009\\u0009\\u0009\\u0009ЛОЖЬ) КАК Ш)\"\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    }
+  ],
+  "subqueryExecution": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "C54-subquery-G1",
+        "query": "ВЫБРАТЬ\n\t1 КАК Результат\nИЗ\n\t(ВЫБРАТЬ\n\t\tЛОЖЬ КАК Флаг) КАК Т\nГДЕ\n\t(НЕ Т.Флаг) В\n\t\t\t(ВЫБРАТЬ\n\t\t\t\tШ.Флаг\n\t\t\tИЗ\n\t\t\t\t(ВЫБРАТЬ\n\t\t\t\t\tИСТИНА КАК Флаг\n\t\t\t\t\n\t\t\t\tОБЪЕДИНИТЬ ВСЕ\n\t\t\t\t\n\t\t\t\tВЫБРАТЬ\n\t\t\t\t\tЛОЖЬ) КАК Ш)",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"Колонки\": [\r\n\"Результат\"\r\n],\r\n\"Строки\": [\r\n[\r\n1\r\n]\r\n],\r\n\"Количество\": 1,\r\n\"Обрезано\": false\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "C54-subquery-G2",
+        "query": "ВЫБРАТЬ\n\t1 КАК Результат\nИЗ\n\t(ВЫБРАТЬ\n\t\tЛОЖЬ КАК Флаг) КАК Т\nГДЕ\n\tНЕ Т.Флаг В\n\t\t\t\t(ВЫБРАТЬ\n\t\t\t\t\tШ.Флаг\n\t\t\t\tИЗ\n\t\t\t\t\t(ВЫБРАТЬ\n\t\t\t\t\t\tИСТИНА КАК Флаг\n\t\t\t\t\t\n\t\t\t\t\tОБЪЕДИНИТЬ ВСЕ\n\t\t\t\t\t\n\t\t\t\t\tВЫБРАТЬ\n\t\t\t\t\t\tЛОЖЬ) КАК Ш)",
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\r\n\"Колонки\": [\r\n\"Результат\"\r\n],\r\n\"Строки\": [],\r\n\"Количество\": 0,\r\n\"Обрезано\": false\r\n}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    }
+  ],
+  "note": "Execution probes use constant derived tables only; no business tables read; no data mutations."
+}

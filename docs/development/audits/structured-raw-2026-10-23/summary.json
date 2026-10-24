@@ -1,0 +1,266 @@
+{
+  "head": "e0084c7f5017af85ce89581d0fa9d40ed753b281",
+  "elapsedMs": 53501,
+  "cases": 2198,
+  "records": 4396,
+  "groups": {
+    "golden": {
+      "without-metadata": {
+        "total": 1976,
+        "parseErrors": 0,
+        "initialParseErrors": 0,
+        "laterParseErrors": 0,
+        "firstTextChanges": 867,
+        "laterTextChanges": 0,
+        "laterModelChanges": 673,
+        "representationChanges": 57,
+        "applyAllowed": 1976,
+        "applyTransitions": 0,
+        "storeTextDiffers": 0
+      },
+      "corpus-metadata": {
+        "total": 1976,
+        "parseErrors": 0,
+        "initialParseErrors": 0,
+        "laterParseErrors": 0,
+        "firstTextChanges": 869,
+        "laterTextChanges": 0,
+        "laterModelChanges": 673,
+        "representationChanges": 57,
+        "applyAllowed": 1976,
+        "applyTransitions": 0,
+        "storeTextDiffers": 6
+      }
+    },
+    "grammar-parity": {
+      "without-metadata": {
+        "total": 153,
+        "parseErrors": 6,
+        "initialParseErrors": 5,
+        "laterParseErrors": 1,
+        "firstTextChanges": 79,
+        "laterTextChanges": 1,
+        "laterModelChanges": 52,
+        "representationChanges": 1,
+        "applyAllowed": 142,
+        "applyTransitions": 4,
+        "storeTextDiffers": 0
+      },
+      "corpus-metadata": {
+        "total": 153,
+        "parseErrors": 6,
+        "initialParseErrors": 5,
+        "laterParseErrors": 1,
+        "firstTextChanges": 79,
+        "laterTextChanges": 1,
+        "laterModelChanges": 52,
+        "representationChanges": 1,
+        "applyAllowed": 142,
+        "applyTransitions": 4,
+        "storeTextDiffers": 0
+      }
+    },
+    "platform": {
+      "without-metadata": {
+        "total": 37,
+        "parseErrors": 1,
+        "initialParseErrors": 0,
+        "laterParseErrors": 1,
+        "firstTextChanges": 34,
+        "laterTextChanges": 0,
+        "laterModelChanges": 22,
+        "representationChanges": 1,
+        "applyAllowed": 30,
+        "applyTransitions": 1,
+        "storeTextDiffers": 15
+      },
+      "corpus-metadata": {
+        "total": 37,
+        "parseErrors": 1,
+        "initialParseErrors": 0,
+        "laterParseErrors": 1,
+        "firstTextChanges": 34,
+        "laterTextChanges": 0,
+        "laterModelChanges": 23,
+        "representationChanges": 1,
+        "applyAllowed": 28,
+        "applyTransitions": 3,
+        "storeTextDiffers": 18
+      }
+    },
+    "pairwise": {
+      "without-metadata": {
+        "total": 8,
+        "parseErrors": 0,
+        "initialParseErrors": 0,
+        "laterParseErrors": 0,
+        "firstTextChanges": 8,
+        "laterTextChanges": 1,
+        "laterModelChanges": 8,
+        "representationChanges": 0,
+        "applyAllowed": 7,
+        "applyTransitions": 0,
+        "storeTextDiffers": 0
+      },
+      "corpus-metadata": {
+        "total": 8,
+        "parseErrors": 0,
+        "initialParseErrors": 0,
+        "laterParseErrors": 0,
+        "firstTextChanges": 8,
+        "laterTextChanges": 1,
+        "laterModelChanges": 8,
+        "representationChanges": 0,
+        "applyAllowed": 7,
+        "applyTransitions": 0,
+        "storeTextDiffers": 0
+      }
+    },
+    "risk": {
+      "without-metadata": {
+        "total": 24,
+        "parseErrors": 1,
+        "initialParseErrors": 1,
+        "laterParseErrors": 0,
+        "firstTextChanges": 23,
+        "laterTextChanges": 1,
+        "laterModelChanges": 22,
+        "representationChanges": 3,
+        "applyAllowed": 13,
+        "applyTransitions": 2,
+        "storeTextDiffers": 1
+      },
+      "corpus-metadata": {
+        "total": 24,
+        "parseErrors": 1,
+        "initialParseErrors": 1,
+        "laterParseErrors": 0,
+        "firstTextChanges": 23,
+        "laterTextChanges": 1,
+        "laterModelChanges": 22,
+        "representationChanges": 3,
+        "applyAllowed": 13,
+        "applyTransitions": 2,
+        "storeTextDiffers": 2
+      }
+    }
+  },
+  "pairwise": {
+    "factors": [
+      "spaces",
+      "lineBreaks",
+      "outerParens",
+      "aliasT_or_V",
+      "leadingNot",
+      "and_or",
+      "depth1_or_2",
+      "scalar_or_tuple"
+    ],
+    "rows": [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0
+      ],
+      [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        1,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0
+      ]
+    ],
+    "coveredPairs": 112,
+    "expectedPairs": 112
+  },
+  "inputs": [
+    {
+      "file": "test/fixtures/corpus/golden.jsonl",
+      "sha256": "2262de7bcbae86e7f2e99033e715500ae08f5ddeaf6cf81b8d900e018e8453d3"
+    },
+    {
+      "file": "test/fixtures/grammar-parity/catalog.jsonl",
+      "sha256": "63db2bf10173b1905f6856f7dc11333025fc812fa15edcca198b65a659b2a2ce"
+    },
+    {
+      "file": "test/fixtures/platform/c2-english.json",
+      "sha256": "8722cf4121db5fe95e835ea687406bad35d166f9f46e610f6ee5c33fd3d0ffa5"
+    },
+    {
+      "file": "test/fixtures/platform/c40-scalar-subquery.json",
+      "sha256": "a388cc609895afd49cdbb63bcd235c58234286fa825e2778806e87521b7e53e0"
+    },
+    {
+      "file": "test/fixtures/platform/v5-phase5-8.3.15.json",
+      "sha256": "6f3c85a6b5016758a1b363130b8fc48b15e71960ca1363edb703996725354a2b"
+    }
+  ]
+}
