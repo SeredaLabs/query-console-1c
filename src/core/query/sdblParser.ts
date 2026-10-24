@@ -76,7 +76,7 @@ import type { SourceInfo } from './qualifyBareFields';
 import { resolveBuilderStar } from './resolveBuilderStar';
 import { dropRedundantGroupDerefs, moveLeadingMovementCaseToEnd, dropFunctionallyDeterminedMovementCase, relocateKeptMovementCase } from './dropRedundantGroupDerefs';
 import { canonicalizeFieldCasing } from './canonicalizeFieldCasing';
-import { LITERAL_WORDS, PERIOD_WORDS } from './sdblKeywordSets';
+import { LITERAL_WORDS, OPERATOR_WORDS, PERIOD_WORDS } from './sdblKeywordSets';
 
 // Инжектируем разборщик подзапросов в пасс квалификации голых полей (для подзапросов,
 // встроенных в СЫРЫЕ выражения условий/полей), избегая циклического импорта.
@@ -3169,8 +3169,11 @@ function interpretCondition(
   // C45: сегмент с пустым конъюнктом (`И`, `НЕ И`, `И В.Код = 1`) — произвольный
   // текст как есть, до разбора голого поля: иначе само `И` стало бы полем `Т.И`.
   const emptyConjunct = splitConjunctsOrNull(tokens) === null;
+  // C55: a lone operator word (`… И НЕ`, `ГДЕ ЕСТЬ`) is incomplete text, not a field:
+  // qualifying it would invent `Т.НЕ` that the acceptor takes as a valid path.
+  const operatorOnly = (ts: Token[]): boolean => ts.length === 1 && OPERATOR_WORDS.has(wordOf(ts[0]));
   if (soleSource && !emptyConjunct) {
-    const bare = tryBareField(tokens, aliasToId);
+    const bare = operatorOnly(tokens) ? undefined : tryBareField(tokens, aliasToId);
     if (bare) {
       if (bare.path.includes('.') && soleSource.outerAliasHead?.(bare.head)) return { custom: true, expression: bare.path };
       const outer = soleSource.outerOwner?.(bare.head);
@@ -3181,7 +3184,7 @@ function interpretCondition(
     // `ГДЕ НЕ Т.ПометкаУдаления`): первый токен — `НЕ`, остаток — чистый точечный
     // путь без квалификации. Конструктор 1С квалифицирует поле под `НЕ`.
     if (tokens.length > 1 && isWordToken(tokens[0], 'НЕ')) {
-      const negBare = tryBareField(tokens.slice(1), aliasToId);
+      const negBare = operatorOnly(tokens.slice(1)) ? undefined : tryBareField(tokens.slice(1), aliasToId);
       if (negBare) {
         if (negBare.path.includes('.') && soleSource.outerAliasHead?.(negBare.head)) return { custom: true, expression: `НЕ ${negBare.path}` };
         const outer = soleSource.outerOwner?.(negBare.head);
