@@ -180,6 +180,9 @@ function acceptAtom(cur: ExprCursor): boolean {
 
   if (isPunct(t, '(')) {
     cur.next();
+    // C46: an empty group is not a value (the platform refuses `ГДЕ ()`); an empty
+    // argument list of a call is accepted below as before.
+    if (isPunct(cur.peek(), ')')) return false;
     return acceptGroupContent(cur);
   }
 

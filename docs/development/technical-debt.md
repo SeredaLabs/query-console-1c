@@ -14,7 +14,7 @@ one place, ordered by priority.
 
 ## Open items
 
-24 items: P1 — 1, P2 — 16, P3 — 7. No item is P0.
+23 items: P1 — 1, P2 — 16, P3 — 6. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
@@ -41,7 +41,6 @@ one place, ordered by priority.
 | C37 | OPEN · P3 | Correctness | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. |
 | C38 | OPEN · P3 | Correctness | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. |
 | C39 | OPEN · P3 | Correctness | English standard field names remain English in Russian output; platform canonical text translates them. |
-| C46 | OPEN · P3 | Correctness | A custom join condition with an empty conjunct (`ПО И А.Код = Б.Код`, `… И`, `… И И …`) is printed with `()` for the empty operand; Apply stays refused (`malformedCustom`). |
 
 ## Correctness
 
@@ -57,7 +56,6 @@ one place, ordered by priority.
 | C38 | OPEN · P3 | ПЕРИОДАМИ omitted arguments differ from platform canonical text; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C39 | OPEN · P3 | English standard field names remain English in Russian output; platform canonical text translates them. [Evidence](audits/v5-phase5-2026-10-21.md). |
 | C40 | PARTIAL · P3 | Apply now refuses scalar subqueries in comparisons, ВЫБОР, join conditions and function arguments (rejected by 8.3.15.1489); only the newer-platform verdict is missing. [Evidence](../../test/fixtures/platform/c40-scalar-subquery.json). |
-| C46 | OPEN · P3 | A custom join condition with an empty conjunct is printed with `()` for the empty operand; Apply stays refused. [Details](#c46-empty-join-conjunct-printed-as-и-). |
 
 The [safety contract](contracts/safety-and-preservation.md) specifies refusal,
 comment handling and recovery limits. No outstanding correctness item is P0.
@@ -293,33 +291,46 @@ the existing field-path check; no separate expression grammar. Prerequisite C43
 
 ### C46. Empty join conjunct printed as `И ()`
 
-**Status:** OPEN · P3 · recorded 2026-10-22 (found during C45; not changed there)
-
-Minimal reproduction (no metadata needed):
+**Status:** CLOSED (2026-10-24; recorded 2026-10-22 as P3, found during C45; raised
+to P2 by the [structured/raw research](audits/structured-raw-2026-10-23/README.md))
 
 ```text
 ВЫБРАТЬ А.Код КАК Код ИЗ Справочник.Валюты КАК А ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО А.Код = Б.Код И И А.Код = 1
 ```
 
-Since C45 the parser keeps the join condition as one custom expression with its
-text, but the generator's AND-chain expansion (`expandAndChainConjuncts` →
-`splitTopLevelAnd`, `sdblGenerator.ts`) splits it again and prints every empty
-operand as `()`:
+Since C45 the parser keeps such a join condition as one custom expression and
+OK / Save refuses it, but the generator's AND-chain expansion
+(`expandAndChainConjuncts` → `splitTopLevelAnd`, `sdblGenerator.ts`) split it again
+and printed every empty operand as `()`:
 
-| Authored `ПО …` | Generated |
+| Authored `ПО …` | Generated before |
 |---|---|
 | `А.Код = Б.Код И И А.Код = 1` | `А.Код = Б.Код И () И (А.Код = 1)` |
 | `И А.Код = Б.Код` | `() И А.Код = Б.Код` |
 | `А.Код = Б.Код И`, `(А.Код = Б.Код И)` | `А.Код = Б.Код И ()` |
 | `И` | `() И ()` |
 
-Before C45 the empty operand (and its `И`) was dropped instead. Every form is
-refused by `malformedCustom`, so nothing is written; the generated text is
-visible in Query Text and differs from the authored one. The C45 join tests pin
-only the refusal.
+The refusal did not survive that text. «Показать запрос» opens Query Text with the
+generated text, «Применить» is enabled without an edit, and the reopened text was
+valid conjuncts plus an empty group that the structural acceptor took as a value
+(`acceptGroupContent` accepts an empty list for a call). The static blocker
+disappeared and OK wrote `И ()`, which the platform refuses
+(`Wrong parameters "И"`). A typed empty group was accepted the same way in every
+condition slot (`ГДЕ ()`, `ГДЕ Т.Код = 1 И ()`, `ИМЕЮЩИЕ … И ()`, `ПО … И ()`; the
+platform refuses `ГДЕ ()`: `Operation not allowed in clause "ГДЕ"`).
+[Evidence](../../test/fixtures/platform/c46-empty-group.json).
 
-**Next boundary:** make the AND-chain expansion leave an expression with an empty
-conjunct unsplit; add a regression next to the C45 suite. Generator change.
+The expansion now leaves a chain with an empty operand as one conjunct, so the
+generated text keeps every authored `И` (`ПО А.Код = Б.Код` / `И ` / `И А.Код = 1`,
+the empty slot printed as a trailing space) and reopens as the same refused custom
+condition. The acceptor refuses an empty group as a value (`()`, `(())`, `НЕ ()`,
+`a И ()`); a call with an empty argument list (`Ф()`) is accepted as before. The golden
+corpus has no `()` at all; golden, grammar-parity and store gates are unchanged.
+[Regressions](../../test/unit/emptyJoinConjunct.c46.test.ts) (the ledger forms,
+`ИЛИ`, a comment and English `AND AND` stay refused through three Query Text
+reopens; typed `()` in `ГДЕ`/`ИМЕЮЩИЕ`/`ПО`; valid controls),
+[acceptor cases](../../test/unit/expressionSyntaxCheck.test.ts), e2e in `queryText.spec.ts`. *Not changed:* an
+empty value list `В ()` (a different acceptor path, not a value group).
 
 ### C51. Tuple IN-subquery changed on the second Save
 
@@ -787,6 +798,7 @@ and [audit index](audits/README.md).
 | C43 | CLOSED | A field reached through a composite reference is found if any target has it; open/Apply/diagnostics no longer refuse it (2026-10-22). [Details](#c43-composite-reference-fields). |
 | C44 | CLOSED | Query Text no longer shows "✓" or applies an incomplete custom condition that OK / Save refuses: the status bar and Apply use the same `malformedCustom` check (2026-10-22). [Details](#c44-query-text-accepted-an-incomplete-condition). |
 | C45 | CLOSED | An empty `И` conjunct in WHERE/HAVING/join no longer disappears on Save: the condition keeps its text and `malformedCustom` refuses it (2026-10-22). [Details](#c45-trailing-и-dropped-from-a-condition). |
+| C46 | CLOSED | A join condition with an empty `И` operand is no longer printed with `()`, so its refusal survives Query Text «Применить»; a typed empty group `()` is refused in every condition slot (2026-10-24). [Details](#c46-empty-join-conjunct-printed-as-и-). |
 | C53 | CLOSED | A non-reference left side of `В (ВЫБРАТЬ …)` split over lines (a line comment or a line break in a tuple) is printed on one line on the first Save, like a raw leaf; left sides the helper does not flatten (`И`/`ИЛИ`, `ВЫБОР`) keep their lines (2026-10-22). [Details](#c53-line-comment-inside-a-tuple-left-side). |
 | C52 | CLOSED | `НЕ НЕ X В (ВЫБРАТЬ …)` no longer moves the subquery one tab on the second Save (2026-10-22). [Details](#c52-doubled-не-before-an-in-subquery-shifts-it-once). |
 | C51 | CLOSED | A tuple left side of `В (ВЫБРАТЬ …)` written compactly no longer changes on the second Save (in `ИМЕЮЩИЕ`, with `НЕ В`, or with bare fields) (2026-10-22). [Details](#c51-tuple-in-subquery-changed-on-the-second-save). |

@@ -181,6 +181,26 @@ test.describe('Query Text', () => {
     });
   }
 
+  // C46: the shown text of a refused join condition once printed the empty `И` operand
+  // as `()`; Apply without an edit reloaded it as valid and OK wrote it.
+  test('C46 empty join conjunct: Apply of the shown text keeps OK refused', async ({ page }) => {
+    const join = 'ВЫБРАТЬ А.Код КАК Код ИЗ Справочник.Валюты КАК А ' +
+      'ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Б ПО А.Код = Б.Код И И А.Код = 1';
+    const malformed = 'Произвольное условие или выражение выглядит синтаксически некорректным.';
+    await openClassic(page, join);
+    const ok = page.getByRole('button', { name: 'ОК', exact: true });
+    await expect(ok).toBeDisabled();
+    const editor = await showQueryText(page);
+    expect(await editorText(editor)).not.toContain('()');
+    await apply(page);
+    await expect(page.locator('div[style*="white-space: pre-wrap"]').filter({ hasText: malformed })).toBeVisible();
+    await expect(editor).toBeVisible();
+    await page.getByTestId('query-text-cancel').click();
+    await expect(editor).toBeHidden();
+    await expect(ok).toBeDisabled();
+    expect(await messages(page, 'insertText')).toHaveLength(0);
+  });
+
   test('batch with a temp table, UNION, comments and parameters applies into the model', async ({ page }) => {
     const batch = '// batch head\n' +
       'ВЫБРАТЬ В.Код КАК Код ПОМЕСТИТЬ ВТ ИЗ Справочник.Валюты КАК В ГДЕ В.Код = &Код; // after temp\n' +

@@ -91,9 +91,8 @@ describe('C45: an empty conjunct keeps its text and is refused', () => {
   });
 });
 
-// Join `ПО`: the parser keeps the condition as one custom expression, but the generator
-// splits it again and prints the empty operand as `()` (C46, generator unchanged). Only
-// the refusal is guaranteed here — the generated join text is NOT the authored one.
+// Join `ПО`: the parser keeps the condition as one custom expression. The generated
+// text and the refusal after reopening it are pinned in emptyJoinConjunct.c46.test.ts.
 describe('C45: an empty join conjunct is refused (text: C46)', () => {
   for (const input of [
     `${J}И А.Код = Б.Код`,
