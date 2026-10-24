@@ -101,8 +101,9 @@ describe('C53: a left side split over lines is printed on one line, on the first
 describe('C52 / C53: unchanged controls', () => {
   it.each([
     ['single НЕ', W + `НЕ Т.Код В ${SUB1}`, `ГДЕ\n\tНЕ Т.Код В\n${block1(4)}`],
+    // C56: the platform's prefix form (was `НЕ (…) НЕ В` on 4 tabs, refused by OK / Save).
     ['НЕ before a tuple НЕ В', W + `НЕ (Т.Код, Т.Наименование) НЕ В ${SUB2}`,
-      `ГДЕ\n\tНЕ (Т.Код, Т.Наименование) НЕ В\n${block2(4)}`],
+      `ГДЕ\n\tНЕ НЕ (Т.Код, Т.Наименование) В\n${block2(5)}`],
     ['one-line tuple', W + `(Т.Код, Т.Наименование) В ${SUB2}`, `ГДЕ\n\t(Т.Код, Т.Наименование) В\n${block2(3)}`],
   ])('%s', (_name, input, expected) => {
     const once = save(input);

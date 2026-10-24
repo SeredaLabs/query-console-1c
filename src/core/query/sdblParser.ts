@@ -3228,8 +3228,13 @@ function interpretCondition(
   // генератор печатает `НЕ ` и сдвигает блок подзапроса (фаза 6.15.NN). Только
   // для подзапросного результата; обычные негативы остаются произвольным текстом.
   if (tokens.length > 1 && isWordToken(tokens[0], 'НЕ')) {
-    // C51: `НЕ (a, b) НЕ В` keeps the inner `НЕ` in `leftExpr` (one `negated` flag
-    // cannot hold both negations).
+    // C56: `НЕ X НЕ В (…)` is `НЕ НЕ X В (…)`: without the inner `НЕ` the left side
+    // `НЕ X` becomes `leftExpr` and the outer one `negated` — the model of `НЕ НЕ X В`.
+    const infix = infixNotBeforeIn(tokens);
+    if (infix > 1) {
+      const doubled = trySimpleCondition([...tokens.slice(0, infix), ...tokens.slice(infix + 1)], source, aliasToId, soleSource, aliasSpelling, false);
+      if (doubled && doubled.subquery) return { ...doubled, negated: true };
+    }
     const inner = trySimpleCondition(tokens.slice(1), source, aliasToId, soleSource, aliasSpelling, false);
     if (inner && inner.subquery) return { ...inner, negated: true };
   }
@@ -3327,10 +3332,15 @@ function trySimpleCondition(
           const owned = new Set<number>();
           if (!legacyStructured) rememberNestedConditionComments(owned, inner, 0, sub);
           if (legacyStructured || comments.every(t => owned.has(t.pos))) {
-            // C51: `(a, b) НЕ В (…)` is `НЕ (a, b) В (…)`; the raw path prints it so
-            // (moveNotBeforeTuple), and the generator prints `negated` the same way.
-            const notIn = hoistTupleNot && lhs.length > 1 && isWordToken(lhs[lhs.length - 1], 'НЕ') && isTupleTokens(lhs.slice(0, -1));
-            if (notIn) return { custom: true, leftExpr: sliceSource(source, lhs.slice(0, -1)), subquery: sub, negated: true };
+            // C51/C56: `X НЕ В (…)` is `НЕ X В (…)` for any left side: the condition
+            // without this `НЕ` is parsed again and negated, so a field gets the model of
+            // `НЕ <поле> В (…)` and other left sides a `leftExpr`. The platform prints
+            // both forms as `НЕ X В`.
+            const notIn = hoistTupleNot && lhs.length > 1 && isWordToken(lhs[lhs.length - 1], 'НЕ');
+            if (notIn) {
+              const positive = trySimpleCondition([...lhs.slice(0, -1), ...tokens.slice(opIdx)], source, aliasToId, soleSource, aliasSpelling, false);
+              if (positive && positive.subquery) return { ...positive, negated: true };
+            }
             return { custom: true, leftExpr: sliceSource(source, lhs), subquery: sub };
           }
         }
@@ -6078,15 +6088,19 @@ function augmentResolverWithTempTables(
   };
 }
 
-/** `( a, b, … )` — one parenthesized group with a top-level comma. */
-function isTupleTokens(tokens: Token[]): boolean {
-  if (tokens[0]?.value !== '(' || tokens[tokens.length - 1]?.value !== ')') return false;
-  let depth = 0, comma = false;
+/**
+ * C56: index of an infix `НЕ` right before the first top-level `В` of a condition
+ * (`X НЕ В (…)`), or -1.
+ */
+function infixNotBeforeIn(tokens: Token[]): number {
+  let depth = 0;
   for (let k = 0; k < tokens.length; k++) {
     const t = tokens[k];
     if (t.type === 'punct' && t.value === '(') depth++;
-    else if (t.type === 'punct' && t.value === ')') { depth--; if (depth === 0 && k < tokens.length - 1) return false; }
-    else if (depth === 1 && t.type === 'punct' && t.value === ',') comma = true;
+    else if (t.type === 'punct' && t.value === ')') depth--;
+    else if (depth === 0 && isCondOperatorToken(t)) {
+      return t.value === 'В' && k > 0 && isWordToken(tokens[k - 1], 'НЕ') ? k - 1 : -1;
+    }
   }
-  return comma;
+  return -1;
 }
