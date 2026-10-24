@@ -1508,7 +1508,10 @@ function expandAndChainConjuncts(conditions: NonNullable<Join['conditions']>): N
     if (c.custom && e && !hasLineComment(e) && hasTopLevelBooleanOp(e) === true && hasTopLevelOr(e) === false &&
         ranges && !hasCodeMatch(e, ranges, /(^|[^\p{L}\p{N}_&])ВЫБОР([^\p{L}\p{N}_]|$)/giu)) {
       const parts = splitTopLevelAnd(e);
-      if (parts.length > 1) {
+      // C46: a chain with an empty operand (`a И И b`, `И a`, `a И`) stays one conjunct:
+      // split pieces would print the empty one as `()`, which reopens as a valid
+      // group and loses the refusal.
+      if (parts.length > 1 && parts.every(p => p !== '')) {
         // Помечаем пьесы как полученные расщеплением И-цепочки (фаза 6.16.78):
         // простое сравнение полей среди них печатается без обёртки (renderArbitraryConjunct).
         parts.forEach((p, index) => out.push({

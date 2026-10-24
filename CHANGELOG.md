@@ -3,6 +3,15 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+
+- A join condition with an empty `И` (`ПО А.Код = Б.Код И И А.Код = 1`) is no longer
+  printed with `()` for the empty part. Before, applying the text shown by **Query
+  text** without an edit cleared the block, and OK / Save wrote a query the
+  platform refuses. An empty group `()` in a condition is now refused too.
+
 ## 0.4.0 - 2026-10-24
 
 ### Changed

@@ -113,6 +113,15 @@ describe('isStructurallyValidExpression — валидные формы', () => 
 });
 
 describe('isStructurallyValidExpression — сломанные формы (найдено на золотом корпусе + реальных production-конфигурациях)', () => {
+  it('C46: пустая группа `()` — не операнд (вызов без аргументов — как раньше)', () => {
+    for (const t of ['()', '(())', '( )', 'НЕ ()', 'Т.Код = 1 И ()', '() И Т.Код = 1', '1 + ()', 'Т.Код = ()']) {
+      expect(isStructurallyValidExpression(t), t).toBe(false);
+    }
+    for (const t of ['Ф()', 'Т.Код = Ф()', 'КОЛИЧЕСТВО(*)', '(1)', '((Т.Код = 1))', 'Т.Код В (&Список)']) {
+      expect(isStructurallyValidExpression(t), t).toBe(true);
+    }
+  });
+
   it('незакрытая/лишняя скобка', () => {
     expect(isStructurallyValidExpression('(Т.Код = &А')).toBe(false);
     expect(isStructurallyValidExpression('Т.Код = &А)')).toBe(false);
