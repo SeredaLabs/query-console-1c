@@ -2579,6 +2579,9 @@ function enclosingFunctionIs(sig: Token[], idx: number, names: Set<string>): boo
  * затрагиваются (кроме переноса `НЕ ` в правиле 3). Многострочный лист в правило 3 не
  * попадает: предикат `В` приходит листом-сравнением без переносов строк.
  */
+/** C57: words that end the operand a leaf-level `НЕ` could be moved in front of. */
+const OPERAND_BOUNDARY_WORDS = new Set(['И', 'ИЛИ', 'ВЫБОР', 'КОГДА', 'ТОГДА', 'ИНАЧЕ', 'AND', 'OR', 'CASE', 'WHEN', 'THEN', 'ELSE']);
+
 function canonicalizeLeafLexemes(raw: string): string {
   if (!raw) return raw;
   let toks: Token[];
@@ -2632,6 +2635,10 @@ function canonicalizeLeafLexemes(raw: string): string {
   //    только на однострочном листе-сравнении (без переносов): ищем `НЕ`, за которым
   //    непосредственно следует оператор членства `В` или `ПОДОБНО`, при наличии
   //    операнда слева. Переносим `НЕ ` в начало операнда (= начало листа). Фаза 6.16.76.
+  //    C57: only a `НЕ` at the leaf's top parenthesis level with no `И`/`ИЛИ`/`ВЫБОР`/
+  //    `КОГДА`/`ТОГДА`/`ИНАЧЕ` before it there: inside a subquery or a call argument, or
+  //    after `И` (a virtual-table condition is not split), the leaf start is not the
+  //    start of its operand and the move negated the whole expression.
   if (!out.includes('\n')) {
     let toks2: Token[];
     try {
@@ -2640,8 +2647,13 @@ function canonicalizeLeafLexemes(raw: string): string {
       return out;
     }
     const sig2 = toks2.filter((t) => t.type !== 'eof');
+    let depth = sig2[0].type === 'punct' && sig2[0].value === '(' ? 1 : 0;
     for (let k = 1; k < sig2.length - 1; k++) {
       const t = sig2[k];
+      if (t.type === 'punct' && t.value === '(') { depth++; continue; }
+      if (t.type === 'punct' && t.value === ')') { depth--; continue; }
+      if (depth !== 0) continue;
+      if (isW(t) && OPERAND_BOUNDARY_WORDS.has(upOf(t))) break;
       if (!isW(t) || upOf(t) !== 'НЕ') continue;
       const nx = sig2[k + 1];
       const nxU = nx ? upOf(nx) : '';

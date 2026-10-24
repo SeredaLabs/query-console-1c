@@ -14,12 +14,11 @@ one place, ordered by priority.
 
 ## Open items
 
-24 items: P1 — 2, P2 — 16, P3 — 6. No item is P0.
+23 items: P1 — 1, P2 — 16, P3 — 6. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
 | V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C37–C40 remain open; C36 is an accepted divergence. |
-| C57 | OPEN · P1 | Correctness | An infix `НЕ В` / `НЕ ПОДОБНО` inside a subquery or a function argument of a raw condition, or after `И` in a virtual-table condition, is moved to the front of the whole expression on Save: the meaning changes and OK / Save writes it. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
 | C41 | OPEN · P2 | Correctness | Metadata validation (open, Apply, editor diagnostics) skips field paths kept as raw expression text: `ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions. |
 | C49 | OPEN · P2 | Correctness | Bare-field qualification rewrites `ГРУППИРУЮЩИМ НАБОРАМ` inside a raw-text subquery (`Х.ГРУППИРУЮЩИМ`); since C48 Apply refuses such valid queries, before it wrote them corrupted. |
@@ -47,7 +46,6 @@ one place, ordered by priority.
 
 | ID | Status / priority | Summary |
 |---|---|---|
-| C57 | OPEN · P1 | `X НЕ В (…)` is rewritten as `НЕ X В (…)` without regard to parentheses or `И`: a nested `НЕ` becomes a negation of the outer expression. [Details](#c57-infix-не-moved-out-of-its-operand). |
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
 | C41 | OPEN · P2 | Metadata validation skips field paths kept as raw expression text (`ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions). [Details](#c41-metadata-validation-of-raw-expressions). |
 | C49 | OPEN · P2 | `ГРУППИРУЮЩИМ НАБОРАМ` inside a raw-text subquery is qualified as a field (`Х.ГРУППИРУЮЩИМ`); Apply now refuses the valid query. [Details](#c49-grouping-sets-qualified-in-a-raw-text-subquery). |
@@ -552,8 +550,8 @@ comparison); an incomplete `ВЫБОР` is printed with a closing `КОНЕЦ` (
 
 ### C57. Infix НЕ moved out of its operand
 
-**Status:** OPEN · P1 · recorded 2026-10-24 (found while implementing C56; the same in
-v0.4.0)
+**Status:** CLOSED (2026-10-24; recorded the same day as P1, found while implementing
+C56; the same in v0.4.0)
 
 ```text
 ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = &К ИЛИ Т.Ссылка В (ВЫБРАТЬ Х.Ссылка ИЗ Справочник.Валюты КАК Х ГДЕ Х.Ссылка НЕ В (&С))
@@ -584,11 +582,16 @@ rewrite be written, so C56 waits for C57. Unchanged and correct: a top-level
 `X НЕ В (&С)` / `X НЕ ПОДОБНО` / `(Т.Код + 1) НЕ В` (printed `НЕ X В`), a `ВЫБОР` or
 an `И` chain in a select field, and join `ПО` conditions.
 
-**Next boundary:** move `НЕ` only when it stands at the leaf's top parenthesis level
-with no `И`/`ИЛИ`/`ВЫБОР`/`КОГДА`/`ТОГДА`/`ИНАЧЕ` before it at that level; otherwise
-leave the text as written. A scratch run of that rule changed none of 19,760 research
-round-trip records (golden, grammar parity, platform fixtures, variations), passed the
-unit suite and printed the platform text above byte for byte.
+Rule 3 now moves `НЕ` only when it stands at the leaf's top parenthesis level with no
+`И`/`ИЛИ`/`ВЫБОР`/`КОГДА`/`ТОГДА`/`ИНАЧЕ` before it at that level; otherwise the text
+stays as written (`Кратность = 1 И Валюта НЕ В (&В)` keeps its infix `НЕ`, unlike the
+platform's canonical text, with the same meaning). The recorded probe is printed byte
+for byte as the platform prints it. Golden, grammar-parity and store gates are
+unchanged; the 19,760 research round-trip records (golden, grammar parity, platform
+fixtures, layout/case/parenthesis variations, pairwise) give the same text and Apply
+decision as before. [Regressions](../../test/unit/nestedNotIn.c57.test.ts) (the four
+forms and `ИМЕЮЩИЕ` keep `НЕ` with its operand through three reopens; the probe; 12
+top-level controls still print `НЕ X В`).
 
 ### C54. Negated field operand loses its parentheses
 
@@ -880,6 +883,7 @@ and [audit index](audits/README.md).
 | C45 | CLOSED | An empty `И` conjunct in WHERE/HAVING/join no longer disappears on Save: the condition keeps its text and `malformedCustom` refuses it (2026-10-22). [Details](#c45-trailing-и-dropped-from-a-condition). |
 | C46 | CLOSED | A join condition with an empty `И` operand is no longer printed with `()`, so its refusal survives Query Text «Применить»; a typed empty group `()` is refused in every condition slot (2026-10-24). [Details](#c46-empty-join-conjunct-printed-as-и-). |
 | C55 | CLOSED | An incomplete condition ending in an operator word (`… И НЕ`, `ГДЕ ЕСТЬ`) is refused: it is no longer qualified as a field (`Т.НЕ`) and the acceptor no longer takes the word as a value (2026-10-24). [Details](#c55-operator-word-taken-as-a-field). |
+| C57 | CLOSED | An infix `НЕ В` / `НЕ ПОДОБНО` inside a subquery or a function argument, or after `И` in a virtual-table condition, stays with its operand on Save; before, it negated the whole expression (2026-10-24). [Details](#c57-infix-не-moved-out-of-its-operand). |
 | C53 | CLOSED | A non-reference left side of `В (ВЫБРАТЬ …)` split over lines (a line comment or a line break in a tuple) is printed on one line on the first Save, like a raw leaf; left sides the helper does not flatten (`И`/`ИЛИ`, `ВЫБОР`) keep their lines (2026-10-22). [Details](#c53-line-comment-inside-a-tuple-left-side). |
 | C52 | CLOSED | `НЕ НЕ X В (ВЫБРАТЬ …)` no longer moves the subquery one tab on the second Save (2026-10-22). [Details](#c52-doubled-не-before-an-in-subquery-shifts-it-once). |
 | C51 | CLOSED | A tuple left side of `В (ВЫБРАТЬ …)` written compactly no longer changes on the second Save (in `ИМЕЮЩИЕ`, with `НЕ В`, or with bare fields) (2026-10-22). [Details](#c51-tuple-in-subquery-changed-on-the-second-save). |
