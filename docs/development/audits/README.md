@@ -19,6 +19,7 @@ This is an indexed historical archive, not a second status ledger.
 
 | Date | Audit / scope | Result → debt/fix | Disposition |
 |---|---|---|---|
+| 2026-10-23 | [Structured/raw expression architecture](structured-raw-2026-10-23/README.md) | Consolidated three-pass research and Claude verification; C46 unsafe reopen, operator-as-field, scalar NOT IN refusal, C54 runtime change; C51–C53 revision status; incremental IR recommendation | RESEARCH; production and ledger unchanged |
 | 2026-10-10 | [A1 closure check](a1-closure-2026-10-10.md) | Identifier names owned by the lexer (live 1C runtime + native Designer evidence for `&Ціна`, `&Gültig`, `ПРЕДСТАВЛЕНИЕ(ВТ.Ціна)`); 17 scanners KEEP; exceptions listed; R4–R7, R11, R12, N1, N3, N4 given ledger rows | A1 OPEN on 2026-10-10; addendum 2026-10-11: inference (R5) and `parseStar` migrated, C24 data loss mitigated, **A1 CLOSED** |
 | 2026-10-04 | [A1 reconciliation and re-plan](a1-reconciliation-2026-10-04.md) | 321 sites re-mapped after C25: 30 still needed in 4 slices, exit criteria; 7 separate findings R1–R7 (R1–R3 literal rewrites of the C25 class) | PLAN; no code changed; R1–R3 reopened C25; R4–R7 in the ledger since 2026-10-10 |
 | 2026-10-04 | [A1 lexical ownership audit](a1-lexical-audit-2026-10-04.md) | 321 lexical sites classified; 9 confirmed literal-content rewrites (proposed C25); migration plan | AUDIT; no code changed |
