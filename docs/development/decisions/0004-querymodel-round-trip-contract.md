@@ -17,7 +17,12 @@ generator honest against it as both evolve.
 `generateBatch(parseBatch(input)) === query_text` is the contract, where
 `query_text` is the *real 1C platform's own* accepted, canonical output for
 `input` — not necessarily `input` itself (the platform's own normalization
-means the two can differ verbatim). It is enforced by the committed recorded
+means the two can differ verbatim). Platform canonical text is the default expected
+output: generation departs from it only where this record documents an exception
+(below), never silently. Canonical equality is a parity contract, not a proof of
+semantic equivalence: a constructor rewrite can itself change the result, as both
+exceptions show, so a claim that two texts mean the same needs its own evidence
+(for example executed results). The contract is enforced by the committed recorded
 canonical-output corpus (`test/fixtures/corpus/golden.jsonl` and
 `test/unit/corpusRegression.test.ts`). Private/live corpora are optional workflows
 with prerequisites, not committed CI gates. Provenance, negative/English coverage
@@ -65,9 +70,14 @@ Platform canonical text:    ГДЕ НЕ Т.ПометкаУдаления В (&�
 negates the membership instead of the field. The same probes show that the platform
 keeps these parentheses before `=`, `>` and `ЕСТЬ NULL` (where dropping them would also
 change `ЕСТЬ NULL`: 1 row and 0 rows for a NULL `Ф`), so no exception is needed
-there and the Designer prints the platform's text. Limitation of this evidence: the
-backend does not report the platform build, so the probes are not tied to a version;
-repeat them on a known build before widening or relying on the exception elsewhere.
+there and the Designer prints the platform's text.
+
+Limitations of this evidence: what is confirmed is the difference of executed results
+and the canonical text that `validate_query` returns (the platform's query schema,
+`СхемаЗапроса`). The behaviour of the built-in 1C Query Designer on a known platform
+version is not separately confirmed, and the backend does not report the platform
+build, so the probes are not tied to a version. Repeat them on a known build before
+widening or relying on the exception elsewhere.
 
 As for literals, constructor acceptance and canonical text are not proof of semantic
 equivalence; writing a query with another result is worse than a difference from the
