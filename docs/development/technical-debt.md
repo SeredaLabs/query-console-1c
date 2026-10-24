@@ -548,6 +548,41 @@ English, refused through Query Text with no invented field; controls for bare fi
 comparison); an incomplete `ВЫБОР` is printed with a closing `КОНЕЦ` (`… И ВЫБОР` /
 `КОНЕЦ`) and stays refused.
 
+### C56. Compact scalar НЕ В subquery refused
+
+**Status:** CLOSED (2026-10-24; found by the [structured/raw research](audits/structured-raw-2026-10-23/README.md), P2 when recorded; waited for C57)
+
+```text
+ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Ссылка НЕ В (ВЫБРАТЬ Ш.Ссылка ИЗ Справочник.Валюты КАК Ш)
+```
+
+A compact `X НЕ В (ВЫБРАТЬ …)` with a non-tuple left side was parsed as `leftExpr`
+`X НЕ` + subquery (`trySimpleCondition`, `sdblParser.ts`); the acceptor refuses that
+`leftExpr`, so OK / Save refused a platform-valid query, while the multi-line form
+passed. C51 moved that `НЕ` into `negated` for a tuple only. The same held for a
+literal or an expression on the left, in `ИМЕЮЩИЕ`, in a modelled or raw-text nested
+subquery, with a comment in the subquery (refused even after reopening), and for a
+double negation `НЕ X НЕ В`, including a tuple. The platform accepts the field and the
+double-negation forms and prints `НЕ Т.Ссылка В` / `НЕ НЕ Т.Ссылка В`
+([research probes](audits/structured-raw-2026-10-23/claude-platform-verification.json));
+the other left sides were not probed.
+
+A compact `X НЕ В (…)` is now parsed again without that `НЕ` and negated, for any left
+side: a field gets the model of `НЕ <поле> В (…)` (also stable in `ИМЕЮЩИЕ`), other
+left sides a `leftExpr`. `НЕ X НЕ В` gets the model of `НЕ НЕ X В`. The multi-line
+form, `НЕ В (&С)` lists, `В ИЕРАРХИИ` and the source alias `В` are unchanged. Five
+C51 and one C52/C53 expectation pinned the text of these refused models and now hold
+the prefix form: `НЕ НЕ (a, b) В` (subquery one tab deeper) and `НЕ 1 В`,
+`НЕ (Т.Код + 1) В`, `НЕ (Т.Код) В`. Golden, grammar-parity and store gates are
+unchanged. Of the 19,761 research round-trip records (golden, grammar parity, platform
+fixtures, variations, pairwise) only 8 changed — 4 inputs, all forms above: Apply
+refused → allowed, with the same `НЕ`/`И`/`ИЛИ` and boolean structure. [Regressions](../../test/unit/scalarNotIn.c56.test.ts) (each infix form
+equals its prefix form in text and model through three reopens; nested, `ИМЕЮЩИЕ`,
+double negation; owners and metadata; unchanged forms).
+*Not changed (R2):* a grouped left side (`(Т.Код + 1) НЕ В`, `(Т.Код) НЕ В`), a
+compact `НЕ В ИЕРАРХИИ` and `НЕ (X НЕ В …)` change once more on the second Save, as
+the same prefix forms typed directly do; the meaning is kept.
+
 ### C57. Infix НЕ moved out of its operand
 
 **Status:** CLOSED (2026-10-24; recorded the same day as P1, found while implementing
@@ -576,9 +611,9 @@ assumes an atomic comparison, but counts neither parentheses nor `И`. Measured 
 | `ГДЕ ЕСТЬNULL(Т.Код НЕ В (&С), ЛОЖЬ)` | `ГДЕ НЕ ЕСТЬNULL(Т.Код В (&С), ЛОЖЬ)` |
 | `СрезПоследних(&Д, Кратность = 1 И Валюта НЕ В (&В))` | `СрезПоследних(&Д, НЕ Кратность = 1 И Валюта В (&В))` |
 
-A compact `НЕ В (ВЫБРАТЬ …)` in the same nested place is refused today only because of
-the scalar NOT IN refusal (C56, not yet recorded); fixing that first would let this
-rewrite be written, so C56 waits for C57. Unchanged and correct: a top-level
+A compact `НЕ В (ВЫБРАТЬ …)` in the same nested place was refused only because of the
+scalar NOT IN refusal ([C56](#c56-compact-scalar-не-в-subquery-refused)); fixing that
+first would have let this rewrite be written, so C56 waited for C57. Unchanged and correct: a top-level
 `X НЕ В (&С)` / `X НЕ ПОДОБНО` / `(Т.Код + 1) НЕ В` (printed `НЕ X В`), a `ВЫБОР` or
 an `И` chain in a select field, and join `ПО` conditions.
 
@@ -883,6 +918,7 @@ and [audit index](audits/README.md).
 | C45 | CLOSED | An empty `И` conjunct in WHERE/HAVING/join no longer disappears on Save: the condition keeps its text and `malformedCustom` refuses it (2026-10-22). [Details](#c45-trailing-и-dropped-from-a-condition). |
 | C46 | CLOSED | A join condition with an empty `И` operand is no longer printed with `()`, so its refusal survives Query Text «Применить»; a typed empty group `()` is refused in every condition slot (2026-10-24). [Details](#c46-empty-join-conjunct-printed-as-и-). |
 | C55 | CLOSED | An incomplete condition ending in an operator word (`… И НЕ`, `ГДЕ ЕСТЬ`) is refused: it is no longer qualified as a field (`Т.НЕ`) and the acceptor no longer takes the word as a value (2026-10-24). [Details](#c55-operator-word-taken-as-a-field). |
+| C56 | CLOSED | A compact `X НЕ В (ВЫБРАТЬ …)` with any left side (and `НЕ X НЕ В`) is applied in the platform's prefix form; before, OK / Save refused it (2026-10-24). [Details](#c56-compact-scalar-не-в-subquery-refused). |
 | C57 | CLOSED | An infix `НЕ В` / `НЕ ПОДОБНО` inside a subquery or a function argument, or after `И` in a virtual-table condition, stays with its operand on Save; before, it negated the whole expression (2026-10-24). [Details](#c57-infix-не-moved-out-of-its-operand). |
 | C53 | CLOSED | A non-reference left side of `В (ВЫБРАТЬ …)` split over lines (a line comment or a line break in a tuple) is printed on one line on the first Save, like a raw leaf; left sides the helper does not flatten (`И`/`ИЛИ`, `ВЫБОР`) keep their lines (2026-10-22). [Details](#c53-line-comment-inside-a-tuple-left-side). |
 | C52 | CLOSED | `НЕ НЕ X В (ВЫБРАТЬ …)` no longer moves the subquery one tab on the second Save (2026-10-22). [Details](#c52-doubled-не-before-an-in-subquery-shifts-it-once). |

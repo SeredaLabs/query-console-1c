@@ -19,6 +19,9 @@ All notable changes are recorded here. The project uses
   (`… ГДЕ Х.Ссылка НЕ В (&С))`) keeps its place on Save. Before, `НЕ` was moved to
   the front of the whole expression, and OK / Save wrote a query with a different
   meaning.
+- A compact `ГДЕ Т.Ссылка НЕ В (ВЫБРАТЬ … ИЗ …)` (also with a literal or an
+  expression on the left, a double `НЕ` or in `ИМЕЮЩИЕ`) is no longer refused by
+  OK / Save; it is written as `НЕ Т.Ссылка В (…)`, as the platform prints it.
 
 ## 0.4.0 - 2026-10-24
 

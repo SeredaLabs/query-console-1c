@@ -106,26 +106,33 @@ describe('C51: `(a, b) НЕ В` keeps its meaning', () => {
     expect(suffix).toEqual(prefix);
   });
 
+  // C56: printed in the platform's prefix form (`НЕ НЕ X В`); before, the inner `НЕ`
+  // stayed in `leftExpr` and OK / Save refused the query.
   it.each([
-    ['ГДЕ', W, 4],
-    ['ИМЕЮЩИЕ', `ВЫБРАТЬ Т.Код ИЗ ${S} КАК Т СГРУППИРОВАТЬ ПО Т.Код ИМЕЮЩИЕ `, 3],
+    ['ГДЕ', W, 5],
+    ['ИМЕЮЩИЕ', `ВЫБРАТЬ Т.Код ИЗ ${S} КАК Т СГРУППИРОВАТЬ ПО Т.Код ИМЕЮЩИЕ `, 4],
   ])('a double negation in %s keeps both НЕ', (_slot, head, tabs) => {
     const once = save(head + `НЕ (Т.Код, Т.Наименование) НЕ В ${SUB}`);
-    expect(once).toContain(`\tНЕ (Т.Код, Т.Наименование) НЕ В\n${block(tabs)}`);
+    expect(once).toContain(`\tНЕ НЕ (Т.Код, Т.Наименование) В\n${block(tabs)}`);
     expect(save(once)).toBe(once);
   });
 
+  // C56: any left side of a compact `НЕ В (ВЫБРАТЬ …)` is negated like a tuple and
+  // printed `НЕ X В`, as the platform prints it; before, `X НЕ` stayed in `leftExpr`
+  // and OK / Save refused the query. The grouped forms then drift once more on the
+  // second Save, as `НЕ (…) В` typed directly does (R2, not changed here).
   it.each([
-    ['grouped expression', '(Т.Код + 1)'],
-    ['literal', '1'],
-    ['one-element parentheses', '(Т.Код)'],
-  ])('a non-tuple left side (%s) keeps `НЕ В` as written', (_name, lhs) => {
+    ['grouped expression', '(Т.Код + 1)', false],
+    ['literal', '1', true],
+    ['one-element parentheses', '(Т.Код)', false],
+  ])('a non-tuple left side (%s) is negated like a tuple', (_name, lhs, stable) => {
     const text = `${W}${lhs} НЕ В (ВЫБРАТЬ Х.Код ИЗ ${S} КАК Х)`;
     const cond = firstModel(text).conditions![0];
-    expect(cond.negated).toBeUndefined();
+    expect(cond).toMatchObject({ leftExpr: lhs, negated: true });
     const once = save(text);
-    expect(once).toContain(`\t${lhs} НЕ В\n`);
-    expect(save(once)).toBe(once);
+    expect(once).toContain(`\tНЕ ${lhs} В\n`);
+    expect(save(once) === once).toBe(stable);
+    expect(save(once)).toMatch(/\tНЕ ?(\(|1 |Т\.)/u);
   });
 });
 
