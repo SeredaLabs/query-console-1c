@@ -3,7 +3,7 @@
 The committed corpus exercises repository parse/generate behavior through unit
 tests. [ADR 0004](decisions/0004-querymodel-round-trip-contract.md) requires output
 to match recorded platform-canonical `query_text` for supported attested cases,
-with its explicit literal-value preservation exception;
+with its explicit literal-value preservation and boolean operand scope exceptions;
 this is distinct from an input-text fixed point or semantic-equivalence proof.
 
 ## Evidence roles and limits

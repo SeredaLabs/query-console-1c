@@ -1,0 +1,64 @@
+{
+  "issue": "C54",
+  "platformBuild": "unknown",
+  "platformBuildSource": "The tools do not return the build.",
+  "platformMethod": "SmartLogistic DEV mcp_APIBackend: validate_query, and execute_query on constant derived tables only (no business data, no changes).",
+  "platformDate": "2026-10-24",
+  "note": "Canonical text keeps `(НЕ поле)` before `=`, `>`, `ЕСТЬ NULL` and drops it before `В`, where the result changes (ADR 0004, boolean operand scope exception).",
+  "validation": [
+    {
+      "name": "in_param",
+      "query": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ (НЕ Т.ПометкаУдаления) В (&П)",
+      "platform": {
+        "valid": true,
+        "query_text": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\nГДЕ\n\tНЕ Т.ПометкаУдаления В (&П)"
+      }
+    },
+    {
+      "name": "eq_true",
+      "query": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ (НЕ Т.ПометкаУдаления) = ИСТИНА",
+      "platform": {
+        "valid": true,
+        "query_text": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\nГДЕ\n\t(НЕ Т.ПометкаУдаления) = ИСТИНА"
+      }
+    },
+    {
+      "name": "gt_false",
+      "query": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ (НЕ Т.ПометкаУдаления) > ЛОЖЬ",
+      "platform": {
+        "valid": true,
+        "query_text": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\nГДЕ\n\t(НЕ Т.ПометкаУдаления) > ЛОЖЬ"
+      }
+    },
+    {
+      "name": "is_null",
+      "query": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ (НЕ Т.ПометкаУдаления) ЕСТЬ NULL",
+      "platform": {
+        "valid": true,
+        "query_text": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\nГДЕ\n\t(НЕ Т.ПометкаУдаления) ЕСТЬ NULL"
+      }
+    }
+  ],
+  "execution": [
+    {
+      "name": "in_list_with_parentheses",
+      "query": "ВЫБРАТЬ 1 КАК Р ИЗ (ВЫБРАТЬ ЛОЖЬ КАК Ф) КАК Т ГДЕ (НЕ Т.Ф) В (ИСТИНА, ЛОЖЬ)",
+      "rows": 1
+    },
+    {
+      "name": "in_list_without_parentheses",
+      "query": "ВЫБРАТЬ 1 КАК Р ИЗ (ВЫБРАТЬ ЛОЖЬ КАК Ф) КАК Т ГДЕ НЕ Т.Ф В (ИСТИНА, ЛОЖЬ)",
+      "rows": 0
+    },
+    {
+      "name": "is_null_with_parentheses",
+      "query": "ВЫБРАТЬ 1 КАК Р ИЗ (ВЫБРАТЬ 1 КАК К) КАК А ЛЕВОЕ СОЕДИНЕНИЕ (ВЫБРАТЬ 2 КАК К, ИСТИНА КАК Ф) КАК Т ПО А.К = Т.К ГДЕ (НЕ Т.Ф) ЕСТЬ NULL",
+      "rows": 1
+    },
+    {
+      "name": "is_null_without_parentheses",
+      "query": "ВЫБРАТЬ 1 КАК Р ИЗ (ВЫБРАТЬ 1 КАК К) КАК А ЛЕВОЕ СОЕДИНЕНИЕ (ВЫБРАТЬ 2 КАК К, ИСТИНА КАК Ф) КАК Т ПО А.К = Т.К ГДЕ НЕ Т.Ф ЕСТЬ NULL",
+      "rows": 0
+    }
+  ]
+}

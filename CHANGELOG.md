@@ -22,6 +22,9 @@ All notable changes are recorded here. The project uses
 - A compact `ГДЕ Т.Ссылка НЕ В (ВЫБРАТЬ … ИЗ …)` (also with a literal or an
   expression on the left, a double `НЕ` or in `ИМЕЮЩИЕ`) is no longer refused by
   OK / Save; it is written as `НЕ Т.Ссылка В (…)`, as the platform prints it.
+- A negated field in parentheses before `В` or `ЕСТЬ NULL` (`ГДЕ (НЕ Т.Пометка) В (&П)`)
+  keeps its parentheses on Save. Before, they were removed and the condition negated
+  the whole membership or NULL check, which changes the query result.
 
 ## 0.4.0 - 2026-10-24
 
