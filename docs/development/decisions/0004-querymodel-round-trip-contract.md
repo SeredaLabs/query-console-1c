@@ -65,7 +65,9 @@ Platform canonical text:    ГДЕ НЕ Т.ПометкаУдаления В (&�
 negates the membership instead of the field. The same probes show that the platform
 keeps these parentheses before `=`, `>` and `ЕСТЬ NULL` (where dropping them would also
 change `ЕСТЬ NULL`: 1 row and 0 rows for a NULL `Ф`), so no exception is needed
-there and the Designer prints the platform's text.
+there and the Designer prints the platform's text. Limitation of this evidence: the
+backend does not report the platform build, so the probes are not tied to a version;
+repeat them on a known build before widening or relying on the exception elsewhere.
 
 As for literals, constructor acceptance and canonical text are not proof of semantic
 equivalence; writing a query with another result is worse than a difference from the

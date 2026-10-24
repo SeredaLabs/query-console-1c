@@ -646,7 +646,8 @@ virtual-table condition; a compact `В (ВЫБРАТЬ …)` lost them on the se
 tables): `(НЕ Т.Ф) В (ИСТИНА, ЛОЖЬ)` 1 row → `НЕ Т.Ф В (…)` 0 rows for a false `Ф`;
 `(НЕ Т.Ф) ЕСТЬ NULL` 1 row → `НЕ Т.Ф ЕСТЬ NULL` 0 rows for a NULL `Ф`. The platform's
 canonical text keeps the parentheses before `=`, `>` and `ЕСТЬ NULL` and drops them
-before `В`. [Evidence](../../test/fixtures/platform/c54-negated-operand.json).
+before `В`. The backend does not report the platform build, so these results are not
+tied to a version. [Evidence](../../test/fixtures/platform/c54-negated-operand.json).
 
 The parentheses are now kept when `В`, `НЕ`, `ЕСТЬ`, `ПОДОБНО`, `МЕЖДУ`, `ССЫЛКА`, an
 ordering comparison or arithmetic follows; a whole negated field, `И`/`ИЛИ` and the old
