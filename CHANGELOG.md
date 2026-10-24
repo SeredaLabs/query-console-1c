@@ -14,6 +14,11 @@ All notable changes are recorded here. The project uses
 - A condition ending in an operator word (`ГДЕ Т.Код = 1 И НЕ`, `… И ЕСТЬ`) is
   refused. Before, the word could become an invented field (`И Т.НЕ`) or stay
   as written, and OK / Save wrote a query the platform refuses.
+- A negated `В` / `ПОДОБНО` inside a subquery of an `ИЛИ` condition, inside a
+  function argument or after `И` in a virtual-table condition
+  (`… ГДЕ Х.Ссылка НЕ В (&С))`) keeps its place on Save. Before, `НЕ` was moved to
+  the front of the whole expression, and OK / Save wrote a query with a different
+  meaning.
 
 ## 0.4.0 - 2026-10-24
 

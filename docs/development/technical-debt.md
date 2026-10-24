@@ -548,6 +548,51 @@ English, refused through Query Text with no invented field; controls for bare fi
 comparison); an incomplete `ВЫБОР` is printed with a closing `КОНЕЦ` (`… И ВЫБОР` /
 `КОНЕЦ`) and stays refused.
 
+### C57. Infix НЕ moved out of its operand
+
+**Status:** CLOSED (2026-10-24; recorded the same day as P1, found while implementing
+C56; the same in v0.4.0)
+
+```text
+ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = &К ИЛИ Т.Ссылка В (ВЫБРАТЬ Х.Ссылка ИЗ Справочник.Валюты КАК Х ГДЕ Х.Ссылка НЕ В (&С))
+```
+
+Save prints `… ИЛИ НЕ Т.Ссылка В (ВЫБРАТЬ … ГДЕ Х.Ссылка В (&С))`: the negation of the
+inner condition becomes a negation of the outer membership, and OK / Save writes it
+(Designer and constructor-parity modes alike). The platform keeps the meaning:
+`validate_query` prints `ИЛИ Т.Ссылка В (… ГДЕ НЕ Х.Ссылка В (&С))`.
+[Evidence](../../test/fixtures/platform/c57-nested-not-in.json).
+
+Rule 3 of `canonicalizeLeafLexemes` (`exprFormatter.ts`, called from
+`normalizeLeafCase` for condition leaves, fields and virtual-table arguments) turns the
+first `НЕ` before `В`/`ПОДОБНО` of a one-line leaf into a prefix of the whole leaf. It
+assumes an atomic comparison, but counts neither parentheses nor `И`. Measured on
+`main` `c6011b93`, every form applied:
+
+| Authored | Saved |
+|---|---|
+| `… ИЛИ Т.Ссылка В (ВЫБРАТЬ … ГДЕ Х.Ссылка НЕ В (&С))` (also `ИМЕЮЩИЕ`) | `… ИЛИ НЕ Т.Ссылка В (… ГДЕ Х.Ссылка В (&С))` |
+| `… ГДЕ Х.Наименование НЕ ПОДОБНО "а%")` in the same place | `НЕ Т.Ссылка В (… Х.Наименование ПОДОБНО "а%")` |
+| `ГДЕ ЕСТЬNULL(Т.Код НЕ В (&С), ЛОЖЬ)` | `ГДЕ НЕ ЕСТЬNULL(Т.Код В (&С), ЛОЖЬ)` |
+| `СрезПоследних(&Д, Кратность = 1 И Валюта НЕ В (&В))` | `СрезПоследних(&Д, НЕ Кратность = 1 И Валюта В (&В))` |
+
+A compact `НЕ В (ВЫБРАТЬ …)` in the same nested place is refused today only because of
+the scalar NOT IN refusal (C56, not yet recorded); fixing that first would let this
+rewrite be written, so C56 waits for C57. Unchanged and correct: a top-level
+`X НЕ В (&С)` / `X НЕ ПОДОБНО` / `(Т.Код + 1) НЕ В` (printed `НЕ X В`), a `ВЫБОР` or
+an `И` chain in a select field, and join `ПО` conditions.
+
+Rule 3 now moves `НЕ` only when it stands at the leaf's top parenthesis level with no
+`И`/`ИЛИ`/`ВЫБОР`/`КОГДА`/`ТОГДА`/`ИНАЧЕ` before it at that level; otherwise the text
+stays as written (`Кратность = 1 И Валюта НЕ В (&В)` keeps its infix `НЕ`, unlike the
+platform's canonical text, with the same meaning). The recorded probe is printed byte
+for byte as the platform prints it. Golden, grammar-parity and store gates are
+unchanged; the 19,760 research round-trip records (golden, grammar parity, platform
+fixtures, layout/case/parenthesis variations, pairwise) give the same text and Apply
+decision as before. [Regressions](../../test/unit/nestedNotIn.c57.test.ts) (the four
+forms and `ИМЕЮЩИЕ` keep `НЕ` with its operand through three reopens; the probe; 12
+top-level controls still print `НЕ X В`).
+
 ### C54. Negated field operand loses its parentheses
 
 **Status:** OPEN · P2 · recorded 2026-10-22 (found in the C52/C53 review; the same on `main`)
@@ -838,6 +883,7 @@ and [audit index](audits/README.md).
 | C45 | CLOSED | An empty `И` conjunct in WHERE/HAVING/join no longer disappears on Save: the condition keeps its text and `malformedCustom` refuses it (2026-10-22). [Details](#c45-trailing-и-dropped-from-a-condition). |
 | C46 | CLOSED | A join condition with an empty `И` operand is no longer printed with `()`, so its refusal survives Query Text «Применить»; a typed empty group `()` is refused in every condition slot (2026-10-24). [Details](#c46-empty-join-conjunct-printed-as-и-). |
 | C55 | CLOSED | An incomplete condition ending in an operator word (`… И НЕ`, `ГДЕ ЕСТЬ`) is refused: it is no longer qualified as a field (`Т.НЕ`) and the acceptor no longer takes the word as a value (2026-10-24). [Details](#c55-operator-word-taken-as-a-field). |
+| C57 | CLOSED | An infix `НЕ В` / `НЕ ПОДОБНО` inside a subquery or a function argument, or after `И` in a virtual-table condition, stays with its operand on Save; before, it negated the whole expression (2026-10-24). [Details](#c57-infix-не-moved-out-of-its-operand). |
 | C53 | CLOSED | A non-reference left side of `В (ВЫБРАТЬ …)` split over lines (a line comment or a line break in a tuple) is printed on one line on the first Save, like a raw leaf; left sides the helper does not flatten (`И`/`ИЛИ`, `ВЫБОР`) keep their lines (2026-10-22). [Details](#c53-line-comment-inside-a-tuple-left-side). |
 | C52 | CLOSED | `НЕ НЕ X В (ВЫБРАТЬ …)` no longer moves the subquery one tab on the second Save (2026-10-22). [Details](#c52-doubled-не-before-an-in-subquery-shifts-it-once). |
 | C51 | CLOSED | A tuple left side of `В (ВЫБРАТЬ …)` written compactly no longer changes on the second Save (in `ИМЕЮЩИЕ`, with `НЕ В`, or with bare fields) (2026-10-22). [Details](#c51-tuple-in-subquery-changed-on-the-second-save). |
