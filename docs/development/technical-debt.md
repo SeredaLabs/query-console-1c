@@ -14,11 +14,12 @@ one place, ordered by priority.
 
 ## Open items
 
-23 items: P1 — 1, P2 — 16, P3 — 6. No item is P0.
+24 items: P1 — 2, P2 — 16, P3 — 6. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
 | V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C37–C40 remain open; C36 is an accepted divergence. |
+| C57 | OPEN · P1 | Correctness | An infix `НЕ В` / `НЕ ПОДОБНО` inside a subquery or a function argument of a raw condition, or after `И` in a virtual-table condition, is moved to the front of the whole expression on Save: the meaning changes and OK / Save writes it. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
 | C41 | OPEN · P2 | Correctness | Metadata validation (open, Apply, editor diagnostics) skips field paths kept as raw expression text: `ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions. |
 | C49 | OPEN · P2 | Correctness | Bare-field qualification rewrites `ГРУППИРУЮЩИМ НАБОРАМ` inside a raw-text subquery (`Х.ГРУППИРУЮЩИМ`); since C48 Apply refuses such valid queries, before it wrote them corrupted. |
@@ -46,6 +47,7 @@ one place, ordered by priority.
 
 | ID | Status / priority | Summary |
 |---|---|---|
+| C57 | OPEN · P1 | `X НЕ В (…)` is rewritten as `НЕ X В (…)` without regard to parentheses or `И`: a nested `НЕ` becomes a negation of the outer expression. [Details](#c57-infix-не-moved-out-of-its-operand). |
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
 | C41 | OPEN · P2 | Metadata validation skips field paths kept as raw expression text (`ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions). [Details](#c41-metadata-validation-of-raw-expressions). |
 | C49 | OPEN · P2 | `ГРУППИРУЮЩИМ НАБОРАМ` inside a raw-text subquery is qualified as a field (`Х.ГРУППИРУЮЩИМ`); Apply now refuses the valid query. [Details](#c49-grouping-sets-qualified-in-a-raw-text-subquery). |
@@ -547,6 +549,46 @@ English, refused through Query Text with no invented field; controls for bare fi
 *Not changed:* other bare-field slots (select list, ORDER/GROUP BY, the left side of a
 comparison); an incomplete `ВЫБОР` is printed with a closing `КОНЕЦ` (`… И ВЫБОР` /
 `КОНЕЦ`) and stays refused.
+
+### C57. Infix НЕ moved out of its operand
+
+**Status:** OPEN · P1 · recorded 2026-10-24 (found while implementing C56; the same in
+v0.4.0)
+
+```text
+ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = &К ИЛИ Т.Ссылка В (ВЫБРАТЬ Х.Ссылка ИЗ Справочник.Валюты КАК Х ГДЕ Х.Ссылка НЕ В (&С))
+```
+
+Save prints `… ИЛИ НЕ Т.Ссылка В (ВЫБРАТЬ … ГДЕ Х.Ссылка В (&С))`: the negation of the
+inner condition becomes a negation of the outer membership, and OK / Save writes it
+(Designer and constructor-parity modes alike). The platform keeps the meaning:
+`validate_query` prints `ИЛИ Т.Ссылка В (… ГДЕ НЕ Х.Ссылка В (&С))`.
+[Evidence](../../test/fixtures/platform/c57-nested-not-in.json).
+
+Rule 3 of `canonicalizeLeafLexemes` (`exprFormatter.ts`, called from
+`normalizeLeafCase` for condition leaves, fields and virtual-table arguments) turns the
+first `НЕ` before `В`/`ПОДОБНО` of a one-line leaf into a prefix of the whole leaf. It
+assumes an atomic comparison, but counts neither parentheses nor `И`. Measured on
+`main` `c6011b93`, every form applied:
+
+| Authored | Saved |
+|---|---|
+| `… ИЛИ Т.Ссылка В (ВЫБРАТЬ … ГДЕ Х.Ссылка НЕ В (&С))` (also `ИМЕЮЩИЕ`) | `… ИЛИ НЕ Т.Ссылка В (… ГДЕ Х.Ссылка В (&С))` |
+| `… ГДЕ Х.Наименование НЕ ПОДОБНО "а%")` in the same place | `НЕ Т.Ссылка В (… Х.Наименование ПОДОБНО "а%")` |
+| `ГДЕ ЕСТЬNULL(Т.Код НЕ В (&С), ЛОЖЬ)` | `ГДЕ НЕ ЕСТЬNULL(Т.Код В (&С), ЛОЖЬ)` |
+| `СрезПоследних(&Д, Кратность = 1 И Валюта НЕ В (&В))` | `СрезПоследних(&Д, НЕ Кратность = 1 И Валюта В (&В))` |
+
+A compact `НЕ В (ВЫБРАТЬ …)` in the same nested place is refused today only because of
+the scalar NOT IN refusal (C56, not yet recorded); fixing that first would let this
+rewrite be written, so C56 waits for C57. Unchanged and correct: a top-level
+`X НЕ В (&С)` / `X НЕ ПОДОБНО` / `(Т.Код + 1) НЕ В` (printed `НЕ X В`), a `ВЫБОР` or
+an `И` chain in a select field, and join `ПО` conditions.
+
+**Next boundary:** move `НЕ` only when it stands at the leaf's top parenthesis level
+with no `И`/`ИЛИ`/`ВЫБОР`/`КОГДА`/`ТОГДА`/`ИНАЧЕ` before it at that level; otherwise
+leave the text as written. A scratch run of that rule changed none of 19,760 research
+round-trip records (golden, grammar parity, platform fixtures, variations), passed the
+unit suite and printed the platform text above byte for byte.
 
 ### C54. Negated field operand loses its parentheses
 

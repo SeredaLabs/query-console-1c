@@ -1,0 +1,18 @@
+{
+  "issue": "C57",
+  "platformBuild": "unknown",
+  "platformBuildSource": "validate_query does not return the build.",
+  "platformMethod": "SmartLogistic DEV mcp_APIBackend validate_query; no execution.",
+  "note": "The platform keeps the negation inside the subquery; the Designer moved it to the outer membership (C57).",
+  "cases": [
+    {
+      "name": "nested_not_in_param",
+      "platformDate": "2026-10-24",
+      "query": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = &К ИЛИ Т.Ссылка В (ВЫБРАТЬ Х.Ссылка ИЗ Справочник.Валюты КАК Х ГДЕ Х.Ссылка НЕ В (&С))",
+      "platform": {
+        "valid": true,
+        "query_text": "ВЫБРАТЬ\n\tТ.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Т\nГДЕ\n\t(Т.Код = &К\n\t\t\tИЛИ Т.Ссылка В\n\t\t\t\t(ВЫБРАТЬ\n\t\t\t\t\tХ.Ссылка\n\t\t\t\tИЗ\n\t\t\t\t\tСправочник.Валюты КАК Х\n\t\t\t\tГДЕ\n\t\t\t\t\tНЕ Х.Ссылка В (&С)))"
+      }
+    }
+  ]
+}
