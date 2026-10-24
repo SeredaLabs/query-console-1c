@@ -11,6 +11,9 @@ All notable changes are recorded here. The project uses
   printed with `()` for the empty part. Before, applying the text shown by **Query
   text** without an edit cleared the block, and OK / Save wrote a query the
   platform refuses. An empty group `()` in a condition is now refused too.
+- A condition ending in an operator word (`ГДЕ Т.Код = 1 И НЕ`, `… И ЕСТЬ`) is
+  refused. Before, the word could become an invented field (`И Т.НЕ`) or stay
+  as written, and OK / Save wrote a query the platform refuses.
 
 ## 0.4.0 - 2026-10-24
 

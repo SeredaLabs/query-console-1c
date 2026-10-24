@@ -11,6 +11,14 @@
 /** SDBL literal keywords (`НЕОПРЕДЕЛЕНО`, `ИСТИНА`, `ЛОЖЬ`, `NULL`). */
 export const LITERAL_WORDS = new Set(['НЕОПРЕДЕЛЕНО', 'ИСТИНА', 'ЛОЖЬ', 'NULL']);
 
+/**
+ * C55: operator words that are never a value or a field (canonical Russian form;
+ * `wordOf` maps English). `ССЫЛКА` is left out: `Ссылка` is a field in every object.
+ */
+export const OPERATOR_WORDS = new Set([
+  'НЕ', 'В', 'МЕЖДУ', 'ПОДОБНО', 'ЕСТЬ', 'СПЕЦСИМВОЛ', 'ВЫБОР', 'КОГДА', 'ТОГДА', 'ИНАЧЕ', 'КОНЕЦ',
+]);
+
 /** Aggregate function words (`СУММА`, `КОЛИЧЕСТВО`, `МАКСИМУМ`, `МИНИМУМ`, `СРЕДНЕЕ`). */
 export const AGGREGATE_WORDS = new Set(['СУММА', 'КОЛИЧЕСТВО', 'МАКСИМУМ', 'МИНИМУМ', 'СРЕДНЕЕ']);
 

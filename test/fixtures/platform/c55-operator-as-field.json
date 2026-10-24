@@ -1,0 +1,36 @@
+{
+  "issue": "C55",
+  "platformBuild": "unknown",
+  "platformBuildSource": "validate_query does not return the build.",
+  "platformMethod": "SmartLogistic DEV mcp_APIBackend validate_query; no execution.",
+  "note": "terminal_not_output is the text the generator printed for terminal_not_input before C55 (structured/raw research, 2026-10-23). Errors are the first line of the platform message.",
+  "cases": [
+    {
+      "name": "terminal_not_input",
+      "platformDate": "2026-10-23",
+      "query": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 И НЕ",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 60)}: Syntax error"
+      }
+    },
+    {
+      "name": "terminal_not_output",
+      "platformDate": "2026-10-23",
+      "query": "ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 И Т.НЕ",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 60)}: Field not found \"Т.НЕ\""
+      }
+    },
+    {
+      "name": "two_sources_terminal_est",
+      "platformDate": "2026-10-24",
+      "query": "ВЫБРАТЬ А.Код ИЗ Справочник.Валюты КАК А, Справочник.Валюты КАК Б ГДЕ А.Код = 1 И ЕСТЬ",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 83)}: Syntax error \"ЕСТЬ\""
+      }
+    }
+  ]
+}

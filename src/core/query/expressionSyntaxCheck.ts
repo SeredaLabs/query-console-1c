@@ -34,7 +34,8 @@
  * `isWordToken` лексера (ident или keyword по каноническому значению), а не по
  * одному только `type`.
  */
-import { tokenize, isWordToken, codeRanges, isCodeAt } from './sdblLexer';
+import { tokenize, isWordToken, wordOf, codeRanges, isCodeAt } from './sdblLexer';
+import { OPERATOR_WORDS } from './sdblKeywordSets';
 import type { Token } from './sdblLexer';
 
 function isPunct(t: Token | undefined, value: string): boolean {
@@ -210,6 +211,9 @@ function acceptAtom(cur: ExprCursor): boolean {
   // `… И И`, `И.Код` при псевдониме `И`). Поле с таким именем после точки (`Т.И`)
   // принимает acceptDottedTail.
   if (isWordToken(t, 'И', 'AND', 'ИЛИ', 'OR')) return false;
+  // C55: the same for the other operator words (`… И ЕСТЬ`, `… И В`); with a dot
+  // after it the word is a path head as before (source alias `В`, `В.Код`).
+  if ((t.type === 'ident' || t.type === 'keyword') && OPERATOR_WORDS.has(wordOf(t)) && !isPunct(cur.peek(1), '.')) return false;
 
   // ДАТАВРЕМЯ(...) — распознаётся общим правилом "имя + скобки" ниже (ident-like).
   // Идентификатор: голая ссылка на поле/mdo (a.b.c…) ИЛИ имя функции с вызовом.

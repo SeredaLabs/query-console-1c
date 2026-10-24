@@ -122,6 +122,17 @@ describe('isStructurallyValidExpression — сломанные формы (на�
     }
   });
 
+  it('C55: операторное слово — не операнд (с точкой — путь, как раньше)', () => {
+    for (const t of ['ЕСТЬ', 'В', 'КОНЕЦ', 'КОГДА', 'МЕЖДУ', 'ПОДОБНО', 'СПЕЦСИМВОЛ', 'ТОГДА', 'ИНАЧЕ',
+      'Т.Код = 1 И ЕСТЬ', 'Т.Код = 1 И В', 'IS', 'Т.Код = 1 AND BETWEEN']) {
+      expect(isStructurallyValidExpression(t), t).toBe(false);
+    }
+    for (const t of ['В.Код = 1', 'Т.В', 'Т.ЕСТЬ = 1', 'Т.Код В (1, 2)', 'Т.Код МЕЖДУ 1 И 2', 'Т.Код ЕСТЬ NULL',
+      'ВЫБОР КОГДА Т.Код = 1 ТОГДА 1 ИНАЧЕ 2 КОНЕЦ', 'Т.Имя ПОДОБНО "а%" СПЕЦСИМВОЛ "~"', 'Т.Ссылка ССЫЛКА Справочник.Валюты']) {
+      expect(isStructurallyValidExpression(t), t).toBe(true);
+    }
+  });
+
   it('незакрытая/лишняя скобка', () => {
     expect(isStructurallyValidExpression('(Т.Код = &А')).toBe(false);
     expect(isStructurallyValidExpression('Т.Код = &А)')).toBe(false);

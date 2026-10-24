@@ -510,6 +510,44 @@ parser ([C49](#c49-grouping-sets-qualified-in-a-raw-text-subquery)).
 4 broken inner queries refused, × 7 valid inner queries not refused, token
 boundaries, deep nesting, template marker), e2e in `queryText.spec.ts`.
 
+### C55. Operator word taken as a field
+
+**Status:** CLOSED (2026-10-24; found by the [structured/raw research](audits/structured-raw-2026-10-23/README.md), P1 when recorded)
+
+```text
+ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 И НЕ
+```
+
+An incomplete condition ending in an operator word was taken as a bare field.
+Under a sole source the root `ГДЕ` bare-field rule (`interpretCondition` →
+`tryBareField`, `sdblParser.ts`) qualified it: `… И НЕ` was saved as `… И Т.НЕ`,
+`ГДЕ ЕСТЬ` as `ГДЕ Т.ЕСТЬ`, for `НЕ`, `ВЫБОР`, `КОГДА`, `ТОГДА`, `ИНАЧЕ`, `КОНЕЦ`,
+`ЕСТЬ`, `МЕЖДУ`, `ПОДОБНО`, `В`, `СПЕЦСИМВОЛ` and their English forms. The acceptor
+took `Т.НЕ` as a path, raw field references are not checked against metadata (C41),
+and OK / Save wrote the invented field also with metadata. Without a sole source
+(two sources, `ИМЕЮЩИЕ`, `ПО`) the word stayed as written, but the structural
+acceptor took it as a field (C45 refused only `И`/`ИЛИ`), so the incomplete text
+was written as well; only `НЕ` and `ВЫБОР` were refused there. The platform refuses
+the input (`Syntax error`), the qualified output (`Field not found "Т.НЕ"`) and the
+unqualified form (`… И ЕСТЬ`: `Syntax error "ЕСТЬ"`).
+[Evidence](../../test/fixtures/platform/c55-operator-as-field.json).
+
+A shared `OPERATOR_WORDS` set (`sdblKeywordSets.ts`) holds the eleven words.
+`interpretCondition` no longer qualifies a lone operator word (also after a leading
+`НЕ`); the raw-text qualifier already skipped these words. The acceptor refuses an
+operator word as an operand; followed by a dot it is a path head as before
+(`В.Код` with the platform-invalid source alias `В`, RP11; a field `Т.В`).
+`ССЫЛКА` is not in the set (`Ссылка` is a field of every object). No metadata name and
+no golden-corpus text uses another of these words as a name; golden, grammar-parity
+and store gates are unchanged.
+[Regressions](../../test/unit/operatorAsField.c55.test.ts) (11 words × 7 forms and
+English, refused through Query Text with no invented field; controls for bare fields,
+`Ссылка`, `МЕЖДУ`, `ВЫБОР`, `ЕСТЬ NULL` and alias `В`),
+[acceptor cases](../../test/unit/expressionSyntaxCheck.test.ts), e2e in `queryText.spec.ts`.
+*Not changed:* other bare-field slots (select list, ORDER/GROUP BY, the left side of a
+comparison); an incomplete `ВЫБОР` is printed with a closing `КОНЕЦ` (`… И ВЫБОР` /
+`КОНЕЦ`) and stays refused.
+
 ### C54. Negated field operand loses its parentheses
 
 **Status:** OPEN · P2 · recorded 2026-10-22 (found in the C52/C53 review; the same on `main`)
@@ -799,6 +837,7 @@ and [audit index](audits/README.md).
 | C44 | CLOSED | Query Text no longer shows "✓" or applies an incomplete custom condition that OK / Save refuses: the status bar and Apply use the same `malformedCustom` check (2026-10-22). [Details](#c44-query-text-accepted-an-incomplete-condition). |
 | C45 | CLOSED | An empty `И` conjunct in WHERE/HAVING/join no longer disappears on Save: the condition keeps its text and `malformedCustom` refuses it (2026-10-22). [Details](#c45-trailing-и-dropped-from-a-condition). |
 | C46 | CLOSED | A join condition with an empty `И` operand is no longer printed with `()`, so its refusal survives Query Text «Применить»; a typed empty group `()` is refused in every condition slot (2026-10-24). [Details](#c46-empty-join-conjunct-printed-as-и-). |
+| C55 | CLOSED | An incomplete condition ending in an operator word (`… И НЕ`, `ГДЕ ЕСТЬ`) is refused: it is no longer qualified as a field (`Т.НЕ`) and the acceptor no longer takes the word as a value (2026-10-24). [Details](#c55-operator-word-taken-as-a-field). |
 | C53 | CLOSED | A non-reference left side of `В (ВЫБРАТЬ …)` split over lines (a line comment or a line break in a tuple) is printed on one line on the first Save, like a raw leaf; left sides the helper does not flatten (`И`/`ИЛИ`, `ВЫБОР`) keep their lines (2026-10-22). [Details](#c53-line-comment-inside-a-tuple-left-side). |
 | C52 | CLOSED | `НЕ НЕ X В (ВЫБРАТЬ …)` no longer moves the subquery one tab on the second Save (2026-10-22). [Details](#c52-doubled-не-before-an-in-subquery-shifts-it-once). |
 | C51 | CLOSED | A tuple left side of `В (ВЫБРАТЬ …)` written compactly no longer changes on the second Save (in `ИМЕЮЩИЕ`, with `НЕ В`, or with bare fields) (2026-10-22). [Details](#c51-tuple-in-subquery-changed-on-the-second-save). |
