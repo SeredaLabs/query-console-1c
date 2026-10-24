@@ -3,7 +3,7 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.4.1 - 2026-10-25
 
 ### Fixed
 
