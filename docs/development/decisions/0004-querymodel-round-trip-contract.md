@@ -47,6 +47,44 @@ and canonical text are not proof of semantic equivalence. Structural formatting
 outside literals retains the existing contract. Corpus differences must still
 be enumerated and reviewed, never hidden by rewriting oracle records.
 
+### Boolean operand scope exception (2026-10-24)
+
+The scope of a negation takes precedence over canonical text in one case: the
+Designer keeps the parentheses of a negated field followed by `В`, although the
+platform's canonical text drops them.
+
+```text
+Input and Designer output:  ГДЕ (НЕ Т.ПометкаУдаления) В (&П)
+Platform canonical text:    ГДЕ НЕ Т.ПометкаУдаления В (&П)
+```
+
+[Executed platform evidence](../../../test/fixtures/platform/c54-negated-operand.json)
+(constant derived tables, 2026-10-24): for a false `Ф`,
+`ГДЕ (НЕ Т.Ф) В (ИСТИНА, ЛОЖЬ)` returns 1 row and the canonical
+`ГДЕ НЕ Т.Ф В (ИСТИНА, ЛОЖЬ)` returns 0 rows. The canonical text is accepted, but it
+negates the membership instead of the field. The same probes show that the platform
+keeps these parentheses before `=`, `>` and `ЕСТЬ NULL` (where dropping them would also
+change `ЕСТЬ NULL`: 1 row and 0 rows for a NULL `Ф`), so no exception is needed
+there and the Designer prints the platform's text. Limitation of this evidence: the
+backend does not report the platform build, so the probes are not tied to a version;
+repeat them on a known build before widening or relying on the exception elsewhere.
+
+As for literals, constructor acceptance and canonical text are not proof of semantic
+equivalence; writing a query with another result is worse than a difference from the
+canonical text.
+
+Bounds:
+
+- Only `(НЕ <поле>)` — a negated field path in its own parentheses — directly before
+  `В` (a parameter, a value list or a subquery). All other parenthesis removal and
+  formatting keep the canonical contract.
+- Not a general licence: another case where the canonical text changes the meaning
+  needs its own executed evidence and an amendment of this record.
+- No golden or grammar-parity text has this form today. If one appears, its
+  difference is enumerated and reviewed, the oracle record is never rewritten, and a
+  grammar-parity construct needs an ACCEPTED ledger item listed in
+  `ACCEPTED_DIVERGENCES`.
+
 ## Consequences
 
 - A syntax or generation change is not "done" until it passes a full corpus

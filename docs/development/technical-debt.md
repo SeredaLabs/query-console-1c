@@ -14,7 +14,7 @@ one place, ordered by priority.
 
 ## Open items
 
-23 items: P1 — 1, P2 — 16, P3 — 6. No item is P0.
+22 items: P1 — 1, P2 — 15, P3 — 6. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
@@ -22,7 +22,6 @@ one place, ordered by priority.
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
 | C41 | OPEN · P2 | Correctness | Metadata validation (open, Apply, editor diagnostics) skips field paths kept as raw expression text: `ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions. |
 | C49 | OPEN · P2 | Correctness | Bare-field qualification rewrites `ГРУППИРУЮЩИМ НАБОРАМ` inside a raw-text subquery (`Х.ГРУППИРУЮЩИМ`); since C48 Apply refuses such valid queries, before it wrote them corrupted. |
-| C54 | OPEN · P2 | Correctness | `(НЕ Т.Поле) В (…)` loses its parentheses on Save (`НЕ Т.Поле В (…)`), which negates the membership instead of the operand; needs a platform verdict on the constructor's own output. |
 | A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple literals, numeric arithmetic over constants/direct metadata fields, and bounded SUBSTRING calls; other compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
 | V3 | PARTIAL · P2 | Verification | The Apply gate never compares input and output semantics. |
@@ -49,7 +48,6 @@ one place, ordered by priority.
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
 | C41 | OPEN · P2 | Metadata validation skips field paths kept as raw expression text (`ПолеN` aliases, arithmetic, non-aggregate functions, `ВЫБОР`, WHERE/JOIN conditions). [Details](#c41-metadata-validation-of-raw-expressions). |
 | C49 | OPEN · P2 | `ГРУППИРУЮЩИМ НАБОРАМ` inside a raw-text subquery is qualified as a field (`Х.ГРУППИРУЮЩИМ`); Apply now refuses the valid query. [Details](#c49-grouping-sets-qualified-in-a-raw-text-subquery). |
-| C54 | OPEN · P2 | `(НЕ Т.Поле) В (…)` is printed as `НЕ Т.Поле В (…)`: the meaning changes for `В`. [Details](#c54-negated-field-operand-loses-its-parentheses). |
 | R11 | PARTIAL · P3 | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
 | C34 | PARTIAL · P3 | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. [Details](#c34-english-sdbl-leftovers). |
 | C37 | OPEN · P3 | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
@@ -630,25 +628,42 @@ top-level controls still print `НЕ X В`).
 
 ### C54. Negated field operand loses its parentheses
 
-**Status:** OPEN · P2 · recorded 2026-10-22 (found in the C52/C53 review; the same on `main`)
+**Status:** CLOSED (2026-10-24; recorded 2026-10-22 as P2, found in the C52/C53 review)
 
 ```text
-ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ (НЕ Т.Пометка) В (&П)
+ВЫБРАТЬ Т.Код ИЗ Справочник.Валюты КАК Т ГДЕ (НЕ Т.ПометкаУдаления) В (&П)
 ```
 
-`stripNegatedFieldParens` (`exprFormatter.ts`) removes the parentheses of
-`(НЕ Алиас.Поле)` at the start of a condition leaf and accepts any tail after it, so
-the operand form is rewritten too: Save prints `НЕ Т.Пометка В (&П)`, which is
-`НЕ (Т.Пометка В (&П))`. For `В` (a list, a parameter, a subquery; with a subquery
-on the second Save) the meaning changes: with `&П` = {ИСТИНА, ЛОЖЬ} the condition was
-always true and becomes always false. For `= ИСТИНА`/`= ЛОЖЬ` on a Boolean field
-both forms are equivalent. The helper's rule is documented for the whole condition
-`(НЕ Т.Поле)`; whether the constructor itself also drops the
-parentheses of an operand is unconfirmed.
+`stripNegatedFieldParens` (`exprFormatter.ts`) removed the parentheses of
+`(НЕ Алиас.Поле)` at the start of a leaf and kept any tail after them — a rule from the
+first import, when a condition could still swallow the next section
+(`(НЕ Т.Поле)\n\nУПОРЯДОЧИТЬ …`). Before an operator that tail changed the meaning:
+`НЕ Т.Поле В (…)` negates the membership, `НЕ Т.Поле ЕСТЬ NULL` the NULL check. The
+helper serves `ГДЕ`/`ИМЕЮЩИЕ` leaves, `И`/`ИЛИ` chains (`formatExpression`) and
+virtual-table conditions, so the rewrite also hit a nested raw-text subquery and a
+virtual-table condition; a compact `В (ВЫБРАТЬ …)` lost them on the second Save. Join
+`ПО` and select fields were not affected. Executed on the platform (constant derived
+tables): `(НЕ Т.Ф) В (ИСТИНА, ЛОЖЬ)` 1 row → `НЕ Т.Ф В (…)` 0 rows for a false `Ф`;
+`(НЕ Т.Ф) ЕСТЬ NULL` 1 row → `НЕ Т.Ф ЕСТЬ NULL` 0 rows for a NULL `Ф`. The platform's
+canonical text keeps the parentheses before `=`, `>` and `ЕСТЬ NULL` and drops them
+before `В`. The backend does not report the platform build, so these results are not
+tied to a version. [Evidence](../../test/fixtures/platform/c54-negated-operand.json).
 
-**Next boundary:** platform probe of `(НЕ Т.Поле) В (&П)` and `… = ИСТИНА`; then
-either keep the parentheses when a tail follows (at least before `В`) or record the
-platform's behaviour. Not changed in C52/C53.
+The parentheses are now kept when `В`, `НЕ`, `ЕСТЬ`, `ПОДОБНО`, `МЕЖДУ`, `ССЫЛКА`, an
+ordering comparison or arithmetic follows; a whole negated field, `И`/`ИЛИ` and the old
+section tails, `=` and `<>` (the same result either way) are printed as before. Before
+`ЕСТЬ NULL` and `>` the Designer now prints the platform's text; before `В` it keeps the
+authored parentheses against the platform's canonical text — the
+[boolean operand scope exception](decisions/0004-querymodel-round-trip-contract.md#boolean-operand-scope-exception-2026-10-24)
+of ADR 0004. No golden or grammar-parity text has `(НЕ поле)` before an operator, so no
+`ACCEPTED_DIVERGENCES` entry is needed; golden, grammar-parity and store gates are
+unchanged. [Regressions](../../test/unit/negatedOperandParens.c54.test.ts) (11 forms
+kept on three Saves; the platform text for `ЕСТЬ NULL` and `>`; the `В` difference with
+its executed result; 10 controls).
+*Not changed:* `(НЕ поле) = ИСТИНА` is printed `НЕ поле = ИСТИНА` (same result; the
+platform keeps the parentheses); a compact `В (ВЫБРАТЬ …)` changes its layout once more
+on the second Save (R2). Not probed on the platform: `ПОДОБНО`, `МЕЖДУ`, `ССЫЛКА` and
+arithmetic after `(НЕ поле)` (hardly valid for a Boolean operand).
 
 ### C49. Grouping sets qualified in a raw-text subquery
 
@@ -920,6 +935,7 @@ and [audit index](audits/README.md).
 | C55 | CLOSED | An incomplete condition ending in an operator word (`… И НЕ`, `ГДЕ ЕСТЬ`) is refused: it is no longer qualified as a field (`Т.НЕ`) and the acceptor no longer takes the word as a value (2026-10-24). [Details](#c55-operator-word-taken-as-a-field). |
 | C56 | CLOSED | A compact `X НЕ В (ВЫБРАТЬ …)` with any left side (and `НЕ X НЕ В`) is applied in the platform's prefix form; before, OK / Save refused it (2026-10-24). [Details](#c56-compact-scalar-не-в-subquery-refused). |
 | C57 | CLOSED | An infix `НЕ В` / `НЕ ПОДОБНО` inside a subquery or a function argument, or after `И` in a virtual-table condition, stays with its operand on Save; before, it negated the whole expression (2026-10-24). [Details](#c57-infix-не-moved-out-of-its-operand). |
+| C54 | CLOSED | `(НЕ поле)` keeps its parentheses before `В`, `ЕСТЬ NULL`, ordering comparisons and other operators whose result depends on them; before `В` this is the ADR 0004 boolean operand scope exception (2026-10-24). [Details](#c54-negated-field-operand-loses-its-parentheses). |
 | C53 | CLOSED | A non-reference left side of `В (ВЫБРАТЬ …)` split over lines (a line comment or a line break in a tuple) is printed on one line on the first Save, like a raw leaf; left sides the helper does not flatten (`И`/`ИЛИ`, `ВЫБОР`) keep their lines (2026-10-22). [Details](#c53-line-comment-inside-a-tuple-left-side). |
 | C52 | CLOSED | `НЕ НЕ X В (ВЫБРАТЬ …)` no longer moves the subquery one tab on the second Save (2026-10-22). [Details](#c52-doubled-не-before-an-in-subquery-shifts-it-once). |
 | C51 | CLOSED | A tuple left side of `В (ВЫБРАТЬ …)` written compactly no longer changes on the second Save (in `ИМЕЮЩИЕ`, with `НЕ В`, or with bare fields) (2026-10-22). [Details](#c51-tuple-in-subquery-changed-on-the-second-save). |

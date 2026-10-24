@@ -4193,9 +4193,21 @@ function tabs(n: number): string {
 // пробелом, но это уже верхнеуровневый булев оператор, который формируется отдельной
 // веткой needsFormatting и в stripNegatedFieldParens не приходит).
 const NEGATED_FIELD_RE = /^\(\s*НЕ\s+([\p{L}_][\p{L}\p{N}_]*(?:\.[\p{L}_][\p{L}\p{N}_]*)*)\s*\)(\s[\s\S]*)?$/u;
+/**
+ * C54: operators after `(НЕ поле)` whose result changes without the parentheses —
+ * `НЕ поле В (…)` negates the membership, `НЕ поле ЕСТЬ NULL` the NULL check. Before them
+ * the text stays as written (ADR 0004: boolean operand scope exception). `=` / `<>` give
+ * the same result either way and are printed as before.
+ */
+const NEGATED_OPERAND_OPERATORS = new Set([
+  'В', 'IN', 'НЕ', 'NOT', 'ЕСТЬ', 'IS', 'ПОДОБНО', 'LIKE', 'МЕЖДУ', 'BETWEEN', 'ССЫЛКА', 'REFS',
+  '<', '>', '<=', '>=', '+', '-', '*', '/', '%',
+]);
 export function stripNegatedFieldParens(text: string): string {
   const m = NEGATED_FIELD_RE.exec(text);
   if (!m) return text;
+  const next = m[2] && /^\s*(<=|>=|<>|[=<>+\-*\/%]|[\p{L}_]+)/u.exec(m[2])?.[1];
+  if (next && NEGATED_OPERAND_OPERATORS.has(next.toUpperCase())) return text;
   return `НЕ ${m[1]}${m[2] ?? ''}`;
 }
 
