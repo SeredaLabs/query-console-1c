@@ -159,7 +159,10 @@ export function validateBatchSemantics(
   resolver: MetadataResolver | undefined,
   text: string,
 ): SemanticError[] {
-  const tokens = tokenize(text);
+  // Tokens only place a «table not found» error; lexing the text up front cost about
+  // two thirds of a pass without one (C41 1b profiling), so it is done on demand.
+  let tokens: Token[] | undefined;
+  const textTokens = (): Token[] => (tokens ??= tokenize(text));
   const errors: SemanticError[] = [];
   const tempTableLifetimes = deriveTempTableLifetimes(doc);
 
@@ -199,7 +202,7 @@ export function validateBatchSemantics(
       if (!SUBTABLE_CHECKED_TYPES.has(prefix)) return;
       if (!resolvable(segs[0] + '.' + segs[1])) return;
     }
-    const pos = findPosition(tokens, fullName);
+    const pos = findPosition(textTokens(), fullName);
     errors.push({
       message: pos
         ? `{(${pos.line}, ${pos.col})}: Таблица не найдена "${fullName}"`

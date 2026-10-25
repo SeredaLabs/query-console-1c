@@ -5,6 +5,18 @@ All notable changes are recorded here. The project uses
 
 ## Unreleased
 
+### Added
+
+- Editor diagnostics also flag a field that does not exist, once metadata has been
+  loaded by a hover, autocomplete or Query Designer: the same check that OK / Save
+  uses. Diagnostics never load metadata themselves and update when it is loaded or
+  refreshed; without metadata they behave as before.
+
+### Changed
+
+- Editor diagnostics check again only the queries whose text changed: an edit
+  elsewhere in a large module no longer parses every query in it again.
+
 ### Fixed
 
 - `ГРУППИРУЮЩИМ НАБОРАМ` inside a subquery kept as text (for example in an `ИЛИ`

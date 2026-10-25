@@ -20,7 +20,7 @@ one place, ordered by priority.
 |---|---|---|---|
 | V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C37–C40 remain open; C36 is an accepted divergence. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
-| C41 | PARTIAL · P2 | Correctness | Raw expression text is checked against metadata for `Псевдоним.Путь` of the query's own sources (stage 1); not checked: an unknown alias head, a raw-text subquery, a nested query with one source, virtual-table parameters and ИТОГИ expressions. |
+| C41 | PARTIAL · P2 | Correctness | Raw expression text is checked against metadata for `Псевдоним.Путь` of the query's own sources (stage 1), also in editor diagnostics with loaded metadata (1b); not checked: an unknown alias head, a raw-text subquery, a nested query with one source, virtual-table parameters and ИТОГИ expressions. |
 | A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple literals, numeric arithmetic over constants/direct metadata fields, and bounded SUBSTRING calls; other compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
 | V3 | PARTIAL · P2 | Verification | The Apply gate never compares input and output semantics. |
@@ -258,7 +258,7 @@ No production code or golden output changed in this audit.
 
 ### C41. Metadata validation of raw expressions
 
-**Status:** PARTIAL · P2 (stage 1, 2026-10-25)
+**Status:** PARTIAL · P2 (stages 1 and 1b, 2026-10-25)
 
 `validateBatchSemantics` (opening a query, Query Text analysis and Apply, through
 `tryOpenBatch` / `validateBatchText`) checked field paths against metadata only in
@@ -302,6 +302,18 @@ and platform canonical text (parsed without metadata, as Apply does); research s
 tabular sections, English; controls; correlated subqueries; the parser artefact),
 [corpus gate](../../test/unit/semanticValidatorCorpus.test.ts).
 
+**Stage 1b (editor diagnostics).** With metadata already loaded by a hover,
+autocomplete or Query Designer, editor diagnostics report the same field errors
+(`validateBatchSemantics`, `fieldNotFound` only; other semantic checks stay out). They
+never start a metadata load: the shared cache (`metadataResolverCache.ts`) announces a
+new snapshot and open documents are checked again. Snapshot policy: the most recently
+started load for a path is shared (the panel's own load included); a load superseded
+before it finishes is dropped. Results are reused per document by literal text and
+resolver ([performance](performance.md)).
+[Regressions](../../test/unit/queryDiagnosticsMetadata.c41.test.ts),
+[cache](../../test/unit/queryDiagnosticsCache.c41.test.ts),
+[Extension Host](../../test/vscode-integration/queryDiagnosticsMetadata.test.ts).
+
 **Not checked (left open):**
 
 - an unknown alias head (`Ъ.Код`) — would need a rule for heads that are not sources
@@ -310,7 +322,10 @@ tabular sections, English; controls; correlated subqueries; the parser artefact)
 - a nested query with one source: validation parses without metadata, so a bare outer
   field there is bound to the local source, and checking it would refuse valid
   correlated queries (the same reason the structured `ГДЕ` check is top-level only);
-- virtual-table parameters and ИТОГИ expressions.
+- virtual-table parameters and ИТОГИ expressions;
+- in editor diagnostics, nothing until metadata has been loaded by a hover,
+  autocomplete or Query Designer (passive by decision); a designer panel opened
+  earlier keeps its own snapshot until its «Обновить кэш».
 
 ### C46. Empty join conjunct printed as `И ()`
 
