@@ -102,6 +102,29 @@ describe('C41 1b: what the cache reuses and what it checks again', () => {
     expect(second.lookups()).toBeGreaterThan(0);
   });
 
+  it('identical literals each get their own problem at their own position', () => {
+    const cache = createQueryProblemsCache();
+    const source = `${A}\n${B}\n${A}`;
+    const starts = [source.indexOf('ВЫБРАТЬ'), source.lastIndexOf('ВЫБРАТЬ')];
+    expect(computeQueryParseProblems(source, withoutНет, cache).map(p => p.start)).toEqual(starts);
+    expect(cache.entries.size).toBe(2); // one entry for both copies
+    const shifted = `// правка\n${source}`;
+    expect(computeQueryParseProblems(shifted, withoutНет, cache).map(p => p.start)).toEqual(starts.map(s => s + '// правка\n'.length));
+  });
+
+  it('resolver A → B → A: the right result each time, the literal is not parsed again', () => {
+    const cache = createQueryProblemsCache();
+    const a = counting(withoutНет);
+    const b = counting(withНет);
+    expect(computeQueryParseProblems(A, a.resolver, cache).map(p => p.kind)).toEqual(['fieldNotFound']);
+    const entry = [...cache.entries.values()][0];
+    expect(computeQueryParseProblems(A, b.resolver, cache)).toEqual([]);
+    const aLookups = a.lookups();
+    expect(computeQueryParseProblems(A, a.resolver, cache).map(p => p.kind)).toEqual(['fieldNotFound']);
+    expect(a.lookups()).toBeGreaterThan(aLookups); // the field check ran for A again
+    expect([...cache.entries.values()][0]).toBe(entry); // the parsed literal was kept
+  });
+
   it('losing metadata drops field problems without parsing again', () => {
     const cache = createQueryProblemsCache();
     computeQueryParseProblems(A, withoutНет, cache);

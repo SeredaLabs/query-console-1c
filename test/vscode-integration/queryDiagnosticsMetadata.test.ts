@@ -134,6 +134,49 @@ describe('Extension Host: per-document reuse of literal results (C41 stage 1b)',
   });
 });
 
+describe('Extension Host: turning diagnostics off releases the caches (C41 stage 1b)', () => {
+  let controller: vscode.Disposable;
+  beforeEach(() => {
+    retainMetadataResolverFor(OTHER_CF);
+    controller = registerQueryDiagnostics(SOURCE);
+  });
+  afterEach(async () => {
+    controller.dispose();
+    retainMetadataResolverFor(OTHER_CF);
+    await vscode.workspace.getConfiguration('queryConsole').update('queryDiagnosticsEnabled', undefined, vscode.ConfigurationTarget.Global);
+  });
+
+  // A kept cache would answer the field check without asking the resolver again; a
+  // released one asks it (the parse is not observable here, the lookups are).
+  async function lookupsAfter(release: (doc: vscode.TextDocument) => Promise<vscode.TextDocument>): Promise<number> {
+    let lookups = 0;
+    const base = buildResolverFromTables([table(['Код'])]);
+    setMetadataResolver(CF, { ...base, tableByFullName: (name: string) => { lookups++; return base.tableByFullName(name); } });
+    const doc = await openLooseBsl(QUERY);
+    assert.ok(await waitUntil(() => fieldDiagnostics(doc.uri).length === 1, 5000));
+    const before = lookups;
+    const again = await release(doc);
+    assert.ok(await waitUntil(() => fieldDiagnostics(again.uri).length === 1, 5000), 'the warning comes back');
+    return lookups - before;
+  }
+
+  // Closing is not tested here: VS Code keeps a file document loaded after its editor
+  // closes and fires onDidCloseTextDocument only when it disposes the document, at no
+  // fixed time. The close path (`forget`) releases the cache with the published state.
+
+  it('turning the diagnostics off releases every cache', async function () {
+    this.timeout(20000);
+    const config = vscode.workspace.getConfiguration('queryConsole');
+    const extra = await lookupsAfter(async (doc) => {
+      await config.update('queryDiagnosticsEnabled', false, vscode.ConfigurationTarget.Global);
+      await waitUntil(() => fieldDiagnostics(doc.uri).length === 0, 5000);
+      await config.update('queryDiagnosticsEnabled', true, vscode.ConfigurationTarget.Global);
+      return doc;
+    });
+    assert.ok(extra > 0, 'after turning on again the document was checked from scratch');
+  });
+});
+
 describe('Extension Host: metadataResolverCache lifecycle (C41 stage 1b)', () => {
   const fakeContext = { globalStorageUri: vscode.Uri.file(os.tmpdir()) } as unknown as vscode.ExtensionContext;
   const fakeChannel = { appendLine: () => {} } as unknown as vscode.OutputChannel;
