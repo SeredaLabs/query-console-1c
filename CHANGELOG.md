@@ -3,6 +3,16 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+
+- With metadata loaded, a field that does not exist is now found in expressions too:
+  arithmetic, functions, `ВЫБОР`, a `Поле1` column, and conditions written as text
+  (`ГДЕ Т.Нет = 1`, `… ИЛИ …`, `ИМЕЮЩИЕ`, join conditions, ORDER BY). Before, OK /
+  Save wrote such a query and the platform refused it (`Field not found`). An unknown
+  table alias and subqueries written as text are not checked yet.
+
 ## 0.4.1 - 2026-10-25
 
 ### Fixed
