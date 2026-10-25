@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { resolveOutPath, loadMetadata } from './metadataLoader';
 import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
 import type { MetadataResolver } from '../core/query/metadataResolver';
+import type { MetadataModel } from '../core/metadata/types';
 
 /**
  * Единственный кэш `MetadataResolver` в extension host (для панели конструктора
@@ -40,19 +41,16 @@ function store(entry: CacheEntry | undefined): void {
   changed.fire();
 }
 
-export function getMetadataResolver(
-  cfPath: string,
-  context: vscode.ExtensionContext,
-  channel: vscode.OutputChannel
-): Promise<MetadataResolver> {
-  if (cached && cached.cfPath === cfPath) return cached.resolverPromise;
-  const outPath = resolveOutPath(context);
+/**
+ * C41 1b snapshot policy: the most recently started load for a path is the shared
+ * snapshot (hover, completion, editor diagnostics). A load superseded before it
+ * finishes neither replaces the newer entry nor announces itself.
+ */
+function begin(cfPath: string, model: Promise<MetadataModel>): CacheEntry {
   const entry: CacheEntry = {
     cfPath,
-    resolverPromise: loadMetadata(cfPath, outPath, context, channel).then((model) => {
-      const resolver = buildResolverFromTables(model.tables);
-      // A load replaced meanwhile (another path, a seeded resolver) must not overwrite
-      // the newer entry or announce itself.
+    resolverPromise: model.then((m) => {
+      const resolver = buildResolverFromTables(m.tables);
       if (cached === entry) {
         entry.resolved = resolver;
         changed.fire();
@@ -60,8 +58,19 @@ export function getMetadataResolver(
       return resolver;
     }),
   };
+  // The panel does not await this promise; a failed load is reported to whoever does.
+  entry.resolverPromise.catch(() => undefined);
   cached = entry;
-  return entry.resolverPromise;
+  return entry;
+}
+
+export function getMetadataResolver(
+  cfPath: string,
+  context: vscode.ExtensionContext,
+  channel: vscode.OutputChannel
+): Promise<MetadataResolver> {
+  if (cached && cached.cfPath === cfPath) return cached.resolverPromise;
+  return begin(cfPath, loadMetadata(cfPath, resolveOutPath(context), context, channel)).resolverPromise;
 }
 
 /**
@@ -76,14 +85,12 @@ export function setMetadataResolver(cfPath: string, resolver: MetadataResolver):
 }
 
 /**
- * C41 1b: the designer panel's own first load seeds the cache when it holds nothing for
- * `cfPath`, so diagnostics see the same snapshot as the panel; an entry for the same
- * path (loaded by hover/completion or a refresh) is kept. `build` runs only then.
+ * C41 1b: the designer panel's own load (which keeps its freshness check) becomes the
+ * shared snapshot, so the panel, hover, completion and editor diagnostics use the same
+ * metadata; a later hover or completion reuses it instead of loading again.
  */
-export function offerMetadataResolver(cfPath: string, build: () => MetadataResolver): void {
-  if (cached?.cfPath === cfPath) return;
-  const resolver = build();
-  store({ cfPath, resolverPromise: Promise.resolve(resolver), resolved: resolver });
+export function shareMetadataLoad(cfPath: string, model: Promise<MetadataModel>): void {
+  begin(cfPath, model);
 }
 
 /** C41 1b: the resolver whose load has finished, without starting one. */

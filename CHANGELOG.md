@@ -12,6 +12,11 @@ All notable changes are recorded here. The project uses
   uses. Diagnostics never load metadata themselves and update when it is loaded or
   refreshed; without metadata they behave as before.
 
+### Changed
+
+- Editor diagnostics check again only the queries whose text changed: an edit
+  elsewhere in a large module no longer parses every query in it again.
+
 ## 0.4.1 - 2026-10-25
 
 ### Fixed

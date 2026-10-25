@@ -4,7 +4,7 @@ import { writeLastKnownGood } from '../core/metadata/lastKnownGoodCache';
 import { loadMetadataWithFallback } from '../core/metadata/parser/loadMetadataSafe';
 import { createMetadataRepository } from '../core/metadata/metadataRepository';
 import { resolveOutPath, loadMetadata, isTrustworthyForLastKnownGood } from './metadataLoader';
-import { offerMetadataResolver, setMetadataResolver } from './metadataResolverCache';
+import { setMetadataResolver, shareMetadataLoad } from './metadataResolverCache';
 import { buildResolverFromTables } from '../core/metadata/buildModelResolver';
 import { insertResult } from './insertResult';
 import type { SavedEditorState } from './insertResult';
@@ -138,12 +138,10 @@ export function createDesignerPanel(
 
   const outPath = resolveOutPath(context);
   let metadataModel: MetadataModel = { version: 1, tables: [] };
-  const metadataReady = loadMetadata(cfPath, outPath, context, channel).then(m => {
-    metadataModel = m;
-    // C41 1b: the shared cache (hover, completion, editor diagnostics) gets this
-    // snapshot when it holds nothing for `cfPath`; an empty model is not offered.
-    if (m.tables.length > 0) offerMetadataResolver(cfPath, () => buildResolverFromTables(m.tables));
-  });
+  const metadataLoad = loadMetadata(cfPath, outPath, context, channel);
+  // C41 1b: this load is the shared snapshot for hover, completion and editor diagnostics.
+  shareMetadataLoad(cfPath, metadataLoad);
+  const metadataReady = metadataLoad.then(m => { metadataModel = m; });
 
   panel.webview.onDidReceiveMessage(async (msg: WebviewMsg) => {
     if (msg.type === 'ready') {

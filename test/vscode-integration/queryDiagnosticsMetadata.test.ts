@@ -12,12 +12,12 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { registerQueryDiagnostics } from '../../src/extension/queryDiagnosticsController';
 import {
-  getMetadataResolver, setMetadataResolver, offerMetadataResolver, peekMetadataResolver,
+  getMetadataResolver, setMetadataResolver, shareMetadataLoad, peekMetadataResolver,
   retainMetadataResolverFor, onDidChangeMetadataResolver,
 } from '../../src/extension/metadataResolverCache';
 import { buildResolverFromTables } from '../../src/core/metadata/buildModelResolver';
 import type { MetadataResolver } from '../../src/core/query/metadataResolver';
-import type { MetaTable } from '../../src/core/metadata/types';
+import type { MetaTable, MetadataModel } from '../../src/core/metadata/types';
 import { waitUntil } from './testUtil';
 
 const SOURCE = 'queryConsole1c-test-metadata';
@@ -102,6 +102,38 @@ describe('Extension Host: diagnostics with already loaded metadata (C41 stage 1b
   });
 });
 
+describe('Extension Host: per-document reuse of literal results (C41 stage 1b)', () => {
+  let controller: vscode.Disposable;
+  beforeEach(() => {
+    retainMetadataResolverFor(OTHER_CF);
+    controller = registerQueryDiagnostics(SOURCE);
+  });
+  afterEach(() => {
+    controller.dispose();
+    retainMetadataResolverFor(OTHER_CF);
+  });
+
+  it('edits inside and outside the queries give the result of a full check', async function () {
+    this.timeout(20000);
+    setMetadataResolver(CF, buildResolverFromTables([table(['Код'])]));
+    const one = 'А.Текст = "ВЫБРАТЬ Т.Код КАК Х ИЗ Справочник.Тест КАК Т";';
+    const two = 'Б.Текст = "ВЫБРАТЬ Т.Нет КАК Х ИЗ Справочник.Тест КАК Т";';
+    const doc = await openLooseBsl(`// модуль\n${one}\n${two}\n`);
+    const editor = await vscode.window.showTextDocument(doc);
+    const replaceAll = (text: string) => editor.edit(b => b.replace(new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length)), text));
+    const lines = () => fieldDiagnostics(doc.uri).map(d => d.range.start.line).sort();
+
+    assert.ok(await waitUntil(() => lines().join() === '2', 5000), `expected the second query only, got ${lines()}`);
+    await replaceAll(`// модуль\n${one.replace('Т.Код', 'Т.Нет')}\n${two}\n`); // inside the first query
+    assert.ok(await waitUntil(() => lines().join() === '1,2', 5000), `expected both queries, got ${lines()}`);
+    await replaceAll(`// модуль, правка\n${one.replace('Т.Код', 'Т.Нет')}\n${two}\n`); // outside the queries
+    await new Promise(r => setTimeout(r, 700));
+    assert.strictEqual(lines().join(), '1,2');
+    await replaceAll(`// модуль, правка\n${one.replace('Т.Код', 'Т.Нет')}\n${two.replace('Т.Нет', 'Т.Код')}\n`); // fix the second
+    assert.ok(await waitUntil(() => lines().join() === '1', 5000), `expected the first query only, got ${lines()}`);
+  });
+});
+
 describe('Extension Host: metadataResolverCache lifecycle (C41 stage 1b)', () => {
   const fakeContext = { globalStorageUri: vscode.Uri.file(os.tmpdir()) } as unknown as vscode.ExtensionContext;
   const fakeChannel = { appendLine: () => {} } as unknown as vscode.OutputChannel;
@@ -141,13 +173,30 @@ describe('Extension Host: metadataResolverCache lifecycle (C41 stage 1b)', () =>
     }
   });
 
-  it('the panel offer seeds an empty cache and never replaces an existing entry', () => {
-    retainMetadataResolverFor(OTHER_CF);
-    const first = buildResolverFromTables([table(['Код'])]);
-    offerMetadataResolver(CF, () => first);
-    assert.strictEqual(peekMetadataResolver(), first);
-    offerMetadataResolver(CF, () => buildResolverFromTables([table(['Код', 'Нет'])]));
-    assert.strictEqual(peekMetadataResolver(), first, 'an existing entry for the same path stays');
+  const model = (fields: string[]) => ({ version: 1, tables: [table(fields)] }) as MetadataModel;
+  function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
+    let resolve!: (v: T) => void;
+    return { promise: new Promise<T>(r => { resolve = r; }), resolve };
+  }
+
+  it('the panel load is the shared snapshot: it replaces an earlier one, and hover reuses it', async () => {
+    setMetadataResolver(CF, buildResolverFromTables([table(['Код'])]));
+    shareMetadataLoad(CF, Promise.resolve(model(['Код', 'Нет'])));
+    const shared = await getMetadataResolver(CF, fakeContext, fakeChannel);
+    assert.strictEqual(peekMetadataResolver(), shared);
+    assert.ok(shared.tableByFullName('Справочник.Тест')!.fields.some(f => f.name === 'Нет'), 'the panel snapshot is used');
+    assert.strictEqual(await getMetadataResolver(CF, fakeContext, fakeChannel), shared, 'no second load');
+  });
+
+  it('a load started earlier and finishing later does not replace a newer one', async () => {
+    const older = deferred<MetadataModel>();
+    shareMetadataLoad(CF, older.promise);
+    shareMetadataLoad(CF, Promise.resolve(model(['Код', 'Нет'])));
+    const newer = await getMetadataResolver(CF, fakeContext, fakeChannel);
+    older.resolve(model(['Код']));
+    await older.promise;
+    await new Promise(r => setTimeout(r, 20));
+    assert.strictEqual(peekMetadataResolver(), newer);
   });
 
   it('a changed metadata path drops the cached resolver', () => {

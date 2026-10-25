@@ -21,12 +21,13 @@
  *   (`peekMetadataResolver`; загрузку запускают hover/completion/панель, не
  *   диагностика). Смена резолвера (`onDidChangeMetadataResolver`) перепроверяет
  *   открытые документы без правки; та же версия документа с тем же резолвером
- *   повторно не считается. Смена `queryConsole.metadataPath` сбрасывает кэш, если
+ *   повторно не считается, а в изменённом документе литералы с прежним текстом
+ *   берутся из кэша документа (`QueryProblemsCache`), разбираются только новые. Смена `queryConsole.metadataPath` сбрасывает кэш, если
  *   путь выгрузки стал другим.
  */
 
 import * as vscode from 'vscode';
-import { computeQueryParseProblems, type QueryParseProblem } from './queryDiagnostics';
+import { computeQueryParseProblems, createQueryProblemsCache, type QueryParseProblem, type QueryProblemsCache } from './queryDiagnostics';
 import { onDidChangeMetadataResolver, peekMetadataResolver, retainMetadataResolverFor } from './metadataResolverCache';
 import { resolveCfPath } from './resolveCfPath';
 import type { MetadataResolver } from '../core/query/metadataResolver';
@@ -88,6 +89,7 @@ export function registerQueryDiagnostics(diagnosticSource: string = DIAGNOSTIC_S
   // Последняя опубликованная проверка документа: та же версия с тем же резолвером
   // повторно не считается (C41 1b — событие кэша перепроверяет все открытые).
   const published = new Map<string, { version: number; resolver: MetadataResolver | undefined }>();
+  const caches = new Map<string, QueryProblemsCache>();
   let disposed = false;
 
   function clearState(key: string): void {
@@ -105,7 +107,9 @@ export function registerQueryDiagnostics(diagnosticSource: string = DIAGNOSTIC_S
     const resolver = peekMetadataResolver();
     const last = published.get(key);
     if (last && last.version === document.version && last.resolver === resolver) return;
-    const problems = computeQueryParseProblems(document.getText(), resolver);
+    let cache = caches.get(key);
+    if (!cache) caches.set(key, (cache = createQueryProblemsCache()));
+    const problems = computeQueryParseProblems(document.getText(), resolver, cache);
     collection.set(document.uri, problems.map((p) => toDiagnostic(document, p, diagnosticSource)));
     published.set(key, { version: document.version, resolver });
   }
@@ -126,6 +130,7 @@ export function registerQueryDiagnostics(diagnosticSource: string = DIAGNOSTIC_S
   function forget(document: vscode.TextDocument): void {
     clearState(document.uri.toString());
     published.delete(document.uri.toString());
+    caches.delete(document.uri.toString());
     collection.delete(document.uri);
   }
 
@@ -148,6 +153,7 @@ export function registerQueryDiagnostics(diagnosticSource: string = DIAGNOSTIC_S
       } else {
         for (const key of states.keys()) clearState(key);
         published.clear();
+        caches.clear();
         collection.clear();
       }
     }),
