@@ -18,7 +18,27 @@ import type { MetadataResolver } from '../core/query/metadataResolver';
  * `createPanel` вызывает `setMetadataResolver` сразу после успешного rebuild
  * (см. panel.ts), передавая уже готовую модель без повторного парсинга.
  */
-let cached: { cfPath: string; resolverPromise: Promise<MetadataResolver> } | undefined;
+interface CacheEntry {
+  cfPath: string;
+  resolverPromise: Promise<MetadataResolver>;
+  /** Set once the load has finished (C41 1b: `peekMetadataResolver`). */
+  resolved?: MetadataResolver;
+}
+
+let cached: CacheEntry | undefined;
+
+/**
+ * C41 1b: the cached resolver changed (a load finished, the panel seeded or refreshed
+ * it, the metadata path changed). Editor diagnostics re-check open documents on it;
+ * they never start a load themselves.
+ */
+const changed = new vscode.EventEmitter<void>();
+export const onDidChangeMetadataResolver: vscode.Event<void> = changed.event;
+
+function store(entry: CacheEntry | undefined): void {
+  cached = entry;
+  changed.fire();
+}
 
 export function getMetadataResolver(
   cfPath: string,
@@ -27,11 +47,21 @@ export function getMetadataResolver(
 ): Promise<MetadataResolver> {
   if (cached && cached.cfPath === cfPath) return cached.resolverPromise;
   const outPath = resolveOutPath(context);
-  const resolverPromise = loadMetadata(cfPath, outPath, context, channel).then((model) =>
-    buildResolverFromTables(model.tables)
-  );
-  cached = { cfPath, resolverPromise };
-  return resolverPromise;
+  const entry: CacheEntry = {
+    cfPath,
+    resolverPromise: loadMetadata(cfPath, outPath, context, channel).then((model) => {
+      const resolver = buildResolverFromTables(model.tables);
+      // A load replaced meanwhile (another path, a seeded resolver) must not overwrite
+      // the newer entry or announce itself.
+      if (cached === entry) {
+        entry.resolved = resolver;
+        changed.fire();
+      }
+      return resolver;
+    }),
+  };
+  cached = entry;
+  return entry.resolverPromise;
 }
 
 /**
@@ -42,5 +72,26 @@ export function getMetadataResolver(
  * `cfPath`.
  */
 export function setMetadataResolver(cfPath: string, resolver: MetadataResolver): void {
-  cached = { cfPath, resolverPromise: Promise.resolve(resolver) };
+  store({ cfPath, resolverPromise: Promise.resolve(resolver), resolved: resolver });
+}
+
+/**
+ * C41 1b: the designer panel's own first load seeds the cache when it holds nothing for
+ * `cfPath`, so diagnostics see the same snapshot as the panel; an entry for the same
+ * path (loaded by hover/completion or a refresh) is kept. `build` runs only then.
+ */
+export function offerMetadataResolver(cfPath: string, build: () => MetadataResolver): void {
+  if (cached?.cfPath === cfPath) return;
+  const resolver = build();
+  store({ cfPath, resolverPromise: Promise.resolve(resolver), resolved: resolver });
+}
+
+/** C41 1b: the resolver whose load has finished, without starting one. */
+export function peekMetadataResolver(): MetadataResolver | undefined {
+  return cached?.resolved;
+}
+
+/** C41 1b: drops the cached resolver when the metadata path is no longer `cfPath`. */
+export function retainMetadataResolverFor(cfPath: string): void {
+  if (cached && cached.cfPath !== cfPath) store(undefined);
 }

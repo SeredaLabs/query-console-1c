@@ -62,6 +62,11 @@ expression, which the designer would refuse to apply. Disable this
 with `queryConsole.queryDiagnosticsEnabled` if it produces false positives for
 queries built by string concatenation.
 
+Once metadata has been loaded (by a hover, autocomplete or Query Designer), a
+field that does not exist (`Поле "Нет" не найдено`) is flagged as well, with the
+same check the designer uses before applying. Diagnostics never load metadata
+themselves; they update when it is loaded or refreshed.
+
 ## 🗂️ When nothing shows
 
 Hover and autocomplete for fields need metadata to be available, either through

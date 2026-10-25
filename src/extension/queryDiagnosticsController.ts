@@ -17,13 +17,26 @@
  * - Дебаунс ~400ms на документ + проверка «не устарел ли результат» (версия
  *   документа и номер поколения запроса) перед публикацией — тот же класс гонки,
  *   что уже стерегут в `insertResult.ts` через `documentVersion`.
+ * - C41 1b: проверка полей по метаданным — только по УЖЕ загруженному резолверу
+ *   (`peekMetadataResolver`; загрузку запускают hover/completion/панель, не
+ *   диагностика). Смена резолвера (`onDidChangeMetadataResolver`) перепроверяет
+ *   открытые документы без правки; та же версия документа с тем же резолвером
+ *   повторно не считается. Смена `queryConsole.metadataPath` сбрасывает кэш, если
+ *   путь выгрузки стал другим.
  */
 
 import * as vscode from 'vscode';
 import { computeQueryParseProblems, type QueryParseProblem } from './queryDiagnostics';
+import { onDidChangeMetadataResolver, peekMetadataResolver, retainMetadataResolverFor } from './metadataResolverCache';
+import { resolveCfPath } from './resolveCfPath';
+import type { MetadataResolver } from '../core/query/metadataResolver';
 
 const DIAGNOSTIC_SOURCE = 'queryConsole1c';
-const DIAGNOSTIC_CODE = { parse: 'designer-parse', malformedExpression: 'designer-malformed-expression' } as const;
+const DIAGNOSTIC_CODE = {
+  parse: 'designer-parse',
+  malformedExpression: 'designer-malformed-expression',
+  fieldNotFound: 'designer-field-not-found',
+} as const;
 const DEBOUNCE_MS = 400;
 
 function isQueryDocument(document: vscode.TextDocument): boolean {
@@ -38,7 +51,9 @@ function toDiagnostic(document: vscode.TextDocument, problem: QueryParseProblem,
   const range = new vscode.Range(document.positionAt(problem.start), document.positionAt(problem.end));
   const message = problem.kind === 'parse'
     ? vscode.l10n.t('Query Designer cannot parse this query: {error}', { error: problem.message })
-    : vscode.l10n.t('Query Designer will not apply this query: a custom condition or expression appears to be syntactically broken.');
+    : problem.kind === 'fieldNotFound'
+      ? vscode.l10n.t('Query Designer will not apply this query: {error}', { error: problem.message })
+      : vscode.l10n.t('Query Designer will not apply this query: a custom condition or expression appears to be syntactically broken.');
   const diagnostic = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Warning);
   diagnostic.source = source;
   diagnostic.code = DIAGNOSTIC_CODE[problem.kind];
@@ -70,6 +85,9 @@ interface DocState {
 export function registerQueryDiagnostics(diagnosticSource: string = DIAGNOSTIC_SOURCE): vscode.Disposable {
   const collection = vscode.languages.createDiagnosticCollection(diagnosticSource);
   const states = new Map<string, DocState>();
+  // Последняя опубликованная проверка документа: та же версия с тем же резолвером
+  // повторно не считается (C41 1b — событие кэша перепроверяет все открытые).
+  const published = new Map<string, { version: number; resolver: MetadataResolver | undefined }>();
   let disposed = false;
 
   function clearState(key: string): void {
@@ -84,8 +102,12 @@ export function registerQueryDiagnostics(diagnosticSource: string = DIAGNOSTIC_S
     const state = states.get(key);
     if (!state || state.generation !== generation) return; // вытеснено более новым изменением
     if (document.isClosed || document.version !== versionAtSchedule) return; // устарело
-    const problems = computeQueryParseProblems(document.getText());
+    const resolver = peekMetadataResolver();
+    const last = published.get(key);
+    if (last && last.version === document.version && last.resolver === resolver) return;
+    const problems = computeQueryParseProblems(document.getText(), resolver);
     collection.set(document.uri, problems.map((p) => toDiagnostic(document, p, diagnosticSource)));
+    published.set(key, { version: document.version, resolver });
   }
 
   function schedule(document: vscode.TextDocument, delayMs: number): void {
@@ -103,6 +125,7 @@ export function registerQueryDiagnostics(diagnosticSource: string = DIAGNOSTIC_S
 
   function forget(document: vscode.TextDocument): void {
     clearState(document.uri.toString());
+    published.delete(document.uri.toString());
     collection.delete(document.uri);
   }
 
@@ -117,14 +140,18 @@ export function registerQueryDiagnostics(diagnosticSource: string = DIAGNOSTIC_S
     vscode.workspace.onDidChangeTextDocument((event) => schedule(event.document, DEBOUNCE_MS)),
     vscode.workspace.onDidCloseTextDocument((document) => forget(document)),
     vscode.workspace.onDidChangeConfiguration((event) => {
+      // The cache event that follows re-checks the open documents.
+      if (event.affectsConfiguration('queryConsole.metadataPath')) retainMetadataResolverFor(resolveCfPath());
       if (!event.affectsConfiguration('queryConsole.queryDiagnosticsEnabled')) return;
       if (isEnabled()) {
         recheckAllOpen();
       } else {
         for (const key of states.keys()) clearState(key);
+        published.clear();
         collection.clear();
       }
-    })
+    }),
+    onDidChangeMetadataResolver(() => recheckAllOpen())
   );
 
   recheckAllOpen();

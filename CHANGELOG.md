@@ -3,6 +3,15 @@
 All notable changes are recorded here. The project uses
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+
+- Editor diagnostics also flag a field that does not exist, once metadata has been
+  loaded by a hover, autocomplete or Query Designer: the same check that OK / Save
+  uses. Diagnostics never load metadata themselves and update when it is loaded or
+  refreshed; without metadata they behave as before.
+
 ## 0.4.1 - 2026-10-25
 
 ### Fixed
