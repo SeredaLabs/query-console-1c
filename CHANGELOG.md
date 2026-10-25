@@ -17,6 +17,18 @@ All notable changes are recorded here. The project uses
 - Editor diagnostics check again only the queries whose text changed: an edit
   elsewhere in a large module no longer parses every query in it again.
 
+### Fixed
+
+- `ГРУППИРУЮЩИМ НАБОРАМ` inside a subquery kept as text (for example in an `ИЛИ`
+  condition) is no longer rewritten as fields (`Х.ГРУППИРУЮЩИМ`), and the parentheses
+  of its sets are kept. Before, OK / Save refused such a query. Grouping sets are
+  not confirmed on the platforms available for testing.
+- With metadata loaded, a field that does not exist is now found in expressions too:
+  arithmetic, functions, `ВЫБОР`, a `Поле1` column, and conditions written as text
+  (`ГДЕ Т.Нет = 1`, `… ИЛИ …`, `ИМЕЮЩИЕ`, join conditions, ORDER BY). Before, OK /
+  Save wrote such a query and the platform refused it (`Field not found`). An unknown
+  table alias and subqueries written as text are not checked yet.
+
 ## 0.4.1 - 2026-10-25
 
 ### Fixed

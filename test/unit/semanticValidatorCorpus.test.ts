@@ -15,6 +15,7 @@ import * as path from 'path';
 import { parseBatch } from '../../src/core/query/sdblParser';
 import { validateBatchSemantics, findMalformedCustomExpressions } from '../../src/core/query/semanticValidator';
 import { buildYamlResolver } from '../../src/core/metadata/buildYamlResolver';
+import { validateBatchText, tryOpenBatch } from '../../src/core/query/validateBatch';
 
 interface Golden { file: string; valid: boolean; input: string; query_text: string; }
 
@@ -150,6 +151,49 @@ describe('checkFieldPaths: нуль хибних спрацювань на ре�
       .map(f => `  ${f.file}:\n    ${f.messages.join('\n    ')}`)
       .join('\n');
     expect(falsePositives, `Хибних спрацювань: ${falsePositives.length}\n${preview}`).toEqual([]);
+  });
+
+  // C41: raw expression text (select expressions, custom ГДЕ/ИМЕЮЩИЕ/ПО) is checked too;
+  // the corpus has it in every section, so the zero above covers the new branch.
+  it('C41: golden queries have field paths in raw expression text', () => {
+    const coverage = { select: 0, where: 0, join: 0 };
+    const qualified = /[\p{L}\p{N}_]\.[\p{L}_]/u;
+    for (const g of golden) {
+      if (!g.valid) continue;
+      let doc;
+      try {
+        doc = parseBatch(g.input, resolver);
+      } catch {
+        continue;
+      }
+      for (const member of doc.members) {
+        for (const m of member.members) {
+          if (m.model.fields.some(f => f.expression !== undefined && qualified.test(f.expression))) coverage.select++;
+          if ((m.model.conditions ?? []).some(c => c.custom && qualified.test(c.expression ?? ''))) coverage.where++;
+          if ((m.model.joins ?? []).some(j => (j.conditions ?? [j]).some(c => c.custom && qualified.test(c.expression ?? '')))) coverage.join++;
+        }
+      }
+    }
+    for (const [branch, count] of Object.entries(coverage)) {
+      expect(count, `${branch}: очікувався принаймні 1 реальний golden-запит`).toBeGreaterThan(0);
+    }
+  });
+
+  // C41: Apply and opening parse WITHOUT metadata (`tryParseBatch`), so bare fields are
+  // qualified differently than above; the same queries must pass that path as well.
+  it('C41: no "Поле … не найдено" through validateBatchText / tryOpenBatch (input and canonical text)', () => {
+    const falsePositives: string[] = [];
+    for (const g of golden) {
+      if (!g.valid) continue;
+      for (const text of [g.input, g.query_text]) {
+        if (!text) continue;
+        const v = validateBatchText(text, resolver);
+        if (!v.ok && v.error.includes('не найдено')) falsePositives.push(`${g.file}: ${v.error}`);
+        const o = tryOpenBatch(text, resolver, { preserveComments: true });
+        if (!o.ok && o.error.includes('не найдено')) falsePositives.push(`${g.file} (open): ${o.error}`);
+      }
+    }
+    expect(falsePositives, falsePositives.slice(0, 20).join('\n')).toEqual([]);
   });
 
   it('жоден реальний запит не дає "Повторяющийся псевдоним источника" (architecture audit P1 №4, 2026-09-22)', () => {

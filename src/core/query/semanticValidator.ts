@@ -29,13 +29,15 @@ import { orderedSelectElements } from './unionModel';
 import type { QueryModel, SelectedTable, Condition, VirtualParams } from './queryModel';
 import type { MetadataResolver } from './metadataResolver';
 import type { MetaTable } from '../metadata/types';
-import { tokenize, tryTokenize } from './sdblLexer';
+import { tokenize, tryTokenize, wordOf } from './sdblLexer';
 import type { Token } from './sdblLexer';
 import { embeddedSubqueryTexts, isStructurallyValidExpression, parseEmptyTableColumns } from './expressionSyntaxCheck';
 import { parseDocument } from './sdblParser';
 import { resolveFieldPath } from './fieldPathResolver';
 import { deriveTempTableLifetimes, visibleTempTableAt } from './tempTableSemantics';
 import { hasUnexpandedWildcard, isWildcardExpression } from './expandStarFields';
+import { resolveAliases } from './queryModelUtils';
+import { OPERATOR_WORDS } from './sdblKeywordSets';
 
 /**
  * C43: `resolveFieldPath` follows only a field's first reference type, but a
@@ -384,6 +386,29 @@ export function validateBatchSemantics(
         checkOne(c.tableId, c.path, 'having');
       }
     }
+
+    // C41: `Псевдоним.Путь` in raw expression text whose head is a source of this query.
+    // A nested query with one source is skipped: validation parses without metadata, so
+    // a bare outer field there is bound to the local source (the reason the structured
+    // ГДЕ/ИМЕЮЩИЕ check above runs only at the top level).
+    if (topLevel || model.tables.length > 1) {
+      const aliasIds = new Map<string, string>();
+      for (const [id, alias] of resolveAliases(model.tables)) aliasIds.set(alias.toUpperCase(), id);
+      const checkRaw = (text: string | undefined, section: FieldValidationSection): void => {
+        for (const ref of rawFieldReferences(text, aliasIds)) checkOne(ref.tableId, ref.path, section);
+      };
+      for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
+        if (!isWildcardExpression(f.expression)) checkRaw(f.expression, 'select');
+      }
+      for (const c of model.conditions ?? []) if (c.custom) { checkRaw(c.expression, 'where'); checkRaw(c.leftExpr, 'where'); }
+      for (const c of model.having ?? []) if (c.custom) { checkRaw(c.expression, 'having'); checkRaw(c.leftExpr, 'having'); }
+      for (const j of model.joins ?? []) {
+        if (!j.conditions) { if (j.custom) checkRaw(j.expression, 'join'); continue; }
+        for (const c of j.conditions) if (c.custom) checkRaw(c.expression, 'join');
+      }
+      for (const f of model.grouping?.groupFields ?? []) checkRaw(f.expression, 'grouping');
+      for (const f of model.order?.fields ?? []) checkRaw(f.expression, 'order');
+    }
   };
 
   // C24: a wildcard with an alias (`* КАК Поле1`, `Т.* КАК Х`) is a platform syntax
@@ -583,6 +608,65 @@ const VT_EXPRESSION_KEYS: (keyof VirtualParams)[] = [
   'condition', 'accountCondition', 'corrAccountCondition',
   'accountDtCondition', 'accountKtCondition',
 ];
+
+/**
+ * C41: field references `Псевдоним.Путь` in raw expression text, by lexer tokens, whose
+ * head is one of `aliasIds` (upper-case alias → table id). Skipped: a nested
+ * `(ВЫБРАТЬ …)` (its own scope), arguments of `ЗНАЧЕНИЕ`/`ТИП` and a `.(…)` column list
+ * (metadata names), a type after `КАК`/`ССЫЛКА`, a path followed by `(` or `.(`, and a
+ * path with an operator word as a segment — the parser's reading of an invalid text
+ * (`НЕ В.Поле` with source alias `В` → `В.НЕ`), not a field the user wrote. Unlexable
+ * text yields nothing.
+ */
+function rawFieldReferences(text: string | undefined, aliasIds: ReadonlyMap<string, string>): Array<{ tableId: string; path: string }> {
+  if (!text || aliasIds.size === 0) return [];
+  const tokens = tryTokenize(text);
+  if (!tokens) return [];
+  const sig = tokens.filter(t => t.type !== 'eof');
+  const isPunct = (t: Token | undefined, v: string): boolean => !!t && t.type === 'punct' && t.value === v;
+  const isWord = (t: Token | undefined): t is Token => !!t && (t.type === 'ident' || t.type === 'keyword');
+  const refs: Array<{ tableId: string; path: string }> = [];
+  const skipDepths: number[] = [];
+  let depth = 0;
+  for (let i = 0; i < sig.length; i++) {
+    const t = sig[i];
+    if (isPunct(t, '(')) {
+      if (isWord(sig[i + 1]) && wordOf(sig[i + 1]) === 'ВЫБРАТЬ') {
+        let d = 0;
+        for (; i < sig.length; i++) {
+          if (isPunct(sig[i], '(')) d++;
+          else if (isPunct(sig[i], ')') && --d === 0) break;
+        }
+        continue;
+      }
+      depth++;
+      const head = sig[i - 1];
+      if (isPunct(head, '.') || (isWord(head) && (wordOf(head) === 'ЗНАЧЕНИЕ' || wordOf(head) === 'ТИП'))) skipDepths.push(depth);
+      continue;
+    }
+    if (isPunct(t, ')')) {
+      if (skipDepths[skipDepths.length - 1] === depth) skipDepths.pop();
+      depth--;
+      continue;
+    }
+    if (skipDepths.length > 0 || !isWord(t) || !isPunct(sig[i + 1], '.')) continue;
+    const prev = sig[i - 1];
+    if (isPunct(prev, '.') || (isWord(prev) && (wordOf(prev) === 'КАК' || wordOf(prev) === 'ССЫЛКА'))) continue;
+    const segs: Token[] = [];
+    let k = i + 1;
+    while (isPunct(sig[k], '.') && isWord(sig[k + 1])) {
+      segs.push(sig[k + 1]);
+      k += 2;
+    }
+    const after = sig[k];
+    const tableId = aliasIds.get(t.text.toUpperCase());
+    i = k - 1;
+    if (!tableId || segs.length === 0 || isPunct(after, '(') || isPunct(after, '.')) continue;
+    if (segs.some(seg => OPERATOR_WORDS.has(wordOf(seg)))) continue;
+    refs.push({ tableId, path: segs.map(seg => seg.text).join('.') });
+  }
+  return refs;
+}
 
 function isWordToken(t: Token | undefined, word: string): boolean {
   return !!t && (t.type === 'ident' || t.type === 'keyword') && t.value.toUpperCase() === word;

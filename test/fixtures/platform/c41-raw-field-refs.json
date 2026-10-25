@@ -1,0 +1,27 @@
+{
+  "issue": "C41",
+  "platformBuild": "unknown",
+  "platformBuildSource": "validate_query does not return the build.",
+  "platformMethod": "SmartLogistic DEV mcp_APIBackend validate_query; no execution.",
+  "note": "A missing field in raw expression text (arithmetic in the select list, an ИЛИ condition) is refused by the platform. Errors are the first line of the platform message.",
+  "cases": [
+    {
+      "name": "select_arithmetic",
+      "platformDate": "2026-10-25",
+      "query": "ВЫБРАТЬ Т.Код + Т.НетТакогоПоля КАК Х ИЗ Справочник.Валюты КАК Т",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 19)}: Field not found \"Т.НетТакогоПоля\""
+      }
+    },
+    {
+      "name": "where_or",
+      "platformDate": "2026-10-25",
+      "query": "ВЫБРАТЬ Т.Код КАК К ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 ИЛИ Т.НетТакогоПоля = 2",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 68)}: Field not found \"Т.НетТакогоПоля\""
+      }
+    }
+  ]
+}
