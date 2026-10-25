@@ -91,12 +91,12 @@ describe('C48: structurally valid subqueries in the same forms stay applicable',
     expect(flat(generateBatch(parse(input)))).toContain(`Т.Код В (${sub('Х.Код = 1')})`);
   });
 
-  // C49 (OPEN): the parser already qualifies `ГРУППИРУЮЩИМ` as a field in raw text; the
-  // corrupted text is refused instead of written. Update when C49 is fixed.
-  it('refuses grouping sets corrupted by bare-field qualification (C49)', () => {
+  // C49 (CLOSED): grouping sets in raw text are no longer qualified as fields, so the
+  // subquery is valid and applicable. Full coverage: groupingSetsRaw.c49.test.ts.
+  it('keeps grouping sets applicable (C49)', () => {
     const input = forms[1][1]('ВЫБРАТЬ Х.Код ИЗ Справочник.Валюты КАК Х СГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ ((Х.Код), (Х.Наименование))');
-    expect(generateBatch(parse(input))).toContain('Х.ГРУППИРУЮЩИМ');
-    expect(finalApplyBlocker(input)).toEqual({ kind: 'malformedCustom' });
+    expect(generateBatch(parse(input))).not.toContain('Х.ГРУППИРУЮЩИМ');
+    expect(finalApplyBlocker(input)).toBeNull();
   });
 
   // Template markers are substituted before the text becomes SDBL (R7): not judged.

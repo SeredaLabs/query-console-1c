@@ -795,13 +795,34 @@ export function reindentLeafSubquery(text: string, base: number): string {
   // конструктор приклеивает её к последней содержательной строке тела
   // (`…&КлючВарианта)`), а псевдоним поля добавляет вызывающий (фаза 6.15.20, MCP).
   // Срабатывает только когда последняя строка — ровно закрывающие скобки.
+  // C49: and only when they close nothing opened inside the body — the closing `)`
+  // of a grouping-set list printed on its own line stays there.
   const last = split.length - 1;
-  if (last > start && /^\t*\)+$/u.test(split[last])) {
+  if (last > start && /^\t*\)+$/u.test(split[last]) && !closesBodyGroup(split.slice(start, last).join('\n'))) {
     const close = split[last].trim();
     split.splice(last, 1);
     split[split.length - 1] = split[split.length - 1].replace(/[ \t]+$/u, '') + close;
   }
   return split.join('\n');
+}
+
+/**
+ * C49: whether the subquery body (from its `(ВЫБРАТЬ` line) leaves a bracket of its own
+ * open, besides the `(` of `(ВЫБРАТЬ`. Brackets in literals and comments do not count;
+ * unknown lexical facts count as open, so nothing is glued. Relies on the balance check
+ * of `reindentLeafSubquery`: the block stays open until the closing line, so the body's
+ * first `(` is the subquery's own (a broken balance never reaches this rule).
+ */
+function closesBodyGroup(body: string): boolean {
+  const ranges = codeRanges(body);
+  if (!ranges) return true;
+  let depth = 0;
+  for (let p = 0; p < body.length; p++) {
+    if (body[p] !== '(' && body[p] !== ')') continue;
+    if (!isCodeAt(ranges, p)) continue;
+    depth += body[p] === '(' ? 1 : -1;
+  }
+  return depth > 1;
 }
 
 /**
@@ -3020,6 +3041,11 @@ export function stripRedundantLeafParens(raw: string): string {
     }
   }
   if (stack.length) return raw;
+  // C49: the parentheses of a grouping-set list (`ГРУППИРУЮЩИМ НАБОРАМ ((a), (b, c))`)
+  // are grammar, not operand grouping — nothing inside the list is removed.
+  const setLists: number[] = [];
+  for (let i = 1; i < sig.length; i++) if (isOpenParen(sig[i]) && isWordToken(sig[i - 1], 'НАБОРАМ')) setLists.push(i);
+  const inSetList = (i: number): boolean => setLists.some((o) => o < i && match.get(o)! > i);
 
   // Булев приоритет (проверено в 1С): снимать пару можно, лишь если самый слабый
   // верхнеуровневый булев оператор ВНУТРИ связывает не слабее, чем требует сосед
@@ -3066,6 +3092,7 @@ export function stripRedundantLeafParens(raw: string): string {
     const prev = i > 0 ? sig[i - 1] : undefined;
     const nx = close + 1 < sig.length ? sig[close + 1] : undefined;
     if (isCallOpenContext(prev)) continue;
+    if (inSetList(i)) continue;
     // Содержимое не пустое и без верхнеуровневой запятой.
     if (close === i + 1) continue;
     let hasTopComma = false;

@@ -14,14 +14,13 @@ one place, ordered by priority.
 
 ## Open items
 
-22 items: P1 — 1, P2 — 15, P3 — 6. No item is P0.
+21 items: P1 — 1, P2 — 14, P3 — 6. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
 | V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C37–C40 remain open; C36 is an accepted divergence. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
 | C41 | PARTIAL · P2 | Correctness | Raw expression text is checked against metadata for `Псевдоним.Путь` of the query's own sources (stage 1); not checked: an unknown alias head, a raw-text subquery, a nested query with one source, virtual-table parameters and ИТОГИ expressions. |
-| C49 | OPEN · P2 | Correctness | Bare-field qualification rewrites `ГРУППИРУЮЩИМ НАБОРАМ` inside a raw-text subquery (`Х.ГРУППИРУЮЩИМ`); since C48 Apply refuses such valid queries, before it wrote them corrupted. |
 | A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple literals, numeric arithmetic over constants/direct metadata fields, and bounded SUBSTRING calls; other compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
 | V3 | PARTIAL · P2 | Verification | The Apply gate never compares input and output semantics. |
@@ -47,7 +46,6 @@ one place, ordered by priority.
 |---|---|---|
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
 | C41 | PARTIAL · P2 | Raw expression text is checked for `Псевдоним.Путь` of the query's own sources; an unknown alias head, raw-text subqueries and single-source nested queries are not. [Details](#c41-metadata-validation-of-raw-expressions). |
-| C49 | OPEN · P2 | `ГРУППИРУЮЩИМ НАБОРАМ` inside a raw-text subquery is qualified as a field (`Х.ГРУППИРУЮЩИМ`); Apply now refuses the valid query. [Details](#c49-grouping-sets-qualified-in-a-raw-text-subquery). |
 | R11 | PARTIAL · P3 | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
 | C34 | PARTIAL · P3 | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. [Details](#c34-english-sdbl-leftovers). |
 | C37 | OPEN · P3 | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
@@ -694,22 +692,47 @@ arithmetic after `(НЕ поле)` (hardly valid for a Boolean operand).
 
 ### C49. Grouping sets qualified in a raw-text subquery
 
-**Status:** OPEN · P2 · recorded 2026-10-22 (found in the C48 review; the same on
-`main` before C48)
+**Status:** CLOSED (2026-10-25; preservation only, recorded 2026-10-22 in the C48
+review, P2 when recorded)
 
 ```text
 ВЫБРАТЬ Т.Код КАК Код ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = 1 ИЛИ Т.Код В (ВЫБРАТЬ Х.Код ИЗ Справочник.Валюты КАК Х СГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ ((Х.Код), (Х.Наименование)))
 ```
 
-The condition stays raw custom text, and the sole-source bare-field qualification
-(`qualifyBareFieldsInExpression`, `sdblParser.ts`) treats `ГРУППИРУЮЩИМ` as a field:
-on `main` OK / Save wrote `СГРУППИРОВАТЬ ПО Х.ГРУППИРУЮЩИМ НАБОРАМ (Х.Код,
-(Х.Наименование)), Х.Код` (platform-invalid) without a block. Since C48 the
-subquery is checked and Apply is refused, so nothing corrupted is written, but a
-valid query cannot be applied.
+The condition stays raw custom text, and the sole-source qualification of the raw
+subquery (`qualifySubquerySpan` → `qualifyExpression`, `qualifyBareFields.ts`; the
+ledger first named `qualifyBareFieldsInExpression`) took `ГРУППИРУЮЩИМ` and `НАБОРАМ`
+for fields: `Х.ГРУППИРУЮЩИМ Х.НАБОРАМ`. Before C48 OK / Save wrote that text; since
+C48 Apply refused the query. The same in a field `ВЫБОР`, a join `ПО`, `ИМЕЮЩИЕ`, a
+multi-line or a nested raw subquery. A structured subquery and a top-level grouping
+were not affected.
 
-**Next boundary:** keep `ГРУППИРУЮЩИМ НАБОРАМ` out of bare-field qualification in
-raw text; regression next to the C48 suite. Parser change.
+Three steps changed the text, each fixed narrowly:
+
+- the two words are in the qualifier's `STRUCTURAL` set;
+- `stripRedundantLeafParens` (`exprFormatter.ts`) removes nothing inside a
+  `НАБОРАМ (…)` list: its parentheses are grammar, not operand grouping. Before, a
+  one-line subquery lost the parentheses of the first set (`((Х.Код), …)` →
+  `(Х.Код, …)`, a form the parser refuses), so the first Save was allowed and the
+  reopened text refused;
+- `reindentLeafSubquery` glues a closing-only last line to the body only when it
+  closes no bracket opened inside the body (counted in code, not in literals or
+  comments, with `codeRanges`). Before, the second Save glued the `)` of the set list,
+  printed on its own line by the generator, to the last set.
+
+Grouping sets in a raw subquery are now kept and applicable on three Saves with the
+text stable after the first one, as in a structured subquery; forms the parser does
+not read (an empty set `()`, `СГРУППИРОВАТЬ ВСЕ ПО`) stay refused with their text kept.
+**Platform:** not confirmed. The available backend (build unknown) and 8.3.15.1489
+refuse `ГРУППИРУЮЩИМ НАБОРАМ`; the grammar-parity area `group.grouping-sets` stays
+`pending-platform-evidence` (probe `PQ-group.grouping-sets`). Corpus sweep: 28 of
+19,769 records changed, all with grouping sets in raw text (refused → applicable,
+same meaning, stable at Save 1); golden, grammar-parity and store gates are unchanged.
+[Regressions](../../test/unit/groupingSetsRaw.c49.test.ts) (8 contexts and 4 set
+forms on three Saves; refused forms; controls; brackets in literals and comments,
+deep nesting and broken balance at the closing line).
+*Not changed:* `СГРУППИРОВАТЬ ВСЕ ПО` is not read by the parser in any form; other
+second-Save layout changes of compact subqueries (R2).
 
 ### C45. Trailing И dropped from a condition
 
@@ -963,6 +986,7 @@ and [audit index](audits/README.md).
 | C56 | CLOSED | A compact `X НЕ В (ВЫБРАТЬ …)` with any left side (and `НЕ X НЕ В`) is applied in the platform's prefix form; before, OK / Save refused it (2026-10-24). [Details](#c56-compact-scalar-не-в-subquery-refused). |
 | C57 | CLOSED | An infix `НЕ В` / `НЕ ПОДОБНО` inside a subquery or a function argument, or after `И` in a virtual-table condition, stays with its operand on Save; before, it negated the whole expression (2026-10-24). [Details](#c57-infix-не-moved-out-of-its-operand). |
 | C54 | CLOSED | `(НЕ поле)` keeps its parentheses before `В`, `ЕСТЬ NULL`, ordering comparisons and other operators whose result depends on them; before `В` this is the ADR 0004 boolean operand scope exception (2026-10-24). [Details](#c54-negated-field-operand-loses-its-parentheses). |
+| C49 | CLOSED | `ГРУППИРУЮЩИМ НАБОРАМ` in a raw-text subquery is no longer qualified as fields, and its set parentheses are kept; such queries are applicable and stable after the first Save. Preservation only: grouping sets are not confirmed on an available platform (2026-10-25). [Details](#c49-grouping-sets-qualified-in-a-raw-text-subquery). |
 | C53 | CLOSED | A non-reference left side of `В (ВЫБРАТЬ …)` split over lines (a line comment or a line break in a tuple) is printed on one line on the first Save, like a raw leaf; left sides the helper does not flatten (`И`/`ИЛИ`, `ВЫБОР`) keep their lines (2026-10-22). [Details](#c53-line-comment-inside-a-tuple-left-side). |
 | C52 | CLOSED | `НЕ НЕ X В (ВЫБРАТЬ …)` no longer moves the subquery one tab on the second Save (2026-10-22). [Details](#c52-doubled-не-before-an-in-subquery-shifts-it-once). |
 | C51 | CLOSED | A tuple left side of `В (ВЫБРАТЬ …)` written compactly no longer changes on the second Save (in `ИМЕЮЩИЕ`, with `НЕ В`, or with bare fields) (2026-10-22). [Details](#c51-tuple-in-subquery-changed-on-the-second-save). |
