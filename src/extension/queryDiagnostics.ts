@@ -22,6 +22,7 @@ import { tryParseBatch } from '../core/query/validateBatch';
 import { findMalformedCustomExpressions, validateBatchSemantics } from '../core/query/semanticValidator';
 import type { MetadataResolver } from '../core/query/metadataResolver';
 import type { BatchDocument } from '../core/query/batchModel';
+import type { QueryDocument } from '../core/query/unionModel';
 
 export interface QueryParseProblem {
   /**
@@ -47,6 +48,11 @@ export interface LiteralCheck {
   /** Kept only when the field check can apply (parsed, not malformed). */
   doc?: BatchDocument;
   field?: { resolver: MetadataResolver; problem: LiteralProblem };
+  /**
+   * C41 2b: parses of the subqueries kept as raw text in this literal, by exact text.
+   * Only syntax: the field check runs again for another resolver. Dropped with the entry.
+   */
+  subqueryParses?: Map<string, QueryDocument | null>;
 }
 
 /**
@@ -66,13 +72,18 @@ export function createQueryProblemsCache(): QueryProblemsCache {
 function checkLiteral(text: string): LiteralCheck {
   const attempt = tryParseBatch(text);
   if (!attempt.ok) return { problem: { kind: 'parse', message: attempt.error } };
-  if (findMalformedCustomExpressions(attempt.doc).length > 0) return { problem: { kind: 'malformedExpression', message: '' } };
-  return { problem: undefined, doc: attempt.doc };
+  const subqueryParses = new Map<string, QueryDocument | null>();
+  if (findMalformedCustomExpressions(attempt.doc, { subqueryParses }).length > 0) {
+    return { problem: { kind: 'malformedExpression', message: '' } };
+  }
+  return { problem: undefined, doc: attempt.doc, subqueryParses };
 }
 
 function fieldProblem(check: LiteralCheck, text: string, resolver: MetadataResolver): LiteralProblem {
   if (check.field?.resolver !== resolver) {
-    const fieldError = validateBatchSemantics(check.doc!, resolver, text).find(e => e.details?.kind === 'fieldNotFound');
+    const subqueryParses = (check.subqueryParses ??= new Map());
+    const fieldError = validateBatchSemantics(check.doc!, resolver, text, { subqueryParses })
+      .find(e => e.details?.kind === 'fieldNotFound');
     check.field = { resolver, problem: fieldError ? { kind: 'fieldNotFound', message: fieldError.message } : undefined };
   }
   return check.field.problem;

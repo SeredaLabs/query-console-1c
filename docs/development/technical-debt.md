@@ -20,7 +20,7 @@ one place, ordered by priority.
 |---|---|---|---|
 | V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C37–C40 remain open; C36 is an accepted divergence. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
-| C41 | PARTIAL · P2 | Correctness | Raw expression text is checked against metadata for `Псевдоним.Путь` of the query's own sources (stage 1), also in editor diagnostics with loaded metadata (1b); not checked: an unknown alias head, a raw-text subquery, a nested query with one source, virtual-table parameters and ИТОГИ expressions. |
+| C41 | PARTIAL · P2 | Correctness | Field paths in raw expression text, nested queries and subqueries kept as raw text are checked against metadata (stages 1, 2), also in editor diagnostics with loaded metadata (1b); not checked: an unknown alias head, a path that may name an outer field (fail-open), virtual-table parameters and ИТОГИ expressions. |
 | A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple literals, numeric arithmetic over constants/direct metadata fields, and bounded SUBSTRING calls; other compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
 | V3 | PARTIAL · P2 | Verification | The Apply gate never compares input and output semantics. |
@@ -45,7 +45,7 @@ one place, ordered by priority.
 | ID | Status / priority | Summary |
 |---|---|---|
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
-| C41 | PARTIAL · P2 | Raw expression text is checked for `Псевдоним.Путь` of the query's own sources; an unknown alias head, raw-text subqueries and single-source nested queries are not. [Details](#c41-metadata-validation-of-raw-expressions). |
+| C41 | PARTIAL · P2 | Field paths in raw expression text, nested queries and raw-text subqueries are checked; an unknown alias head and paths that may name an outer field are not. [Details](#c41-metadata-validation-of-raw-expressions). |
 | R11 | PARTIAL · P3 | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
 | C34 | PARTIAL · P3 | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. [Details](#c34-english-sdbl-leftovers). |
 | C37 | OPEN · P3 | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
@@ -258,7 +258,7 @@ No production code or golden output changed in this audit.
 
 ### C41. Metadata validation of raw expressions
 
-**Status:** PARTIAL · P2 (stages 1 and 1b, 2026-10-25)
+**Status:** PARTIAL · P2 (stages 1 and 1b, 2026-10-25; stage 2, 2026-10-26)
 
 `validateBatchSemantics` (opening a query, Query Text analysis and Apply, through
 `tryOpenBatch` / `validateBatchText`) checked field paths against metadata only in
@@ -314,14 +314,29 @@ resolver ([performance](performance.md)).
 [cache](../../test/unit/queryDiagnosticsCache.c41.test.ts),
 [Extension Host](../../test/vscode-integration/queryDiagnosticsMetadata.test.ts).
 
+**Stage 2 (nested scopes).** The platform refuses a missing local field in a
+subquery (`Field not found "Б.НетТакогоПоля"`) and accepts a correlated reference
+(2026-10-26, build unknown). The validator walks queries with the sources of the
+enclosing queries. In a nested query with one source — where validation, parsing
+without metadata, binds a bare outer field to the local source — and in structured
+`ГДЕ`/`ИМЕЮЩИЕ` conditions of any nested query, a path is checked only when it cannot
+name an outer field: its first segment is not an outer alias, no outer source with
+known metadata has it, and every outer source has known columns (a subquery,
+parameter, virtual table or temporary table without a complete schema leaves it
+unchecked). A subquery kept as raw text is parsed as for C48 and checked the same
+way, level by level; editor diagnostics reuse its parse (shared with the C48 check)
+by exact text per literal. Golden corpus: 0 false positives through
+`validateBatchText`/`tryOpenBatch` (one valid query, an outer alias inside a subquery
+over a temporary table, needed the outer-alias rule); research sweep: no change.
+[Regressions](../../test/unit/nestedFieldScopes.c41.test.ts).
+
 **Not checked (left open):**
 
-- an unknown alias head (`Ъ.Код`) — would need a rule for heads that are not sources
-  (type prefixes, outer aliases, temporary tables);
-- a subquery kept as raw text inside an expression (its own scope);
-- a nested query with one source: validation parses without metadata, so a bare outer
-  field there is bound to the local source, and checking it would refuse valid
-  correlated queries (the same reason the structured `ГДЕ` check is top-level only);
+- an unknown alias head (`Ъ.Код`; the platform refuses it) — would need a rule for
+  heads that are not sources (type prefixes, outer aliases, temporary tables);
+- a nested path that may name an outer field (fail-open), including an authored
+  `Б.Поле` when only an outer source has `Поле`, and a path under an outer source
+  without known columns; an outer alias head (`Т.Нет` inside a subquery);
 - virtual-table parameters and ИТОГИ expressions;
 - in editor diagnostics, nothing until metadata has been loaded by a hover,
   autocomplete or Query Designer (passive by decision); a designer panel opened

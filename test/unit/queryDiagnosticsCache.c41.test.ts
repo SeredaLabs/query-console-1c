@@ -125,6 +125,22 @@ describe('C41 1b: what the cache reuses and what it checks again', () => {
     expect([...cache.entries.values()][0]).toBe(entry); // the parsed literal was kept
   });
 
+  it('a raw subquery is parsed once per literal; a resolver change only checks again (C41 2b)', () => {
+    const cache = createQueryProblemsCache();
+    const rawSub = lit('ВЫБРАТЬ Т.Код КАК Х ИЗ Справочник.Тест КАК Т ГДЕ Т.Код = 1 ИЛИ Т.Ссылка В (ВЫБРАТЬ Ю.Ссылка ИЗ Справочник.Тест КАК Ю ГДЕ Ю.Нет = 1)');
+    const ref = buildResolverFromTables([{ ...table(['Код']), fields: [...table(['Код']).fields, { name: 'Ссылка', kind: 'standard', types: [] }] }]);
+    const refНет = buildResolverFromTables([{ ...table(['Код', 'Нет']), fields: [...table(['Код', 'Нет']).fields, { name: 'Ссылка', kind: 'standard', types: [] }] }]);
+    expect(computeQueryParseProblems(rawSub, ref, cache).map(p => p.kind)).toEqual(['fieldNotFound']);
+    const entry = [...cache.entries.values()][0];
+    expect(entry.subqueryParses?.size).toBe(1);
+    const parsed = [...entry.subqueryParses!.values()][0];
+    expect(computeQueryParseProblems(rawSub, refНет, cache)).toEqual([]);
+    expect([...entry.subqueryParses!.values()][0]).toBe(parsed);
+    expect(computeQueryParseProblems(rawSub, ref, cache)).toEqual(computeQueryParseProblems(rawSub, ref));
+    computeQueryParseProblems(B, ref, cache); // the literal is gone, and its parses with it
+    expect([...cache.entries.values()].some(e => e === entry)).toBe(false);
+  });
+
   it('losing metadata drops field problems without parsing again', () => {
     const cache = createQueryProblemsCache();
     computeQueryParseProblems(A, withoutНет, cache);
