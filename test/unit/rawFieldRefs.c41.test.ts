@@ -12,8 +12,9 @@ import type { MetaTable } from '../../src/core/metadata/types';
 // functions, ВЫБОР, a `Поле{n}` alias, WHERE/HAVING/JOIN/ORDER text) is checked against
 // metadata like a structured field, when its head is a source of the same query. The
 // platform refuses such a query: test/fixtures/platform/c41-raw-field-refs.json.
-// An unknown alias head is not checked. Nested queries with one source and subqueries
-// kept as raw text are checked since stage 2 (nestedFieldScopes.c41.test.ts).
+// Nested queries with one source and subqueries kept as raw text are checked since
+// stage 2 (nestedFieldScopes.c41.test.ts), an unknown alias head since stage 2c
+// (unknownAlias.c41.test.ts).
 
 const ВАЛЮТЫ: MetaTable = {
   kind: 'Справочник', name: 'Валюты', fullName: 'Справочник.Валюты',
@@ -92,7 +93,6 @@ describe('C41: existing fields and non-field words are not refused', () => {
     ['tabular section field', `${W}ГДЕ Х.Курсы.Курс = 1 ИЛИ Х.Код = "1"`],
     ['target table without metadata', `ВЫБРАТЬ Х.Счет.Что + 1 КАК П ИЗ ${S}`],
     ['string literal and comment', `${W}ГДЕ Х.Наименование = "Х.Нет" // Х.Нет\n ИЛИ Х.Код = "1"`],
-    ['unknown alias (stage 1 does not check it)', `ВЫБРАТЬ Х.Код + Ъ.Код КАК П ИЗ ${S}`],
     ['unknown table: no second error', 'ВЫБРАТЬ Х.Что + 1 КАК П ИЗ Справочник.НетТакого КАК Х'],
   ];
   it.each(ok)('%s', (name, text) => {

@@ -34,6 +34,11 @@ a metadata update does not parse them again (without that, ~103 ms in the protot
 Open and Apply have no cache: there the raw subqueries are parsed per call (~0.2 ms per
 query of the 200 largest).
 
+C41 stage 2c (unknown alias heads, 2026-10-26, same set-up, 3 alternating runs against
+`main` c0105274): no measurable cost — metadata update ~71.8 ms vs ~71.1 ms, first pass
+with metadata ~562 ms vs ~560 ms. The other heads come from the same token pass as the
+stage 1 references, and only heads that are not a local source are judged.
+
 The field check no longer lexes the query text again (`validateBatchSemantics` lexes it
 only to place a «table not found» error). Going below the first pass would need
 incremental parsing of a literal's text; not attempted.

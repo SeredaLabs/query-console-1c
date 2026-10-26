@@ -1,0 +1,260 @@
+{
+  "issue": "C41",
+  "stage": "2c",
+  "platformBuild": "unknown",
+  "platformBuildSource": "validate_query does not return the build.",
+  "platformMethod": "SmartLogistic DEV mcp_APIBackend validate_query; no execution.",
+  "note": "Unknown alias heads. `ours`: unknownAlias = refused with `Поле \"<path>\" не найдено` (unknownAlias details); refusedBefore = already refused before stage 2c (the parser binds the path to the only source); knownLimitation = accepted although the platform refuses (a full-name head while the source has an alias; the short name of a source without КАК, which the parser takes as its alias); valid = accepted. Errors are the first line of the platform message.",
+  "cases": [
+    {
+      "name": "U1",
+      "ours": "unknownAlias",
+      "path": "Ъ.Код",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код + Ъ.Код КАК Х ИЗ Справочник.Валюты КАК Т",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 17)}: Field not found \"Ъ.Код\""
+      }
+    },
+    {
+      "name": "U2",
+      "ours": "unknownAlias",
+      "path": "Ъ.Код",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Ъ.Код КАК Х ИЗ Справочник.Валюты КАК Т",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 9)}: Field not found \"Ъ.Код\""
+      }
+    },
+    {
+      "name": "U3",
+      "ours": "refusedBefore",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код КАК К ИЗ Справочник.Валюты КАК Т ГДЕ Ъ.Код = &П",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 52)}: Field not found \"Ъ.Код\""
+      }
+    },
+    {
+      "name": "U4",
+      "ours": "unknownAlias",
+      "path": "Ъ.Код",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код КАК К ИЗ Справочник.Валюты КАК Т ГДЕ Ъ.Код = 1",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 52)}: Field not found \"Ъ.Код\""
+      }
+    },
+    {
+      "name": "U5",
+      "ours": "refusedBefore",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код КАК К ИЗ Справочник.Валюты КАК Т УПОРЯДОЧИТЬ ПО Ъ.Код",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 63)}: Field not found \"Ъ.Код\""
+      }
+    },
+    {
+      "name": "U6",
+      "ours": "unknownAlias",
+      "path": "Ъ.Код",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код КАК К ИЗ Справочник.Валюты КАК Т ГДЕ Т.Ссылка В (ВЫБРАТЬ Б.Ссылка ИЗ Справочник.Валюты КАК Б ГДЕ Ъ.Код = 1)",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 112)}: Field not found \"Ъ.Код\""
+      }
+    },
+    {
+      "name": "U7",
+      "ours": "unknownAlias",
+      "path": "Ъ.Код",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код КАК К ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = \"1\" ИЛИ Т.Ссылка В (ВЫБРАТЬ Б.Ссылка ИЗ Справочник.Валюты КАК Б ГДЕ Ъ.Код = 1)",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 128)}: Field not found \"Ъ.Код\""
+      }
+    },
+    {
+      "name": "U8",
+      "ours": "unknownAlias",
+      "path": "Ъ.Code",
+      "platformDate": "2026-10-26",
+      "query": "SELECT T.Code AS K FROM Catalog.Валюты AS T WHERE Ъ.Code = 1",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 51)}: Field not found \"Ъ.Code\""
+      }
+    },
+    {
+      "name": "U9",
+      "ours": "unknownAlias",
+      "path": "Валюты.Код",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Валюты.Код КАК Х ИЗ Справочник.Валюты КАК Т",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 9)}: Field not found \"Валюты.Код\""
+      }
+    },
+    {
+      "name": "U10",
+      "ours": "knownLimitation",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Справочник.Валюты.Код КАК Х ИЗ Справочник.Валюты КАК Т",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 9)}: Field not found \"Справочник.Валюты.Код\""
+      }
+    },
+    {
+      "name": "U11",
+      "ours": "unknownAlias",
+      "path": "Х.Наименование",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Ссылка КАК Х ИЗ Справочник.Валюты КАК Т УПОРЯДОЧИТЬ ПО Х.Наименование",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 66)}: Field not found \"Х.Наименование\""
+      }
+    },
+    {
+      "name": "U12",
+      "ours": "unknownAlias",
+      "path": "ВТ.Код",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код КАК Код ПОМЕСТИТЬ ВТ ИЗ Справочник.Валюты КАК Т;\nВЫБРАТЬ ВТ.Код КАК К ИЗ ВТ КАК А",
+      "platform": {
+        "valid": false,
+        "error": "{(2, 9)}: Field not found \"ВТ.Код\""
+      }
+    },
+    {
+      "name": "U13",
+      "ours": "unknownAlias",
+      "path": "Т.Код",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код КАК К ИЗ Справочник.Валюты КАК Т, (ВЫБРАТЬ Б.Код КАК Код ИЗ Справочник.Валюты КАК Б ГДЕ Б.Код = Т.Код) КАК П",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 111)}: Field not found \"Т.Код\""
+      }
+    },
+    {
+      "name": "U14",
+      "ours": "knownLimitation",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Валюты.Код КАК Х ИЗ Справочник.Валюты",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 9)}: Field not found \"Валюты.Код\""
+      }
+    },
+    {
+      "name": "U15",
+      "ours": "knownLimitation",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ КурсыВалютСрезПоследних.Курс КАК К ИЗ РегистрСведений.КурсыВалют.СрезПоследних",
+      "platform": {
+        "valid": false,
+        "error": "{(1, 9)}: Field not found \"КурсыВалютСрезПоследних.Курс\""
+      }
+    },
+    {
+      "name": "V1",
+      "ours": "valid",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Ссылка.Код КАК Х ИЗ Справочник.Валюты КАК Т",
+      "platform": {
+        "valid": true
+      }
+    },
+    {
+      "name": "V2",
+      "ours": "valid",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Справочник.Валюты.Код КАК Х ИЗ Справочник.Валюты",
+      "platform": {
+        "valid": true
+      }
+    },
+    {
+      "name": "V3",
+      "ours": "valid",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ РегистрСведений.КурсыВалют.СрезПоследних.Курс КАК К ИЗ РегистрСведений.КурсыВалют.СрезПоследних",
+      "platform": {
+        "valid": true
+      }
+    },
+    {
+      "name": "V4",
+      "ours": "valid",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Курс КАК К ИЗ РегистрСведений.КурсыВалют.СрезПоследних",
+      "platform": {
+        "valid": true
+      }
+    },
+    {
+      "name": "V5",
+      "ours": "valid",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код КАК Код ПОМЕСТИТЬ ВТ ИЗ Справочник.Валюты КАК Т;\nВЫБРАТЬ ВТ.Код КАК К ИЗ ВТ",
+      "platform": {
+        "valid": true
+      }
+    },
+    {
+      "name": "V6",
+      "ours": "valid",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код КАК К ИЗ Справочник.Валюты КАК Т ГДЕ Т.Ссылка В (ВЫБРАТЬ Б.Ссылка ИЗ Справочник.Валюты КАК Б ГДЕ Б.Ссылка В (ВЫБРАТЬ Ш.Ссылка ИЗ Справочник.Валюты КАК Ш ГДЕ Ш.Код = Т.Код))",
+      "platform": {
+        "valid": true
+      }
+    },
+    {
+      "name": "V7",
+      "ours": "valid",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код КАК К ИЗ Справочник.Валюты КАК Т ГДЕ Т.Ссылка В (ВЫБРАТЬ Т.Ссылка ИЗ Справочник.Валюты КАК Т ГДЕ Т.Код = \"1\")",
+      "platform": {
+        "valid": true
+      }
+    },
+    {
+      "name": "V8",
+      "ours": "valid",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ ВЫРАЗИТЬ(Т.Ссылка КАК Справочник.Валюты).Код КАК К ИЗ Справочник.Валюты КАК Т ГДЕ Т.Ссылка ССЫЛКА Справочник.Валюты И Т.Ссылка <> ЗНАЧЕНИЕ(Справочник.Валюты.ПустаяСсылка)",
+      "platform": {
+        "valid": true
+      }
+    },
+    {
+      "name": "V9",
+      "ours": "valid",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код КАК К ИЗ Справочник.Валюты КАК Т ГДЕ Т.Ссылка В (ВЫБРАТЬ Б.Ссылка ИЗ Справочник.Валюты КАК Б ГДЕ Б.Код = Т.Код)",
+      "platform": {
+        "valid": true
+      }
+    },
+    {
+      "name": "V10",
+      "ours": "valid",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Справочник.Валюты.Код + \"\" КАК Х ИЗ Справочник.Валюты",
+      "platform": {
+        "valid": true
+      }
+    }
+  ]
+}

@@ -20,7 +20,7 @@ one place, ordered by priority.
 |---|---|---|---|
 | V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Modern-version and metadata coverage, catalog promotion, C37–C40 remain open; C36 is an accepted divergence. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
-| C41 | PARTIAL · P2 | Correctness | Field paths in raw expression text, nested queries and subqueries kept as raw text are checked against metadata (stages 1, 2), also in editor diagnostics with loaded metadata (1b); not checked: an unknown alias head, a path that may name an outer field (fail-open), virtual-table parameters and ИТОГИ expressions. |
+| C41 | PARTIAL · P2 | Correctness | Field paths in raw expression text, nested queries and subqueries kept as raw text, and unknown alias heads are checked against metadata (stages 1, 2, 2c), also in editor diagnostics with loaded metadata (1b); not checked: a metadata-name head while the source has an alias, the short name of a source without КАК, paths that may name an outer field or meet a source without known columns (fail-open), virtual-table parameters and ИТОГИ expressions. |
 | A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple literals, numeric arithmetic over constants/direct metadata fields, and bounded SUBSTRING calls; other compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
 | V3 | PARTIAL · P2 | Verification | The Apply gate never compares input and output semantics. |
@@ -45,7 +45,7 @@ one place, ordered by priority.
 | ID | Status / priority | Summary |
 |---|---|---|
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
-| C41 | PARTIAL · P2 | Field paths in raw expression text, nested queries and raw-text subqueries are checked; an unknown alias head and paths that may name an outer field are not. [Details](#c41-metadata-validation-of-raw-expressions). |
+| C41 | PARTIAL · P2 | Field paths in raw expression text, nested queries, raw-text subqueries and unknown alias heads are checked; three platform-refused head forms and fail-open paths are not. [Details](#c41-metadata-validation-of-raw-expressions). |
 | R11 | PARTIAL · P3 | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
 | C34 | PARTIAL · P3 | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. [Details](#c34-english-sdbl-leftovers). |
 | C37 | OPEN · P3 | RIGHT JOIN canonicalization differs from the platform; generated text is platform-equivalent. [Evidence](audits/v5-phase5-2026-10-21.md). |
@@ -258,7 +258,7 @@ No production code or golden output changed in this audit.
 
 ### C41. Metadata validation of raw expressions
 
-**Status:** PARTIAL · P2 (stages 1 and 1b, 2026-10-25; stage 2, 2026-10-26)
+**Status:** PARTIAL · P2 (stages 1 and 1b, 2026-10-25; stages 2 and 2c, 2026-10-26)
 
 `validateBatchSemantics` (opening a query, Query Text analysis and Apply, through
 `tryOpenBatch` / `validateBatchText`) checked field paths against metadata only in
@@ -330,10 +330,32 @@ by exact text per literal. Golden corpus: 0 false positives through
 over a temporary table, needed the outer-alias rule); research sweep: no change.
 [Regressions](../../test/unit/nestedFieldScopes.c41.test.ts).
 
+**Stage 2c (unknown alias heads).** 25 platform probes
+([evidence](../../test/fixtures/platform/c41-unknown-alias.json), build unknown): the
+platform refuses `Field not found "Ъ.Код"` for a head that names no source, also a
+table name or a temporary-table name while the source has an alias, an output column
+(`УПОРЯДОЧИТЬ ПО Х.Наименование`) and an outer alias inside a source subquery; it
+accepts a bare path from a field (`Ссылка.Код`), the full name of a source without
+`КАК`, correlated and shadowed aliases. With metadata, the head of `Голова.Путь` that is
+no local or outer alias, no metadata kind and no field, tabular section or pseudo-field
+of a visible source is refused once per query (`Поле "Ъ.Код" не найдено`,
+`unknownAlias` details, also in editor diagnostics): in raw expression text (found in
+the same token pass as stage 1 references), in a select field the parser bound as a bare
+dotted path, and in an unbound УПОРЯДОЧИТЬ path, in every scope of stage 2. A visible
+source without known columns (parameter, temporary table without a complete schema,
+subquery with `*` or an unnamed column, a source unknown to the resolver) leaves the
+head unchecked. Golden corpus: 0 hits through `validateBatchText`/`tryOpenBatch` on
+input and canonical text (275 non-local heads judged: 268 correlated aliases, 7 bare
+paths); research corpus: the one hit is the platform-refused probe.
+[Regressions](../../test/unit/unknownAlias.c41.test.ts) (all 25 probes).
+
 **Not checked (left open):**
 
-- an unknown alias head (`Ъ.Код`; the platform refuses it) — would need a rule for
-  heads that are not sources (type prefixes, outer aliases, temporary tables);
+- a metadata-name head while the source has an alias (`Справочник.Валюты.Код` from
+  `… КАК Т`; the platform refuses it), and the short name of a source without `КАК`
+  (`Валюты.Код`, `КурсыВалютСрезПоследних.Курс`; refused on input) — the parser takes
+  it as the source's alias and writes `КАК <имя>`, so the applied text is valid;
+- a head while a visible source has no known columns (fail-open);
 - a nested path that may name an outer field (fail-open), including an authored
   `Б.Поле` when only an outer source has `Поле`, and a path under an outer source
   without known columns; an outer alias head (`Т.Нет` inside a subquery);

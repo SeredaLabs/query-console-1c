@@ -10,7 +10,7 @@
  * C41 stage 1b: с УЖЕ загруженными метаданными (резолвер передаёт контроллер, сам
  * модуль их не грузит) добавляется проверка полей — та же `validateBatchSemantics`,
  * что при открытии, в «Тексте запроса» и при Apply; из её ошибок берутся только
- * `fieldNotFound`. Без резолвера поведение прежнее.
+ * `fieldNotFound` и `unknownAlias` (C41 2c). Без резолвера поведение прежнее.
  *
  * Модуль ДОЛЖЕН оставаться чистым (без `import vscode`) — адаптер к
  * `vscode.Diagnostic` и жизненный цикл (debounce, подписки) — в
@@ -30,7 +30,8 @@ export interface QueryParseProblem {
    * `'malformedExpression'` — разобрал, но сохранил структурно некорректный
    * сырой текст выражения/условия, и Apply его заблокирует
    * (`findMalformedCustomExpressions`, тот же чекер, что в `webview/applyGate.ts`);
-   * `'fieldNotFound'` — поле не найдено по уже загруженным метаданным (C41 1b).
+   * `'fieldNotFound'` — поле (или псевдоним его пути, C41 2c) не найдено по уже
+   * загруженным метаданным (C41 1b).
    */
   kind: 'parse' | 'malformedExpression' | 'fieldNotFound';
   /** Сырое сообщение парсера или валидатора (не локализуется — как и везде, отражает язык платформы 1С); пусто для `'malformedExpression'`. */
@@ -83,7 +84,7 @@ function fieldProblem(check: LiteralCheck, text: string, resolver: MetadataResol
   if (check.field?.resolver !== resolver) {
     const subqueryParses = (check.subqueryParses ??= new Map());
     const fieldError = validateBatchSemantics(check.doc!, resolver, text, { subqueryParses })
-      .find(e => e.details?.kind === 'fieldNotFound');
+      .find(e => e.details?.kind === 'fieldNotFound' || e.details?.kind === 'unknownAlias');
     check.field = { resolver, problem: fieldError ? { kind: 'fieldNotFound', message: fieldError.message } : undefined };
   }
   return check.field.problem;

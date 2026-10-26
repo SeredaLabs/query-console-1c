@@ -22,7 +22,7 @@
       "platformDate": "2026-10-26",
       "query": "ВЫБРАТЬ Т.Код + Ъ.Код КАК Х ИЗ Справочник.Валюты КАК Т",
       "platform": { "valid": false, "error": "{(1, 17)}: Field not found \"Ъ.Код\"" },
-      "note": "Not checked in stage 2 (unknown alias head)."
+      "note": "Not checked in stage 2; refused since stage 2c (unknown alias head, c41-unknown-alias.json)."
     }
   ]
 }
