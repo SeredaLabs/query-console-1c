@@ -1,0 +1,28 @@
+{
+  "issue": "C41",
+  "platformBuild": "unknown",
+  "platformBuildSource": "validate_query does not return the build.",
+  "platformMethod": "SmartLogistic DEV mcp_APIBackend validate_query; no execution.",
+  "note": "Stage 2: a missing local field in a subquery with one source is refused; a correlated reference to the enclosing query is accepted. Errors are the first line of the platform message.",
+  "cases": [
+    {
+      "name": "nested_local_missing",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код КАК К ИЗ Справочник.Валюты КАК Т ГДЕ Т.Ссылка В (ВЫБРАТЬ Б.Ссылка ИЗ Справочник.Валюты КАК Б ГДЕ Б.НетТакогоПоля = 1)",
+      "platform": { "valid": false, "error": "{(1, 114)}: Field not found \"Б.НетТакогоПоля\"" }
+    },
+    {
+      "name": "nested_correlated",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код КАК К ИЗ Справочник.Валюты КАК Т ГДЕ Т.Ссылка В (ВЫБРАТЬ Б.Ссылка ИЗ Справочник.Валюты КАК Б ГДЕ Б.Код = Т.Код)",
+      "platform": { "valid": true }
+    },
+    {
+      "name": "unknown_alias",
+      "platformDate": "2026-10-26",
+      "query": "ВЫБРАТЬ Т.Код + Ъ.Код КАК Х ИЗ Справочник.Валюты КАК Т",
+      "platform": { "valid": false, "error": "{(1, 17)}: Field not found \"Ъ.Код\"" },
+      "note": "Not checked in stage 2 (unknown alias head)."
+    }
+  ]
+}

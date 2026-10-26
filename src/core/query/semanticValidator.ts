@@ -154,10 +154,16 @@ const SUBTABLE_CHECKED_TYPES = new Set<string>([
   'РЕГИСТРБУХГАЛТЕРИИ',
 ]);
 
+/** C41 2b: optional reuse of raw-subquery parses by exact text (editor diagnostics). */
+export interface SemanticValidationOptions {
+  subqueryParses?: Map<string, QueryDocument | null>;
+}
+
 export function validateBatchSemantics(
   doc: BatchDocument,
   resolver: MetadataResolver | undefined,
   text: string,
+  options: SemanticValidationOptions = {},
 ): SemanticError[] {
   // Tokens only place a «table not found» error; lexing the text up front cost about
   // two thirds of a pass without one (C41 1b profiling), so it is done on demand.
@@ -224,7 +230,32 @@ export function validateBatchSemantics(
    * `'targetUnresolved'` (пробел метаданных — ссылка резолвится, но целевая таблица
    * не в кэше) НИКОГДА не считается ошибкой (unknown != invalid).
    */
-  const checkFieldPaths = (model: QueryModel, topLevel: boolean, statementIndex: number): void => {
+  /**
+   * C41 2a: whether a path of a nested query may name a field of an enclosing query.
+   * Validation parses without metadata, so a bare outer field is bound to a local
+   * source; such a path is left unchecked when its first segment is an outer alias, or
+   * an outer source has that field, or an outer source has no known columns (subquery,
+   * parameter, temporary table without a complete schema, virtual table).
+   */
+  const mayNameOuterField = (path: string, outer: SelectedTable[][], statementIndex: number): boolean => {
+    if (outer.length === 0) return false;
+    const r = resolver ?? EMPTY_METADATA_RESOLVER;
+    const seg = path.split('.')[0].toUpperCase();
+    for (const level of outer) {
+      for (const [, alias] of resolveAliases(level)) if (alias.toUpperCase() === seg) return true;
+      for (const t of level) {
+        if (t.subquery || !t.fullName || t.fullName.startsWith('&')) return true;
+        const tempSchema = visibleTempTableAt(tempTableLifetimes, statementIndex, t.fullName);
+        const meta = tempSchema?.complete ? tempSchema.table : r.tableByFullName(t.fullName);
+        if (!meta || (meta.kind === 'ВременнаяТаблица' && !tempSchema?.complete)) return true;
+        if (meta.fields.some(f => f.name.toUpperCase() === seg)) return true;
+        if (meta.tabularSections?.some(ts => ts.name.toUpperCase() === seg)) return true;
+      }
+    }
+    return false;
+  };
+
+  const checkFieldPaths = (model: QueryModel, topLevel: boolean, statementIndex: number, outer: SelectedTable[][] = []): void => {
     const r = resolver ?? EMPTY_METADATA_RESOLVER;
     const idToTable = new Map<string, SelectedTable>();
     for (const t of model.tables) idToTable.set(t.id, t);
@@ -371,31 +402,36 @@ export function validateBatchSemantics(
     }
 
     // `ГДЕ`/`ИМЕЮЩИЕ`: стандартное условие (`custom=false`, `tableId`/`path`).
-    // ТОЛЬКО для запроса верхнего уровня: в подзапросе ГОЛОЕ поле условия парсер
-    // привязывает к единственному локальному источнику, даже если это на деле
-    // коррелированная ссылка на поле ОБЪЕМЛЮЩЕГО запроса (валидный запрос), а
-    // модель не хранит, было ли поле квалифицировано в тексте — проверка там
-    // дала бы ложное «не найдено». На верхнем уровне объемлющего запроса нет.
-    if (topLevel) {
-      for (const c of model.conditions ?? []) {
+    // В подзапросе ГОЛОЕ поле условия парсер привязывает к локальному источнику, даже
+    // если это коррелированная ссылка на поле ОБЪЕМЛЮЩЕГО запроса (валидный запрос), а
+    // модель не хранит, было ли поле квалифицировано в тексте. Поэтому в подзапросе
+    // путь проверяется лишь когда он не может быть полем объемлющего запроса (C41 2a).
+    for (const [conditions, section] of [[model.conditions, 'where'], [model.having, 'having']] as const) {
+      for (const c of conditions ?? []) {
         if (c.custom || c.expression !== undefined || !c.tableId || !c.path) continue;
-        checkOne(c.tableId, c.path, 'where');
-      }
-      for (const c of model.having ?? []) {
-        if (c.custom || c.expression !== undefined || !c.tableId || !c.path) continue;
-        checkOne(c.tableId, c.path, 'having');
+        if (!topLevel && mayNameOuterField(c.path, outer, statementIndex)) continue;
+        checkOne(c.tableId, c.path, section);
       }
     }
 
     // C41: `Псевдоним.Путь` in raw expression text whose head is a source of this query.
-    // A nested query with one source is skipped: validation parses without metadata, so
-    // a bare outer field there is bound to the local source (the reason the structured
-    // ГДЕ/ИМЕЮЩИЕ check above runs only at the top level).
-    if (topLevel || model.tables.length > 1) {
+    // In a nested query with one source a path that may name an outer field is skipped
+    // (C41 2a, as for structured conditions above). A subquery kept as raw text is parsed
+    // and checked as a nested query (C41 2b).
+    {
+      const soleNested = !topLevel && model.tables.length === 1;
       const aliasIds = new Map<string, string>();
       for (const [id, alias] of resolveAliases(model.tables)) aliasIds.set(alias.toUpperCase(), id);
       const checkRaw = (text: string | undefined, section: FieldValidationSection): void => {
-        for (const ref of rawFieldReferences(text, aliasIds)) checkOne(ref.tableId, ref.path, section);
+        for (const ref of rawFieldReferences(text, aliasIds)) {
+          if (soleNested && mayNameOuterField(ref.path, outer, statementIndex)) continue;
+          checkOne(ref.tableId, ref.path, section);
+        }
+        if (text === undefined || !resolver) return;
+        for (const inner of embeddedSubqueryTexts(text)) {
+          const sub = parseRawSubquery(inner);
+          if (sub) checkDocumentFields(sub, statementIndex, [model.tables, ...outer]);
+        }
       };
       for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
         if (!isWildcardExpression(f.expression)) checkRaw(f.expression, 'select');
@@ -408,6 +444,31 @@ export function validateBatchSemantics(
       }
       for (const f of model.grouping?.groupFields ?? []) checkRaw(f.expression, 'grouping');
       for (const f of model.order?.fields ?? []) checkRaw(f.expression, 'order');
+    }
+  };
+
+  const parseRawSubquery = (inner: string): QueryDocument | null => {
+    const cached = options.subqueryParses?.get(inner);
+    if (cached !== undefined) return cached;
+    let sub: QueryDocument | null;
+    try {
+      sub = parseDocument(inner);
+    } catch {
+      sub = null; // a broken raw subquery is refused by findMalformedCustomExpressions (C48)
+    }
+    options.subqueryParses?.set(inner, sub);
+    return sub;
+  };
+
+  /** C41 2b: field paths of a subquery kept as raw text, scope by scope. */
+  const checkDocumentFields = (qdoc: QueryDocument, statementIndex: number, outer: SelectedTable[][]): void => {
+    for (const member of qdoc.members) {
+      const m = member.model;
+      checkFieldPaths(m, false, statementIndex, outer);
+      for (const t of m.tables) if (t.subquery) checkDocumentFields(t.subquery, statementIndex, outer);
+      for (const c of [...(m.conditions ?? []), ...(m.having ?? [])]) {
+        if (c.subquery) checkDocumentFields(c.subquery, statementIndex, [m.tables, ...outer]);
+      }
     }
   };
 
@@ -466,9 +527,9 @@ export function validateBatchSemantics(
     }
   };
 
-  const walkConditions = (conditions: Condition[] | undefined, statementIndex: number): void => {
+  const walkConditions = (conditions: Condition[] | undefined, statementIndex: number, outer: SelectedTable[][]): void => {
     for (const c of conditions ?? []) {
-      if (c.subquery) walkDocument(c.subquery, false, statementIndex);
+      if (c.subquery) walkDocument(c.subquery, false, statementIndex, outer);
     }
   };
 
@@ -494,23 +555,25 @@ export function validateBatchSemantics(
     }
   };
 
-  const walkModel = (model: QueryModel, topLevel: boolean, statementIndex: number): void => {
+  // `outer` — sources of the enclosing queries, nearest first (C41 2a). A source subquery
+  // (`ИЗ (ВЫБРАТЬ …)`) sees no columns of the query it is a source of.
+  const walkModel = (model: QueryModel, topLevel: boolean, statementIndex: number, outer: SelectedTable[][]): void => {
     for (const t of model.tables) {
-      if (t.subquery) walkDocument(t.subquery, false, statementIndex);
+      if (t.subquery) walkDocument(t.subquery, false, statementIndex, outer);
       else checkTable(t);
     }
     checkDuplicateAliases(model);
     checkWildcardAlias(model);
     checkDuplicateSourceAliases(model);
-    checkFieldPaths(model, topLevel, statementIndex);
-    walkConditions(model.conditions, statementIndex);
-    walkConditions(model.having, statementIndex);
+    checkFieldPaths(model, topLevel, statementIndex, outer);
+    walkConditions(model.conditions, statementIndex, [model.tables, ...outer]);
+    walkConditions(model.having, statementIndex, [model.tables, ...outer]);
   };
 
   /** `topLevel` — члены ОБЪЕДИНЕНИЯ самого оператора пакета (без объемлющего запроса). */
-  function walkDocument(qdoc: QueryDocument, topLevel: boolean, statementIndex: number): void {
+  function walkDocument(qdoc: QueryDocument, topLevel: boolean, statementIndex: number, outer: SelectedTable[][] = []): void {
     checkUnionColumnCount(qdoc);
-    for (const member of qdoc.members) walkModel(member.model, topLevel, statementIndex);
+    for (const member of qdoc.members) walkModel(member.model, topLevel, statementIndex, outer);
   }
 
   for (let statementIndex = 0; statementIndex < doc.members.length; statementIndex++) {
@@ -749,7 +812,7 @@ function withoutTailAlias(text: string): string {
  */
 let previousSubqueryHits = new Map<string, MalformedCustomHit[] | null>();
 
-export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCustomHit[] {
+export function findMalformedCustomExpressions(doc: BatchDocument, options: SemanticValidationOptions = {}): MalformedCustomHit[] {
   const hits: MalformedCustomHit[] = [];
   const subqueryHits = new Map<string, MalformedCustomHit[] | null>();
   const check = (text: string | undefined, kind: MalformedCustomHit['kind']): void => {
@@ -766,11 +829,15 @@ export function findMalformedCustomExpressions(doc: BatchDocument): MalformedCus
     for (const inner of embeddedSubqueryTexts(text)) {
       let innerHits = subqueryHits.get(inner) ?? previousSubqueryHits.get(inner);
       if (innerHits === undefined) {
-        let sub: QueryDocument | undefined;
-        try {
-          sub = parseDocument(inner);
-        } catch {
-          sub = undefined;
+        // C41 2b: the parse is shared with the field check through `options`.
+        let sub = options.subqueryParses?.get(inner) ?? undefined;
+        if (sub === undefined && !options.subqueryParses?.has(inner)) {
+          try {
+            sub = parseDocument(inner);
+          } catch {
+            sub = undefined;
+          }
+          options.subqueryParses?.set(inner, sub ?? null);
         }
         if (sub) {
           const start = hits.length;

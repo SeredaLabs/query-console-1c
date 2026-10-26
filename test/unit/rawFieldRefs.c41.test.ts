@@ -12,9 +12,8 @@ import type { MetaTable } from '../../src/core/metadata/types';
 // functions, ВЫБОР, a `Поле{n}` alias, WHERE/HAVING/JOIN/ORDER text) is checked against
 // metadata like a structured field, when its head is a source of the same query. The
 // platform refuses such a query: test/fixtures/platform/c41-raw-field-refs.json.
-// Not checked (stage 1): an unknown alias head, a raw-text subquery, and a nested query
-// with a single source (a bare field there may be an outer reference: validation parses
-// without metadata and binds it to the local source).
+// An unknown alias head is not checked. Nested queries with one source and subqueries
+// kept as raw text are checked since stage 2 (nestedFieldScopes.c41.test.ts).
 
 const ВАЛЮТЫ: MetaTable = {
   kind: 'Справочник', name: 'Валюты', fullName: 'Справочник.Валюты',
@@ -112,13 +111,20 @@ describe('C41: correlated subqueries stay conservative', () => {
     // One source: validation parses without metadata, so a bare outer field is bound to Б.
     ['one source, bare outer field', sub('ВЫБРАТЬ Б.Валюта ИЗ Справочник.БанковскиеСчета КАК Б ГДЕ ОсновнаяВалюта ИЛИ Б.Валюта = &В')],
     ['one source, qualified outer field', sub('ВЫБРАТЬ Б.Валюта ИЗ Справочник.БанковскиеСчета КАК Б ГДЕ Х.ОсновнаяВалюта ИЛИ Б.Валюта = &В')],
-    ['one source, missing local field (not checked in stage 1)', sub('ВЫБРАТЬ Б.Валюта ИЗ Справочник.БанковскиеСчета КАК Б ГДЕ Б.Нет = 1 ИЛИ Б.Валюта = &В')],
     ['two sources, existing outer field', sub(`ВЫБРАТЬ Б.Валюта ИЗ Справочник.БанковскиеСчета КАК Б, ${S.replace('Х', 'Ю')} ГДЕ Х.ОсновнаяВалюта ИЛИ Б.Валюта = Ю.Ссылка`)],
     ['two sources, missing outer field (an outer alias is not checked)', sub(`ВЫБРАТЬ Б.Валюта ИЗ Справочник.БанковскиеСчета КАК Б, ${S.replace('Х', 'Ю')} ГДЕ Х.Нет = 1 ИЛИ Б.Валюта = Ю.Ссылка`)],
-    ['raw-text subquery in a raw condition', `${W}ГДЕ Х.Код = "1" ИЛИ Х.Ссылка В (ВЫБРАТЬ Ю.Ссылка ИЗ ${S.replace('Х', 'Ю')} ГДЕ Ю.Нет = 1)`],
   ];
   it.each(ok)('%s', (_name, text) => {
     expect(errs(text)).toEqual([]);
+  });
+
+  // Stage 2 (C41 2a/2b): both were left unchecked by stage 1.
+  it('one source, missing local field: refused since stage 2', () => {
+    expect(errs(sub('ВЫБРАТЬ Б.Валюта ИЗ Справочник.БанковскиеСчета КАК Б ГДЕ Б.Нет = 1 ИЛИ Б.Валюта = &В')))
+      .toEqual(['Поле "Нет" не найдено в "Справочник.БанковскиеСчета"']);
+  });
+  it('raw-text subquery in a raw condition: refused since stage 2', () => {
+    expect(errs(`${W}ГДЕ Х.Код = "1" ИЛИ Х.Ссылка В (ВЫБРАТЬ Ю.Ссылка ИЗ ${S.replace('Х', 'Ю')} ГДЕ Ю.Нет = 1)`)).toEqual([MISSING]);
   });
 
   it('an inner alias that shadows an outer one is checked as local', () => {

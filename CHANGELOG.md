@@ -27,7 +27,10 @@ All notable changes are recorded here. The project uses
   arithmetic, functions, `ВЫБОР`, a `Поле1` column, and conditions written as text
   (`ГДЕ Т.Нет = 1`, `… ИЛИ …`, `ИМЕЮЩИЕ`, join conditions, ORDER BY). Before, OK /
   Save wrote such a query and the platform refused it (`Field not found`). An unknown
-  table alias and subqueries written as text are not checked yet.
+  table alias is not checked yet.
+- With metadata loaded, a field that does not exist is also found inside subqueries,
+  including subqueries written as text (`… ИЛИ Т.Ссылка В (ВЫБРАТЬ …)`). A field
+  that may belong to the enclosing query is not reported.
 
 ## 0.4.1 - 2026-10-25
 

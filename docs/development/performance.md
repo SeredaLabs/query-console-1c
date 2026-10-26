@@ -26,6 +26,14 @@ by the resolver object (`QueryProblemsCache`, ~3 MB for that module):
 | Repeat without a change (the controller skips it) | ~14 ms | ~15 ms |
 | Metadata update (field check only, raw expression text included) | ~62 ms | ~66 ms |
 
+With C41 stage 2 (nested scopes and raw-text subqueries; 2026-10-26, same set-up,
+clean runs): first pass with metadata ~559 ms (p95 ~572), edit inside a query ~33 ms,
+outside ~14 ms, metadata update ~70.5 ms (p95 ~74) — the added nested-scope checks.
+Parses of raw-text subqueries are shared with the C48 check and kept per literal, so
+a metadata update does not parse them again (without that, ~103 ms in the prototype).
+Open and Apply have no cache: there the raw subqueries are parsed per call (~0.2 ms per
+query of the 200 largest).
+
 The field check no longer lexes the query text again (`validateBatchSemantics` lexes it
 only to place a «table not found» error). Going below the first pass would need
 incremental parsing of a literal's text; not attempted.
