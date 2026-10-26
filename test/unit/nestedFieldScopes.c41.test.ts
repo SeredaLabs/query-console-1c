@@ -112,8 +112,8 @@ describe('C41 2: Apply, opening and metadata', () => {
     expect(errs(probe('nested_local_missing').query)).toEqual(['Поле "НетТакогоПоля" не найдено в "Справочник.Валюты"']);
     expect(probe('nested_correlated').platform.valid).toBe(true);
     expect(errs(probe('nested_correlated').query)).toEqual([]);
-    // Refused by the platform, not checked here (stage 2c, out of scope).
-    expect(errs(probe('unknown_alias').query)).toEqual([]);
+    // Refused by the platform; checked since stage 2c (unknownAlias.c41.test.ts).
+    expect(errs(probe('unknown_alias').query)).toEqual(['Поле "Ъ.Код" не найдено']);
   });
 
   it('Apply and opening refuse a missing field in a nested query', () => {

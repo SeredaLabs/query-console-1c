@@ -26,8 +26,10 @@ All notable changes are recorded here. The project uses
 - With metadata loaded, a field that does not exist is now found in expressions too:
   arithmetic, functions, `ВЫБОР`, a `Поле1` column, and conditions written as text
   (`ГДЕ Т.Нет = 1`, `… ИЛИ …`, `ИМЕЮЩИЕ`, join conditions, ORDER BY). Before, OK /
-  Save wrote such a query and the platform refused it (`Field not found`). An unknown
-  table alias is not checked yet.
+  Save wrote such a query and the platform refused it (`Field not found`).
+- With metadata loaded, a path whose first name is no table alias of the query
+  (`Ъ.Код`, a table name while the table has an alias, an output column in
+  УПОРЯДОЧИТЬ ПО) is refused too, as the platform refuses it (`Field not found`).
 - With metadata loaded, a field that does not exist is also found inside subqueries,
   including subqueries written as text (`… ИЛИ Т.Ссылка В (ВЫБРАТЬ …)`). A field
   that may belong to the enclosing query is not reported.

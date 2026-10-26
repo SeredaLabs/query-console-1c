@@ -38,6 +38,8 @@ import { deriveTempTableLifetimes, visibleTempTableAt } from './tempTableSemanti
 import { hasUnexpandedWildcard, isWildcardExpression } from './expandStarFields';
 import { resolveAliases } from './queryModelUtils';
 import { OPERATOR_WORDS } from './sdblKeywordSets';
+import { ENGLISH_METADATA_KINDS, canonicalMetadataKind } from './sdblEnglish';
+import { TYPE_PREFIXES as QUALIFIER_TYPE_PREFIXES } from './qualifyBareFields';
 
 /**
  * C43: `resolveFieldPath` follows only a field's first reference type, but a
@@ -96,7 +98,19 @@ export interface FieldNotFoundDetails {
   ownerFullName: string;
 }
 
-export type SemanticErrorDetails = FieldNotFoundDetails;
+/**
+ * C41 2c: the head of `Голова.Путь` names no source of the query or of an enclosing
+ * one, no metadata type and no field of a visible source (`Field not found "Ъ.Код"`).
+ */
+export interface UnknownAliasDetails {
+  kind: 'unknownAlias';
+  statementIndex: number;
+  section: FieldValidationSection;
+  alias: string;
+  requestedPath: string;
+}
+
+export type SemanticErrorDetails = FieldNotFoundDetails | UnknownAliasDetails;
 
 /**
  * Распознаваемые префиксы видов метаданных (ВЕРХ-регистр). Источник проверяется на
@@ -118,6 +132,15 @@ export type SemanticErrorDetails = FieldNotFoundDetails;
  * Дополнять этот список ТОЛЬКО по такой же корпусной проверке, а не по догадке.
  */
 const PSEUDO_FIELDS = new Set<string>(['ПРЕДСТАВЛЕНИЕ', 'ТИП', 'ПРОВЕДЕН']);
+
+/** C41 2c: heads that name a metadata kind (`Справочник.Валюты.Код`), never an alias. */
+let metadataKindHeads: Set<string> | undefined;
+function isMetadataKindHead(head: string): boolean {
+  metadataKindHeads ??= new Set([
+    ...TYPE_PREFIXES, ...QUALIFIER_TYPE_PREFIXES, ...[...ENGLISH_METADATA_KINDS.values()].map(k => k.toUpperCase()),
+  ]);
+  return metadataKindHeads.has(canonicalMetadataKind(head).toUpperCase());
+}
 
 export const TYPE_PREFIXES = new Set<string>([
   'СПРАВОЧНИК',
@@ -422,11 +445,14 @@ export function validateBatchSemantics(
       const soleNested = !topLevel && model.tables.length === 1;
       const aliasIds = new Map<string, string>();
       for (const [id, alias] of resolveAliases(model.tables)) aliasIds.set(alias.toUpperCase(), id);
+      const judgeHead = unknownAliasJudge(model, outer, statementIndex, aliasIds);
       const checkRaw = (text: string | undefined, section: FieldValidationSection): void => {
-        for (const ref of rawFieldReferences(text, aliasIds)) {
+        const { refs, heads } = rawFieldReferences(text, aliasIds);
+        for (const ref of refs) {
           if (soleNested && mayNameOuterField(ref.path, outer, statementIndex)) continue;
           checkOne(ref.tableId, ref.path, section);
         }
+        for (const h of heads) judgeHead(h.head, h.path, section);
         if (text === undefined || !resolver) return;
         for (const inner of embeddedSubqueryTexts(text)) {
           const sub = parseRawSubquery(inner);
@@ -444,7 +470,73 @@ export function validateBatchSemantics(
       }
       for (const f of model.grouping?.groupFields ?? []) checkRaw(f.expression, 'grouping');
       for (const f of model.order?.fields ?? []) checkRaw(f.expression, 'order');
+      // C41 2c: structured slots where the parser bound an unknown head as a bare path
+      // of a source (`Ъ.Код` → path `Ъ.Код`) or left an УПОРЯДОЧИТЬ path unbound.
+      for (const f of [...model.fields, ...(model.trailingFields ?? [])]) {
+        if (f.expression === undefined && !f.qualified && f.path.includes('.')) judgeHead(f.path.split('.')[0], f.path, 'select');
+      }
+      for (const f of model.order?.fields ?? []) {
+        if (f.expression === undefined && !f.tableId && f.path.includes('.')) judgeHead(f.path.split('.')[0], f.path, 'order');
+      }
     }
+  };
+
+  /**
+   * C41 2c: reports `head.path` once per query when the head names no local or outer
+   * source, no metadata kind and no field, tabular section or pseudo-field of a visible
+   * source. Needs metadata; a visible source without known columns (a parameter, a
+   * temporary table without a complete schema, a subquery with `*` or an unnamed
+   * column, a source unknown to the resolver) leaves the head unchecked.
+   */
+  const unknownAliasJudge = (
+    model: QueryModel, outer: SelectedTable[][], statementIndex: number, aliasIds: ReadonlyMap<string, string>,
+  ) => {
+    const reported = new Set<string>();
+    let aliases: Set<string> | undefined;
+    let columns: (Set<string> | undefined)[] | undefined;
+    return (head: string, path: string, section: FieldValidationSection): void => {
+      if (!resolver) return;
+      const H = head.toUpperCase();
+      if (!aliases) {
+        aliases = new Set(aliasIds.keys());
+        for (const level of outer) for (const [, a] of resolveAliases(level)) aliases.add(a.toUpperCase());
+      }
+      if (aliases.has(H) || isMetadataKindHead(head) || PSEUDO_FIELDS.has(H)) return;
+      columns ??= [model.tables, ...outer].flat().map(t => knownColumns(t, statementIndex));
+      if (columns.some(c => c === undefined || c.has(H))) return;
+      const key = path.toUpperCase();
+      if (reported.has(key)) return;
+      reported.add(key);
+      errors.push({
+        message: `Поле "${path}" не найдено`,
+        details: { kind: 'unknownAlias', statementIndex, section, alias: head, requestedPath: path },
+      });
+    };
+  };
+
+  /** C41 2c: the column names of a source, or undefined when they are not known. */
+  const knownColumns = (t: SelectedTable, statementIndex: number): Set<string> | undefined => {
+    const r = resolver!;
+    if (t.subquery) {
+      const m0 = t.subquery.members[0]?.model;
+      if (!m0) return undefined;
+      const names = new Set<string>();
+      for (const f of [...m0.fields, ...(m0.trailingFields ?? [])]) {
+        const name = f.alias ?? (f.expression === undefined ? f.path.split('.').pop() : undefined);
+        if (!name || isWildcardExpression(f.expression)) return undefined;
+        names.add(name.toUpperCase());
+      }
+      return names;
+    }
+    if (!t.fullName || t.fullName.startsWith('&')) return undefined;
+    const tempSchema = visibleTempTableAt(tempTableLifetimes, statementIndex, t.fullName);
+    const meta = tempSchema?.complete
+      ? tempSchema.table
+      : (t.virtual ? r.virtualTableByFullName?.(t.fullName) : undefined) ?? r.tableByFullName(t.fullName);
+    if (!meta || (meta.kind === 'ВременнаяТаблица' && !tempSchema?.complete)) return undefined;
+    const names = new Set(meta.fields.map(f => f.name.toUpperCase()));
+    for (const ts of meta.tabularSections ?? []) names.add(ts.name.toUpperCase());
+    return names;
   };
 
   const parseRawSubquery = (inner: string): QueryDocument | null => {
@@ -674,21 +766,25 @@ const VT_EXPRESSION_KEYS: (keyof VirtualParams)[] = [
 
 /**
  * C41: field references `Псевдоним.Путь` in raw expression text, by lexer tokens, whose
- * head is one of `aliasIds` (upper-case alias → table id). Skipped: a nested
- * `(ВЫБРАТЬ …)` (its own scope), arguments of `ЗНАЧЕНИЕ`/`ТИП` and a `.(…)` column list
- * (metadata names), a type after `КАК`/`ССЫЛКА`, a path followed by `(` or `.(`, and a
- * path with an operator word as a segment — the parser's reading of an invalid text
- * (`НЕ В.Поле` with source alias `В` → `В.НЕ`), not a field the user wrote. Unlexable
- * text yields nothing.
+ * head is one of `aliasIds` (upper-case alias → table id), and — in the same pass — the
+ * other `Голова.Путь` heads (C41 2c judges them). Skipped: a nested `(ВЫБРАТЬ …)` (its
+ * own scope), arguments of `ЗНАЧЕНИЕ`/`ТИП` and a `.(…)` column list (metadata names), a
+ * type after `КАК`/`ССЫЛКА`, a path followed by `(` or `.(`, and a path with an operator
+ * word as a segment — the parser's reading of an invalid text (`НЕ В.Поле` with source
+ * alias `В` → `В.НЕ`), not a field the user wrote. Unlexable text yields nothing.
  */
-function rawFieldReferences(text: string | undefined, aliasIds: ReadonlyMap<string, string>): Array<{ tableId: string; path: string }> {
-  if (!text || aliasIds.size === 0) return [];
+function rawFieldReferences(text: string | undefined, aliasIds: ReadonlyMap<string, string>): {
+  refs: Array<{ tableId: string; path: string }>;
+  heads: Array<{ head: string; path: string }>;
+} {
+  const refs: Array<{ tableId: string; path: string }> = [];
+  const heads: Array<{ head: string; path: string }> = [];
+  if (!text) return { refs, heads };
   const tokens = tryTokenize(text);
-  if (!tokens) return [];
+  if (!tokens) return { refs, heads };
   const sig = tokens.filter(t => t.type !== 'eof');
   const isPunct = (t: Token | undefined, v: string): boolean => !!t && t.type === 'punct' && t.value === v;
   const isWord = (t: Token | undefined): t is Token => !!t && (t.type === 'ident' || t.type === 'keyword');
-  const refs: Array<{ tableId: string; path: string }> = [];
   const skipDepths: number[] = [];
   let depth = 0;
   for (let i = 0; i < sig.length; i++) {
@@ -724,11 +820,13 @@ function rawFieldReferences(text: string | undefined, aliasIds: ReadonlyMap<stri
     const after = sig[k];
     const tableId = aliasIds.get(t.text.toUpperCase());
     i = k - 1;
-    if (!tableId || segs.length === 0 || isPunct(after, '(') || isPunct(after, '.')) continue;
+    if (segs.length === 0 || isPunct(after, '(') || isPunct(after, '.')) continue;
     if (segs.some(seg => OPERATOR_WORDS.has(wordOf(seg)))) continue;
-    refs.push({ tableId, path: segs.map(seg => seg.text).join('.') });
+    const path = segs.map(seg => seg.text).join('.');
+    if (tableId) refs.push({ tableId, path });
+    else heads.push({ head: t.text, path: `${t.text}.${path}` });
   }
-  return refs;
+  return { refs, heads };
 }
 
 function isWordToken(t: Token | undefined, word: string): boolean {
