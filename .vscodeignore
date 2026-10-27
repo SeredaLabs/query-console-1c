@@ -1,6 +1,5 @@
 .vscode/**
 .github/**
-.devcontainer/**
 .claude/**
 .gitignore
 AGENTS.md
