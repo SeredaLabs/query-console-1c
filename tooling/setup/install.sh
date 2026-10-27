@@ -13,14 +13,11 @@
 #   6. (--wasm) пересобирает tree-sitter-sdbl.wasm из tmp/tree-sitter-bsl
 #               (опциональный внешний oracle для разработки, V2; не нужен
 #               для сборки, тестов и релиза; требует emscripten).
-#   7. (--docker) ставит Docker Engine (+ buildx/compose) и devcontainers CLI —
-#               хост-окружение для разработки в контейнере (DevContainer).
 #
 # Использование:
 #   npm run setup --              # системные пакеты (если apt) + npm install + build
 #   npm run setup -- --e2e        # то же + браузеры Playwright
 #   npm run setup -- --wasm       # то же + пересборка SDBL-грамматики в .wasm
-#   npm run setup -- --docker     # то же + Docker Engine и devcontainers CLI (DevContainer)
 #   npm run setup -- --no-system  # пропустить установку системных пакетов
 #   npm run setup -- --e2e --wasm
 set -euo pipefail
@@ -31,13 +28,11 @@ cd "$REPO_ROOT"
 WITH_E2E=0
 WITH_WASM=0
 WITH_SYSTEM=1
-WITH_DOCKER=0
 
 for arg in "$@"; do
   case "$arg" in
     --e2e)        WITH_E2E=1 ;;
     --wasm)       WITH_WASM=1 ;;
-    --docker)     WITH_DOCKER=1 ;;
     --no-system)  WITH_SYSTEM=0 ;;
     -h|--help)
       # Печатаем шапку-комментарий (со строки 2 до первой не-комментной строки).
@@ -115,64 +110,7 @@ if [ "$WITH_WASM" -eq 1 ]; then
     bash tooling/scripts/build-wasm.sh
   else
     echo "[install] ПРОПУСК --wasm: нет tmp/tree-sitter-bsl." >&2
-    echo "          Скопируйте sibling-репо (см. .devcontainer/copy-sibling-repos.sh) и нужен emscripten." >&2
-  fi
-fi
-
-# --- 7. Docker + devcontainers CLI (для DevContainer, опционально) ----------
-if [ "$WITH_DOCKER" -eq 1 ]; then
-  # 7a. Docker Engine.
-  if command -v docker >/dev/null 2>&1; then
-    log "Docker уже установлен: $(docker --version)"
-  else
-    if ! command -v curl >/dev/null 2>&1; then
-      echo "[install] ОШИБКА --docker: нужен curl для установки Docker." >&2
-      echo "          Установите Docker вручную: https://docs.docker.com/engine/install/" >&2
-      exit 1
-    fi
-    log "Установка Docker Engine (официальный скрипт get.docker.com) ..."
-    # Convenience-скрипт сам подбирает apt/dnf-репозиторий по дистрибутиву
-    # и ставит docker-ce, CLI, containerd, buildx и compose-плагины.
-    TMP_GET_DOCKER="$(mktemp)"
-    curl -fsSL https://get.docker.com -o "$TMP_GET_DOCKER"
-    $SUDO sh "$TMP_GET_DOCKER"
-    rm -f "$TMP_GET_DOCKER"
-    log "Docker установлен: $(docker --version)"
-  fi
-
-  # 7b. Демон: включаем и запускаем (если systemd доступен).
-  if command -v systemctl >/dev/null 2>&1; then
-    $SUDO systemctl enable --now docker >/dev/null 2>&1 \
-      && log "Docker-демон включён (systemctl enable --now docker)." \
-      || log "Не удалось управлять docker через systemctl — запустите демон вручную."
-  fi
-
-  # 7c. Группа docker — чтобы работать без sudo (нужен перелогин/newgrp).
-  TARGET_USER="${SUDO_USER:-${USER:-$(id -un)}}"
-  if [ "$TARGET_USER" != "root" ]; then
-    if ! id -nG "$TARGET_USER" 2>/dev/null | tr ' ' '\n' | grep -qx docker; then
-      log "Добавляю '$TARGET_USER' в группу docker ..."
-      $SUDO usermod -aG docker "$TARGET_USER" \
-        && log "Готово. Перелогиньтесь (или 'newgrp docker'), чтобы группа применилась." \
-        || log "Не удалось добавить в группу docker — используйте 'sudo docker'."
-    else
-      log "Пользователь '$TARGET_USER' уже в группе docker."
-    fi
-  fi
-
-  # 7d. devcontainers CLI — поднимать контейнер из терминала (devcontainer up).
-  if command -v devcontainer >/dev/null 2>&1; then
-    log "devcontainers CLI уже установлен: $(devcontainer --version 2>/dev/null)"
-  else
-    log "Установка @devcontainers/cli (npm -g) ..."
-    if npm install -g @devcontainers/cli >/dev/null 2>&1; then
-      log "devcontainers CLI установлен: $(devcontainer --version 2>/dev/null)"
-    elif [ -n "$SUDO" ] && $SUDO npm install -g @devcontainers/cli >/dev/null 2>&1; then
-      log "devcontainers CLI установлен (через sudo): $(devcontainer --version 2>/dev/null)"
-    else
-      echo "[install] ПРЕДУПРЕЖДЕНИЕ: не удалось поставить @devcontainers/cli глобально." >&2
-      echo "          Поставьте вручную: npm install -g @devcontainers/cli" >&2
-    fi
+    echo "          Положите репозиторий tree-sitter-bsl в tmp/tree-sitter-bsl; нужен emscripten." >&2
   fi
 fi
 
@@ -182,10 +120,3 @@ echo "    npm run dev        # сборка + запуск VS Code с расши
 echo "    npm run test:unit  # юнит-тесты (Vitest)"
 [ "$WITH_E2E" -eq 1 ] && echo "    npm run test:e2e   # e2e-тесты (Playwright)"
 echo "    npm run parse -- --cf <путь-к-cf> --out <вывод>   # CLI-парсер метаданных"
-if [ "$WITH_DOCKER" -eq 1 ]; then
-  echo
-  echo "    Разработка в контейнере (DevContainer):"
-  echo "      • VS Code: команда «Dev Containers: Reopen in Container»"
-  echo "      • Терминал: devcontainer up --workspace-folder .   (затем devcontainer exec ... )"
-  echo "    Проверка Docker: docker run --rm hello-world  (если 'permission denied' — перелогиньтесь)"
-fi
