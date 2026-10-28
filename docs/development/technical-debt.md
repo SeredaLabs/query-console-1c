@@ -14,14 +14,13 @@ one place, ordered by priority.
 
 ## Open items
 
-22 items: P1 — 1, P2 — 16, P3 — 5. No item is P0.
+21 items: P1 — 1, P2 — 15, P3 — 5. No item is P0.
 
 | ID | Status / priority | Area | What is left |
 |---|---|---|---|
-| V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Its 44 refused cases re-checked on 8.5.1.1529: 32 accepted (28 only by the newer platform); 30 of them produce the platform canonical text (one differs in whitespace only), 2 are refused by our parser (C58, C59). Metadata coverage, catalog promotion, C37–C39, C58, C59 remain open; C36 is an accepted divergence. |
+| V5 | OPEN · P1 | Verification | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Its 44 refused cases re-checked on 8.5.1.1529: 32 accepted (28 only by the newer platform); 31 of them produce the platform canonical text (one differs in whitespace only; C58 fixed), 1 is refused by our parser (C59). Metadata coverage, catalog promotion, C37–C39, C59 remain open; C36 is an accepted divergence. |
 | C29 | PARTIAL · P2 | Correctness | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. |
 | C41 | PARTIAL · P2 | Correctness | Field paths in raw expression text, nested queries and subqueries kept as raw text, and unknown alias heads are checked against metadata (stages 1, 2, 2c), also in editor diagnostics with loaded metadata (1b); not checked: a metadata-name head while the source has an alias, the short name of a source without КАК, paths that may name an outer field or meet a source without known columns (fail-open), virtual-table parameters and ИТОГИ expressions. |
-| C58 | OPEN · P2 | Correctness | `ИНДЕКСИРОВАТЬ ПО … УНИКАЛЬНО` (accepted by 8.5.1.1529, refused by 8.3.15.1489) is a parse error: the Designer does not open the query and editor diagnostics mark it. |
 | C59 | OPEN · P2 | Correctness | An empty grouping set `()` in `ГРУППИРУЮЩИМ НАБОРАМ` (accepted by 8.5.1.1529, refused by 8.3.15.1489) is a parse error: the Designer does not open the query and editor diagnostics mark it. |
 | A3 | PARTIAL · P2 | Architecture | The expression editor types resolved fields and simple literals, numeric arithmetic over constants/direct metadata fields, and bounded SUBSTRING calls; other compound expressions stay untyped. |
 | V1 | PARTIAL · P2 | Verification | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. |
@@ -47,7 +46,6 @@ one place, ordered by priority.
 |---|---|---|
 | C29 | PARTIAL · P2 | Metadata column synthesis: four platform rules fixed; cases absent from SL_kza and the old-YAML fallback path remain unverified. [Details](#c29-metadata-column-synthesis). |
 | C41 | PARTIAL · P2 | Field paths in raw expression text, nested queries, raw-text subqueries and unknown alias heads are checked; three platform-refused head forms and fail-open paths are not. [Details](#c41-metadata-validation-of-raw-expressions). |
-| C58 | OPEN · P2 | `ИНДЕКСИРОВАТЬ ПО … УНИКАЛЬНО` (accepted by 8.5.1.1529, refused by 8.3.15.1489) is a parse error: the Designer does not open the query and editor diagnostics mark it. [Details](#c58c59-newer-platform-forms-refused-by-the-parser). |
 | C59 | OPEN · P2 | An empty grouping set `()` in `ГРУППИРУЮЩИМ НАБОРАМ` (accepted by 8.5.1.1529, refused by 8.3.15.1489) is a parse error: the Designer does not open the query and editor diagnostics mark it. [Details](#c58c59-newer-platform-forms-refused-by-the-parser). |
 | R11 | PARTIAL · P3 | Constructor-parity GROUP BY: three rewrites were removed (they over-fired on every probe in the repository); the platform's own GROUP BY reconstruction is not modelled and historical positive witnesses are unavailable. The Designer keeps GROUP BY as written. [Details](#r11-group-by-semantics). |
 | C34 | PARTIAL · P3 | English calculation-register, chart-of-calculation-types and sequence names are mapped, but not platform-attested (two names from the official 1C guide, four from a third-party grammar); `Base<Register>` is deliberately not mapped. [Details](#c34-english-sdbl-leftovers). |
@@ -261,7 +259,7 @@ No production code or golden output changed in this audit.
 
 ### C58–C59. Newer-platform forms refused by the parser
 
-**C58 / C59: OPEN · P2** (2026-10-28, found by the
+**C58: CLOSED (2026-10-28); C59: OPEN · P2** (2026-10-28, found by the
 [8.5.1.1529 re-check](../../test/fixtures/platform/v5-phase5-8.5.1.1529.json)).
 
 Both forms were refused by 8.3.15.1489 and are accepted by 8.5.1.1529
@@ -272,16 +270,27 @@ diagnostics report a parse error on valid text. Nothing is written.
 - **C58:** `PQ-package.index-by.2` — `ИНДЕКСИРОВАТЬ ПО Код УНИКАЛЬНО`: «после конца
   запроса остались нераспознанные данные (получено «УНИКАЛЬНО»)». The platform
   prints `ИНДЕКСИРОВАТЬ ПО\n\tКод УНИКАЛЬНО`. Without `УНИКАЛЬНО` the query opens.
+  *Fix (2026-10-28):* `parseIndex` reads `УНИКАЛЬНО` after the fields of a single
+  index, and `renderIndex` prints it after the last field when the index is unique.
+  The «Уникальный» checkbox of a single index used to be dropped on OK / Save; it
+  now writes `УНИКАЛЬНО`. English `UNIQUE` is read as `УНИКАЛЬНО` (pair attested by
+  8.5; both words were already reserved as aliases on 8.3.15). Five more 8.5 probes
+  ([fixture](../../test/fixtures/platform/c58-index-unique.json): two fields, a
+  single set of `ПО НАБОРАМ`, unique and mixed sets, English) open, reopen, apply
+  and produce exactly the platform canonical text
+  ([regressions](../../test/unit/indexUnique.c58.test.ts)). `УНИКАЛЬНО` is refused
+  by 8.3.15.1489, like `ПО НАБОРАМ`, which the generator already writes for two or
+  more indexes.
 - **C59:** `PQ-expression.grouped-by` — `ГРУППИРУЮЩИМ НАБОРАМ ((Вал.Код), ())`:
   «ожидалась ссылка на поле группировки (получено «)»)». The platform prints the
   empty set as `()`. `СГРУППИРОВАНОПО(…)` itself opens with non-empty sets.
 
-Expected failures in
+C59 is an expected failure in
 [`grammarParity.phase5-8.5.test.ts`](../../test/unit/grammarParity.phase5-8.5.test.ts).
 Both are newer-platform syntax: accepting them must not change how other text is
 read; the platform build a query targets is not known to the extension.
 
-**Next boundary:** one bounded parser fix per item, with open/reopen/Apply and the
+**Next boundary:** C59 — a bounded parser fix with open/reopen/Apply and the
 platform canonical text as regressions.
 
 ### C41. Metadata validation of raw expressions
@@ -947,7 +956,7 @@ partial, as recorded in the architecture table above.
 
 | ID | Status / priority | Summary |
 |---|---|---|
-| V5 | OPEN · P1 | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Its 44 refused cases re-checked on 8.5.1.1529: 32 accepted (28 only by the newer platform); 30 of them produce the platform canonical text (one differs in whitespace only), 2 are refused by our parser (C58, C59). Metadata coverage, catalog promotion, C37–C39, C58, C59 remain open; C36 is an accepted divergence. [Details](#v5-grammar-parity-gate-query-core-v1). |
+| V5 | OPEN · P1 | Query Core v1 gate: 0 known platform-valid grammar gaps. Phase 5 partial: 88 adapted cases on 8.3.15.1489; 53 fully attested cases produce the same platform canonical text. Its 44 refused cases re-checked on 8.5.1.1529: 32 accepted (28 only by the newer platform); 31 of them produce the platform canonical text (one differs in whitespace only; C58 fixed), 1 is refused by our parser (C59). Metadata coverage, catalog promotion, C37–C39, C59 remain open; C36 is an accepted divergence. [Details](#v5-grammar-parity-gate-query-core-v1). |
 | V1 | PARTIAL · P2 | Golden corpus entries have no per-entry platform/metadata attestation; no attested negative or English cases. [Details](#v1-corpus-attestation). |
 | V3 | PARTIAL · P2 | The Apply gate never compares input and output semantics. [Details](#v3-apply-semantic-preservation). |
 
@@ -962,7 +971,7 @@ Query Core v1 blocker, not a defect of the current product. [Grammar parity](gra
 
 The [catalog](../../test/fixtures/grammar-parity/catalog.jsonl) holds 153 entries (RP01–RP25 and 128 golden-attested forms, build unknown); no open catalog gap; C36 is an accepted divergence (its two listed constructs only) (C2 fixed 2026-10-17, C24 fixed 2026-10-18). The Phase 5 evidence adds C37–C39 canonical differences and C40 safety evidence (C40 closed) pending catalog promotion. [Proposal](audits/sdbl-grammar-parity-proposal-2026-10-04.md).
 
-**Next boundary:** Phase 3 inventory remains 70 areas = 35 covered + 34 pending + 1 out of scope. [Phase 5 partial audit](audits/v5-phase5-2026-10-21.md) records 88 adapted cases addressing 80 form IDs across 31 queued areas; this is not full coverage of those forms. 53 full platform verdicts have stable local round trips and platform-equivalent generated output. The original queue/catalog remain unchanged pending reviewed promotion. The 44 cases refused by 8.3.15.1489 were re-checked on 8.5.1.1529 ([fixture](../../test/fixtures/platform/v5-phase5-8.5.1.1529.json), [audit](audits/v5-phase5-2026-10-21.md#re-check-on-8511529)): 32 accepted — the string, math and value functions, `ГРУППИРУЮЩИМ НАБОРАМ`, `СГРУППИРОВАНОПО`, `ИНДЕКСИРОВАТЬ ПО НАБОРАМ` / `УНИКАЛЬНО`, a change table and the four C40 `В` forms; 30 of them open, reopen, apply and produce the platform canonical text (grouping sets differ in whitespace only), C58 and C59 do not open. The 10 grammar refusals are refused by us too; 2 table-not-found refusals depend on the base. Finish missing-metadata probes, resolve the incomplete characteristics probe (unbraced form refused by 8.5 too), fix C58–C59 and review C37–C39 before claiming the gate. Gates G2/G3/G5 run in the unit suite.
+**Next boundary:** Phase 3 inventory remains 70 areas = 35 covered + 34 pending + 1 out of scope. [Phase 5 partial audit](audits/v5-phase5-2026-10-21.md) records 88 adapted cases addressing 80 form IDs across 31 queued areas; this is not full coverage of those forms. 53 full platform verdicts have stable local round trips and platform-equivalent generated output. The original queue/catalog remain unchanged pending reviewed promotion. The 44 cases refused by 8.3.15.1489 were re-checked on 8.5.1.1529 ([fixture](../../test/fixtures/platform/v5-phase5-8.5.1.1529.json), [audit](audits/v5-phase5-2026-10-21.md#re-check-on-8511529)): 32 accepted — the string, math and value functions, `ГРУППИРУЮЩИМ НАБОРАМ`, `СГРУППИРОВАНОПО`, `ИНДЕКСИРОВАТЬ ПО НАБОРАМ` / `УНИКАЛЬНО`, a change table and the four C40 `В` forms; 30 of them open, reopen, apply and produce the platform canonical text (grouping sets differ in whitespace only), C59 does not open (C58 fixed). The 10 grammar refusals are refused by us too; 2 table-not-found refusals depend on the base. Finish missing-metadata probes, resolve the incomplete characteristics probe (unbraced form refused by 8.5 too), fix C59 and review C37–C39 before claiming the gate. Gates G2/G3/G5 run in the unit suite.
 
 ### V1. Corpus attestation
 
@@ -1058,6 +1067,7 @@ and [audit index](audits/README.md).
 | C32 | CLOSED | OK / Save without a change no longer rewrites the query. [Details](#c32-safe--no-op-apply). |
 | C33 | CLOSED | An unaliased `#Имя` source gets no synthesized `КАК` in the Designer (2026-10-18). [Details](#c33-unaliased-template-marker-source). |
 | C40 | CLOSED | A scalar subquery outside `В` / `НЕ В` / `В ИЕРАРХИИ` is refused on Apply, as by the platform; the same verdicts on 8.3.15.1489 and 8.5.1.1529 (2026-10-28). [Details](#c37c40-phase-5-findings). |
+| C58 | CLOSED | `ИНДЕКСИРОВАТЬ ПО … УНИКАЛЬНО` opens and is printed as by 8.5.1.1529; the «Уникальный» flag of a single index is no longer dropped; `UNIQUE` reads as `УНИКАЛЬНО` (2026-10-28). [Details](#c58c59-newer-platform-forms-refused-by-the-parser). |
 | C42 | CLOSED | A Classic ↔ Canvas switch no longer erases an Apply block: a model with a static Apply blocker does not switch (2026-10-22). [Details](#c42-unclosed-condition-closed-by-a-designer-switch). |
 | C43 | CLOSED | A field reached through a composite reference is found if any target has it; open/Apply/diagnostics no longer refuse it (2026-10-22). [Details](#c43-composite-reference-fields). |
 | C44 | CLOSED | Query Text no longer shows "✓" or applies an incomplete custom condition that OK / Save refuses: the status bar and Apply use the same `malformedCustom` check (2026-10-22). [Details](#c44-query-text-accepted-an-incomplete-condition). |

@@ -20,9 +20,9 @@ function measure(text: string) {
     apply: decideApply(generated, null, blocked ? { kind: 'malformedCustom' } : null, undefined, text) };
 }
 
-// Platform-valid on 8.5, refused by the parser: C58 (ИНДЕКСИРОВАТЬ … УНИКАЛЬНО) and
-// C59 (an empty grouping set `()`). Expected failures until those are fixed.
-const GAPS = new Set(['PQ-package.index-by.2', 'PQ-expression.grouped-by']);
+// Platform-valid on 8.5, refused by the parser: C59 (an empty grouping set `()`).
+// Expected failure until it is fixed.
+const GAPS = new Set(['PQ-expression.grouped-by']);
 // The platform prints a tab after the opening parenthesis of ГРУППИРУЮЩИМ НАБОРАМ and
 // a final line break; ours does not. Whitespace only, open/reopen/Apply pass.
 const WHITESPACE_ONLY = new Set(['PQ-group.grouping-sets.1']);

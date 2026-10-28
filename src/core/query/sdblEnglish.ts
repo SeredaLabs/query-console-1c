@@ -5,9 +5,9 @@
  * word therefore behaves as its Russian pair: the parser keeps a single, Russian,
  * canonical vocabulary.
  *
- * Only pairs attested on the platform are listed (test/fixtures/platform/c2-english.json).
- * Russian words without an attested English spelling (ДОБАВИТЬ, УНИКАЛЬНО,
- * ГРУППИРУЮЩИМ НАБОРАМ, ХАРАКТЕРИСТИКИ) stay Russian-only.
+ * Only pairs attested on the platform are listed (test/fixtures/platform/c2-english.json;
+ * UNIQUE: c58-index-unique.json, 8.5.1.1529). Russian words without an attested
+ * English spelling (ДОБАВИТЬ, ГРУППИРУЮЩИМ НАБОРАМ, ХАРАКТЕРИСТИКИ) stay Russian-only.
  */
 
 /**
@@ -24,7 +24,7 @@ export const ENGLISH_KEYWORDS: ReadonlyMap<string, string> = new Map([
   ['ON', 'ПО'], ['BY', 'ПО'], ['GROUP', 'СГРУППИРОВАТЬ'], ['HAVING', 'ИМЕЮЩИЕ'],
   ['INTO', 'ПОМЕСТИТЬ'], ['DROP', 'УНИЧТОЖИТЬ'], ['ORDER', 'УПОРЯДОЧИТЬ'], ['DESC', 'УБЫВ'],
   ['AUTOORDER', 'АВТОУПОРЯДОЧИВАНИЕ'], ['TOTALS', 'ИТОГИ'], ['OVERALL', 'ОБЩИЕ'],
-  ['HIERARCHY', 'ИЕРАРХИЯ'], ['ONLY', 'ТОЛЬКО'], ['INDEX', 'ИНДЕКСИРОВАТЬ'],
+  ['HIERARCHY', 'ИЕРАРХИЯ'], ['ONLY', 'ТОЛЬКО'], ['INDEX', 'ИНДЕКСИРОВАТЬ'], ['UNIQUE', 'УНИКАЛЬНО'],
   ['FOR', 'ДЛЯ'], ['UPDATE', 'ИЗМЕНЕНИЯ'], ['UNION', 'ОБЪЕДИНИТЬ'], ['ALL', 'ВСЕ'],
 ]);
 
