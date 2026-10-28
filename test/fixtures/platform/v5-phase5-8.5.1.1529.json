@@ -3,7 +3,7 @@
   "platformBuild": "8.5.1.1529",
   "platformBuildSource": "Recorded by the probe processor (СистемнаяИнформация.ВерсияПриложения).",
   "platformDate": "2026-10-28",
-  "platformMethod": "External processor ПроверкаЗапросов (tooling/1c-probe): СхемаЗапроса.УстановитьТекстЗапроса + ПолучитьТекстЗапроса (designerOk, query_text) and Запрос.НайтиПараметры (compileOk); valid = both. No execution. Run by the user on a Windows test base; its configuration was not recorded.",
+  "platformMethod": "External processor ПроверкаЗапросов (tooling/1c-probe): СхемаЗапроса.УстановитьТекстЗапроса + ПолучитьТекстЗапроса (designerOk, query_text) and Запрос.НайтиПараметры (compileOk); valid = both. No execution. Run by the user on a Windows test base of the configuration «Комплексне управління бізнес процесами» (as named by the user; its release was not recorded).",
   "note": "The 44 cases are every case refused by 8.3.15.1489 in v5-phase5-8.3.15.json (34) plus every case of c40-scalar-subquery.json except rhs_eq (= PQ-expression.scalar-subquery), with the same text re-indented by two spaces. platform8315Valid is the 8.3.15.1489 verdict of the same case. Errors are the first line of the platform message (Ukrainian UI). Table-not-found refusals depend on the base configuration and say nothing about the version.",
   "cases": [
     {
