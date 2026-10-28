@@ -2533,7 +2533,8 @@ export function renderTotals(totals: Totals | undefined, model: QueryModel): str
  * тогда вывод байт-в-байт как раньше. Поля адресуются по псевдониму выборки.
  *
  * Один индекс → `ИНДЕКСИРОВАТЬ ПО` + поля `\t<псевдоним>` (запятая после всех,
- * кроме последнего); уникальность для одиночного индекса не выражается. Два и более
+ * кроме последнего), ` УНИКАЛЬНО` после последнего поля при `unique` (C58; так
+ * печатает 8.5.1.1529, и `ПО НАБОРАМ` из одного набора тоже). Два и более
  * → `ИНДЕКСИРОВАТЬ ПО НАБОРАМ`, наборы в скобках `(…)`, суффикс ` УНИКАЛЬНО` при
  * `ix.unique`, запятая между наборами.
  */
@@ -2551,10 +2552,10 @@ export function renderIndex(indexing: Indexing | undefined, model: QueryModel): 
       : sectionFieldRefText(model, tableAliases, f.tableId, f.path, f.selectAlias);
 
   if (indexes.length === 1) {
-    const fields = indexes[0].fields;
+    const { fields, unique } = indexes[0];
     const lines = fields.map((f, i) => {
-      const comma = i < fields.length - 1 ? ',' : '';
-      return `\t${aliasOf(f)}${comma}`;
+      const tail = i < fields.length - 1 ? ',' : unique ? ' УНИКАЛЬНО' : '';
+      return `\t${aliasOf(f)}${tail}`;
     });
     return ['ИНДЕКСИРОВАТЬ ПО', ...lines];
   }

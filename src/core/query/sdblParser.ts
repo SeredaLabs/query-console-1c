@@ -4712,7 +4712,7 @@ function parseTotalGroupField(cur: Cursor, ctx: SectionResolveContext): TotalGro
 
 /**
  * Секция ИНДЕКСИРОВАТЬ ПО / ИНДЕКСИРОВАТЬ ПО НАБОРАМ. Инвертирует `renderIndex`:
- *  - `ИНДЕКСИРОВАТЬ ПО <a>, <b>` → один индекс {unique:false, fields}.
+ *  - `ИНДЕКСИРОВАТЬ ПО <a>, <b>[ УНИКАЛЬНО]` → один индекс {unique, fields}.
  *  - `ИНДЕКСИРОВАТЬ ПО НАБОРАМ ( (a, b)[ УНИКАЛЬНО], (c) )` → несколько индексов.
  * Поля адресуются по псевдониму выборки.
  */
@@ -4741,14 +4741,16 @@ function parseIndex(cur: Cursor, ctx: SectionResolveContext): Indexing {
     return { indexes };
   }
 
-  // Один индекс: список псевдонимов через запятую.
+  // Один индекс: список псевдонимов через запятую, затем необязательное УНИКАЛЬНО
+  // (C58; 8.5.1.1529 принимает, 8.3.15.1489 — нет).
   const fields: FieldRef[] = [];
   for (;;) {
     fields.push(parseIndexField(cur, ctx));
     if (cur.matchPunct(',')) continue;
     break;
   }
-  return { indexes: [{ unique: false, fields }] };
+  const unique = cur.matchKeyword('УНИКАЛЬНО');
+  return { indexes: [{ unique, fields }] };
 }
 
 /**

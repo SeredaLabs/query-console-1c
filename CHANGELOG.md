@@ -19,6 +19,10 @@ All notable changes are recorded here. The project uses
 
 ### Fixed
 
+- `ИНДЕКСИРОВАТЬ ПО … УНИКАЛЬНО` with one index opens in the Query Designer and is no
+  longer marked as an error, and the «Уникальный» checkbox of a single index now
+  writes `УНИКАЛЬНО`; before, it was dropped on OK / Save. English `UNIQUE` is read
+  as `УНИКАЛЬНО`. Platform 8.5.1.1529 accepts it; 8.3.15.1489 does not.
 - `ГРУППИРУЮЩИМ НАБОРАМ` inside a subquery kept as text (for example in an `ИЛИ`
   condition) is no longer rewritten as fields (`Х.ГРУППИРУЮЩИМ`), and the parentheses
   of its sets are kept. Before, OK / Save refused such a query. Grouping sets are
