@@ -1,0 +1,494 @@
+{
+  "issue": "V5, C40",
+  "platformBuild": "8.5.1.1529",
+  "platformBuildSource": "Recorded by the probe processor (СистемнаяИнформация.ВерсияПриложения).",
+  "platformDate": "2026-10-28",
+  "platformMethod": "External processor ПроверкаЗапросов (tooling/1c-probe): СхемаЗапроса.УстановитьТекстЗапроса + ПолучитьТекстЗапроса (designerOk, query_text) and Запрос.НайтиПараметры (compileOk); valid = both. No execution. Run by the user on a Windows test base of the configuration BAS Integrated Enterprise Management 2.1.21.1, no configuration extensions.",
+  "note": "The 44 cases are every case refused by 8.3.15.1489 in v5-phase5-8.3.15.json (34) plus every case of c40-scalar-subquery.json except rhs_eq (= PQ-expression.scalar-subquery), with the same text re-indented by two spaces. platform8315Valid is the 8.3.15.1489 verdict of the same case. Errors are the first line of the platform message (Ukrainian UI). Table-not-found refusals depend on the base configuration and say nothing about the version.",
+  "cases": [
+    {
+      "id": "PQ-select.tabular-section",
+      "text": "ВЫБРАТЬ\n  Д.Ссылка КАК Ссылка,\n  Д.Участники.* КАК Участники\nИЗ\n  Документ.Встреча КАК Д",
+      "platform": {
+        "valid": false,
+        "designerOk": false,
+        "compileOk": false,
+        "error": "{(3, 17)}: Синтаксична помилка \"КАК\""
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-package.index-by.1",
+      "text": "ВЫБРАТЬ\n  Вал.Код КАК Код,\n  Вал.Наименование КАК Наименование\nПОМЕСТИТЬ ВТ1\nИЗ\n  Справочник.Валюты КАК Вал\nИНДЕКСИРОВАТЬ ПО НАБОРАМ ((Код), (Код, Наименование))",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК Код,\n\tВал.Наименование КАК Наименование\nПОМЕСТИТЬ ВТ1\nИЗ\n\tСправочник.Валюты КАК Вал\n\nИНДЕКСИРОВАТЬ ПО НАБОРАМ\n(\n\t(Код),\n\t(Код,\n\tНаименование)\n)"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-package.index-by.2",
+      "text": "ВЫБРАТЬ\n  Вал.Код КАК Код\nПОМЕСТИТЬ ВТ2\nИЗ\n  Справочник.Валюты КАК Вал\nИНДЕКСИРОВАТЬ ПО\n  Код УНИКАЛЬНО",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nПОМЕСТИТЬ ВТ2\nИЗ\n\tСправочник.Валюты КАК Вал\n\nИНДЕКСИРОВАТЬ ПО\n\tКод УНИКАЛЬНО"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-group.grouping-sets.1",
+      "text": "ВЫБРАТЬ\n  Вал.Код КАК Код,\n  Вал.Наименование КАК Наименование,\n  КОЛИЧЕСТВО(*) КАК Количество\nИЗ\n  Справочник.Валюты КАК Вал\nСГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ ((Вал.Код), (Вал.Наименование))",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК Код,\n\tВал.Наименование КАК Наименование,\n\tКОЛИЧЕСТВО(*) КАК Количество\nИЗ\n\tСправочник.Валюты КАК Вал\n\nСГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ\n(\t\n\t(Вал.Код),\n\t(Вал.Наименование)\n)\n"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-group.grouping-sets.2",
+      "text": "ВЫБРАТЬ\n  Вал.Код КАК Код,\n  КОЛИЧЕСТВО(*) КАК Количество\nИЗ\n  Справочник.Валюты КАК Вал\nСГРУППИРОВАТЬ ВСЕ ПО ГРУППИРУЮЩИМ НАБОРАМ ((Вал.Код))",
+      "platform": {
+        "valid": false,
+        "designerOk": false,
+        "compileOk": false,
+        "error": "{(6, 15)}: Очікується вираз \"ПО\""
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.string-functions.string-length",
+      "text": "ВЫБРАТЬ\n  ДЛИНАСТРОКИ(Вал.Наименование) КАК Ф1\nИЗ\n  Справочник.Валюты КАК Вал",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tДЛИНАСТРОКИ(Вал.Наименование) КАК Ф1\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.string-functions.trim-l",
+      "text": "ВЫБРАТЬ\n  СОКРЛ(Вал.Наименование) КАК Ф2\nИЗ\n  Справочник.Валюты КАК Вал",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tСОКРЛ(Вал.Наименование) КАК Ф2\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.string-functions.trim-r",
+      "text": "ВЫБРАТЬ\n  СОКРП(Вал.Наименование) КАК Ф3\nИЗ\n  Справочник.Валюты КАК Вал",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tСОКРП(Вал.Наименование) КАК Ф3\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.string-functions.trim-all",
+      "text": "ВЫБРАТЬ\n  СОКРЛП(Вал.Наименование) КАК Ф4\nИЗ\n  Справочник.Валюты КАК Вал",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tСОКРЛП(Вал.Наименование) КАК Ф4\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.string-functions.left",
+      "text": "ВЫБРАТЬ\n  ЛЕВ(Вал.Наименование, 2) КАК Ф5\nИЗ\n  Справочник.Валюты КАК Вал",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tЛЕВ(Вал.Наименование, 2) КАК Ф5\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.string-functions.right",
+      "text": "ВЫБРАТЬ\n  ПРАВ(Вал.Наименование, 2) КАК Ф6\nИЗ\n  Справочник.Валюты КАК Вал",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tПРАВ(Вал.Наименование, 2) КАК Ф6\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.string-functions.str-find",
+      "text": "ВЫБРАТЬ\n  СТРНАЙТИ(Вал.Наименование, \"а\") КАК Ф7\nИЗ\n  Справочник.Валюты КАК Вал",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tСТРНАЙТИ(Вал.Наименование, \"а\") КАК Ф7\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.string-functions.upper",
+      "text": "ВЫБРАТЬ\n  ВРЕГ(Вал.Наименование) КАК Ф8\nИЗ\n  Справочник.Валюты КАК Вал",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tВРЕГ(Вал.Наименование) КАК Ф8\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.string-functions.lower",
+      "text": "ВЫБРАТЬ\n  НРЕГ(Вал.Наименование) КАК Ф9\nИЗ\n  Справочник.Валюты КАК Вал",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tНРЕГ(Вал.Наименование) КАК Ф9\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.string-functions.str-replace",
+      "text": "ВЫБРАТЬ\n  СТРЗАМЕНИТЬ(Вал.Наименование, \"а\", \"б\") КАК Ф10\nИЗ\n  Справочник.Валюты КАК Вал",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tСТРЗАМЕНИТЬ(Вал.Наименование, \"а\", \"б\") КАК Ф10\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.math-functions.acos",
+      "text": "ВЫБРАТЬ\n  ACOS(0.5) КАК Ф1\nИЗ\n  РегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tACOS(0.5) КАК Ф1\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.math-functions.asin",
+      "text": "ВЫБРАТЬ\n  ASIN(0.5) КАК Ф2\nИЗ\n  РегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tASIN(0.5) КАК Ф2\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.math-functions.atan",
+      "text": "ВЫБРАТЬ\n  ATAN(1) КАК Ф3\nИЗ\n  РегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tATAN(1) КАК Ф3\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.math-functions.cos",
+      "text": "ВЫБРАТЬ\n  COS(0) КАК Ф4\nИЗ\n  РегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tCOS(0) КАК Ф4\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.math-functions.sin",
+      "text": "ВЫБРАТЬ\n  SIN(0) КАК Ф5\nИЗ\n  РегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tSIN(0) КАК Ф5\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.math-functions.exp",
+      "text": "ВЫБРАТЬ\n  EXP(1) КАК Ф6\nИЗ\n  РегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tEXP(1) КАК Ф6\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.math-functions.log",
+      "text": "ВЫБРАТЬ\n  LOG(10) КАК Ф7\nИЗ\n  РегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tLOG(10) КАК Ф7\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.math-functions.log10",
+      "text": "ВЫБРАТЬ\n  LOG10(100) КАК Ф8\nИЗ\n  РегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tLOG10(100) КАК Ф8\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.math-functions.pow",
+      "text": "ВЫБРАТЬ\n  POW(2, 3) КАК Ф9\nИЗ\n  РегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tPOW(2, 3) КАК Ф9\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.math-functions.sqrt",
+      "text": "ВЫБРАТЬ\n  SQRT(4) КАК Ф10\nИЗ\n  РегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tSQRT(4) КАК Ф10\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.math-functions.round",
+      "text": "ВЫБРАТЬ\n  ОКР(К.Курс, 2) КАК Ф11\nИЗ\n  РегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tОКР(К.Курс, 2) КАК Ф11\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.math-functions.int",
+      "text": "ВЫБРАТЬ\n  ЦЕЛ(К.Курс) КАК Ф12\nИЗ\n  РегистрСведений.КурсыВалют КАК К",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tЦЕЛ(К.Курс) КАК Ф12\nИЗ\n\tРегистрСведений.КурсыВалют КАК К"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.value-functions.2",
+      "text": "ВЫБРАТЬ\n  УНИКАЛЬНЫЙИДЕНТИФИКАТОР(Вал.Ссылка) КАК Ид\nИЗ\n  Справочник.Валюты КАК Вал",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tУНИКАЛЬНЫЙИДЕНТИФИКАТОР(Вал.Ссылка) КАК Ид\nИЗ\n\tСправочник.Валюты КАК Вал"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.grouped-by",
+      "text": "ВЫБРАТЬ\n  Вал.Код КАК Код,\n  СГРУППИРОВАНОПО(Вал.Код) КАК ПоКоду,\n  КОЛИЧЕСТВО(*) КАК Количество\nИЗ\n  Справочник.Валюты КАК Вал\nСГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ ((Вал.Код), ())",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК Код,\n\tСГРУППИРОВАНОПО(Вал.Код) КАК ПоКоду,\n\tКОЛИЧЕСТВО(*) КАК Количество\nИЗ\n\tСправочник.Валюты КАК Вал\n\nСГРУППИРОВАТЬ ПО ГРУППИРУЮЩИМ НАБОРАМ\n(\t\n\t(Вал.Код),\n\t()\n)\n"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-expression.scalar-subquery",
+      "text": "ВЫБРАТЬ\n  Вал.Код КАК Код\nИЗ\n  Справочник.Валюты КАК Вал\nГДЕ\n  Вал.Ссылка = (ВЫБРАТЬ ПЕРВЫЕ 1 Б.Ссылка ИЗ Справочник.Валюты КАК Б)",
+      "platform": {
+        "valid": false,
+        "designerOk": false,
+        "compileOk": false,
+        "error": "{(6, 17)}: Синтаксична помилка \"ВЫБРАТЬ\""
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-source.metadata-table.business-process-points",
+      "text": "ВЫБРАТЬ Т.Ссылка КАК Поле ИЗ БизнесПроцесс.Задание.ТочкиМаршрута КАК Т",
+      "platform": {
+        "valid": false,
+        "designerOk": false,
+        "compileOk": false,
+        "error": "{(1, 30)}: Таблицю не знайдено \"БизнесПроцесс.Задание.ТочкиМаршрута\""
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-source.change-tables.accumulation-register",
+      "text": "ВЫБРАТЬ Изм.Узел КАК Узел ИЗ РегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Изменения КАК Изм",
+      "platform": {
+        "valid": false,
+        "designerOk": false,
+        "compileOk": false,
+        "error": "{(1, 30)}: Таблицю не знайдено \"РегистрНакопления.CC_ОтгрузкиПосылокПартнерамПеревозчикам.Изменения\""
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-source.change-tables.chart-of-accounts",
+      "text": "ВЫБРАТЬ Изм.Узел КАК Узел ИЗ ПланСчетов.Хозрасчетный.Изменения КАК Изм",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tИзм.Узел КАК Узел\nИЗ\n\tПланСчетов.Хозрасчетный.Изменения КАК Изм"
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "PQ-characteristics.block.no-braces",
+      "text": "ВЫБРАТЬ\n  Н.Ссылка КАК Ссылка\nИЗ\n  Справочник.Валюты КАК Н\nХАРАКТЕРИСТИКИ\n  ТИП(Справочник.Валюты)\n  ВИДЫХАРАКТЕРИСТИК ПланВидовХарактеристик.ВидыХарактеристик\n  ПОЛЕКЛЮЧА Ссылка\n  ПОЛЕИМЕНИ Наименование\n  ПОЛЕТИПАЗНАЧЕНИЯ ТипЗначения",
+      "platform": {
+        "valid": false,
+        "designerOk": false,
+        "compileOk": false,
+        "error": "{(5, 1)}: Синтаксична помилка \"ХАРАКТЕРИСТИКИ\""
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "C40.lhs_eq",
+      "text": "ВЫБРАТЬ Вал.Код КАК Код ИЗ Справочник.Валюты КАК Вал ГДЕ (ВЫБРАТЬ ПЕРВЫЕ 1 Б.Ссылка ИЗ Справочник.Валюты КАК Б) = Вал.Ссылка",
+      "platform": {
+        "valid": false,
+        "designerOk": false,
+        "compileOk": false,
+        "error": "{(1, 59)}: Синтаксична помилка \"ВЫБРАТЬ\""
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "C40.ne",
+      "text": "ВЫБРАТЬ Вал.Код КАК Код ИЗ Справочник.Валюты КАК Вал ГДЕ Вал.Код <> (ВЫБРАТЬ ПЕРВЫЕ 1 Б.Код ИЗ Справочник.Валюты КАК Б)",
+      "platform": {
+        "valid": false,
+        "designerOk": false,
+        "compileOk": false,
+        "error": "{(1, 70)}: Синтаксична помилка \"ВЫБРАТЬ\""
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "C40.case_when",
+      "text": "ВЫБРАТЬ ВЫБОР КОГДА Вал.Ссылка = (ВЫБРАТЬ ПЕРВЫЕ 1 Б.Ссылка ИЗ Справочник.Валюты КАК Б) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Ф ИЗ Справочник.Валюты КАК Вал",
+      "platform": {
+        "valid": false,
+        "designerOk": false,
+        "compileOk": false,
+        "error": "{(1, 35)}: Синтаксична помилка \"ВЫБРАТЬ\""
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "C40.join_on",
+      "text": "ВЫБРАТЬ Вал.Код КАК Код ИЗ Справочник.Валюты КАК Вал ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Х ПО Х.Ссылка = (ВЫБРАТЬ ПЕРВЫЕ 1 Б.Ссылка ИЗ Справочник.Валюты КАК Б)",
+      "platform": {
+        "valid": false,
+        "designerOk": false,
+        "compileOk": false,
+        "error": "{(1, 110)}: Синтаксична помилка \"ВЫБРАТЬ\""
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "C40.function_arg",
+      "text": "ВЫБРАТЬ Вал.Код КАК Код ИЗ Справочник.Валюты КАК Вал ГДЕ ЕСТЬNULL((ВЫБРАТЬ ПЕРВЫЕ 1 Б.Ссылка ИЗ Справочник.Валюты КАК Б), Вал.Ссылка) = Вал.Ссылка",
+      "platform": {
+        "valid": false,
+        "designerOk": false,
+        "compileOk": false,
+        "error": "{(1, 68)}: Синтаксична помилка \"ВЫБРАТЬ\""
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "C40.select_list",
+      "text": "ВЫБРАТЬ (ВЫБРАТЬ ПЕРВЫЕ 1 Б.Код ИЗ Справочник.Валюты КАК Б) КАК А",
+      "platform": {
+        "valid": false,
+        "designerOk": false,
+        "compileOk": false,
+        "error": "{(1, 10)}: Синтаксична помилка \"ВЫБРАТЬ\""
+      },
+      "platform8315Valid": false
+    },
+    {
+      "id": "C40.in",
+      "text": "ВЫБРАТЬ Вал.Код КАК Код ИЗ Справочник.Валюты КАК Вал ГДЕ Вал.Ссылка В (ВЫБРАТЬ ПЕРВЫЕ 1 Б.Ссылка ИЗ Справочник.Валюты КАК Б)",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал\nГДЕ\n\tВал.Ссылка В\n\t\t\t(ВЫБРАТЬ ПЕРВЫЕ 1\n\t\t\t\tБ.Ссылка\n\t\t\tИЗ\n\t\t\t\tСправочник.Валюты КАК Б)"
+      },
+      "platform8315Valid": true
+    },
+    {
+      "id": "C40.not_in_and_in_hierarchy",
+      "text": "ВЫБРАТЬ Вал.Код КАК Код ИЗ Справочник.Валюты КАК Вал ГДЕ НЕ Вал.Ссылка В (ВЫБРАТЬ ПЕРВЫЕ 1 Б.Ссылка ИЗ Справочник.Валюты КАК Б) И Вал.Ссылка В ИЕРАРХИИ (ВЫБРАТЬ ПЕРВЫЕ 1 Б.Ссылка ИЗ Справочник.Валюты КАК Б)",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал\nГДЕ\n\tНЕ Вал.Ссылка В\n\t\t\t\t(ВЫБРАТЬ ПЕРВЫЕ 1\n\t\t\t\t\tБ.Ссылка\n\t\t\t\tИЗ\n\t\t\t\t\tСправочник.Валюты КАК Б)\n\tИ Вал.Ссылка В ИЕРАРХИИ\n\t\t\t(ВЫБРАТЬ ПЕРВЫЕ 1\n\t\t\t\tБ.Ссылка\n\t\t\tИЗ\n\t\t\t\tСправочник.Валюты КАК Б)"
+      },
+      "platform8315Valid": true
+    },
+    {
+      "id": "C40.tuple_in",
+      "text": "ВЫБРАТЬ Вал.Код КАК Код ИЗ Справочник.Валюты КАК Вал ГДЕ (Вал.Ссылка, Вал.Код) В (ВЫБРАТЬ Б.Ссылка, Б.Код ИЗ Справочник.Валюты КАК Б)",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал\nГДЕ\n\t(Вал.Ссылка, Вал.Код) В\n\t\t\t(ВЫБРАТЬ\n\t\t\t\tБ.Ссылка,\n\t\t\t\tБ.Код\n\t\t\tИЗ\n\t\t\t\tСправочник.Валюты КАК Б)"
+      },
+      "platform8315Valid": true
+    },
+    {
+      "id": "C40.join_in_and_group",
+      "text": "ВЫБРАТЬ Вал.Код КАК Код ИЗ Справочник.Валюты КАК Вал ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Х ПО Х.Ссылка = Вал.Ссылка И Х.Ссылка В (ВЫБРАТЬ ПЕРВЫЕ 1 Б.Ссылка ИЗ Справочник.Валюты КАК Б) ГДЕ (Вал.Код + \"1\") = \"11\"",
+      "platform": {
+        "valid": true,
+        "designerOk": true,
+        "compileOk": true,
+        "query_text": "ВЫБРАТЬ\n\tВал.Код КАК Код\nИЗ\n\tСправочник.Валюты КАК Вал\n\t\tЛЕВОЕ СОЕДИНЕНИЕ Справочник.Валюты КАК Х\n\t\tПО (Х.Ссылка = Вал.Ссылка)\n\t\t\tИ (Х.Ссылка В\n\t\t\t\t(ВЫБРАТЬ ПЕРВЫЕ 1\n\t\t\t\t\tБ.Ссылка\n\t\t\t\tИЗ\n\t\t\t\t\tСправочник.Валюты КАК Б))\nГДЕ\n\tВал.Код + \"1\" = \"11\""
+      },
+      "platform8315Valid": true
+    }
+  ]
+}

@@ -14,8 +14,9 @@ The gate is a Query Core v1 blocker (ledger V5, P1): Core v1 cannot be
 declared until it holds with sufficient coverage confidence. It is not a claim
 that the current product is unsafe; concrete known gaps are separate C items
 (C36 is an accepted divergence since 2026-10-21; the partial Phase 5 audit adds
-canonical differences C37–C39 and the version-qualified safety finding C40; C2 and
-C24 were fixed on 2026-10-17/18).
+canonical differences C37–C39 and the safety finding C40, closed after the same
+verdicts on 8.5.1.1529; that re-check adds C58–C59, newer-platform forms our parser
+refuses; C2 and C24 were fixed on 2026-10-17/18).
 
 The claim is bounded: it never says the whole 1C grammar is proven, and it is
 always reported with coverage confidence:
@@ -261,8 +262,10 @@ forms are the exception: their examples keep the `*`.
 The [2026-10-21 partial Phase 5 audit](audits/v5-phase5-2026-10-21.md) records
 88 adapted cases on 8.3.15.1489 (user-confirmed build), including 53 fully accepted
 cases whose generated output was independently revalidated. It does not complete
-the queue: modern-version/metadata coverage and catalog promotion remain pending.
-New findings are tracked as C37–C40; the known deliberate wildcard divergence is C36.
+the queue: metadata coverage and catalog promotion remain pending. Its 44 refused
+cases were re-checked on 8.5.1.1529 (32 accepted; see the audit).
+New findings are tracked as C37–C40 (C40 closed) and C58–C59; the known deliberate
+wildcard divergence is C36.
 
 [`probe-queue.jsonl`](../../test/fixtures/grammar-parity/probe-queue.jsonl)
 holds one executable probe per pending area (34 probes over 96 forms). The debt
