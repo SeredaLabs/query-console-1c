@@ -9,7 +9,8 @@
  *
  * The rule is the shared Apply contract of Classic and Canvas
  * (`findStaticApplyBlocker` / `decideApply`); a refusal writes nothing.
- * Version boundary: evidence is from 8.3.15 only.
+ * Version boundary: 8.5.1.1529 gives the same verdict for every case
+ * (test/fixtures/platform/v5-phase5-8.5.1.1529.json, cases `C40.*`).
  */
 import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
@@ -33,6 +34,16 @@ function applyOf(query: string) {
   const blocker = findStaticApplyBlocker(state);
   return { opened: true as const, blocker, decision: decideApply(out.text, out.error, blocker, undefined, query) };
 }
+
+describe('C40: 8.5.1.1529 gives the same verdicts as 8.3.15.1489', () => {
+  const newer: { id: string; platform: { valid: boolean } }[] = JSON.parse(fs.readFileSync(
+    path.join(__dirname, '..', 'fixtures', 'platform', 'v5-phase5-8.5.1.1529.json'), 'utf8')).cases;
+  // rhs_eq was probed on 8.5 as PQ-expression.scalar-subquery (same query).
+  const idOf = (name: string) => name === 'rhs_eq' ? 'PQ-expression.scalar-subquery' : `C40.${name}`;
+  it.each(cases.map(c => [c.name, c] as const))('%s', (_name, c) => {
+    expect(newer.find(n => n.id === idOf(c.name))?.platform.valid).toBe(c.platform.valid);
+  });
+});
 
 describe('C40: platform-rejected scalar subqueries are never applied', () => {
   it.each(cases.filter(c => !c.platform.valid).map(c => [c.name, c] as const))('%s', (_name, c) => {
